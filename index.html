@@ -752,64 +752,160 @@
     </div>
 </div>
                 
+<!-- استبدال الصفحات الفارغة بالكود الجديد -->
+
+<!-- صفحة البطولات -->
 <div id="tournaments-page" class="page">
     <div class="page-header">
         <h1 class="page-title">
             <i class="fas fa-chess-king"></i>
             البطولات
         </h1>
+        <div class="header-actions">
+            <button class="btn btn-outline" id="create-tournament">
+                <i class="fas fa-plus"></i> إنشاء بطولة
+            </button>
+            <button class="btn btn-refresh" id="refresh-tournaments">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
     </div>
-    <div class="tournaments-container" id="tournaments-container">
-        <!-- سيتم ملؤها ديناميكياً -->
+    
+    <div class="tournaments-container">
+        <div class="tournaments-grid" id="tournaments-grid">
+            <!-- سيتم ملؤها ديناميكياً -->
+        </div>
+        
+        <div class="tournaments-list-section">
+            <h3>البطولات النشطة</h3>
+            <div class="tournaments-table-container">
+                <table class="tournaments-table">
+                    <thead>
+                        <tr>
+                            <th>اسم البطولة</th>
+                            <th>النوع</th>
+                            <th>الجائزة</th>
+                            <th>المشاركون</th>
+                            <th>الوقت</th>
+                            <th>الحالة</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tournaments-table-body">
+                        <!-- سيتم ملؤها ديناميكياً -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- نموذج إنشاء بطولة -->
+    <div class="modal" id="tournament-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>إنشاء بطولة جديدة</h3>
+                <button class="close-modal" id="close-tournament-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="tournament-form">
+                    <div class="form-group">
+                        <label class="form-label">اسم البطولة *</label>
+                        <input type="text" class="form-control" id="tournament-name" required>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">نوع البطولة *</label>
+                            <select class="form-control" id="tournament-type" required>
+                                <option value="speed">تحدي السرعة</option>
+                                <option value="survival">تحدي البقاء</option>
+                                <option value="marathon">ماراثون الأسئلة</option>
+                                <option value="expert">تحدي الخبراء</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">عدد المشاركين *</label>
+                            <select class="form-control" id="tournament-max-players" required>
+                                <option value="8">8 لاعبين</option>
+                                <option value="16">16 لاعبين</option>
+                                <option value="32">32 لاعبين</option>
+                                <option value="64">64 لاعبين</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">عدد الأسئلة *</label>
+                            <input type="number" class="form-control" id="tournament-questions" min="10" max="100" value="20" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">مدة كل سؤال *</label>
+                            <select class="form-control" id="question-time" required>
+                                <option value="15">15 ثانية</option>
+                                <option value="20">20 ثانية</option>
+                                <option value="25">25 ثانية</option>
+                                <option value="30">30 ثانية</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">مستوى الصعوبة *</label>
+                        <select class="form-control" id="tournament-difficulty" required>
+                            <option value="easy">سهل</option>
+                            <option value="medium">متوسط</option>
+                            <option value="hard">صعب</option>
+                            <option value="mixed">مختلط</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">الجائزة (نقاط) *</label>
+                        <input type="number" class="form-control" id="tournament-prize" min="100" max="10000" value="1000" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">وصف البطولة</label>
+                        <textarea class="form-control" id="tournament-description" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="tournament-private">
+                            <span>بطولة خاصة (بالدعوة فقط)</span>
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancel-tournament">إلغاء</button>
+                <button class="btn btn-primary" id="save-tournament">إنشاء البطولة</button>
+            </div>
+        </div>
     </div>
 </div>
 
+<!-- صفحة التصنيف -->
 <div id="leaderboard-page" class="page">
-    <div class="page-header">
-        <h1 class="page-title">
-            <i class="fas fa-trophy"></i>
-            التصنيف
-        </h1>
-    </div>
-    <div class="leaderboard-container" id="leaderboard-container">
-        <!-- سيتم ملؤها ديناميكياً -->
-    </div>
+    <!-- سيتم ملؤها ديناميكياً -->
 </div>
 
+<!-- صفحة الأصدقاء -->
 <div id="friends-page" class="page">
-    <div class="page-header">
-        <h1 class="page-title">
-            <i class="fas fa-user-friends"></i>
-            الأصدقاء
-        </h1>
-    </div>
-    <div class="friends-container" id="friends-container">
-        <!-- سيتم ملؤها ديناميكياً -->
-    </div>
+    <!-- سيتم ملؤها ديناميكياً -->
 </div>
 
+<!-- صفحة المتجر -->
 <div id="shop-page" class="page">
-    <div class="page-header">
-        <h1 class="page-title">
-            <i class="fas fa-shopping-cart"></i>
-            المتجر
-        </h1>
-    </div>
-    <div class="shop-container" id="shop-container">
-        <!-- سيتم ملؤها ديناميكياً -->
-    </div>
+    <!-- سيتم ملؤها ديناميكياً -->
 </div>
 
+<!-- صفحة الإعدادات -->
 <div id="settings-page" class="page">
-    <div class="page-header">
-        <h1 class="page-title">
-            <i class="fas fa-cog"></i>
-            الإعدادات
-        </h1>
-    </div>
-    <div class="settings-container" id="settings-container">
-        <!-- سيتم ملؤها ديناميكياً -->
-    </div>
+    <!-- سيتم ملؤها ديناميكياً -->
 </div>
 
 <div id="help-page" class="page">
@@ -914,5 +1010,6 @@
     </div>
 
     <script src="app.js"></script>
+        <script src="app1.js"></script>
 </body>
 </html>
