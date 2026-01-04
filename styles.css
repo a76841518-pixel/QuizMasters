@@ -3270,3 +3270,1288 @@ input:checked + .slider:before {
     color: var(--danger);
     margin-bottom: 15px;
 }
+
+/* أنماط الصفحات الجديدة */
+
+/* البطولات */
+.tournaments-container {
+    padding: 20px 0;
+}
+
+.tournaments-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.tournament-card {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    transition: var(--transition);
+    border: 2px solid transparent;
+}
+
+.tournament-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.tournament-card.premium {
+    border-color: #FFD700;
+}
+
+.tournament-card.active {
+    border-color: var(--success-color);
+}
+
+.tournament-card.upcoming {
+    border-color: var(--warning-color);
+}
+
+.tournament-header {
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+}
+
+.tournament-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.tournament-badge.premium {
+    background: #FFD700;
+    color: #333;
+}
+
+.tournament-badge.active {
+    background: var(--success-color);
+    color: white;
+}
+
+.tournament-badge.upcoming {
+    background: var(--warning-color);
+    color: white;
+}
+
+.tournament-prize {
+    font-size: 18px;
+    font-weight: bold;
+    color: #FFD700;
+}
+
+.tournament-body {
+    padding: 20px;
+}
+
+.tournament-body h3 {
+    margin: 0 0 10px 0;
+    color: var(--dark-color);
+}
+
+.tournament-body p {
+    color: var(--gray-color);
+    margin-bottom: 15px;
+}
+
+.tournament-details {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.detail {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 14px;
+    color: var(--gray-color);
+}
+
+.tournament-progress {
+    margin-top: 15px;
+}
+
+.progress-bar {
+    height: 6px;
+    background: #e9ecef;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 5px;
+}
+
+.progress {
+    height: 100%;
+    background: var(--primary-color);
+    border-radius: 3px;
+}
+
+.tournament-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #eee;
+}
+
+/* جدول البطولات */
+.tournaments-table-container {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.tournaments-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tournaments-table th {
+    background: #f8f9fa;
+    padding: 15px;
+    text-align: right;
+    font-weight: 600;
+    color: var(--dark-color);
+    border-bottom: 2px solid #dee2e6;
+}
+
+.tournaments-table td {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.tournaments-table tr:hover {
+    background: #f8f9fa;
+}
+
+.tournament-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.tournament-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.prize-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    background: #fff3cd;
+    color: #856404;
+    border-radius: 20px;
+    font-size: 14px;
+}
+
+.participants-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--gray-color);
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status-badge.upcoming {
+    background: #cce5ff;
+    color: #004085;
+}
+
+.status-badge.active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.finished {
+    background: #e2e3e5;
+    color: #383d41;
+}
+
+/* التصنيف */
+.leaderboard-container {
+    padding: 20px 0;
+}
+
+.leaderboard-top3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.podium {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    text-align: center;
+    box-shadow: var(--shadow);
+    position: relative;
+}
+
+.podium.first {
+    transform: translateY(-20px);
+    border: 2px solid #FFD700;
+}
+
+.podium.second {
+    border: 2px solid #C0C0C0;
+}
+
+.podium.third {
+    border: 2px solid #CD7F32;
+}
+
+.podium-rank {
+    position: absolute;
+    top: -15px;
+    left: -15px;
+    width: 40px;
+    height: 40px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.podium.first .podium-rank {
+    background: #FFD700;
+    color: #333;
+}
+
+.podium.second .podium-rank {
+    background: #C0C0C0;
+}
+
+.podium.third .podium-rank {
+    background: #CD7F32;
+    color: white;
+}
+
+.podium-avatar {
+    width: 80px;
+    height: 80px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: bold;
+    margin: 0 auto 15px;
+}
+
+.podium.first .podium-avatar {
+    background: #FFD700;
+    color: #333;
+    font-size: 36px;
+}
+
+.podium-badge {
+    position: absolute;
+    top: -15px;
+    right: -15px;
+    width: 40px;
+    height: 40px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.podium-info {
+    margin-top: 10px;
+}
+
+.podium-name {
+    font-weight: 600;
+    font-size: 18px;
+    margin-bottom: 5px;
+}
+
+.podium-points {
+    color: var(--gray-color);
+    font-size: 14px;
+}
+
+/* جدول التصنيف */
+.leaderboard-table-container {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+.leaderboard-filters {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.filter-group {
+    display: flex;
+    gap: 10px;
+}
+
+.filter-btn {
+    padding: 8px 15px;
+    border: 1px solid #ddd;
+    background: white;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.filter-btn:hover {
+    border-color: var(--primary-color);
+}
+
+.filter-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.leaderboard-table {
+    overflow-x: auto;
+}
+
+.leaderboard-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.leaderboard-table th {
+    background: #f8f9fa;
+    padding: 15px;
+    text-align: right;
+    font-weight: 600;
+    color: var(--dark-color);
+    border-bottom: 2px solid #dee2e6;
+}
+
+.leaderboard-table td {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.leaderboard-table tr.current-user {
+    background: #e3f2fd;
+}
+
+.leaderboard-table tr:hover {
+    background: #f8f9fa;
+}
+
+.rank-number {
+    font-weight: bold;
+    color: var(--dark-color);
+}
+
+.rank-badge {
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 30px;
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+.rank-badge.top-1 {
+    background: #FFD700;
+    color: #333;
+}
+
+.rank-badge.top-2 {
+    background: #C0C0C0;
+}
+
+.rank-badge.top-3 {
+    background: #CD7F32;
+    color: white;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.level-badge {
+    display: inline-block;
+    padding: 5px 10px;
+    background: #e3f2fd;
+    color: var(--primary-color);
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+.points, .wins, .win-rate {
+    font-weight: 600;
+}
+
+.status-badge.online {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.offline {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* موقع المستخدم الحالي */
+.your-position {
+    background: var(--primary-color);
+    color: white;
+    padding: 15px;
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.position-rank {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.position-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-avatar-small {
+    width: 40px;
+    height: 40px;
+    background: white;
+    color: var(--primary-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.position-change {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.position-change.up {
+    color: #4CAF50;
+}
+
+.position-change.down {
+    color: #f44336;
+}
+
+/* إحصائيات التصنيف */
+.leaderboard-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-top: 30px;
+}
+
+.leaderboard-stats .stat-card {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    text-align: center;
+    box-shadow: var(--shadow);
+}
+
+.leaderboard-stats .stat-icon {
+    width: 50px;
+    height: 50px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin: 0 auto 15px;
+}
+
+.leaderboard-stats .stat-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--dark-color);
+    margin-bottom: 5px;
+}
+
+.leaderboard-stats .stat-label {
+    color: var(--gray-color);
+    font-size: 14px;
+}
+
+/* الأصدقاء */
+.friends-container {
+    padding: 20px 0;
+}
+
+.friends-tabs {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.tabs-header {
+    display: flex;
+    border-bottom: 1px solid #eee;
+    background: #f8f9fa;
+}
+
+.tab-btn {
+    padding: 15px 20px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--gray-color);
+    border-bottom: 3px solid transparent;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: var(--transition);
+}
+
+.tab-btn:hover {
+    color: var(--primary-color);
+}
+
+.tab-btn.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    background: white;
+}
+
+.tab-content {
+    padding: 20px;
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* قائمة الأصدقاء */
+.friends-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.friend-item {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: var(--border-radius);
+    gap: 15px;
+    transition: var(--transition);
+}
+
+.friend-item:hover {
+    background: #e9ecef;
+    transform: translateX(-5px);
+}
+
+.friend-avatar {
+    width: 60px;
+    height: 60px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: bold;
+    position: relative;
+}
+
+.friend-avatar.online::after {
+    content: '';
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    width: 12px;
+    height: 12px;
+    background: #4CAF50;
+    border-radius: 50%;
+    border: 2px solid white;
+}
+
+.friend-avatar.offline::after {
+    content: '';
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    width: 12px;
+    height: 12px;
+    background: #f44336;
+    border-radius: 50%;
+    border: 2px solid white;
+}
+
+.friend-info {
+    flex: 1;
+}
+
+.friend-name {
+    font-weight: 600;
+    font-size: 18px;
+    margin-bottom: 5px;
+}
+
+.friend-details {
+    display: flex;
+    gap: 15px;
+    color: var(--gray-color);
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.friend-status .online {
+    color: #4CAF50;
+    font-size: 14px;
+}
+
+.friend-status .offline {
+    color: #f44336;
+    font-size: 14px;
+}
+
+.friend-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.action-btn {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: var(--transition);
+}
+
+.action-btn.challenge {
+    background: var(--primary-color);
+    color: white;
+}
+
+.action-btn.challenge:hover {
+    background: var(--secondary-color);
+}
+
+.action-btn.message {
+    background: #e3f2fd;
+    color: var(--primary-color);
+}
+
+.action-btn.message:hover {
+    background: #bbdefb;
+}
+
+.action-btn.remove {
+    background: #ffebee;
+    color: #f44336;
+}
+
+.action-btn.remove:hover {
+    background: #ffcdd2;
+}
+
+/* إحصائيات الأصدقاء */
+.friends-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.friends-stats .stat {
+    background: white;
+    padding: 15px;
+    border-radius: var(--border-radius);
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.friends-stats .stat-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--primary-color);
+    margin-bottom: 5px;
+}
+
+.friends-stats .stat-label {
+    color: var(--gray-color);
+    font-size: 14px;
+}
+
+/* طلبات الصداقة */
+.requests-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.request-item {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    background: white;
+    border: 1px solid #eee;
+    border-radius: var(--border-radius);
+    gap: 15px;
+}
+
+.request-avatar {
+    width: 50px;
+    height: 50px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.request-info {
+    flex: 1;
+}
+
+.request-name {
+    font-weight: 600;
+    font-size: 16px;
+    margin-bottom: 5px;
+}
+
+.request-details {
+    display: flex;
+    gap: 15px;
+    color: var(--gray-color);
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.request-message {
+    color: var(--gray-color);
+    font-size: 14px;
+}
+
+.request-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* المتجر */
+.shop-container {
+    padding: 20px 0;
+}
+
+.shop-categories {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+}
+
+.category-btn {
+    padding: 10px 20px;
+    border: 1px solid #ddd;
+    background: white;
+    border-radius: 20px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: var(--transition);
+}
+
+.category-btn:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.category-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.shop-items-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.shop-item {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    transition: var(--transition);
+}
+
+.shop-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.item-header {
+    height: 10px;
+    position: relative;
+}
+
+.item-header.common {
+    background: linear-gradient(135deg, #6c757d, #495057);
+}
+
+.item-header.rare {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+}
+
+.item-header.epic {
+    background: linear-gradient(135deg, #6f42c1, #4a2d8c);
+}
+
+.item-header.legendary {
+    background: linear-gradient(135deg, #fd7e14, #e8590c);
+}
+
+.item-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    z-index: 1;
+}
+
+.item-badge.new {
+    background: #dc3545;
+    color: white;
+}
+
+.item-badge.popular {
+    background: #28a745;
+    color: white;
+}
+
+.item-body {
+    padding: 20px;
+}
+
+.item-icon {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin-bottom: 15px;
+}
+
+.item-name {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--dark-color);
+}
+
+.item-description {
+    color: var(--gray-color);
+    font-size: 14px;
+    margin-bottom: 15px;
+    line-height: 1.5;
+}
+
+.item-stats {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.item-stat {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--gray-color);
+    font-size: 14px;
+}
+
+.item-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.item-price {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #FFD700;
+}
+
+.buy-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* الإعدادات */
+.settings-container {
+    padding: 20px 0;
+}
+
+.settings-tabs {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.settings-section {
+    margin-bottom: 30px;
+}
+
+.settings-section h3 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    color: var(--dark-color);
+}
+
+.settings-section h3 i {
+    color: var(--primary-color);
+}
+
+.settings-group {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.setting-item {
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: var(--border-radius);
+}
+
+.setting-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.setting-description {
+    color: var(--gray-color);
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+.theme-selector {
+    display: flex;
+    gap: 10px;
+}
+
+.theme-option {
+    flex: 1;
+    padding: 15px;
+    border: 2px solid #ddd;
+    background: white;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    text-align: center;
+    transition: var(--transition);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.theme-option:hover {
+    border-color: var(--primary-color);
+}
+
+.theme-option.active {
+    border-color: var(--primary-color);
+    background: #e3f2fd;
+}
+
+.theme-option i {
+    font-size: 24px;
+    margin-bottom: 5px;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 24px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: var(--primary-color);
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+/* شريط مستوى الصوت */
+input[type="range"] {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: #ddd;
+    outline: none;
+    -webkit-appearance: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    cursor: pointer;
+}
+
+.volume-value {
+    text-align: center;
+    margin-top: 5px;
+    font-weight: 500;
+}
+
+.input-with-button {
+    display: flex;
+    gap: 10px;
+}
+
+.setting-item.danger {
+    border-left: 4px solid #dc3545;
+    background: #fff5f5;
+}
+
+/* رسومات التحميل والرسائل */
+.loading-section {
+    text-align: center;
+    padding: 40px;
+}
+
+.loader-spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--gray-color);
+}
+
+.empty-state i {
+    font-size: 48px;
+    color: #ddd;
+    margin-bottom: 20px;
+}
+
+.empty-state p {
+    margin-bottom: 10px;
+}
+
+.error-section {
+    text-align: center;
+    padding: 40px;
+    color: #dc3545;
+}
+
+.error-section i {
+    font-size: 48px;
+    margin-bottom: 20px;
+}
+
+/* تحسينات للجوّال */
+@media (max-width: 768px) {
+    .tournaments-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .leaderboard-top3 {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .podium.first {
+        transform: none;
+    }
+    
+    .tournament-details {
+        grid-template-columns: 1fr;
+    }
+    
+    .leaderboard-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .shop-items-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .friend-item {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .friend-actions {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .settings-section h3 {
+        font-size: 18px;
+    }
+    
+    .theme-selector {
+        flex-direction: column;
+    }
+}
+
+/* تحسينات للوضع الداكن */
+[data-theme="dark"] .tournament-card,
+[data-theme="dark"] .leaderboard-table-container,
+[data-theme="dark"] .friends-tabs,
+[data-theme="dark"] .shop-item,
+[data-theme="dark"] .settings-tabs {
+    background: #2d3748;
+}
+
+[data-theme="dark"] .tournament-body h3,
+[data-theme="dark"] .podium-name,
+[data-theme="dark"] .item-name,
+[data-theme="dark"] .settings-section h3 {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .friend-item,
+[data-theme="dark"] .request-item,
+[data-theme="dark"] .setting-item {
+    background: #4a5568;
+}
+
+[data-theme="dark"] .setting-item.danger {
+    background: #742a2a;
+}
