@@ -1131,7 +1131,7 @@ class GameManager {
     formatTime(seconds) {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
-        return ${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')};
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
 
     getPlayerName(playerId) {
@@ -1267,7 +1267,7 @@ class AdminPanel {
         });
 
         document.querySelectorAll('.tab-content').forEach(content => {
-            content.classList.toggle('active', content.id === ${tab}-tab);
+            content.classList.toggle('active', content.id === `${tab}-tab`);
         });
 
         switch (tab) {
@@ -1546,7 +1546,7 @@ class AdminPanel {
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            showToast('تم التحديث', تم ${isCurrentlyModerator ? 'إلغاء صلاحية' : 'منح صلاحية'} المراقب, 'success');
+            showToast('تم التحديث', `تم ${isCurrentlyModerator ? 'إلغاء صلاحية' : 'منح صلاحية'} المراقب`, 'success');
             await this.loadUsers();
             this.renderUsersTable();
 
@@ -1708,7 +1708,7 @@ function showAlert(message, type = 'error') {
     if (!alertDiv) return;
 
     alertDiv.textContent = message;
-    alertDiv.className = alert alert-${type};
+    alertDiv.className = `alert alert-${type}`;
     alertDiv.style.display = 'flex';
 
     const closeBtn = document.createElement('button');
@@ -1730,7 +1730,7 @@ function showToast(title, message, type = 'info') {
     if (!toastContainer) return;
 
     const toast = document.createElement('div');
-    toast.className = toast ${type};
+    toast.className = `toast ${type}`;
 
     const icon = type === 'success' ? 'check-circle' :
         type === 'error' ? 'exclamation-circle' : 'info-circle';
@@ -1881,7 +1881,7 @@ function updateUIWithUserData() {
     // تحديث الهيدر
     document.getElementById('header-points').textContent = user.points || 0;
     document.getElementById('header-level').textContent = user.level || 1;
-    document.getElementById('header-rank').textContent = #${user.rank || 0};
+    document.getElementById('header-rank').textContent = `#${user.rank || 0}`;
 
     // تحديث الصور والاسماء
     const avatarElements = document.querySelectorAll('.user-avatar, #sidebar-avatar, #dropdown-avatar');
@@ -1891,7 +1891,7 @@ function updateUIWithUserData() {
 
     document.getElementById('dropdown-username').textContent = user.name || 'مستخدم';
     document.getElementById('sidebar-username').textContent = user.name || 'مستخدم';
-    document.getElementById('dropdown-level').textContent = المستوى ${user.level || 1};
+    document.getElementById('dropdown-level').textContent = `المستوى ${user.level || 1}`;
 
     // تحديث شريط الخبرة
     const currentLevel = user.level || 1;
@@ -1905,8 +1905,8 @@ function updateUIWithUserData() {
     const xpProgress = document.getElementById('xp-progress');
     const xpText = document.getElementById('xp-text');
     if (xpProgress && xpText) {
-        xpProgress.style.width = ${percentage}%;
-        xpText.textContent = ${xpInLevel}/${xpNeeded};
+        xpProgress.style.width = `${percentage}%`;
+        xpText.textContent = `${xpInLevel}/${xpNeeded}`;
     }
 
     // تحديث الإحصائيات
@@ -1920,7 +1920,7 @@ function updateDashboardStats() {
     document.getElementById('stat-wins').textContent = user.wins || 0;
     document.getElementById('stat-points').textContent = user.points || 0;
     document.getElementById('stat-matches').textContent = user.matches || 0;
-    document.getElementById('stat-rank').textContent = #${user.rank || 0};
+    document.getElementById('stat-rank').textContent = `#${user.rank || 0}`;
 }
 
 // تحميل البيانات
@@ -2146,7 +2146,7 @@ async function createChallenge(type) {
 
         const challengeRef = await db.collection('challenges').add(challengeData);
 
-        await rtdb.ref(challenges/${challengeRef.id}).set({
+        await rtdb.ref(`challenges/${challengeRef.id}`).set({
             ...challengeData,
             id: challengeRef.id
         });
@@ -2202,13 +2202,13 @@ function navigateTo(page) {
     document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
     
     // إظهار الصفحة المطلوبة
-    const targetPage = document.getElementById(${page}-page);
+    const targetPage = document.getElementById(`${page}-page`);
     if (targetPage) {
         targetPage.classList.add('active');
     }
     
     // تحديث عنصر القائمة النشط
-    const menuItem = document.querySelector(.menu-item[data-page="${page}"]);
+    const menuItem = document.querySelector(`.menu-item[data-page="${page}"]`);
     if (menuItem) {
         menuItem.classList.add('active');
     }
@@ -2338,10 +2338,10 @@ async function handleAuthSubmit(e) {
 }
 
 async function handleGuestLogin() {
-    const guestEmail = guest_${Date.now()}@quizmasters.com;
+    const guestEmail = `guest_${Date.now()}@quizmasters.com`;
     const guestPassword = 'guest123';
 
-    await registerUser(guestEmail, guestPassword, 'لاعب زائر', guest_${Date.now()})
+    await registerUser(guestEmail, guestPassword, 'لاعب زائر', `guest_${Date.now()}`)
         .then(() => {
             showToast('مرحباً!', 'تم الدخول كزائر بنجاح', 'success');
         })
@@ -2462,7 +2462,7 @@ function createChallengeElement(challenge) {
             ${challenge.players?.slice(0, 3).map((playerId, index) => `
                 <div class="player-avatar">${index + 1}</div>
             `).join('')}
-            ${playerCount > 3 ? <div class="more-players">+${playerCount - 3}</div> : ''}
+            ${playerCount > 3 ? `<div class="more-players">+${playerCount - 3}</div>` : ''}
         </div>
         
         <button class="btn btn-primary btn-block join-challenge-btn" data-id="${challenge.id}">
@@ -2540,7 +2540,7 @@ async function joinTournament(tournamentId) {
         await addNotification(AppState.currentUser.uid, {
             type: 'tournament',
             title: 'انضمام للبطولة',
-            message: لقد انضممت لبطولة ${tournament.title}
+            message: `لقد انضممت لبطولة ${tournament.title}`
         });
         
         showToast('تم', 'تم الانضمام للبطولة بنجاح', 'success');
@@ -2895,7 +2895,7 @@ async function sendFriendRequest(friendId) {
         await addNotification(friendId, {
             type: 'friend_request',
             title: 'طلب صداقة جديد',
-            message: ${AppState.userData.name} يريد إضافتك كصديق,
+            message: `${AppState.userData.name} يريد إضافتك كصديق`,
             data: { from: AppState.currentUser.uid }
         });
         
@@ -3066,6 +3066,2472 @@ async function loadUserData(uid) {
         console.error('خطأ في تحميل بيانات المستخدم:', error);
     }
 }
+
+// ===============================
+// نظام الصفحات المفقودة - الوظائف الكاملة
+// ===============================
+
+// دالة تحميل صفحة البطولات
+async function loadTournamentsPage() {
+    const container = document.getElementById('tournaments-page');
+    if (!container) return;
+    
+    try {
+        container.innerHTML = `
+            <div class="page-header">
+                <h1 class="page-title">
+                    <i class="fas fa-chess-king"></i>
+                    البطولات
+                </h1>
+                <div class="header-actions">
+                    <button class="btn btn-outline" id="create-tournament">
+                        <i class="fas fa-plus"></i> إنشاء بطولة
+                    </button>
+                    <button class="btn btn-refresh" id="refresh-tournaments">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="tournaments-container">
+                <div class="tournaments-grid" id="tournaments-grid">
+                    <div class="loading-section">
+                        <div class="loader-spinner"></div>
+                        <p>جاري تحميل البطولات...</p>
+                    </div>
+                </div>
+                
+                <div class="tournaments-list-section">
+                    <h3>البطولات النشطة</h3>
+                    <div class="tournaments-table-container">
+                        <table class="tournaments-table">
+                            <thead>
+                                <tr>
+                                    <th>اسم البطولة</th>
+                                    <th>النوع</th>
+                                    <th>الجائزة</th>
+                                    <th>المشاركون</th>
+                                    <th>الوقت</th>
+                                    <th>الحالة</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tournaments-table-body">
+                                <!-- سيتم ملؤها ديناميكياً -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- نموذج إنشاء بطولة -->
+            <div class="modal" id="tournament-modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>إنشاء بطولة جديدة</h3>
+                        <button class="close-modal" id="close-tournament-modal">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="tournament-form">
+                            <div class="form-group">
+                                <label class="form-label">اسم البطولة *</label>
+                                <input type="text" class="form-control" id="tournament-name" required>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">نوع البطولة *</label>
+                                    <select class="form-control" id="tournament-type" required>
+                                        <option value="speed">تحدي السرعة</option>
+                                        <option value="survival">تحدي البقاء</option>
+                                        <option value="marathon">ماراثون الأسئلة</option>
+                                        <option value="expert">تحدي الخبراء</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">عدد المشاركين *</label>
+                                    <select class="form-control" id="tournament-max-players" required>
+                                        <option value="8">8 لاعبين</option>
+                                        <option value="16">16 لاعبين</option>
+                                        <option value="32">32 لاعبين</option>
+                                        <option value="64">64 لاعبين</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">عدد الأسئلة *</label>
+                                    <input type="number" class="form-control" id="tournament-questions" min="10" max="100" value="20" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">مدة كل سؤال *</label>
+                                    <select class="form-control" id="question-time" required>
+                                        <option value="15">15 ثانية</option>
+                                        <option value="20">20 ثانية</option>
+                                        <option value="25">25 ثانية</option>
+                                        <option value="30">30 ثانية</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">مستوى الصعوبة *</label>
+                                <select class="form-control" id="tournament-difficulty" required>
+                                    <option value="easy">سهل</option>
+                                    <option value="medium">متوسط</option>
+                                    <option value="hard">صعب</option>
+                                    <option value="mixed">مختلط</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">الجائزة (نقاط) *</label>
+                                <input type="number" class="form-control" id="tournament-prize" min="100" max="10000" value="1000" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">وصف البطولة</label>
+                                <textarea class="form-control" id="tournament-description" rows="3"></textarea>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <input type="checkbox" id="tournament-private">
+                                    <span>بطولة خاصة (بالدعوة فقط)</span>
+                                </label>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" id="cancel-tournament">إلغاء</button>
+                        <button class="btn btn-primary" id="save-tournament">إنشاء البطولة</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // إضافة مستمعات الأحداث
+        document.getElementById('create-tournament')?.addEventListener('click', showCreateTournamentModal);
+        document.getElementById('refresh-tournaments')?.addEventListener('click', loadTournamentsPage);
+        document.getElementById('close-tournament-modal')?.addEventListener('click', hideCreateTournamentModal);
+        document.getElementById('cancel-tournament')?.addEventListener('click', hideCreateTournamentModal);
+        document.getElementById('save-tournament')?.addEventListener('click', createTournament);
+        
+        // تحميل البطولات
+        await loadTournamentsData();
+        
+    } catch (error) {
+        console.error('خطأ في تحميل صفحة البطولات:', error);
+        container.innerHTML = `
+            <div class="page-header">
+                <h1 class="page-title">
+                    <i class="fas fa-chess-king"></i>
+                    البطولات
+                </h1>
+            </div>
+            <div class="error-section">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>حدث خطأ في تحميل البطولات</p>
+                <button class="btn btn-primary" onclick="loadTournamentsPage()">إعادة المحاولة</button>
+            </div>
+        `;
+    }
+}
+
+// دالة تحميل بيانات البطولات
+async function loadTournamentsData() {
+    try {
+        const snapshot = await db.collection('tournaments')
+            .where('status', 'in', ['upcoming', 'active'])
+            .orderBy('startDate')
+            .limit(20)
+            .get();
+        
+        AppState.tournaments = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+        
+        renderTournaments();
+        
+    } catch (error) {
+        console.error('خطأ في تحميل البطولات:', error);
+    }
+}
+
+// دالة عرض البطولات
+function renderTournaments() {
+    const grid = document.getElementById('tournaments-grid');
+    const tableBody = document.getElementById('tournaments-table-body');
+    
+    if (!grid || !tableBody) return;
+    
+    if (AppState.tournaments.length === 0) {
+        grid.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-chess-king"></i>
+                <p>لا توجد بطولات حالياً</p>
+                <button class="btn btn-primary" id="create-first-tournament">أنشئ أول بطولة</button>
+            </div>
+        `;
+        
+        document.getElementById('create-first-tournament')?.addEventListener('click', showCreateTournamentModal);
+        tableBody.innerHTML = '';
+        return;
+    }
+    
+    // عرض البطولات في الشبكة
+    grid.innerHTML = AppState.tournaments.slice(0, 3).map(tournament => `
+        <div class="tournament-card ${tournament.status}">
+            <div class="tournament-header">
+                <div class="tournament-badge ${tournament.status}">
+                    <i class="fas fa-${getTournamentStatusIcon(tournament.status)}"></i>
+                    <span>${getTournamentStatusText(tournament.status)}</span>
+                </div>
+                <div class="tournament-prize">${tournament.prize || 0} نقطة</div>
+            </div>
+            <div class="tournament-body">
+                <h3>${tournament.title || 'بطولة جديدة'}</h3>
+                <p>${tournament.description || 'انضم الآن واربح الجائزة'}</p>
+                <div class="tournament-details">
+                    <div class="detail">
+                        <i class="fas fa-users"></i>
+                        <span>${tournament.participants || 0}/${tournament.maxParticipants || 8}</span>
+                    </div>
+                    <div class="detail">
+                        <i class="fas fa-question-circle"></i>
+                        <span>${tournament.questionCount || 20} سؤال</span>
+                    </div>
+                    <div class="detail">
+                        <i class="fas fa-clock"></i>
+                        <span>${tournament.duration || 30} دقيقة</span>
+                    </div>
+                </div>
+                ${tournament.status === 'active' ? `
+                    <div class="tournament-timer">
+                        <i class="fas fa-hourglass-half"></i>
+                        <span>متبقي: ${formatTime(tournament.timeLeft || 1800)}</span>
+                    </div>
+                ` : ''}
+            </div>
+            <div class="tournament-footer">
+                <button class="btn btn-primary join-tournament-btn" data-id="${tournament.id}">
+                    ${tournament.status === 'active' ? 'الانضمام' : 'التسجيل'}
+                </button>
+            </div>
+        </div>
+    `).join('');
+    
+    // عرض البطولات في الجدول
+    tableBody.innerHTML = AppState.tournaments.map(tournament => `
+        <tr>
+            <td>
+                <div class="tournament-info">
+                    <div class="tournament-icon">
+                        <i class="fas fa-${getTournamentTypeIcon(tournament.type)}"></i>
+                    </div>
+                    <div class="tournament-details">
+                        <div class="tournament-name">${tournament.title}</div>
+                        <div class="tournament-type">${getTournamentTypeText(tournament.type)}</div>
+                    </div>
+                </div>
+            </td>
+            <td>${getTournamentTypeText(tournament.type)}</td>
+            <td>
+                <div class="prize-badge">
+                    <i class="fas fa-coins"></i>
+                    <span>${tournament.prize || 0}</span>
+                </div>
+            </td>
+            <td>
+                <div class="participants-count">
+                    <i class="fas fa-users"></i>
+                    <span>${tournament.participants || 0}</span>
+                </div>
+            </td>
+            <td>${tournament.startDate ? formatDate(tournament.startDate) : 'قريباً'}</td>
+            <td>
+                <span class="status-badge ${tournament.status}">
+                    ${getTournamentStatusText(tournament.status)}
+                </span>
+            </td>
+            <td>
+                <div class="table-actions">
+                    <button class="action-btn join" onclick="joinTournament('${tournament.id}')">
+                        <i class="fas fa-sign-in-alt"></i>
+                        ${tournament.status === 'active' ? 'انضم' : 'سجل'}
+                    </button>
+                    ${AppState.isAdmin ? `
+                        <button class="action-btn edit" onclick="editTournament('${tournament.id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    ` : ''}
+                </div>
+            </td>
+        </tr>
+    `).join('');
+    
+    // إضافة مستمعات الأحداث للأزرار
+    document.querySelectorAll('.join-tournament-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const tournamentId = this.dataset.id;
+            joinTournament(tournamentId);
+        });
+    });
+}
+
+// دالة تحميل صفحة التصنيف
+async function loadLeaderboardPage() {
+    const container = document.getElementById('leaderboard-page');
+    if (!container) return;
+    
+    try {
+        container.innerHTML = `
+            <div class="page-header">
+                <h1 class="page-title">
+                    <i class="fas fa-trophy"></i>
+                    التصنيف العالمي
+                </h1>
+                <div class="header-actions">
+                    <select class="form-control" id="leaderboard-filter">
+                        <option value="global">التصنيف العالمي</option>
+                        <option value="friends">الأصدقاء فقط</option>
+                        <option value="weekly">الأسبوعي</option>
+                        <option value="monthly">الشهري</option>
+                    </select>
+                    <button class="btn btn-refresh" id="refresh-leaderboard">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="leaderboard-container">
+                <div class="loading-section">
+                    <div class="loader-spinner"></div>
+                    <p>جاري تحميل بيانات التصنيف...</p>
+                </div>
+            </div>
+        `;
+        
+        // إضافة مستمعات الأحداث
+        document.getElementById('refresh-leaderboard')?.addEventListener('click', loadLeaderboardData);
+        document.getElementById('leaderboard-filter')?.addEventListener('change', filterLeaderboard);
+        
+        // تحميل بيانات التصنيف
+        await loadLeaderboardData();
+        
+    } catch (error) {
+        console.error('خطأ في تحميل صفحة التصنيف:', error);
+        container.innerHTML = `
+            <div class="page-header">
+                <h1 class="page-title">
+                    <i class="fas fa-trophy"></i>
+                    التصنيف العالمي
+                </h1>
+            </div>
+            <div class="error-section">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>حدث خطأ في تحميل التصنيف</p>
+                <button class="btn btn-primary" onclick="loadLeaderboardPage()">إعادة المحاولة</button>
+            </div>
+        `;
+    }
+}
+
+// دالة تحميل بيانات التصنيف
+async function loadLeaderboardData() {
+    try {
+        const snapshot = await db.collection('users')
+            .orderBy('points', 'desc')
+            .limit(100)
+            .get();
+        
+        AppState.leaderboard = snapshot.docs.map((doc, index) => ({
+            id: doc.id,
+            rank: index + 1,
+            ...doc.data()
+        }));
+        
+        renderLeaderboard();
+        
+    } catch (error) {
+        console.error('خطأ في تحميل التصنيف:', error);
+    }
+}
+
+// دالة عرض التصنيف
+function renderLeaderboard() {
+    const container = document.getElementById('leaderboard-page');
+    if (!container) return;
+    
+    // العثور على ترتيب المستخدم الحالي
+    const currentUserRank = AppState.leaderboard.findIndex(user => 
+        user.id === AppState.currentUser?.uid
+    );
+    const userRank = currentUserRank !== -1 ? currentUserRank + 1 : 0;
+    const userData = currentUserRank !== -1 ? AppState.leaderboard[currentUserRank] : null;
+    
+    container.innerHTML = `
+        <div class="page-header">
+            <h1 class="page-title">
+                <i class="fas fa-trophy"></i>
+                التصنيف العالمي
+            </h1>
+            <div class="header-actions">
+                <select class="form-control" id="leaderboard-filter">
+                    <option value="global">التصنيف العالمي</option>
+                    <option value="friends">الأصدقاء فقط</option>
+                    <option value="weekly">الأسبوعي</option>
+                    <option value="monthly">الشهري</option>
+                </select>
+                <button class="btn btn-refresh" id="refresh-leaderboard">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="leaderboard-container">
+            <!-- أفضل 3 لاعبين -->
+            ${AppState.leaderboard.length >= 3 ? `
+                <div class="leaderboard-top3">
+                    ${[1, 0, 2].map((index, podiumIndex) => {
+                        const player = AppState.leaderboard[index];
+                        if (!player) return '';
+                        const podiumClass = ['second', 'first', 'third'][podiumIndex];
+                        return `
+                            <div class="podium ${podiumClass}">
+                                <div class="podium-rank">${player.rank}</div>
+                                <div class="podium-avatar">
+                                    ${player.name?.charAt(0) || '?'}
+                                </div>
+                                <div class="podium-info">
+                                    <div class="podium-name">${player.name || 'لاعب'}</div>
+                                    <div class="podium-points">${player.points || 0} نقطة</div>
+                                </div>
+                                <div class="podium-badge">
+                                    <i class="fas fa-${player.rank === 1 ? 'crown' : 'medal'}"></i>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            ` : ''}
+            
+            <!-- جدول التصنيف -->
+            <div class="leaderboard-table-container">
+                <div class="leaderboard-filters">
+                    <div class="filter-group">
+                        <button class="filter-btn active" data-filter="all">الكل</button>
+                        <button class="filter-btn" data-filter="online">المتصلون الآن</button>
+                        <button class="filter-btn" data-filter="friends">الأصدقاء</button>
+                    </div>
+                </div>
+                
+                <div class="leaderboard-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>الترتيب</th>
+                                <th>المستخدم</th>
+                                <th>المستوى</th>
+                                <th>النقاط</th>
+                                <th>الفوز</th>
+                                <th>معدل الفوز</th>
+                                <th>الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-table-body">
+                            ${AppState.leaderboard.slice(0, 50).map(user => `
+                                <tr class="${user.id === AppState.currentUser?.uid ? 'current-user' : ''}">
+                                    <td class="rank">
+                                        <div class="rank-number">#${user.rank}</div>
+                                        ${user.rank <= 3 ? `<div class="rank-badge top-${user.rank}">${user.rank}</div>` : ''}
+                                    </td>
+                                    <td class="user">
+                                        <div class="user-info">
+                                            <div class="user-avatar">${user.name?.charAt(0) || '?'}</div>
+                                            <div class="user-details">
+                                                <div class="user-name">${user.name || 'لاعب'}</div>
+                                                <div class="user-username">@${user.username || 'مجهول'}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="level">
+                                        <div class="level-badge">${user.level || 1}</div>
+                                    </td>
+                                    <td class="points">${user.points || 0}</td>
+                                    <td class="wins">${user.wins || 0}</td>
+                                    <td class="win-rate">
+                                        ${user.matches && user.wins ? Math.round((user.wins / user.matches) * 100) : 0}%
+                                    </td>
+                                    <td class="status">
+                                        <span class="status-badge ${user.isOnline ? 'online' : 'offline'}">
+                                            ${user.isOnline ? 'متصل' : 'غير متصل'}
+                                        </span>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- موقع المستخدم الحالي -->
+                ${userData ? `
+                    <div class="your-position">
+                        <div class="position-rank">#${userRank}</div>
+                        <div class="position-user">
+                            <div class="user-avatar-small">${userData.name?.charAt(0) || 'أنت'}</div>
+                            <div class="user-info">
+                                <div class="user-name">${userData.name || 'أنت'}</div>
+                                <div class="user-details">
+                                    ${userData.points || 0} نقطة | المستوى ${userData.level || 1}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="position-change">
+                            <i class="fas fa-chart-line"></i>
+                            <span>مركزك في التصنيف</span>
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+            
+            <!-- إحصائيات التصنيف -->
+            <div class="leaderboard-stats">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-value">${AppState.leaderboard.length}</div>
+                        <div class="stat-label">لاعب في التصنيف</div>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-calculator"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-value">
+                            ${AppState.leaderboard.length > 0 ? 
+                                Math.round(AppState.leaderboard.reduce((sum, user) => sum + (user.points || 0), 0) / AppState.leaderboard.length) : 0
+                            }
+                        </div>
+                        <div class="stat-label">متوسط النقاط</div>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-value">
+                            ${AppState.leaderboard.length > 0 ? AppState.leaderboard[0].points || 0 : 0}
+                        </div>
+                        <div class="stat-label">أعلى نقاط</div>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-globe-asia"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-value">${calculateCountriesCount()}</div>
+                        <div class="stat-label">دولة مختلفة</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // إضافة مستمعات الأحداث
+    document.getElementById('refresh-leaderboard')?.addEventListener('click', loadLeaderboardData);
+    document.getElementById('leaderboard-filter')?.addEventListener('change', filterLeaderboard);
+    
+    // إضافة مستمعات الأزرار للمرشحات
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            filterLeaderboardByType(this.dataset.filter);
+        });
+    });
+}
+
+// دالة تحميل صفحة الأصدقاء
+async function loadFriendsPage() {
+    const container = document.getElementById('friends-page');
+    if (!container) return;
+    
+    try {
+        container.innerHTML = `
+            <div class="page-header">
+                <h1 class="page-title">
+                    <i class="fas fa-user-friends"></i>
+                    الأصدقاء
+                </h1>
+                <div class="header-actions">
+                    <button class="btn btn-outline" id="add-friend-btn">
+                        <i class="fas fa-user-plus"></i> إضافة صديق
+                    </button>
+                    <button class="btn btn-refresh" id="refresh-friends">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="friends-container">
+                <div class="friends-tabs">
+                    <div class="tabs-header">
+                        <button class="tab-btn active" data-tab="all-friends">جميع الأصدقاء</button>
+                        <button class="tab-btn" data-tab="online-friends">المتصلون الآن</button>
+                        <button class="tab-btn" data-tab="pending-requests">
+                            طلبات الصداقة
+                            <span class="badge" id="requests-badge" style="display: none;">0</span>
+                        </button>
+                    </div>
+                    
+                    <div class="tab-content active" id="all-friends-tab">
+                        <div class="loading-section">
+                            <div class="loader-spinner"></div>
+                            <p>جاري تحميل قائمة الأصدقاء...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- نموذج إضافة صديق -->
+            <div class="modal" id="add-friend-modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>إضافة صديق جديد</h3>
+                        <button class="close-modal" id="close-friend-modal">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="search-friend">
+                            <div class="search-box">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="friend-search" placeholder="ابحث باسم المستخدم أو البريد الإلكتروني...">
+                            </div>
+                            <div class="search-results" id="search-results">
+                                <!-- نتائج البحث تظهر هنا -->
+                            </div>
+                        </div>
+                        
+                        <div class="friend-suggestions">
+                            <h4>اقتراحات لك</h4>
+                            <div class="suggestions-list" id="suggestions-list">
+                                <!-- اقتراحات الأصدقاء تظهر هنا -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // إضافة مستمعات الأحداث
+        document.getElementById('add-friend-btn')?.addEventListener('click', showAddFriendModal);
+        document.getElementById('refresh-friends')?.addEventListener('click', loadFriendsData);
+        document.getElementById('close-friend-modal')?.addEventListener('click', hideAddFriendModal);
+        
+        // إضافة مستمعات للألسنة
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                this.classList.add('active');
+                const tabId = this.dataset.tab + '-tab';
+                document.getElementById(tabId)?.classList.add('active');
+                
+                switch(this.dataset.tab) {
+                    case 'all-friends':
+                        loadAllFriends();
+                        break;
+                    case 'online-friends':
+                        loadOnlineFriends();
+                        break;
+                    case 'pending-requests':
+                        loadFriendRequests();
+                        break;
+                }
+            });
+        });
+        
+        // تحميل بيانات الأصدقاء
+        await loadFriendsData();
+        
+    } catch (error) {
+        console.error('خطأ في تحميل صفحة الأصدقاء:', error);
+        container.innerHTML = `
+            <div class="page-header">
+                <h1 class="page-title">
+                    <i class="fas fa-user-friends"></i>
+                    الأصدقاء
+                </h1>
+            </div>
+            <div class="error-section">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>حدث خطأ في تحميل قائمة الأصدقاء</p>
+                <button class="btn btn-primary" onclick="loadFriendsPage()">إعادة المحاولة</button>
+            </div>
+        `;
+    }
+}
+
+// دالة تحميل بيانات الأصدقاء
+async function loadFriendsData() {
+    try {
+        if (!AppState.currentUser) return;
+        
+        // تحميل قائمة الأصدقاء
+        const userDoc = await db.collection('users').doc(AppState.currentUser.uid).get();
+        const userData = userDoc.data();
+        
+        if (userData.friends && userData.friends.length > 0) {
+            const friendsPromises = userData.friends.map(friendId => 
+                db.collection('users').doc(friendId).get()
+            );
+            
+            const friendsSnapshots = await Promise.all(friendsPromises);
+            AppState.friends = friendsSnapshots
+                .filter(snap => snap.exists)
+                .map(snap => ({
+                    id: snap.id,
+                    ...snap.data()
+                }));
+        } else {
+            AppState.friends = [];
+        }
+        
+        // تحميل طلبات الصداقة
+        await loadFriendRequests();
+        
+        // تحديث واجهة الأصدقاء
+        renderFriends();
+        
+    } catch (error) {
+        console.error('خطأ في تحميل بيانات الأصدقاء:', error);
+    }
+}
+
+// دالة عرض الأصدقاء
+function renderFriends() {
+    const allFriendsTab = document.getElementById('all-friends-tab');
+    if (!allFriendsTab) return;
+    
+    if (AppState.friends.length === 0) {
+        allFriendsTab.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-user-friends"></i>
+                <p>لا يوجد أصدقاء في قائمتك بعد</p>
+                <p>أضف أصدقاء لتتمكن من تحدييهم واللعب معهم</p>
+                <button class="btn btn-primary" id="find-friends-btn">ابحث عن أصدقاء</button>
+            </div>
+        `;
+        
+        document.getElementById('find-friends-btn')?.addEventListener('click', showAddFriendModal);
+        return;
+    }
+    
+    allFriendsTab.innerHTML = `
+        <div class="friends-list">
+            ${AppState.friends.map(friend => `
+                <div class="friend-item">
+                    <div class="friend-avatar ${friend.isOnline ? 'online' : 'offline'}">
+                        ${friend.name?.charAt(0) || '?'}
+                    </div>
+                    <div class="friend-info">
+                        <div class="friend-name">${friend.name || 'مستخدم'}</div>
+                        <div class="friend-details">
+                            <span class="friend-level">المستوى ${friend.level || 1}</span>
+                            <span class="friend-points">${friend.points || 0} نقطة</span>
+                        </div>
+                        <div class="friend-status">
+                            ${friend.isOnline ? `
+                                <span class="status online">
+                                    <i class="fas fa-circle"></i> متصل الآن
+                                </span>
+                            ` : `
+                                <span class="status offline">
+                                    <i class="fas fa-circle"></i> غير متصل
+                                </span>
+                            `}
+                        </div>
+                    </div>
+                    <div class="friend-actions">
+                        <button class="action-btn challenge" onclick="challengeFriend('${friend.id}')">
+                            <i class="fas fa-gamepad"></i> تحدى
+                        </button>
+                        <button class="action-btn message" onclick="messageFriend('${friend.id}')">
+                            <i class="fas fa-comment"></i> رسالة
+                        </button>
+                        <button class="action-btn remove" onclick="removeFriend('${friend.id}')">
+                            <i class="fas fa-user-minus"></i> إزالة
+                        </button>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+        
+        <div class="friends-stats">
+            <div class="stat">
+                <div class="stat-value">${AppState.friends.length}</div>
+                <div class="stat-label">إجمالي الأصدقاء</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">${AppState.friends.filter(f => f.isOnline).length}</div>
+                <div class="stat-label">متصلون الآن</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">
+                    ${AppState.friends.length > 0 ? 
+                        Math.round(AppState.friends.reduce((sum, f) => sum + (f.level || 1), 0) / AppState.friends.length) : 0
+                    }
+                </div>
+                <div class="stat-label">متوسط المستوى</div>
+            </div>
+        </div>
+    `;
+    
+    // تحديث شارة طلبات الصداقة
+    updateFriendRequestsBadge();
+}
+
+// دالة تحميل صفحة المتجر
+async function loadShopPage() {
+    const container = document.getElementById('shop-page');
+    if (!container) return;
+    
+    try {
+        container.innerHTML = `
+            <div class="page-header">
+                <h1 class="page-title">
+                    <i class="fas fa-shopping-cart"></i>
+                    متجر اللعبة
+                </h1>
+                <div class="header-actions">
+                    <div class="user-coins">
+                        <i class="fas fa-coins"></i>
+                        <span id="user-coins">${AppState.userData?.points || 0}</span>
+                        <span class="coins-label">نقطة</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="shop-container">
+                <div class="shop-categories">
+                    <button class="category-btn active" data-category="all">جميع المنتجات</button>
+                    <button class="category-btn" data-category="powerups">معززات اللعب</button>
+                    <button class="category-btn" data-category="appearance">المظهر</button>
+                    <button class="category-btn" data-category="boosters">معززات الخبرة</button>
+                    <button class="category-btn" data-category="special">مميزات خاصة</button>
+                </div>
+                
+                <div class="shop-items-grid" id="shop-items">
+                    <div class="loading-section">
+                        <div class="loader-spinner"></div>
+                        <p>جاري تحميل المنتجات...</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // إضافة مستمعات الأحداث
+        document.querySelectorAll('.category-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                filterShopItems(this.dataset.category);
+            });
+        });
+        
+        // تحميل منتجات المتجر
+        await loadShopItems();
+        
+    } catch (error) {
+        console.error('خطأ في تحميل صفحة المتجر:', error);
+        container.innerHTML = `
+            <div class="page-header">
+                <h1 class="page-title">
+                    <i class="fas fa-shopping-cart"></i>
+                    متجر اللعبة
+                </h1>
+            </div>
+            <div class="error-section">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>حدث خطأ في تحميل المتجر</p>
+                <button class="btn btn-primary" onclick="loadShopPage()">إعادة المحاولة</button>
+            </div>
+        `;
+    }
+}
+
+// دالة تحميل منتجات المتجر
+async function loadShopItems() {
+    try {
+        const snapshot = await db.collection('shop_items')
+            .orderBy('price')
+            .limit(50)
+            .get();
+        
+        AppState.shopItems = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+        
+        renderShopItems();
+        
+    } catch (error) {
+        console.error('خطأ في تحميل منتجات المتجر:', error);
+        // إذا لم تكن هناك منتجات، نستخدم المنتجات الافتراضية
+        AppState.shopItems = getDefaultShopItems();
+        renderShopItems();
+    }
+}
+
+// دالة عرض منتجات المتجر
+function renderShopItems(items = AppState.shopItems) {
+    const shopItemsGrid = document.getElementById('shop-items');
+    if (!shopItemsGrid) return;
+    
+    if (items.length === 0) {
+        shopItemsGrid.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-shopping-cart"></i>
+                <p>لا توجد منتجات في المتجر حالياً</p>
+                <p>سيتم إضافة منتجات جديدة قريباً</p>
+            </div>
+        `;
+        return;
+    }
+    
+    shopItemsGrid.innerHTML = items.map(item => `
+        <div class="shop-item" data-category="${item.category || 'all'}">
+            <div class="item-header ${item.rarity || 'common'}">
+                ${item.isNew ? '<span class="item-badge new">جديد</span>' : ''}
+                ${item.isPopular ? '<span class="item-badge popular">الأكثر مبيعاً</span>' : ''}
+            </div>
+            <div class="item-body">
+                <div class="item-icon">
+                    <i class="${item.icon || 'fas fa-gift'}"></i>
+                </div>
+                <div class="item-info">
+                    <h3 class="item-name">${item.name}</h3>
+                    <p class="item-description">${item.description}</p>
+                    <div class="item-stats">
+                        ${item.duration ? `
+                            <div class="item-stat">
+                                <i class="fas fa-clock"></i>
+                                <span>${item.duration} يوم</span>
+                            </div>
+                        ` : ''}
+                        ${item.effect ? `
+                            <div class="item-stat">
+                                <i class="fas fa-bolt"></i>
+                                <span>${item.effect}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+            <div class="item-footer">
+                <div class="item-price">
+                    <i class="fas fa-coins"></i>
+                    <span>${item.price} نقطة</span>
+                </div>
+                <button class="btn btn-primary buy-btn" 
+                        data-id="${item.id}"
+                        data-price="${item.price}"
+                        ${(AppState.userData?.points || 0) < item.price ? 'disabled' : ''}>
+                    <i class="fas fa-shopping-cart"></i> شراء
+                </button>
+            </div>
+        </div>
+    `).join('');
+    
+    // إضافة مستمعات الأحداث لأزرار الشراء
+    document.querySelectorAll('.buy-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const itemId = this.dataset.id;
+            const itemPrice = parseInt(this.dataset.price);
+            purchaseItem(itemId, itemPrice);
+        });
+    });
+}
+
+// دالة تحميل صفحة الإعدادات
+async function loadSettingsPage() {
+    const container = document.getElementById('settings-page');
+    if (!container) return;
+    
+    const settings = AppState.userData?.settings || {};
+    
+    try {
+        container.innerHTML = `
+            <div class="page-header">
+                <h1 class="page-title">
+                    <i class="fas fa-cog"></i>
+                    الإعدادات
+                </h1>
+                <div class="header-actions">
+                    <button class="btn btn-primary" id="save-settings">
+                        <i class="fas fa-save"></i> حفظ التغييرات
+                    </button>
+                </div>
+            </div>
+            
+            <div class="settings-container">
+                <div class="settings-tabs">
+                    <div class="tabs-header">
+                        <button class="tab-btn active" data-tab="general">عام</button>
+                        <button class="tab-btn" data-tab="gameplay">إعدادات اللعب</button>
+                        <button class="tab-btn" data-tab="notifications">الإشعارات</button>
+                        <button class="tab-btn" data-tab="privacy">الخصوصية</button>
+                        <button class="tab-btn" data-tab="account">الحساب</button>
+                    </div>
+                    
+                    <div class="tab-content active" id="general-tab">
+                        <div class="settings-section">
+                            <h3><i class="fas fa-palette"></i> المظهر</h3>
+                            <div class="settings-group">
+                                <div class="setting-item">
+                                    <label class="setting-label">السمة</label>
+                                    <div class="theme-selector">
+                                        <button class="theme-option ${settings.theme === 'light' ? 'active' : ''}" data-theme="light">
+                                            <i class="fas fa-sun"></i>
+                                            <span>فاتح</span>
+                                        </button>
+                                        <button class="theme-option ${settings.theme === 'dark' ? 'active' : ''}" data-theme="dark">
+                                            <i class="fas fa-moon"></i>
+                                            <span>داكن</span>
+                                        </button>
+                                        <button class="theme-option ${settings.theme === 'auto' ? 'active' : ''}" data-theme="auto">
+                                            <i class="fas fa-adjust"></i>
+                                            <span>تلقائي</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="setting-item">
+                                    <label class="setting-label">لغة الواجهة</label>
+                                    <select class="form-control" id="language-select">
+                                        <option value="ar" ${settings.language === 'ar' ? 'selected' : ''}>العربية</option>
+                                        <option value="en" ${settings.language === 'en' ? 'selected' : ''}>English</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="settings-section">
+                            <h3><i class="fas fa-volume-up"></i> الصوت</h3>
+                            <div class="settings-group">
+                                <div class="setting-item">
+                                    <label class="setting-label">
+                                        <span>الموسيقى الخلفية</span>
+                                        <label class="switch">
+                                            <input type="checkbox" id="music-toggle" ${settings.music !== false ? 'checked' : ''}>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </label>
+                                    <div class="setting-description">تشغيل الموسيقى أثناء اللعب</div>
+                                </div>
+                                
+                                <div class="setting-item">
+                                    <label class="setting-label">
+                                        <span>المؤثرات الصوتية</span>
+                                        <label class="switch">
+                                            <input type="checkbox" id="sound-effects-toggle" ${settings.soundEffects !== false ? 'checked' : ''}>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </label>
+                                    <div class="setting-description">أصوات الأزرار والتحديات</div>
+                                </div>
+                                
+                                <div class="setting-item">
+                                    <label class="setting-label">مستوى الصوت</label>
+                                    <input type="range" id="volume-slider" min="0" max="100" value="${settings.volume || 50}">
+                                    <div class="volume-value" id="volume-value">${settings.volume || 50}%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-content" id="gameplay-tab">
+                        <div class="settings-section">
+                            <h3><i class="fas fa-gamepad"></i> إعدادات اللعب</h3>
+                            <div class="settings-group">
+                                <div class="setting-item">
+                                    <label class="setting-label">
+                                        <span>الاهتزاز</span>
+                                        <label class="switch">
+                                            <input type="checkbox" id="vibration-toggle" ${settings.vibration !== false ? 'checked' : ''}>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </label>
+                                    <div class="setting-description">اهتزاز الجهاز عند الفوز أو الخسارة</div>
+                                </div>
+                                
+                                <div class="setting-item">
+                                    <label class="setting-label">
+                                        <span>التنبيهات داخل اللعبة</span>
+                                        <label class="switch">
+                                            <input type="checkbox" id="game-alerts-toggle" ${settings.gameAlerts !== false ? 'checked' : ''}>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </label>
+                                    <div class="setting-description">عرض تلميحات ونصائح أثناء اللعب</div>
+                                </div>
+                                
+                                <div class="setting-item">
+                                    <label class="setting-label">مستوى الصعوبة الافتراضي</label>
+                                    <select class="form-control" id="default-difficulty">
+                                        <option value="easy" ${settings.defaultDifficulty === 'easy' ? 'selected' : ''}>سهل</option>
+                                        <option value="medium" ${settings.defaultDifficulty === 'medium' || !settings.defaultDifficulty ? 'selected' : ''}>متوسط</option>
+                                        <option value="hard" ${settings.defaultDifficulty === 'hard' ? 'selected' : ''}>صعب</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-content" id="notifications-tab">
+                        <div class="settings-section">
+                            <h3><i class="fas fa-bell"></i> إعدادات الإشعارات</h3>
+                            <div class="settings-group">
+                                <div class="setting-item">
+                                    <label class="setting-label">
+                                        <span>إشعارات التحديات</span>
+                                        <label class="switch">
+                                            <input type="checkbox" id="challenge-notifications" ${settings.notifications?.challenges !== false ? 'checked' : ''}>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </label>
+                                    <div class="setting-description">إشعارات عند بدء التحديات الجديدة</div>
+                                </div>
+                                
+                                <div class="setting-item">
+                                    <label class="setting-label">
+                                        <span>إشعارات الأصدقاء</span>
+                                        <label class="switch">
+                                            <input type="checkbox" id="friend-notifications" ${settings.notifications?.friends !== false ? 'checked' : ''}>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </label>
+                                    <div class="setting-description">إشعارات طلبات الصداقة وتحديات الأصدقاء</div>
+                                </div>
+                                
+                                <div class="setting-item">
+                                    <label class="setting-label">
+                                        <span>إشعارات البطولات</span>
+                                        <label class="switch">
+                                            <input type="checkbox" id="tournament-notifications" ${settings.notifications?.tournaments !== false ? 'checked' : ''}>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </label>
+                                    <div class="setting-description">إشعارات البطولات القادمة والنتائج</div>
+                                </div>
+                                
+                                <div class="setting-item">
+                                    <label class="setting-label">
+                                        <span>إشعارات الإنجازات</span>
+                                        <label class="switch">
+                                            <input type="checkbox" id="achievement-notifications" ${settings.notifications?.achievements !== false ? 'checked' : ''}>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </label>
+                                    <div class="setting-description">إشعارات عند تحقيق إنجازات جديدة</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-content" id="privacy-tab">
+                        <div class="settings-section">
+                            <h3><i class="fas fa-shield-alt"></i> إعدادات الخصوصية</h3>
+                            <div class="settings-group">
+                                <div class="setting-item">
+                                    <label class="setting-label">
+                                        <span>إظهار حالة الاتصال</span>
+                                        <label class="switch">
+                                            <input type="checkbox" id="show-status" ${settings.privacy?.showStatus !== false ? 'checked' : ''}>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </label>
+                                    <div class="setting-description">إظهار حالتك (متصل/غير متصل) للأصدقاء</div>
+                                </div>
+                                
+                                <div class="setting-item">
+                                    <label class="setting-label">
+                                        <span>الملف الشخصي العام</span>
+                                        <label class="switch">
+                                            <input type="checkbox" id="public-profile" ${settings.privacy?.publicProfile !== false ? 'checked' : ''}>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </label>
+                                    <div class="setting-description">إظهار ملفك الشخصي لجميع اللاعبين</div>
+                                </div>
+                                
+                                <div class="setting-item">
+                                    <label class="setting-label">
+                                        <span>قبول طلبات الصداقة تلقائياً</span>
+                                        <label class="switch">
+                                            <input type="checkbox" id="auto-accept-friends" ${settings.privacy?.autoAcceptFriends === true ? 'checked' : ''}>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </label>
+                                    <div class="setting-description">قبول جميع طلبات الصداقة تلقائياً</div>
+                                </div>
+                                
+                                <div class="setting-item">
+                                    <label class="setting-label">من يمكنه مراسلتك</label>
+                                    <select class="form-control" id="message-privacy">
+                                        <option value="all" ${settings.privacy?.messagePrivacy === 'all' ? 'selected' : ''}>الجميع</option>
+                                        <option value="friends" ${settings.privacy?.messagePrivacy === 'friends' || !settings.privacy?.messagePrivacy ? 'selected' : ''}>الأصدقاء فقط</option>
+                                        <option value="none" ${settings.privacy?.messagePrivacy === 'none' ? 'selected' : ''}>لا أحد</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-content" id="account-tab">
+                        <div class="settings-section">
+                            <h3><i class="fas fa-user-cog"></i> إعدادات الحساب</h3>
+                            <div class="settings-group">
+                                <div class="setting-item">
+                                    <label class="setting-label">تغيير الاسم</label>
+                                    <div class="input-with-button">
+                                        <input type="text" class="form-control" id="change-name" value="${AppState.userData?.name || ''}">
+                                        <button class="btn btn-outline" id="save-name">حفظ</button>
+                                    </div>
+                                </div>
+                                
+                                <div class="setting-item">
+                                    <label class="setting-label">تغيير اسم المستخدم</label>
+                                    <div class="input-with-button">
+                                        <input type="text" class="form-control" id="change-username" value="${AppState.userData?.username || ''}">
+                                        <button class="btn btn-outline" id="save-username">حفظ</button>
+                                    </div>
+                                    <div class="setting-description">يظهر للأصدقاء واللاعبين الآخرين</div>
+                                </div>
+                                
+                                <div class="setting-item">
+                                    <button class="btn btn-outline" id="change-password">
+                                        <i class="fas fa-key"></i> تغيير كلمة المرور
+                                    </button>
+                                </div>
+                                
+                                <div class="setting-item danger">
+                                    <h4>خيارات متقدمة</h4>
+                                    <button class="btn btn-danger" id="delete-account">
+                                        <i class="fas fa-trash"></i> حذف الحساب
+                                    </button>
+                                    <div class="setting-description">تحذير: لا يمكن التراجع عن هذه الخطوة</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // إضافة مستمعات الأحداث
+        setupSettingsEventListeners();
+        
+    } catch (error) {
+        console.error('خطأ في تحميل صفحة الإعدادات:', error);
+        container.innerHTML = `
+            <div class="page-header">
+                <h1 class="page-title">
+                    <i class="fas fa-cog"></i>
+                    الإعدادات
+                </h1>
+            </div>
+            <div class="error-section">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>حدث خطأ في تحميل الإعدادات</p>
+                <button class="btn btn-primary" onclick="loadSettingsPage()">إعادة المحاولة</button>
+            </div>
+        `;
+    }
+}
+
+// ===============================
+// وظائف مساعدة جديدة
+// ===============================
+
+function getTournamentStatusIcon(status) {
+    const icons = {
+        upcoming: 'calendar-plus',
+        active: 'play-circle',
+        finished: 'flag-checkered',
+        cancelled: 'times-circle'
+    };
+    return icons[status] || 'question-circle';
+}
+
+function getTournamentStatusText(status) {
+    const texts = {
+        upcoming: 'قادمة',
+        active: 'جارية الآن',
+        finished: 'منتهية',
+        cancelled: 'ملغاة'
+    };
+    return texts[status] || status;
+}
+
+function getTournamentTypeIcon(type) {
+    const icons = {
+        speed: 'bolt',
+        survival: 'heartbeat',
+        marathon: 'running',
+        expert: 'crown',
+        team: 'users'
+    };
+    return icons[type] || 'chess-king';
+}
+
+function getTournamentTypeText(type) {
+    const texts = {
+        speed: 'تحدي السرعة',
+        survival: 'تحدي البقاء',
+        marathon: 'ماراثون الأسئلة',
+        expert: 'تحدي الخبراء',
+        team: 'تحدي الفرق'
+    };
+    return texts[type] || type;
+}
+
+function calculateCountriesCount() {
+    // هذه دالة افتراضية، في التطبيق الحقيقي ستجلب البيانات من قاعدة البيانات
+    return 42;
+}
+
+function getDefaultShopItems() {
+    return [
+        {
+            id: 'xp-booster-1',
+            name: 'معزز الخبرة (1 يوم)',
+            description: 'احصل على ضعف الخبرة لمدة 24 ساعة',
+            price: 500,
+            category: 'boosters',
+            icon: 'fas fa-chart-line',
+            rarity: 'rare',
+            duration: 1,
+            effect: '+100% خبرة'
+        },
+        {
+            id: 'points-booster',
+            name: 'معزز النقاط',
+            description: 'احصل على نقاط إضافية في كل فوز',
+            price: 750,
+            category: 'boosters',
+            icon: 'fas fa-coins',
+            rarity: 'epic',
+            duration: 3,
+            effect: '+50% نقاط'
+        },
+        {
+            id: 'time-extension',
+            name: 'تمديد الوقت',
+            description: 'احصل على 5 ثواني إضافية لكل سؤال',
+            price: 300,
+            category: 'powerups',
+            icon: 'fas fa-clock',
+            rarity: 'common',
+            effect: '+5 ثواني'
+        },
+        {
+            id: 'premium-theme',
+            name: 'سمة مميزة',
+            description: 'سمة داكنة مع ألوان متوهجة',
+            price: 1000,
+            category: 'appearance',
+            icon: 'fas fa-palette',
+            rarity: 'legendary',
+            isNew: true
+        },
+        {
+            id: 'double-chance',
+            name: 'فرصة مزدوجة',
+            description: 'احصل على فرصة ثانية للإجابة الصحيحة',
+            price: 600,
+            category: 'powerups',
+            icon: 'fas fa-redo',
+            rarity: 'rare',
+            effect: 'فرصة ثانية'
+        },
+        {
+            id: 'skip-question',
+            name: 'تخطي السؤال',
+            description: 'تخطي سؤال صعب واستبداله بآخر',
+            price: 400,
+            category: 'powerups',
+            icon: 'fas fa-forward',
+            rarity: 'common',
+            isPopular: true
+        },
+        {
+            id: 'profile-badge',
+            name: 'شارة الملف الشخصي',
+            description: 'شارة مميزة تظهر بجانب اسمك',
+            price: 1500,
+            category: 'special',
+            icon: 'fas fa-award',
+            rarity: 'legendary'
+        },
+        {
+            id: 'animated-avatar',
+            name: 'صورة رمزية متحركة',
+            description: 'صورة رمزية متحركة خاصة بك',
+            price: 2000,
+            category: 'appearance',
+            icon: 'fas fa-user-circle',
+            rarity: 'epic'
+        }
+    ];
+}
+
+// ===============================
+// إعداد مستمعات الأحداث للإعدادات
+// ===============================
+
+function setupSettingsEventListeners() {
+    // ألسنة الإعدادات
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            this.classList.add('active');
+            const tabId = this.dataset.tab + '-tab';
+            document.getElementById(tabId)?.classList.add('active');
+        });
+    });
+    
+    // محددات السمة
+    document.querySelectorAll('.theme-option').forEach(option => {
+        option.addEventListener('click', function() {
+            document.querySelectorAll('.theme-option').forEach(opt => opt.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+    
+    // شريط مستوى الصوت
+    const volumeSlider = document.getElementById('volume-slider');
+    const volumeValue = document.getElementById('volume-value');
+    if (volumeSlider && volumeValue) {
+        volumeSlider.addEventListener('input', function() {
+            volumeValue.textContent = this.value + '%';
+        });
+    }
+    
+    // حفظ الإعدادات
+    document.getElementById('save-settings')?.addEventListener('click', saveSettings);
+    
+    // تغيير الاسم
+    document.getElementById('save-name')?.addEventListener('click', async function() {
+        const newName = document.getElementById('change-name').value.trim();
+        if (newName && AppState.currentUser) {
+            try {
+                await db.collection('users').doc(AppState.currentUser.uid).update({
+                    name: newName,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                AppState.userData.name = newName;
+                updateUIWithUserData();
+                showToast('تم', 'تم تغيير الاسم بنجاح', 'success');
+            } catch (error) {
+                console.error('خطأ في تغيير الاسم:', error);
+                showToast('خطأ', 'فشل في تغيير الاسم', 'error');
+            }
+        }
+    });
+    
+    // تغيير اسم المستخدم
+    document.getElementById('save-username')?.addEventListener('click', async function() {
+        const newUsername = document.getElementById('change-username').value.trim();
+        if (newUsername && AppState.currentUser) {
+            try {
+                // التحقق من توفر اسم المستخدم
+                const usernameExists = await checkUsernameExists(newUsername);
+                if (usernameExists && newUsername !== AppState.userData?.username) {
+                    showToast('خطأ', 'اسم المستخدم مستخدم مسبقاً', 'error');
+                    return;
+                }
+                
+                await db.collection('users').doc(AppState.currentUser.uid).update({
+                    username: newUsername,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                AppState.userData.username = newUsername;
+                showToast('تم', 'تم تغيير اسم المستخدم بنجاح', 'success');
+            } catch (error) {
+                console.error('خطأ في تغيير اسم المستخدم:', error);
+                showToast('خطأ', 'فشل في تغيير اسم المستخدم', 'error');
+            }
+        }
+    });
+    
+    // تغيير كلمة المرور
+    document.getElementById('change-password')?.addEventListener('click', function() {
+        showChangePasswordModal();
+    });
+    
+    // حذف الحساب
+    document.getElementById('delete-account')?.addEventListener('click', function() {
+        if (confirm('هل أنت متأكد من حذف حسابك؟ هذه العملية لا يمكن التراجع عنها.')) {
+            deleteUserAccount();
+        }
+    });
+}
+
+// ===============================
+// الدوال الرئيسية الجديدة
+// ===============================
+
+async function showCreateTournamentModal() {
+    const modal = document.getElementById('tournament-modal');
+    if (modal) {
+        modal.classList.add('show');
+    }
+}
+
+function hideCreateTournamentModal() {
+    const modal = document.getElementById('tournament-modal');
+    if (modal) {
+        modal.classList.remove('show');
+        document.getElementById('tournament-form')?.reset();
+    }
+}
+
+async function createTournament() {
+    if (!AppState.currentUser) {
+        showToast('خطأ', 'يجب تسجيل الدخول أولاً', 'error');
+        return;
+    }
+    
+    try {
+        const tournamentData = {
+            title: document.getElementById('tournament-name').value,
+            type: document.getElementById('tournament-type').value,
+            maxParticipants: parseInt(document.getElementById('tournament-max-players').value),
+            questionCount: parseInt(document.getElementById('tournament-questions').value),
+            questionTime: parseInt(document.getElementById('question-time').value),
+            difficulty: document.getElementById('tournament-difficulty').value,
+            prize: parseInt(document.getElementById('tournament-prize').value),
+            description: document.getElementById('tournament-description').value,
+            isPrivate: document.getElementById('tournament-private').checked,
+            creatorId: AppState.currentUser.uid,
+            creatorName: AppState.userData.name,
+            status: 'upcoming',
+            participants: 1,
+            participantsList: [AppState.currentUser.uid],
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            startDate: new Date(Date.now() + 24 * 60 * 60 * 1000) // بعد 24 ساعة
+        };
+        
+        const docRef = await db.collection('tournaments').add(tournamentData);
+        
+        // إضافة المنشئ كأول مشارك
+        await db.collection('tournament_participants').add({
+            tournamentId: docRef.id,
+            userId: AppState.currentUser.uid,
+            joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        hideCreateTournamentModal();
+        showToast('تم', 'تم إنشاء البطولة بنجاح', 'success');
+        await loadTournamentsData();
+        
+    } catch (error) {
+        console.error('خطأ في إنشاء البطولة:', error);
+        showToast('خطأ', 'فشل في إنشاء البطولة', 'error');
+    }
+}
+
+async function joinTournament(tournamentId) {
+    if (!AppState.currentUser) {
+        showToast('خطأ', 'يجب تسجيل الدخول أولاً', 'error');
+        return;
+    }
+    
+    try {
+        const tournamentRef = db.collection('tournaments').doc(tournamentId);
+        const tournamentDoc = await tournamentRef.get();
+        
+        if (!tournamentDoc.exists) {
+            showToast('خطأ', 'البطولة غير موجودة', 'error');
+            return;
+        }
+        
+        const tournament = tournamentDoc.data();
+        
+        // التحقق إذا كان المستخدم منضم بالفعل
+        if (tournament.participantsList?.includes(AppState.currentUser.uid)) {
+            showToast('معلومات', 'أنت منضم بالفعل للبطولة', 'info');
+            return;
+        }
+        
+        // التحقق من السعة
+        if (tournament.participants >= tournament.maxParticipants) {
+            showToast('خطأ', 'البطولة ممتلئة', 'error');
+            return;
+        }
+        
+        // التحقق إذا كانت البطولة خاصة
+        if (tournament.isPrivate) {
+            showToast('خطأ', 'البطولة خاصة، تحتاج لدعوة للانضمام', 'error');
+            return;
+        }
+        
+        // الانضمام للبطولة
+        await tournamentRef.update({
+            participants: firebase.firestore.FieldValue.increment(1),
+            participantsList: firebase.firestore.FieldValue.arrayUnion(AppState.currentUser.uid)
+        });
+        
+        // تسجيل المشاركة
+        await db.collection('tournament_participants').add({
+            tournamentId: tournamentId,
+            userId: AppState.currentUser.uid,
+            joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            status: 'registered'
+        });
+        
+        // إضافة إشعار للمستخدم
+        await addNotification(AppState.currentUser.uid, {
+            type: 'tournament',
+            title: 'انضمام للبطولة',
+            message: `لقد انضممت لبطولة ${tournament.title}`,
+            data: { tournamentId: tournamentId }
+        });
+        
+        showToast('تم', 'تم الانضمام للبطولة بنجاح', 'success');
+        await loadTournamentsData();
+        
+    } catch (error) {
+        console.error('خطأ في الانضمام للبطولة:', error);
+        showToast('خطأ', 'فشل في الانضمام للبطولة', 'error');
+    }
+}
+
+function filterLeaderboard() {
+    const filterValue = document.getElementById('leaderboard-filter').value;
+    // هنا يمكن إضافة منطق التصفية حسب النوع المحدد
+    loadLeaderboardData();
+}
+
+function filterLeaderboardByType(type) {
+    // تصفية القائمة حسب النوع (جميع، متصلون، أصدقاء)
+    // هذه وظيفة افتراضية، يمكن توسيعها حسب الحاجة
+    renderLeaderboard(); // إعادة العرض حالياً
+}
+
+function showAddFriendModal() {
+    const modal = document.getElementById('add-friend-modal');
+    if (modal) {
+        modal.classList.add('show');
+        loadFriendSuggestions();
+    }
+}
+
+function hideAddFriendModal() {
+    const modal = document.getElementById('add-friend-modal');
+    if (modal) {
+        modal.classList.remove('show');
+        document.getElementById('friend-search').value = '';
+        document.getElementById('search-results').innerHTML = '';
+    }
+}
+
+async function loadFriendSuggestions() {
+    try {
+        if (!AppState.currentUser) return;
+        
+        // جلب اقتراحات الأصدقاء (لاعبين غير أصدقاء ومن نفس المستوى تقريباً)
+        const suggestionsList = document.getElementById('suggestions-list');
+        if (!suggestionsList) return;
+        
+        // في التطبيق الحقيقي، هنا سيتم جلب الاقتراحات من قاعدة البيانات
+        // حالياً نعرض رسالة افتراضية
+        suggestionsList.innerHTML = `
+            <div class="empty-suggestions">
+                <i class="fas fa-user-friends"></i>
+                <p>استخدم مربع البحث للعثور على أصدقاء</p>
+            </div>
+        `;
+        
+    } catch (error) {
+        console.error('خطأ في تحميل اقتراحات الأصدقاء:', error);
+    }
+}
+
+async function searchFriends() {
+    const searchTerm = document.getElementById('friend-search').value.trim();
+    const searchResults = document.getElementById('search-results');
+    
+    if (!searchTerm) {
+        searchResults.innerHTML = '';
+        return;
+    }
+    
+    try {
+        // البحث عن المستخدمين
+        const usersSnapshot = await db.collection('users')
+            .where('username', '>=', searchTerm)
+            .where('username', '<=', searchTerm + '\uf8ff')
+            .limit(10)
+            .get();
+        
+        const nameSnapshot = await db.collection('users')
+            .where('name', '>=', searchTerm)
+            .where('name', '<=', searchTerm + '\uf8ff')
+            .limit(10)
+            .get();
+        
+        const allUsers = new Map();
+        
+        // جمع النتائج بدون تكرار
+        [...usersSnapshot.docs, ...nameSnapshot.docs].forEach(doc => {
+            if (!allUsers.has(doc.id) && doc.id !== AppState.currentUser?.uid) {
+                allUsers.set(doc.id, { id: doc.id, ...doc.data() });
+            }
+        });
+        
+        const results = Array.from(allUsers.values());
+        
+        if (results.length === 0) {
+            searchResults.innerHTML = `
+                <div class="no-results">
+                    <i class="fas fa-search"></i>
+                    <p>لا توجد نتائج لـ "${searchTerm}"</p>
+                </div>
+            `;
+            return;
+        }
+        
+        searchResults.innerHTML = results.map(user => `
+            <div class="search-result-item">
+                <div class="result-avatar">
+                    ${user.name?.charAt(0) || '?'}
+                </div>
+                <div class="result-info">
+                    <div class="result-name">${user.name || 'مستخدم'}</div>
+                    <div class="result-username">@${user.username || 'بدون'}</div>
+                    <div class="result-level">المستوى ${user.level || 1}</div>
+                </div>
+                <div class="result-actions">
+                    ${AppState.friends.some(f => f.id === user.id) ? `
+                        <button class="btn btn-outline btn-sm" disabled>
+                            <i class="fas fa-check"></i> صديق
+                        </button>
+                    ` : `
+                        <button class="btn btn-primary btn-sm" onclick="sendFriendRequest('${user.id}')">
+                            <i class="fas fa-user-plus"></i> أضف صديقاً
+                        </button>
+                    `}
+                </div>
+            </div>
+        `).join('');
+        
+    } catch (error) {
+        console.error('خطأ في البحث عن أصدقاء:', error);
+        searchResults.innerHTML = `
+            <div class="error-results">
+                <i class="fas fa-exclamation-circle"></i>
+                <p>حدث خطأ أثناء البحث</p>
+            </div>
+        `;
+    }
+}
+
+async function sendFriendRequest(friendId) {
+    if (!AppState.currentUser) return;
+    
+    try {
+        // التحقق إذا كان هناك طلب صداقة مسبق
+        const existingRequest = await db.collection('friend_requests')
+            .where('from', '==', AppState.currentUser.uid)
+            .where('to', '==', friendId)
+            .where('status', '==', 'pending')
+            .get();
+        
+        if (!existingRequest.empty) {
+            showToast('معلومات', 'تم إرسال طلب الصداقة مسبقاً', 'info');
+            return;
+        }
+        
+        // إرسال طلب الصداقة
+        await db.collection('friend_requests').add({
+            from: AppState.currentUser.uid,
+            fromName: AppState.userData.name,
+            to: friendId,
+            status: 'pending',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // إرسال إشعار للمستخدم
+        await addNotification(friendId, {
+            type: 'friend_request',
+            title: 'طلب صداقة جديد',
+            message: `${AppState.userData.name} يريد إضافتك كصديق`,
+            data: { from: AppState.currentUser.uid }
+        });
+        
+        hideAddFriendModal();
+        showToast('تم', 'تم إرسال طلب الصداقة', 'success');
+        
+    } catch (error) {
+        console.error('خطأ في إرسال طلب الصداقة:', error);
+        showToast('خطأ', 'فشل في إرسال طلب الصداقة', 'error');
+    }
+}
+
+async function loadFriendRequests() {
+    try {
+        if (!AppState.currentUser) return;
+        
+        // تحميل طلبات الصداقة الواردة
+        const incomingRequests = await db.collection('friend_requests')
+            .where('to', '==', AppState.currentUser.uid)
+            .where('status', '==', 'pending')
+            .orderBy('createdAt', 'desc')
+            .get();
+        
+        // تحميل معلومات المرسلين
+        const requestsWithData = await Promise.all(
+            incomingRequests.docs.map(async doc => {
+                const request = { id: doc.id, ...doc.data() };
+                const userDoc = await db.collection('users').doc(request.from).get();
+                return {
+                    ...request,
+                    senderData: userDoc.exists ? userDoc.data() : null
+                };
+            })
+        );
+        
+        AppState.friendRequests = requestsWithData;
+        updateFriendRequestsBadge();
+        renderFriendRequests();
+        
+    } catch (error) {
+        console.error('خطأ في تحميل طلبات الصداقة:', error);
+    }
+}
+
+function updateFriendRequestsBadge() {
+    const badge = document.getElementById('requests-badge');
+    const friendRequestsBadge = document.getElementById('friend-requests-badge');
+    
+    if (badge) {
+        const count = AppState.friendRequests?.length || 0;
+        badge.textContent = count;
+        badge.style.display = count > 0 ? 'inline-flex' : 'none';
+    }
+    
+    if (friendRequestsBadge) {
+        const count = AppState.friendRequests?.length || 0;
+        friendRequestsBadge.textContent = count;
+        friendRequestsBadge.style.display = count > 0 ? 'inline-flex' : 'none';
+    }
+}
+
+function renderFriendRequests() {
+    const pendingTab = document.getElementById('pending-requests-tab');
+    if (!pendingTab) return;
+    
+    if (AppState.friendRequests.length === 0) {
+        pendingTab.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-user-clock"></i>
+                <p>لا توجد طلبات صداقة معلقة</p>
+            </div>
+        `;
+        return;
+    }
+    
+    pendingTab.innerHTML = `
+        <div class="requests-list">
+            ${AppState.friendRequests.map(request => `
+                <div class="request-item">
+                    <div class="request-avatar">
+                        ${request.senderData?.name?.charAt(0) || '?'}
+                    </div>
+                    <div class="request-info">
+                        <div class="request-name">${request.senderData?.name || 'مستخدم'}</div>
+                        <div class="request-details">
+                            <span class="request-level">المستوى ${request.senderData?.level || 1}</span>
+                            <span class="request-time">${formatDate(request.createdAt?.toDate())}</span>
+                        </div>
+                        <div class="request-message">يريد إضافتك كصديق</div>
+                    </div>
+                    <div class="request-actions">
+                        <button class="btn btn-success btn-sm" onclick="acceptFriendRequest('${request.id}', '${request.from}')">
+                            <i class="fas fa-check"></i> قبول
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="rejectFriendRequest('${request.id}')">
+                            <i class="fas fa-times"></i> رفض
+                        </button>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+async function acceptFriendRequest(requestId, friendId) {
+    try {
+        if (!AppState.currentUser) return;
+        
+        // تحديث حالة طلب الصداقة
+        await db.collection('friend_requests').doc(requestId).update({
+            status: 'accepted',
+            respondedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // إضافة الصديق لكلا الطرفين
+        const batch = db.batch();
+        
+        // إضافة للمستخدم الحالي
+        const currentUserRef = db.collection('users').doc(AppState.currentUser.uid);
+        batch.update(currentUserRef, {
+            friends: firebase.firestore.FieldValue.arrayUnion(friendId),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // إضافة للصديق
+        const friendRef = db.collection('users').doc(friendId);
+        batch.update(friendRef, {
+            friends: firebase.firestore.FieldValue.arrayUnion(AppState.currentUser.uid),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        await batch.commit();
+        
+        // إرسال إشعار للصديق
+        await addNotification(friendId, {
+            type: 'friend_request_accepted',
+            title: 'تم قبول طلب الصداقة',
+            message: `${AppState.userData.name} قبل طلب صداقتك`,
+            data: { friendId: AppState.currentUser.uid }
+        });
+        
+        showToast('تم', 'تم قبول طلب الصداقة', 'success');
+        
+        // تحديث البيانات
+        await loadFriendsData();
+        await loadFriendRequests();
+        
+    } catch (error) {
+        console.error('خطأ في قبول طلب الصداقة:', error);
+        showToast('خطأ', 'فشل في قبول طلب الصداقة', 'error');
+    }
+}
+
+async function rejectFriendRequest(requestId) {
+    try {
+        await db.collection('friend_requests').doc(requestId).update({
+            status: 'rejected',
+            respondedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        showToast('تم', 'تم رفض طلب الصداقة', 'info');
+        await loadFriendRequests();
+        
+    } catch (error) {
+        console.error('خطأ في رفض طلب الصداقة:', error);
+        showToast('خطأ', 'فشل في رفض طلب الصداقة', 'error');
+    }
+}
+
+async function removeFriend(friendId) {
+    if (!confirm('هل أنت متأكد من إزالة هذا الصديق؟')) {
+        return;
+    }
+    
+    try {
+        if (!AppState.currentUser) return;
+        
+        const batch = db.batch();
+        
+        // إزالة من قائمة أصدقاء المستخدم الحالي
+        const currentUserRef = db.collection('users').doc(AppState.currentUser.uid);
+        batch.update(currentUserRef, {
+            friends: firebase.firestore.FieldValue.arrayRemove(friendId),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // إزالة من قائمة أصدقاء الصديق
+        const friendRef = db.collection('users').doc(friendId);
+        batch.update(friendRef, {
+            friends: firebase.firestore.FieldValue.arrayRemove(AppState.currentUser.uid),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        await batch.commit();
+        
+        showToast('تم', 'تم إزالة الصديق', 'success');
+        await loadFriendsData();
+        
+    } catch (error) {
+        console.error('خطأ في إزالة الصديق:', error);
+        showToast('خطأ', 'فشل في إزالة الصديق', 'error');
+    }
+}
+
+async function challengeFriend(friendId) {
+    if (!AppState.currentUser) return;
+    
+    try {
+        const friendDoc = await db.collection('users').doc(friendId).get();
+        if (!friendDoc.exists) {
+            showToast('خطأ', 'الصديق غير موجود', 'error');
+            return;
+        }
+        
+        const friendData = friendDoc.data();
+        
+        // إنشاء تحدٍ خاص
+        const challengeData = {
+            type: 'private',
+            creatorId: AppState.currentUser.uid,
+            creatorName: AppState.userData.name,
+            opponentId: friendId,
+            opponentName: friendData.name,
+            status: 'waiting',
+            players: [AppState.currentUser.uid, friendId],
+            maxPlayers: 2,
+            settings: {
+                timeLimit: 300,
+                questionCount: 10,
+                difficulty: 'medium'
+            },
+            isPrivate: true,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        const challengeRef = await db.collection('challenges').add(challengeData);
+        
+        // إرسال إشعار للصديق
+        await addNotification(friendId, {
+            type: 'challenge',
+            title: 'تحدي جديد من صديق',
+            message: `${AppState.userData.name} يدعوك لتحدي`,
+            data: { challengeId: challengeRef.id }
+        });
+        
+        showToast('تم', 'تم إرسال التحدي للصديق', 'success');
+        
+    } catch (error) {
+        console.error('خطأ في تحدى الصديق:', error);
+        showToast('خطأ', 'فشل في إرسال التحدي', 'error');
+    }
+}
+
+function filterShopItems(category) {
+    const items = category === 'all' 
+        ? AppState.shopItems 
+        : AppState.shopItems.filter(item => item.category === category);
+    renderShopItems(items);
+}
+
+async function purchaseItem(itemId, itemPrice) {
+    if (!AppState.currentUser) {
+        showToast('خطأ', 'يجب تسجيل الدخول أولاً', 'error');
+        return;
+    }
+    
+    if ((AppState.userData?.points || 0) < itemPrice) {
+        showToast('خطأ', 'نقاطك غير كافية لشراء هذا المنتج', 'error');
+        return;
+    }
+    
+    try {
+        const itemDoc = await db.collection('shop_items').doc(itemId).get();
+        if (!itemDoc.exists) {
+            showToast('خطأ', 'المنتج غير موجود', 'error');
+            return;
+        }
+        
+        const item = itemDoc.data();
+        
+        // خصم النقاط
+        await db.collection('users').doc(AppState.currentUser.uid).update({
+            points: firebase.firestore.FieldValue.increment(-itemPrice),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // تسجيل عملية الشراء
+        await db.collection('purchases').add({
+            userId: AppState.currentUser.uid,
+            itemId: itemId,
+            itemName: item.name,
+            price: itemPrice,
+            purchasedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // إضافة المنتج للمستخدم
+        await db.collection('user_items').add({
+            userId: AppState.currentUser.uid,
+            itemId: itemId,
+            itemData: item,
+            purchasedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            expiresAt: item.duration ? 
+                new Date(Date.now() + item.duration * 24 * 60 * 60 * 1000) : null
+        });
+        
+        // تحديث بيانات المستخدم المحلية
+        AppState.userData.points = (AppState.userData.points || 0) - itemPrice;
+        updateUIWithUserData();
+        
+        showToast('تم الشراء', `تم شراء ${item.name} بنجاح`, 'success');
+        
+        // إعادة تحميل صفحة المتجر
+        await loadShopItems();
+        
+    } catch (error) {
+        console.error('خطأ في شراء المنتج:', error);
+        showToast('خطأ', 'فشل في إتمام عملية الشراء', 'error');
+    }
+}
+
+async function saveSettings() {
+    if (!AppState.currentUser) return;
+    
+    try {
+        const settings = {
+            theme: document.querySelector('.theme-option.active')?.dataset.theme || 'light',
+            language: document.getElementById('language-select').value,
+            music: document.getElementById('music-toggle').checked,
+            soundEffects: document.getElementById('sound-effects-toggle').checked,
+            volume: parseInt(document.getElementById('volume-slider').value),
+            vibration: document.getElementById('vibration-toggle').checked,
+            gameAlerts: document.getElementById('game-alerts-toggle').checked,
+            defaultDifficulty: document.getElementById('default-difficulty').value,
+            notifications: {
+                challenges: document.getElementById('challenge-notifications').checked,
+                friends: document.getElementById('friend-notifications').checked,
+                tournaments: document.getElementById('tournament-notifications').checked,
+                achievements: document.getElementById('achievement-notifications').checked
+            },
+            privacy: {
+                showStatus: document.getElementById('show-status').checked,
+                publicProfile: document.getElementById('public-profile').checked,
+                autoAcceptFriends: document.getElementById('auto-accept-friends').checked,
+                messagePrivacy: document.getElementById('message-privacy').value
+            }
+        };
+        
+        await db.collection('users').doc(AppState.currentUser.uid).update({
+            settings: settings,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // تحديث البيانات المحلية
+        if (AppState.userData) {
+            AppState.userData.settings = settings;
+        }
+        
+        // تطبيق السمة المحددة
+        if (settings.theme === 'dark') {
+            document.body.setAttribute('data-theme', 'dark');
+        } else if (settings.theme === 'light') {
+            document.body.setAttribute('data-theme', 'light');
+        } else {
+            // تلقائي - استخدام تفضيل النظام
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.body.setAttribute('data-theme', 'dark');
+            } else {
+                document.body.setAttribute('data-theme', 'light');
+            }
+        }
+        
+        showToast('تم', 'تم حفظ الإعدادات بنجاح', 'success');
+        
+    } catch (error) {
+        console.error('خطأ في حفظ الإعدادات:', error);
+        showToast('خطأ', 'فشل في حفظ الإعدادات', 'error');
+    }
+}
+
+function showChangePasswordModal() {
+    const modalHtml = `
+        <div class="modal" id="change-password-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>تغيير كلمة المرور</h3>
+                    <button class="close-modal" id="close-password-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="password-form">
+                        <div class="form-group">
+                            <label class="form-label">كلمة المرور الحالية</label>
+                            <input type="password" class="form-control" id="current-password" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">كلمة المرور الجديدة</label>
+                            <input type="password" class="form-control" id="new-password" required minlength="6">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">تأكيد كلمة المرور الجديدة</label>
+                            <input type="password" class="form-control" id="confirm-password" required minlength="6">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" id="cancel-password">إلغاء</button>
+                    <button class="btn btn-primary" id="save-password">تغيير كلمة المرور</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // إضافة النموذج للصفحة
+    const modalContainer = document.createElement('div');
+    modalContainer.innerHTML = modalHtml;
+    document.body.appendChild(modalContainer.firstElementChild);
+    
+    const modal = document.getElementById('change-password-modal');
+    modal.classList.add('show');
+    
+    // إضافة مستمعات الأحداث
+    document.getElementById('close-password-modal').addEventListener('click', () => {
+        modal.remove();
+    });
+    
+    document.getElementById('cancel-password').addEventListener('click', () => {
+        modal.remove();
+    });
+    
+    document.getElementById('save-password').addEventListener('click', changePassword);
+}
+
+async function changePassword() {
+    const currentPassword = document.getElementById('current-password').value;
+    const newPassword = document.getElementById('new-password').value;
+    const confirmPassword = document.getElementById('confirm-password').value;
+    
+    if (newPassword !== confirmPassword) {
+        showToast('خطأ', 'كلمتا المرور غير متطابقتين', 'error');
+        return;
+    }
+    
+    if (newPassword.length < 6) {
+        showToast('خطأ', 'كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'error');
+        return;
+    }
+    
+    try {
+        const user = auth.currentUser;
+        const credential = firebase.auth.EmailAuthProvider.credential(
+            user.email,
+            currentPassword
+        );
+        
+        // إعادة المصادقة
+        await user.reauthenticateWithCredential(credential);
+        
+        // تغيير كلمة المرور
+        await user.updatePassword(newPassword);
+        
+        document.getElementById('change-password-modal').remove();
+        showToast('تم', 'تم تغيير كلمة المرور بنجاح', 'success');
+        
+    } catch (error) {
+        console.error('خطأ في تغيير كلمة المرور:', error);
+        if (error.code === 'auth/wrong-password') {
+            showToast('خطأ', 'كلمة المرور الحالية غير صحيحة', 'error');
+        } else {
+            showToast('خطأ', 'فشل في تغيير كلمة المرور', 'error');
+        }
+    }
+}
+
+async function deleteUserAccount() {
+    if (!confirm('هل أنت متأكد من حذف حسابك؟ هذا الإجراء لا يمكن التراجع عنه وسيتم حذف جميع بياناتك.')) {
+        return;
+    }
+    
+    try {
+        // حذف بيانات المستخدم من Firestore
+        await db.collection('users').doc(AppState.currentUser.uid).delete();
+        
+        // حذف الحساب من Firebase Auth
+        await AppState.currentUser.delete();
+        
+        showToast('تم', 'تم حذف حسابك بنجاح', 'success');
+        showAuth();
+        
+    } catch (error) {
+        console.error('خطأ في حذف الحساب:', error);
+        showToast('خطأ', 'فشل في حذف الحساب', 'error');
+    }
+}
+
+// ===============================
+// تحديث دالة loadPageContent الرئيسية
+// ===============================
+
+async function loadPageContent(page) {
+    console.log('تحميل محتوى الصفحة:', page);
+    
+    switch (page) {
+        case 'dashboard':
+            // لوحة التحكم مُحملة بالفعل
+            break;
+            
+        case 'challenges':
+            await loadChallengesPage();
+            break;
+            
+        case 'tournaments':
+            await loadTournamentsPage();
+            break;
+            
+        case 'leaderboard':
+            await loadLeaderboardPage();
+            break;
+            
+        case 'friends':
+            await loadFriendsPage();
+            break;
+            
+        case 'shop':
+            await loadShopPage();
+            break;
+            
+        case 'profile':
+            await loadProfilePage();
+            break;
+            
+        case 'settings':
+            await loadSettingsPage();
+            break;
+            
+        case 'admin':
+            if (AppState.isAdmin) {
+                await admin.loadAdminData();
+            } else {
+                navigateTo('dashboard');
+                showToast('غير مصرح', 'ليس لديك صلاحية الوصول', 'error');
+            }
+            break;
+            
+        case 'help':
+            loadHelpPage();
+            break;
+    }
+}
+
+// ===============================
+// تحديث دالة initApp لإضافة البحث عن الأصدقاء
+// ===============================
+
+function setupAdditionalEventListeners() {
+    // تحديث التحديات
+    document.getElementById('refresh-challenges')?.addEventListener('click', loadChallenges);
+    
+    // البحث عن الأصدقاء
+    const friendSearch = document.getElementById('friend-search');
+    if (friendSearch) {
+        let searchTimeout;
+        friendSearch.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                searchFriends();
+            }, 500);
+        });
+    }
+    
+    // الانضمام للتحديات
+    document.addEventListener('click', async (e) => {
+        if (e.target.classList.contains('join-challenge-btn')) {
+            const challengeId = e.target.dataset.id;
+            await joinChallenge(challengeId);
+        }
+        
+        if (e.target.classList.contains('join-tournament')) {
+            const tournamentId = e.target.dataset.id;
+            await joinTournament(tournamentId);
+        }
+    });
+    
+    // تحديث لوحة التحكم
+    document.getElementById('refresh-dashboard')?.addEventListener('click', async () => {
+        if (AppState.currentUser) {
+            await Promise.all([
+                loadUserData(AppState.currentUser.uid),
+                loadChallenges(),
+                loadTournaments(),
+                loadNotifications(),
+                loadFriendsData(),
+                loadLeaderboardData()
+            ]);
+            showToast('تم التحديث', 'تم تحديث جميع البيانات', 'success');
+        }
+    });
+}
+
+// ===============================
+// تحديث دالة loadUserData
+// ===============================
+
+async function loadUserData(uid) {
+    try {
+        const doc = await db.collection('users').doc(uid).get();
+        if (doc.exists) {
+            AppState.userData = doc.data();
+            updateUIWithUserData();
+            
+            AppState.isAdmin = AppState.userData.isAdmin || false;
+            if (AppState.isAdmin) {
+                document.getElementById('admin-menu-item').style.display = 'flex';
+            }
+            
+            // تحميل جميع البيانات في الخلفية
+            setTimeout(async () => {
+                await Promise.all([
+                    loadQuestions(),
+                    loadFriendsData(),
+                    loadNotifications(),
+                    loadLeaderboardData(),
+                    loadTournamentsData(),
+                    loadChallenges(),
+                    loadFriendRequests()
+                ]);
+            }, 1000);
+        }
+    } catch (error) {
+        console.error('خطأ في تحميل بيانات المستخدم:', error);
+    }
+}
+
+// ===============================
+// تصدير الدوال للاستخدام العام
+// ===============================
+
+window.loadTournamentsPage = loadTournamentsPage;
+window.loadLeaderboardPage = loadLeaderboardPage;
+window.loadFriendsPage = loadFriendsPage;
+window.loadShopPage = loadShopPage;
+window.loadSettingsPage = loadSettingsPage;
+window.joinTournament = joinTournament;
+window.sendFriendRequest = sendFriendRequest;
+window.acceptFriendRequest = acceptFriendRequest;
+window.rejectFriendRequest = rejectFriendRequest;
+window.removeFriend = removeFriend;
+window.challengeFriend = challengeFriend;
+window.purchaseItem = purchaseItem;
 
 // تصدير الدوال للاستخدام العام
 window.startChallenge = (challengeId) => game.startChallenge(challengeId);
