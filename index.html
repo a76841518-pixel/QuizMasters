@@ -3,175 +3,176 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz Masters - لعبة الاختبارات الجماعية</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <title>Quiz Masters</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <!-- شاشة التحميل -->
-    <div id="loading-screen" class="loading-screen">
+    <div id="loading-screen">
         <div class="loader">
             <div class="loader-spinner"></div>
-            <p>جاري تحميل اللعبة...</p>
+            <h2>Quiz Masters</h2>
+            <p>جاري التحميل...</p>
         </div>
     </div>
 
     <!-- صفحة المصادقة -->
-    <div id="auth-page" class="page active">
+    <div id="auth-page" class="page">
         <div class="auth-container">
-            <div class="auth-box">
-                <div class="logo-large">
+            <div class="auth-header">
+                <div class="auth-logo">
                     <i class="fas fa-brain"></i>
                     <h1>Quiz Masters</h1>
-                    <p>اختبارات معرفية جماعية</p>
+                </div>
+                <p class="auth-subtitle">منصة الألعاب الذهنية الأكثر متعة وتحدياً</p>
+            </div>
+            
+            <form id="auth-form">
+                <div class="form-group" id="auth-name-group" style="display: none;">
+                    <label for="auth-name" class="form-label">
+                        <i class="fas fa-user"></i> الاسم الكامل
+                    </label>
+                    <input type="text" id="auth-name" class="form-control" placeholder="أدخل اسمك الكامل">
                 </div>
                 
-                <div id="auth-alert" class="alert alert-error" style="display: none;"></div>
+                <div class="form-group" id="auth-username-group" style="display: none;">
+                    <label for="auth-username" class="form-label">
+                        <i class="fas fa-at"></i> اسم المستخدم
+                    </label>
+                    <input type="text" id="auth-username" class="form-control" placeholder="اختر اسم مستخدم فريد">
+                </div>
                 
-                <form id="auth-form" class="auth-form">
-                    <div class="form-group">
-                        <label for="auth-email" class="form-label">
-                            <i class="fas fa-envelope"></i> البريد الإلكتروني
-                        </label>
-                        <input type="email" id="auth-email" class="form-control" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="auth-password" class="form-label">
-                            <i class="fas fa-lock"></i> كلمة المرور
-                        </label>
-                        <input type="password" id="auth-password" class="form-control" required>
-                        <div class="password-strength" id="password-strength" style="display: none;"></div>
-                    </div>
-                    
-                    <div id="auth-name-group" class="form-group" style="display: none;">
-                        <label for="auth-name" class="form-label">
-                            <i class="fas fa-user"></i> الاسم الكامل
-                        </label>
-                        <input type="text" id="auth-name" class="form-control">
-                    </div>
-                    
-                    <div id="auth-username-group" class="form-group" style="display: none;">
-                        <label for="auth-username" class="form-label">
-                            <i class="fas fa-at"></i> اسم المستخدم
-                        </label>
-                        <input type="text" id="auth-username" class="form-control">
-                        <small class="form-text">اسمك في اللعبة (يظهر للأصدقاء)</small>
-                    </div>
-                    
-                    <button type="submit" id="auth-submit" class="btn btn-primary btn-block btn-lg">
-                        <span id="auth-submit-text">تسجيل الدخول</span>
-                        <i class="fas fa-sign-in-alt"></i>
-                    </button>
-                </form>
+                <div class="form-group">
+                    <label for="auth-email" class="form-label">
+                        <i class="fas fa-envelope"></i> البريد الإلكتروني
+                    </label>
+                    <input type="email" id="auth-email" class="form-control" placeholder="example@email.com" required>
+                </div>
                 
-                <div class="auth-footer">
+                <div class="form-group">
+                    <label for="auth-password" class="form-label">
+                        <i class="fas fa-lock"></i> كلمة المرور
+                    </label>
+                    <input type="password" id="auth-password" class="form-control" placeholder="كلمة المرور (6 أحرف على الأقل)" minlength="6" required>
+                </div>
+                
+                <div id="auth-alert" class="alert" style="display: none;"></div>
+                
+                <button type="submit" class="btn btn-primary btn-block">
+                    <span id="auth-submit-text">تسجيل الدخول</span>
+                </button>
+                
+                <div class="auth-divider">
+                    <span>أو</span>
+                </div>
+                
+                <button type="button" id="guest-login" class="btn btn-outline btn-block">
+                    <i class="fas fa-user-clock"></i> الدخول كزائر
+                </button>
+                
+                <div class="auth-switch">
                     <span id="auth-switch-text">ليس لديك حساب؟</span>
-                    <a href="#" id="auth-switch-link" class="auth-link">إنشاء حساب جديد</a>
-                    <div class="divider">أو</div>
-                    <button class="btn btn-outline btn-block" id="guest-login">
-                        <i class="fas fa-user-clock"></i> الدخول كزائر
-                    </button>
+                    <a href="#" id="auth-switch-link">إنشاء حساب جديد</a>
                 </div>
+            </form>
+            
+            <div class="auth-footer">
+                <p>© <span id="current-year">2024</span> Quiz Masters. جميع الحقوق محفوظة.</p>
             </div>
         </div>
     </div>
 
-    <!-- التطبيق الرئيسي -->
-    <div id="app-container" class="app-container" style="display: none;">
-        <!-- شريط التنقل العلوي -->
-        <header class="app-header">
-            <div class="container">
-                <div class="header-content">
-                    <div class="header-left">
-                        <button class="menu-toggle" id="menu-toggle">
-                            <i class="fas fa-bars"></i>
-                        </button>
-                        <div class="logo">
-                            <i class="fas fa-brain"></i>
-                            <span>Quiz Masters</span>
+    <!-- حاوية التطبيق -->
+    <div id="app-container" style="display: none;">
+        <!-- الهيدر -->
+        <header id="main-header">
+            <div class="header-left">
+                <button id="menu-toggle" class="btn-icon">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="logo">
+                    <i class="fas fa-brain"></i>
+                    <span>Quiz Masters</span>
+                </div>
+            </div>
+            
+            <div class="header-center">
+                <div class="header-stats">
+                    <div class="stat-item">
+                        <i class="fas fa-trophy"></i>
+                        <span id="header-rank">#0</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-chart-line"></i>
+                        <span id="header-level">1</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-coins"></i>
+                        <span id="header-points">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="header-right">
+                <button id="refresh-dashboard" class="btn-icon" title="تحديث">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                
+                <div class="notification-bell" id="notification-bell">
+                    <i class="fas fa-bell"></i>
+                    <span id="notification-count" class="badge">0</span>
+                    <div id="notification-dropdown" class="dropdown">
+                        <div class="dropdown-header">
+                            <h4>التنبيهات</h4>
+                            <button class="btn-link">عرض الكل</button>
+                        </div>
+                        <div class="dropdown-body" id="notification-list">
+                            <!-- التنبيهات تظهر هنا -->
                         </div>
                     </div>
-                    
-                    <div class="header-center">
-                        <div class="quick-stats">
-                            <div class="stat-item">
-                                <i class="fas fa-coins"></i>
-                                <span id="header-points">0</span>
-                            </div>
-                            <div class="stat-item">
-                                <i class="fas fa-trophy"></i>
-                                <span id="header-level">1</span>
-                            </div>
-                            <div class="stat-item">
-                                <i class="fas fa-globe"></i>
-                                <span id="header-rank">#0</span>
-                            </div>
-                        </div>
+                </div>
+                
+                <div class="user-menu" id="user-menu-toggle">
+                    <div class="user-avatar" id="dropdown-avatar">?</div>
+                    <div class="user-info">
+                        <div class="user-name" id="dropdown-username">مستخدم</div>
+                        <div class="user-level" id="dropdown-level">المستوى 1</div>
                     </div>
+                    <i class="fas fa-chevron-down"></i>
                     
-                    <div class="header-right">
-                        <div class="user-menu">
-                            <div class="user-avatar-container" id="user-menu-toggle">
-                                <div class="user-avatar" id="user-avatar">?</div>
-                                <div class="user-status online"></div>
-                            </div>
-                            <div class="user-dropdown" id="user-dropdown">
-                                <div class="dropdown-header">
-                                    <div class="user-avatar" id="dropdown-avatar">?</div>
-                                    <div class="user-info">
-                                        <div class="username" id="dropdown-username">مستخدم</div>
-                                        <div class="user-level" id="dropdown-level">المستوى 1</div>
-                                    </div>
-                                </div>
-                                <div class="dropdown-menu">
-                                    <a href="#" class="dropdown-item" data-page="profile">
-                                        <i class="fas fa-user-circle"></i> الملف الشخصي
-                                    </a>
-                                    <a href="#" class="dropdown-item" data-page="friends">
-                                        <i class="fas fa-user-friends"></i> الأصدقاء
-                                    </a>
-                                    <a href="#" class="dropdown-item" data-page="settings">
-                                        <i class="fas fa-cog"></i> الإعدادات
-                                    </a>
-                                    <div class="dropdown-divider"></div>
-                                    <a href="#" class="dropdown-item logout-btn" id="logout-btn">
-                                        <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="notification-bell" id="notification-bell">
-                            <i class="fas fa-bell"></i>
-                            <span class="notification-count" id="notification-count" style="display: none;">0</span>
-                            <div class="notification-dropdown" id="notification-dropdown">
-                                <div class="dropdown-header">
-                                    <h3>التنبيهات</h3>
-                                </div>
-                                <div class="dropdown-menu" id="notification-list">
-                                    <!-- سيتم ملء التنبيهات ديناميكياً -->
-                                </div>
-                            </div>
-                        </div>
+                    <div id="user-dropdown" class="dropdown">
+                        <a href="#" class="dropdown-item" data-page="profile">
+                            <i class="fas fa-user-circle"></i> الملف الشخصي
+                        </a>
+                        <a href="#" class="dropdown-item" data-page="settings">
+                            <i class="fas fa-cog"></i> الإعدادات
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="#" class="dropdown-item" id="logout-btn">
+                            <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+                        </a>
                     </div>
                 </div>
             </div>
         </header>
 
         <!-- القائمة الجانبية -->
-        <nav class="sidebar" id="sidebar">
+        <nav id="sidebar">
             <div class="sidebar-header">
-                <div class="logo">
-                    <i class="fas fa-brain"></i>
-                    <span>Quiz Masters</span>
+                <div class="user-info">
+                    <div class="user-avatar" id="sidebar-avatar">?</div>
+                    <div class="user-details">
+                        <div class="user-name" id="sidebar-username">مستخدم</div>
+                        <div class="xp-progress">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="xp-progress"></div>
+                            </div>
+                            <span class="xp-text" id="xp-text">0/100</span>
+                        </div>
+                    </div>
                 </div>
-                <button class="close-sidebar" id="close-sidebar">
+                <button id="close-sidebar" class="btn-icon">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -179,7 +180,7 @@
             <div class="sidebar-menu">
                 <a href="#" class="menu-item active" data-page="dashboard">
                     <i class="fas fa-home"></i>
-                    <span>الرئيسية</span>
+                    <span>لوحة التحكم</span>
                 </a>
                 
                 <a href="#" class="menu-item" data-page="challenges">
@@ -190,7 +191,6 @@
                 <a href="#" class="menu-item" data-page="tournaments">
                     <i class="fas fa-chess-king"></i>
                     <span>البطولات</span>
-                    <span class="badge new">جديد</span>
                 </a>
                 
                 <a href="#" class="menu-item" data-page="leaderboard">
@@ -201,7 +201,7 @@
                 <a href="#" class="menu-item" data-page="friends">
                     <i class="fas fa-user-friends"></i>
                     <span>الأصدقاء</span>
-                    <span class="badge" id="friend-requests-badge" style="display: none;">0</span>
+                    <span id="friend-requests-badge" class="badge" style="display: none;">0</span>
                 </a>
                 
                 <a href="#" class="menu-item" data-page="shop">
@@ -209,807 +209,208 @@
                     <span>المتجر</span>
                 </a>
                 
-                <div class="menu-divider"></div>
-                
-                <a href="#" class="menu-item" data-page="admin" id="admin-menu-item" style="display: none;">
-                    <i class="fas fa-crown"></i>
-                    <span>لوحة المشرف</span>
-                </a>
-                
-                <a href="#" class="menu-item" data-page="settings">
-                    <i class="fas fa-cog"></i>
-                    <span>الإعدادات</span>
-                </a>
+                <div class="sidebar-divider"></div>
                 
                 <a href="#" class="menu-item" data-page="help">
                     <i class="fas fa-question-circle"></i>
                     <span>المساعدة</span>
                 </a>
+                
+                <a href="#" class="menu-item" id="admin-menu-item" style="display: none;" data-page="admin">
+                    <i class="fas fa-user-shield"></i>
+                    <span>لوحة المشرف</span>
+                </a>
             </div>
             
             <div class="sidebar-footer">
-                <div class="user-profile">
-                    <div class="user-avatar" id="sidebar-avatar">?</div>
-                    <div class="user-details">
-                        <div class="username" id="sidebar-username">مستخدم</div>
-                        <div class="user-xp">
-                            <div class="xp-bar">
-                                <div class="xp-progress" id="xp-progress" style="width: 0%"></div>
-                            </div>
-                            <span class="xp-text" id="xp-text">0/100</span>
-                        </div>
+                <div class="online-friends">
+                    <h4>المتصلون الآن</h4>
+                    <div class="friends-list" id="online-friends">
+                        <!-- الأصدقاء المتصلون يظهرون هنا -->
                     </div>
                 </div>
             </div>
         </nav>
 
         <!-- المحتوى الرئيسي -->
-        <main class="main-content" id="main-content">
-            <div class="container">
-                <!-- لوحة التحكم -->
-                <div id="dashboard-page" class="page active">
-                    <div class="page-header">
-                        <h1 class="page-title">
-                            <i class="fas fa-tachometer-alt"></i>
-                            لوحة التحكم
-                        </h1>
-                        <button class="btn btn-refresh" id="refresh-dashboard">
+        <main id="main-content">
+            <!-- صفحات التطبيق -->
+            <div id="dashboard-page" class="page active">
+                <div class="page-header">
+                    <h1 class="page-title">
+                        <i class="fas fa-home"></i>
+                        لوحة التحكم
+                    </h1>
+                    <div class="header-actions">
+                        <button class="btn btn-outline" id="quick-challenge">
+                            <i class="fas fa-bolt"></i> تحدٍ سريع
+                        </button>
+                        <button class="btn btn-refresh" id="refresh-dashboard-btn">
                             <i class="fas fa-sync-alt"></i>
                         </button>
                     </div>
-                    
-                    <div class="stats-cards">
-                        <div class="stat-card primary">
+                </div>
+                
+                <div class="dashboard-container">
+                    <div class="stats-grid">
+                        <div class="stat-card">
                             <div class="stat-icon">
                                 <i class="fas fa-trophy"></i>
                             </div>
                             <div class="stat-info">
                                 <div class="stat-value" id="stat-wins">0</div>
-                                <div class="stat-label">عدد الانتصارات</div>
-                                <div class="stat-change positive" id="stat-wins-change">
-                                    <i class="fas fa-arrow-up"></i> 0% هذا الأسبوع
-                                </div>
+                                <div class="stat-label">الانتصارات</div>
                             </div>
                         </div>
-                        
-                        <div class="stat-card success">
+                        <div class="stat-card">
                             <div class="stat-icon">
                                 <i class="fas fa-coins"></i>
                             </div>
                             <div class="stat-info">
                                 <div class="stat-value" id="stat-points">0</div>
-                                <div class="stat-label">النقاط الكلية</div>
-                                <div class="stat-change positive" id="stat-points-change">
-                                    <i class="fas fa-arrow-up"></i> 0 هذا الأسبوع
-                                </div>
+                                <div class="stat-label">النقاط</div>
                             </div>
                         </div>
-                        
-                        <div class="stat-card warning">
+                        <div class="stat-card">
                             <div class="stat-icon">
                                 <i class="fas fa-gamepad"></i>
                             </div>
                             <div class="stat-info">
                                 <div class="stat-value" id="stat-matches">0</div>
-                                <div class="stat-label">المباريات الملعوبة</div>
-                                <div class="stat-change positive" id="stat-matches-change">
-                                    <i class="fas fa-arrow-up"></i> 0 هذا الأسبوع
-                                </div>
+                                <div class="stat-label">المباريات</div>
                             </div>
                         </div>
-                        
-                        <div class="stat-card danger">
+                        <div class="stat-card">
                             <div class="stat-icon">
-                                <i class="fas fa-crown"></i>
+                                <i class="fas fa-chart-line"></i>
                             </div>
                             <div class="stat-info">
                                 <div class="stat-value" id="stat-rank">#0</div>
-                                <div class="stat-label">التصنيف العالمي</div>
-                                <div class="stat-change negative" id="stat-rank-change">
-                                    <i class="fas fa-arrow-down"></i> 0 مركز
-                                </div>
+                                <div class="stat-label">الترتيب</div>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="dashboard-grid">
-                        <div class="dashboard-card quick-actions">
-                            <div class="card-header">
-                                <h3>ابدأ تحدياً</h3>
-                                <p>اختر نوع التحدي للبدء</p>
-                            </div>
-                            <div class="challenge-quick-select">
-                                <div class="challenge-type" data-type="individual">
-                                    <div class="challenge-icon">
-                                        <i class="fas fa-user"></i>
-                                    </div>
-                                    <div class="challenge-info">
-                                        <h4>التحدي الفردي</h4>
-                                        <p>تدرب على مهاراتك</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="challenge-type" data-type="speed">
-                                    <div class="challenge-icon">
-                                        <i class="fas fa-bolt"></i>
-                                    </div>
-                                    <div class="challenge-info">
-                                        <h4>تحدي السرعة</h4>
-                                        <p>2-4 لاعبين</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="challenge-type" data-type="time">
-                                    <div class="challenge-icon">
-                                        <i class="fas fa-clock"></i>
-                                    </div>
-                                    <div class="challenge-info">
-                                        <h4>تحدي الوقت</h4>
-                                        <p>2-4 لاعبين</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="challenge-type" data-type="comprehensive">
-                                    <div class="challenge-icon">
-                                        <i class="fas fa-crown"></i>
-                                    </div>
-                                    <div class="challenge-info">
-                                        <h4>التحدي الشامل</h4>
-                                        <p>الأصعب والأكثر تشويقاً</p>
-                                    </div>
-                                </div>
+                    <div class="dashboard-content">
+                        <div class="dashboard-section">
+                            <h3>التحديات القادمة</h3>
+                            <div class="challenges-preview" id="upcoming-challenges">
+                                <!-- التحديات القادمة تظهر هنا -->
                             </div>
                         </div>
                         
-                        <div class="dashboard-card recent-activity">
-                            <div class="card-header">
-                                <h3>النشاط الأخير</h3>
-                                <a href="#" class="view-all" data-page="activity">عرض الكل</a>
-                            </div>
-                            <div class="activity-list" id="recent-activity">
-                                <!-- سيتم ملء النشاطات ديناميكياً -->
-                                <div class="activity-item">
-                                    <div class="activity-icon success">
-                                        <i class="fas fa-trophy"></i>
-                                    </div>
-                                    <div class="activity-details">
-                                        <p>فزت في <strong>تحدي السرعة</strong></p>
-                                        <small>منذ 5 دقائق</small>
-                                    </div>
-                                    <div class="activity-points">+50</div>
-                                </div>
+                        <div class="dashboard-section">
+                            <h3>البطولات النشطة</h3>
+                            <div class="tournaments-preview" id="upcoming-tournaments">
+                                <!-- البطولات تظهر هنا -->
                             </div>
                         </div>
                         
-                        <div class="dashboard-card friends-online">
-                            <div class="card-header">
-                                <h3>الأصدقاء المتصلون</h3>
-                                <span class="online-count" id="online-friends-count">0</span>
-                            </div>
-                            <div class="friends-list" id="online-friends">
-                                <!-- سيتم ملء الأصدقاء ديناميكياً -->
-                            </div>
-                            <div class="card-footer">
-                                <button class="btn btn-outline btn-block" id="invite-friends">
-                                    <i class="fas fa-user-plus"></i> دعوة أصدقاء
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div class="dashboard-card upcoming-tournaments">
-                            <div class="card-header">
-                                <h3>البطولات القادمة</h3>
-                                <a href="#" class="view-all" data-page="tournaments">عرض الكل</a>
-                            </div>
-                            <div class="tournaments-list" id="upcoming-tournaments">
-                                <!-- سيتم ملء البطولات ديناميكياً -->
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="achievements-section">
-                        <div class="section-header">
-                            <h2>إنجازاتك القريبة</h2>
-                            <p>أنت على بعد خطوات من تحقيق هذه الإنجازات</p>
-                        </div>
-                        <div class="achievements-grid" id="near-achievements">
-                            <!-- سيتم ملء الإنجازات ديناميكياً -->
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- صفحة التحديات -->
-                <div id="challenges-page" class="page">
-                    <div class="page-header">
-                        <h1 class="page-title">
-                            <i class="fas fa-gamepad"></i>
-                            التحديات
-                        </h1>
-                        <div class="header-actions">
-                            <button class="btn btn-outline" id="create-challenge">
-                                <i class="fas fa-plus"></i> إنشاء تحدٍ
-                            </button>
-                            <button class="btn btn-refresh" id="refresh-challenges">
-                                <i class="fas fa-sync-alt"></i>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="challenges-container">
-                        <div class="challenge-category">
-                            <h2>التحديات الفردية</h2>
-                            <p>اختبر مهاراتك بنفسك</p>
-                            <div class="challenges-list" id="individual-challenges">
-                                <!-- تحديات فردية -->
-                            </div>
-                        </div>
-                        
-                        <div class="challenge-category">
-                            <h2>التحديات الجماعية</h2>
-                            <p>تحدى أصدقاءك ولاعبين آخرين</p>
-                            <div class="challenges-list" id="multiplayer-challenges">
-                                <!-- تحديات جماعية -->
-                            </div>
-                        </div>
-                        
-                        <div class="challenge-category">
-                            <h2>التحديات الخاصة</h2>
-                            <p>من الأصدقاء أو الدعوات</p>
-                            <div class="challenges-list" id="private-challenges">
-                                <!-- تحديات خاصة -->
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="challenge-stats">
-                        <div class="stat-box">
-                            <h3>إحصائيات التحديات</h3>
-                            <div class="stats-grid">
-                                <div class="stat">
-                                    <div class="stat-value" id="total-challenges">0</div>
-                                    <div class="stat-label">إجمالي التحديات</div>
-                                </div>
-                                <div class="stat">
-                                    <div class="stat-value" id="win-rate">0%</div>
-                                    <div class="stat-label">معدل الفوز</div>
-                                </div>
-                                <div class="stat">
-                                    <div class="stat-value" id="avg-score">0</div>
-                                    <div class="stat-label">متوسط النقاط</div>
-                                </div>
-                                <div class="stat">
-                                    <div class="stat-value" id="best-streak">0</div>
-                                    <div class="stat-label">أفضل سلسلة فوز</div>
-                                </div>
+                        <div class="dashboard-section">
+                            <h3>الإنجازات الحديثة</h3>
+                            <div class="achievements-preview" id="recent-achievements">
+                                <!-- الإنجازات تظهر هنا -->
                             </div>
                         </div>
                     </div>
                 </div>
-                
-                <!-- لوحة المشرف -->
-                <div id="admin-page" class="page">
-                    <div class="page-header">
-                        <h1 class="page-title">
-                            <i class="fas fa-crown"></i>
-                            لوحة المشرف
-                        </h1>
-                        <div class="admin-badge">
-                            <i class="fas fa-shield-alt"></i>
-                            <span>مشرف النظام</span>
-                        </div>
-                    </div>
-                    
-                    <div class="admin-tabs">
-                        <div class="tabs-header">
-                            <button class="tab-btn active" data-tab="questions">
-                                <i class="fas fa-question-circle"></i> إدارة الأسئلة
-                            </button>
-                            <button class="tab-btn" data-tab="users">
-                                <i class="fas fa-users"></i> إدارة المستخدمين
-                            </button>
-                            <button class="tab-btn" data-tab="reports">
-                                <i class="fas fa-flag"></i> التقارير
-                            </button>
-                            <button class="tab-btn" data-tab="system">
-                                <i class="fas fa-cogs"></i> إعدادات النظام
-                            </button>
-                        </div>
-                        
-                        <div class="tab-content active" id="questions-tab">
-                            <div class="admin-toolbar">
-                                <button class="btn btn-primary" id="add-question-btn">
-                                    <i class="fas fa-plus"></i> إضافة سؤال جديد
-                                </button>
-                                
-                                <div class="filters">
-                                    <select class="form-control" id="question-category-filter">
-                                        <option value="">جميع الفئات</option>
-                                        <option value="science">العلوم</option>
-                                        <option value="history">التاريخ</option>
-                                        <option value="geography">الجغرافيا</option>
-                                        <option value="sports">الرياضة</option>
-                                        <option value="art">الفن</option>
-                                        <option value="entertainment">الترفيه</option>
-                                        <option value="technology">التكنولوجيا</option>
-                                        <option value="general">عامة</option>
-                                    </select>
-                                    
-                                    <select class="form-control" id="question-difficulty-filter">
-                                        <option value="">جميع المستويات</option>
-                                        <option value="easy">سهل</option>
-                                        <option value="medium">متوسط</option>
-                                        <option value="hard">صعب</option>
-                                    </select>
-                                    
-                                    <input type="text" class="form-control" id="question-search" placeholder="بحث في الأسئلة...">
-                                </div>
-                            </div>
-                            
-                            <div class="questions-table-container">
-                                <table class="admin-table" id="questions-table">
-                                    <thead>
-                                        <tr>
-                                            <th>#</th>
-                                            <th>السؤال</th>
-                                            <th>الفئة</th>
-                                            <th>المستوى</th>
-                                            <th>الإجابات</th>
-                                            <th>الإجابة الصحيحة</th>
-                                            <th>الوقت (ثانية)</th>
-                                            <th>تاريخ الإضافة</th>
-                                            <th>الإجراءات</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="questions-table-body">
-                                        <!-- سيتم ملء الأسئلة ديناميكياً -->
-                                    </tbody>
-                                </table>
-                            </div>
-                            
-                            <div class="pagination" id="questions-pagination">
-                                <!-- ترقيم الصفحات -->
-                            </div>
-                        </div>
-                        
-                        <div class="tab-content" id="users-tab">
-                            <div class="admin-toolbar">
-                                <input type="text" class="form-control" id="user-search" placeholder="بحث بالمستخدمين...">
-                                <select class="form-control" id="user-role-filter">
-                                    <option value="">جميع الصلاحيات</option>
-                                    <option value="user">لاعب</option>
-                                    <option value="admin">مشرف</option>
-                                    <option value="moderator">مراقب</option>
-                                </select>
-                            </div>
-                            
-                            <div class="users-table-container">
-                                <table class="admin-table" id="users-table">
-                                    <thead>
-                                        <tr>
-                                            <th>#</th>
-                                            <th>المستخدم</th>
-                                            <th>البريد الإلكتروني</th>
-                                            <th>المستوى</th>
-                                            <th>النقاط</th>
-                                            <th>الصلاحية</th>
-                                            <th>تاريخ الانضمام</th>
-                                            <th>الحالة</th>
-                                            <th>الإجراءات</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="users-table-body">
-                                        <!-- سيتم ملء المستخدمين ديناميكياً -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        
-                        <div class="tab-content" id="reports-tab">
-                            <div class="reports-container">
-                                <div class="report-card">
-                                    <h3>التقارير المعلقة</h3>
-                                    <div class="reports-list" id="pending-reports">
-                                        <!-- التقارير المعلقة -->
-                                    </div>
-                                </div>
-                                
-                                <div class="report-card">
-                                    <h3>إحصائيات النظام</h3>
-                                    <div class="system-stats">
-                                        <div class="stat">
-                                            <div class="stat-value" id="total-users">0</div>
-                                            <div class="stat-label">إجمالي المستخدمين</div>
-                                        </div>
-                                        <div class="stat">
-                                            <div class="stat-value" id="total-questions">0</div>
-                                            <div class="stat-label">إجمالي الأسئلة</div>
-                                        </div>
-                                        <div class="stat">
-                                            <div class="stat-value" id="total-matches">0</div>
-                                            <div class="stat-label">إجمالي المباريات</div>
-                                        </div>
-                                        <div class="stat">
-                                            <div class="stat-value" id="active-now">0</div>
-                                            <div class="stat-label">نشطون الآن</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- نموذج إضافة/تعديل سؤال -->
-                    <div class="modal" id="question-modal">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h3 id="modal-title">إضافة سؤال جديد</h3>
-                                <button class="close-modal" id="close-question-modal">&times;</button>
-                            </div>
-                            <div class="modal-body">
-                                <form id="question-form">
-                                    <div class="form-row">
-                                        <div class="form-group">
-                                            <label class="form-label">نص السؤال *</label>
-                                            <textarea class="form-control" id="question-text" rows="3" required></textarea>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="form-row">
-                                        <div class="form-group">
-                                            <label class="form-label">فئة السؤال *</label>
-                                            <select class="form-control" id="question-category" required>
-                                                <option value="">اختر الفئة</option>
-                                                <option value="science">العلوم</option>
-                                                <option value="history">التاريخ</option>
-                                                <option value="geography">الجغرافيا</option>
-                                                <option value="sports">الرياضة</option>
-                                                <option value="art">الفن</option>
-                                                <option value="entertainment">الترفيه</option>
-                                                <option value="technology">التكنولوجيا</option>
-                                                <option value="general">عامة</option>
-                                            </select>
-                                        </div>
-                                        
-                                        <div class="form-group">
-                                            <label class="form-label">صعوبة السؤال *</label>
-                                            <select class="form-control" id="question-difficulty" required>
-                                                <option value="">اختر الصعوبة</option>
-                                                <option value="easy">سهل (10 نقاط)</option>
-                                                <option value="medium">متوسط (20 نقطة)</option>
-                                                <option value="hard">صعب (30 نقطة)</option>
-                                            </select>
-                                        </div>
-                                        
-                                        <div class="form-group">
-                                            <label class="form-label">الوقت (ثانية) *</label>
-                                            <input type="number" class="form-control" id="question-time" min="5" max="120" value="30" required>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="form-row">
-                                        <div class="form-group">
-                                            <label class="form-label">الإجابة الصحيحة *</label>
-                                            <input type="text" class="form-control" id="correct-answer" required>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="form-row">
-                                        <div class="form-group">
-                                            <label class="form-label">الإجابات الخاطئة *</label>
-                                            <input type="text" class="form-control" id="wrong-answer-1" placeholder="الإجابة الخاطئة الأولى" required>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="form-row">
-                                        <div class="form-group">
-                                            <input type="text" class="form-control" id="wrong-answer-2" placeholder="الإجابة الخاطئة الثانية" required>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="form-row">
-                                        <div class="form-group">
-                                            <input type="text" class="form-control" id="wrong-answer-3" placeholder="الإجابة الخاطئة الثالثة" required>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="form-row">
-                                        <div class="form-group">
-                                            <label class="form-label">صورة السؤال (اختياري)</label>
-                                            <input type="text" class="form-control" id="question-image" placeholder="رابط الصورة">
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="form-row">
-                                        <div class="form-group">
-                                            <label class="form-label">شرح الإجابة (اختياري)</label>
-                                            <textarea class="form-control" id="question-explanation" rows="2" placeholder="شرح مفصل للإجابة الصحيحة"></textarea>
-                                        </div>
-                                    </div>
-                                </form>
-                            </div>
-                            <div class="modal-footer">
-                                <button class="btn btn-secondary" id="cancel-question">إلغاء</button>
-                                <button class="btn btn-primary" id="save-question">حفظ السؤال</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- صفحات أخرى -->
-<div id="profile-page" class="page">
-    <div class="page-header">
-        <h1 class="page-title">
-            <i class="fas fa-user-circle"></i>
-            الملف الشخصي
-        </h1>
-    </div>
-    <div class="profile-container">
-        <div class="empty-state">
-            <i class="fas fa-user-circle"></i>
-            <p>صفحة الملف الشخصي قيد التطوير</p>
-            <p>ستحتوي على معلوماتك الشخصية وإحصائياتك التفصيلية</p>
-        </div>
-    </div>
-</div>
-                
-<!-- استبدال الصفحات الفارغة بالكود الجديد -->
-
-<!-- صفحة البطولات -->
-<div id="tournaments-page" class="page">
-    <div class="page-header">
-        <h1 class="page-title">
-            <i class="fas fa-chess-king"></i>
-            البطولات
-        </h1>
-        <div class="header-actions">
-            <button class="btn btn-outline" id="create-tournament">
-                <i class="fas fa-plus"></i> إنشاء بطولة
-            </button>
-            <button class="btn btn-refresh" id="refresh-tournaments">
-                <i class="fas fa-sync-alt"></i>
-            </button>
-        </div>
-    </div>
-    
-    <div class="tournaments-container">
-        <div class="tournaments-grid" id="tournaments-grid">
-            <!-- سيتم ملؤها ديناميكياً -->
-        </div>
-        
-        <div class="tournaments-list-section">
-            <h3>البطولات النشطة</h3>
-            <div class="tournaments-table-container">
-                <table class="tournaments-table">
-                    <thead>
-                        <tr>
-                            <th>اسم البطولة</th>
-                            <th>النوع</th>
-                            <th>الجائزة</th>
-                            <th>المشاركون</th>
-                            <th>الوقت</th>
-                            <th>الحالة</th>
-                            <th>الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tournaments-table-body">
-                        <!-- سيتم ملؤها ديناميكياً -->
-                    </tbody>
-                </table>
             </div>
-        </div>
-    </div>
-    
-    <!-- نموذج إنشاء بطولة -->
-    <div class="modal" id="tournament-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>إنشاء بطولة جديدة</h3>
-                <button class="close-modal" id="close-tournament-modal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="tournament-form">
-                    <div class="form-group">
-                        <label class="form-label">اسم البطولة *</label>
-                        <input type="text" class="form-control" id="tournament-name" required>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">نوع البطولة *</label>
-                            <select class="form-control" id="tournament-type" required>
-                                <option value="speed">تحدي السرعة</option>
-                                <option value="survival">تحدي البقاء</option>
-                                <option value="marathon">ماراثون الأسئلة</option>
-                                <option value="expert">تحدي الخبراء</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">عدد المشاركين *</label>
-                            <select class="form-control" id="tournament-max-players" required>
-                                <option value="8">8 لاعبين</option>
-                                <option value="16">16 لاعبين</option>
-                                <option value="32">32 لاعبين</option>
-                                <option value="64">64 لاعبين</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">عدد الأسئلة *</label>
-                            <input type="number" class="form-control" id="tournament-questions" min="10" max="100" value="20" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">مدة كل سؤال *</label>
-                            <select class="form-control" id="question-time" required>
-                                <option value="15">15 ثانية</option>
-                                <option value="20">20 ثانية</option>
-                                <option value="25">25 ثانية</option>
-                                <option value="30">30 ثانية</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">مستوى الصعوبة *</label>
-                        <select class="form-control" id="tournament-difficulty" required>
-                            <option value="easy">سهل</option>
-                            <option value="medium">متوسط</option>
-                            <option value="hard">صعب</option>
-                            <option value="mixed">مختلط</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">الجائزة (نقاط) *</label>
-                        <input type="number" class="form-control" id="tournament-prize" min="100" max="10000" value="1000" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">وصف البطولة</label>
-                        <textarea class="form-control" id="tournament-description" rows="3"></textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">
-                            <input type="checkbox" id="tournament-private">
-                            <span>بطولة خاصة (بالدعوة فقط)</span>
-                        </label>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" id="cancel-tournament">إلغاء</button>
-                <button class="btn btn-primary" id="save-tournament">إنشاء البطولة</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- صفحة التصنيف -->
-<div id="leaderboard-page" class="page">
-    <!-- سيتم ملؤها ديناميكياً -->
-</div>
-
-<!-- صفحة الأصدقاء -->
-<div id="friends-page" class="page">
-    <!-- سيتم ملؤها ديناميكياً -->
-</div>
-
-<!-- صفحة المتجر -->
-<div id="shop-page" class="page">
-    <!-- سيتم ملؤها ديناميكياً -->
-</div>
-
-<!-- صفحة الإعدادات -->
-<div id="settings-page" class="page">
-    <!-- سيتم ملؤها ديناميكياً -->
-</div>
-
-<div id="help-page" class="page">
-    <div class="page-header">
-        <h1 class="page-title">
-            <i class="fas fa-question-circle"></i>
-            المساعدة
-        </h1>
-    </div>
-    <div class="help-container">
-        <div class="empty-state">
-            <i class="fas fa-question-circle"></i>
-            <p>صفحة المساعدة قيد التطوير</p>
-            <p>ستحتوي على دليل الاستخدام والأسئلة الشائعة</p>
-        </div>
-    </div>
-</div>
-            </div>
+            
+            <div id="challenges-page" class="page"></div>
+            <div id="tournaments-page" class="page"></div>
+            <div id="leaderboard-page" class="page"></div>
+            <div id="friends-page" class="page"></div>
+            <div id="shop-page" class="page"></div>
+            <div id="profile-page" class="page"></div>
+            <div id="settings-page" class="page"></div>
+            <div id="admin-page" class="page"></div>
+            <div id="help-page" class="page"></div>
         </main>
 
         <!-- نافذة التحدي -->
-        <div class="challenge-window" id="challenge-window" style="display: none;">
-            <div class="challenge-container">
-                <!-- محتوى التحدي سيتم تحميله ديناميكياً -->
-            </div>
+        <div id="challenge-window" style="display: none;">
+            <div class="challenge-container"></div>
         </div>
 
-        <!-- التنبيهات -->
-        <div class="toast-container" id="toast-container"></div>
-
-        <!-- تذييل الصفحة -->
-        <footer class="app-footer">
-            <div class="container">
-                <div class="footer-content">
-                    <div class="footer-section">
-                        <div class="logo">
-                            <i class="fas fa-brain"></i>
-                            <span>Quiz Masters</span>
+        <!-- الفوتر -->
+        <footer id="main-footer">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Quiz Masters</h4>
+                    <p>منصة الألعاب الذهنية الرائدة في العالم العربي</p>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>إحصائيات المنصة</h4>
+                    <div class="footer-stats">
+                        <div class="footer-stat">
+                            <i class="fas fa-users"></i>
+                            <span id="footer-total-users">0</span>
+                            <span>لاعب</span>
                         </div>
-                        <p class="footer-description">
-                            منصة الاختبارات المعرفية الجماعية الأولى من نوعها. تحدى أصدقاءك واختبر معلوماتك!
-                        </p>
-                        <div class="social-links">
-                            <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
-                            <a href="#" class="social-link"><i class="fab fa-facebook"></i></a>
-                            <a href="#" class="social-link"><i class="fab fa-instagram"></i></a>
-                            <a href="#" class="social-link"><i class="fab fa-youtube"></i></a>
+                        <div class="footer-stat">
+                            <i class="fas fa-question-circle"></i>
+                            <span id="footer-total-questions">0</span>
+                            <span>سؤال</span>
                         </div>
-                    </div>
-                    
-                    <div class="footer-section">
-                        <h4>روابط سريعة</h4>
-                        <ul class="footer-links">
-                            <li><a href="#" data-page="dashboard">الرئيسية</a></li>
-                            <li><a href="#" data-page="challenges">التحديات</a></li>
-                            <li><a href="#" data-page="leaderboard">التصنيف</a></li>
-                            <li><a href="#" data-page="tournaments">البطولات</a></li>
-                            <li><a href="#" data-page="shop">المتجر</a></li>
-                        </ul>
-                    </div>
-                    
-                    <div class="footer-section">
-                        <h4>الدعم</h4>
-                        <ul class="footer-links">
-                            <li><a href="#" data-page="help">الأسئلة الشائعة</a></li>
-                            <li><a href="#">الشروط والأحكام</a></li>
-                            <li><a href="#">سياسة الخصوصية</a></li>
-                            <li><a href="#">اتصل بنا</a></li>
-                            <li><a href="#">الإبلاغ عن مشكلة</a></li>
-                        </ul>
-                    </div>
-                    
-                    <div class="footer-section">
-                        <h4>إحصائيات الموقع</h4>
-                        <div class="footer-stats">
-                            <div class="footer-stat">
-                                <div class="stat-value" id="footer-total-users">0</div>
-                                <div class="stat-label">لاعب مسجل</div>
-                            </div>
-                            <div class="footer-stat">
-                                <div class="stat-value" id="footer-total-matches">0</div>
-                                <div class="stat-label">مباراة ملعوبة</div>
-                            </div>
-                            <div class="footer-stat">
-                                <div class="stat-value" id="footer-total-questions">0</div>
-                                <div class="stat-label">سؤال متوفر</div>
-                            </div>
+                        <div class="footer-stat">
+                            <i class="fas fa-gamepad"></i>
+                            <span id="footer-total-matches">0</span>
+                            <span>مباراة</span>
                         </div>
                     </div>
                 </div>
                 
-                <div class="footer-bottom">
-                    <p>&copy; <span id="current-year">2023</span> Quiz Masters. جميع الحقوق محفوظة.</p>
+                <div class="footer-section">
+                    <h4>روابط سريعة</h4>
                     <div class="footer-links">
-                        <a href="#">الخصوصية</a>
-                        <a href="#">الشروط</a>
-                        <a href="#">خرائط الموقع</a>
+                        <a href="#" data-page="help">المساعدة</a>
+                        <a href="#" data-page="settings">الإعدادات</a>
+                        <a href="#" data-page="profile">الملف الشخصي</a>
                     </div>
                 </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>© <span id="footer-year">2024</span> Quiz Masters. جميع الحقوق محفوظة.</p>
             </div>
         </footer>
     </div>
 
-    <script src="app.js"></script>
-        <script src="app1.js"></script>
+    <!-- حاوية التنبيهات -->
+    <div id="toast-container"></div>
+
+    <!-- سكريبتات Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+    <!-- الملفات المنقسمة -->
+    <script type="module" src="src/main.js"></script>
+   <script type="module" src="components/modals.js"></script>
+   <script type="module" src="components/notifications.js"></script>
+   <script type="module" src="components/ui.js"></script>
+   <script type="module" src="constants/appConstants.js"></script>
+   <script type="module" src="firebase/auth.js"></script>
+    <script type="module" src="firebase/config.js"></script>
+    <script type="module" src="firebase/database.js"></script>
+    <script type="module" src="managers/adminPanel.js"></script>
+    <script type="module" src="managers/gameManager.js"></script>
+    <script type="module" src="pages/admin.js"></script>
+    <script type="module" src="pages/auth.js"></script>
+    <script type="module" src="pages/challenges.js"></script>
+    <script type="module" src="pages/dashboard.js"></script>
+    <script type="module" src="pages/friendes.js"></script>
+    <script type="module" src="pages/help.js"></script>
+    <script type="module" src="pages/leaderboard.js"></script>
+    <script type="module" src="pages/profile.js"></script>
+    <script type="module" src="pages/settings.js"></script>
+    <script type="module" src="pages/shop.js"></script>
+    <script type="module" src="pages/tournaments.js"></script>
+
+
+
+
 </body>
 </html>
