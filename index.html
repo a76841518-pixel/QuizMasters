@@ -2,416 +2,2009 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz Masters</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>لعبة الألوان الذهنية</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 10px;
+            direction: rtl;
+            overflow-x: hidden;
+            touch-action: manipulation;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            min-height: calc(100vh - 20px);
+            overflow-y: auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            color: #fff;
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            line-height: 1.3;
+        }
+        
+        .subtitle {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            line-height: 1.4;
+        }
+        
+        .screen {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .active-screen {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* شاشة تسجيل الدخول */
+        .login-box {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+            text-align: right;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            font-size: 0.95rem;
+            background-color: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+        
+        button {
+            background: linear-gradient(to right, #FF416C, #FF4B2B);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 40px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            margin-top: 8px;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(255, 65, 108, 0.4);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(255, 65, 108, 0.6);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        /* شاشة انتظار اللاعبين */
+        .players-waiting {
+            text-align: center;
+            padding: 15px;
+        }
+        
+        .room-code-box {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px;
+            border-radius: 8px;
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .room-code-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .room-code {
+            font-size: 1.3rem;
+            letter-spacing: 3px;
+            font-family: monospace;
+            font-weight: bold;
+            color: #FFD700;
+        }
+        
+        .copy-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .players-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .player-card {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            transition: all 0.3s ease;
+            min-height: 70px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .player-card.active {
+            background: rgba(46, 204, 113, 0.3);
+            box-shadow: 0 0 12px rgba(46, 204, 113, 0.5);
+            border: 2px solid rgba(46, 204, 113, 0.6);
+        }
+        
+        .player-name {
+            font-weight: bold;
+            font-size: 0.95rem;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .player-score {
+            font-size: 1.1rem;
+            color: #FFD700;
+            font-weight: bold;
+        }
+        
+        /* شاشة اللعبة */
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .game-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            font-size: 0.85rem;
+        }
+        
+        .game-stat {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 4px 8px;
+            border-radius: 6px;
+            display: inline-block;
+        }
+        
+        .round-info {
+            text-align: center;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 8px 12px;
+            border-radius: 8px;
+            flex-grow: 1;
+            min-width: 150px;
+        }
+        
+        .round-title {
+            font-size: 1rem;
+            margin-bottom: 3px;
+            font-weight: bold;
+        }
+        
+        .round-desc {
+            font-size: 0.75rem;
+            opacity: 0.8;
+            line-height: 1.3;
+        }
+        
+        .timer-container {
+            text-align: center;
+            margin: 15px 0;
+            position: relative;
+        }
+        
+        .timer {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+            margin-bottom: 5px;
+        }
+        
+        .timer-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .timer-progress {
+            height: 100%;
+            background: linear-gradient(to right, #00b09b, #96c93d);
+            width: 100%;
+            transition: width 1s linear;
+        }
+        
+        .question-box {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 18px;
+            text-align: center;
+            margin: 18px 0;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .question-text {
+            font-size: 1.4rem;
+            font-weight: bold;
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+        
+        .question-instruction {
+            font-size: 0.95rem;
+            opacity: 0.9;
+            line-height: 1.4;
+        }
+        
+        .buttons-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .color-button {
+            height: 90px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 3px solid transparent;
+            color: white;
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            padding: 5px;
+            word-break: break-word;
+            overflow: hidden;
+        }
+        
+        .color-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .color-button:active {
+            transform: translateY(0);
+        }
+        
+        .color-button.selected {
+            border: 4px solid #FFD700;
+            transform: scale(1.02);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.7);
+        }
+        
+        /* شاشة النتائج */
+        .results-container {
+            text-align: center;
+            padding: 15px;
+        }
+        
+        .result-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #FFD700;
+        }
+        
+        .result-message {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            padding: 12px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            line-height: 1.4;
+        }
+        
+        .correct {
+            background: rgba(46, 204, 113, 0.3);
+            color: #2ecc71;
+            border: 2px solid rgba(46, 204, 113, 0.5);
+        }
+        
+        .incorrect {
+            background: rgba(231, 76, 60, 0.3);
+            color: #e74c3c;
+            border: 2px solid rgba(231, 76, 60, 0.5);
+        }
+        
+        .winner-announcement {
+            font-size: 1.8rem;
+            color: #FFD700;
+            margin: 20px 0;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+            animation: pulse 1.5s infinite;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+            100% { transform: scale(1); }
+        }
+        
+        .final-scores {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            margin: 20px 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .score-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 1rem;
+            align-items: center;
+        }
+        
+        .score-item:last-child {
+            border-bottom: none;
+        }
+        
+        .player-rank {
+            font-size: 1.2rem;
+            margin-right: 8px;
+            min-width: 30px;
+        }
+        
+        .player-info {
+            flex-grow: 1;
+            text-align: right;
+        }
+        
+        .player-score-value {
+            font-weight: bold;
+            color: #FFD700;
+            min-width: 60px;
+            text-align: left;
+        }
+        
+        /* رسائل النظام */
+        .system-message {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 12px;
+            border-radius: 8px;
+            margin: 12px 0;
+            text-align: center;
+            font-style: italic;
+            animation: slideIn 0.3s ease;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-15px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        /* أزرار الإجراءات */
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 20px;
+        }
+        
+        .action-buttons.horizontal {
+            flex-direction: row;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .action-buttons.horizontal button {
+            flex: 1;
+            min-width: 140px;
+        }
+        
+        /* ميزات جديدة */
+        .feature-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #FF416C;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+        
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+        
+        .quick-action-btn {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s ease;
+        }
+        
+        .quick-action-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+        
+        .game-tips {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 12px;
+            margin: 15px 0;
+            border-right: 4px solid #FFD700;
+        }
+        
+        .game-tips h4 {
+            margin-bottom: 8px;
+            color: #FFD700;
+            font-size: 0.95rem;
+        }
+        
+        .game-tips p {
+            font-size: 0.8rem;
+            line-height: 1.4;
+            opacity: 0.9;
+        }
+        
+        /* تصميم للهواتف */
+        @media (max-width: 768px) {
+            .container {
+                padding: 12px;
+                border-radius: 12px;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+            
+            .buttons-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .color-button {
+                height: 80px;
+                font-size: 1.2rem;
+            }
+            
+            .game-header {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .players-list {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .player-card {
+                min-width: auto;
+            }
+            
+            .question-text {
+                font-size: 1.2rem;
+            }
+            
+            .timer {
+                font-size: 1.5rem;
+            }
+            
+            .action-buttons.horizontal {
+                flex-direction: column;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .players-list {
+                grid-template-columns: 1fr;
+            }
+            
+            .color-button {
+                height: 75px;
+                font-size: 1.1rem;
+            }
+            
+            .question-box {
+                padding: 15px;
+                min-height: 90px;
+            }
+            
+            .game-stats {
+                font-size: 0.8rem;
+            }
+        }
+        
+        /* تحسينات للتفاعل */
+        .shake {
+            animation: shake 0.5s ease;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        
+        .bounce {
+            animation: bounce 0.5s ease;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        /* تخصيص شريط التمرير */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+        
+        /* تأثيرات الجوائز */
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            opacity: 0;
+            top: 0;
+            z-index: 9999;
+        }
+    </style>
 </head>
 <body>
-    <!-- شاشة التحميل -->
-    <div id="loading-screen">
-        <div class="loader">
-            <div class="loader-spinner"></div>
-            <h2>Quiz Masters</h2>
-            <p>جاري التحميل...</p>
-        </div>
-    </div>
-
-    <!-- صفحة المصادقة -->
-    <div id="auth-page" class="page">
-        <div class="auth-container">
-            <div class="auth-header">
-                <div class="auth-logo">
-                    <i class="fas fa-brain"></i>
-                    <h1>Quiz Masters</h1>
-                </div>
-                <p class="auth-subtitle">منصة الألعاب الذهنية الأكثر متعة وتحدياً</p>
-            </div>
-            
-            <form id="auth-form">
-                <div class="form-group" id="auth-name-group" style="display: none;">
-                    <label for="auth-name" class="form-label">
-                        <i class="fas fa-user"></i> الاسم الكامل
-                    </label>
-                    <input type="text" id="auth-name" class="form-control" placeholder="أدخل اسمك الكامل">
-                </div>
-                
-                <div class="form-group" id="auth-username-group" style="display: none;">
-                    <label for="auth-username" class="form-label">
-                        <i class="fas fa-at"></i> اسم المستخدم
-                    </label>
-                    <input type="text" id="auth-username" class="form-control" placeholder="اختر اسم مستخدم فريد">
-                </div>
-                
-                <div class="form-group">
-                    <label for="auth-email" class="form-label">
-                        <i class="fas fa-envelope"></i> البريد الإلكتروني
-                    </label>
-                    <input type="email" id="auth-email" class="form-control" placeholder="example@email.com" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="auth-password" class="form-label">
-                        <i class="fas fa-lock"></i> كلمة المرور
-                    </label>
-                    <input type="password" id="auth-password" class="form-control" placeholder="كلمة المرور (6 أحرف على الأقل)" minlength="6" required>
-                </div>
-                
-                <div id="auth-alert" class="alert" style="display: none;"></div>
-                
-                <button type="submit" class="btn btn-primary btn-block">
-                    <span id="auth-submit-text">تسجيل الدخول</span>
-                </button>
-                
-                <div class="auth-divider">
-                    <span>أو</span>
-                </div>
-                
-                <button type="button" id="guest-login" class="btn btn-outline btn-block">
-                    <i class="fas fa-user-clock"></i> الدخول كزائر
-                </button>
-                
-                <div class="auth-switch">
-                    <span id="auth-switch-text">ليس لديك حساب؟</span>
-                    <a href="#" id="auth-switch-link">إنشاء حساب جديد</a>
-                </div>
-            </form>
-            
-            <div class="auth-footer">
-                <p>© <span id="current-year">2024</span> Quiz Masters. جميع الحقوق محفوظة.</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- حاوية التطبيق -->
-    <div id="app-container" style="display: none;">
-        <!-- الهيدر -->
-        <header id="main-header">
-            <div class="header-left">
-                <button id="menu-toggle" class="btn-icon">
-                    <i class="fas fa-bars"></i>
-                </button>
-                <div class="logo">
-                    <i class="fas fa-brain"></i>
-                    <span>Quiz Masters</span>
-                </div>
-            </div>
-            
-            <div class="header-center">
-                <div class="header-stats">
-                    <div class="stat-item">
-                        <i class="fas fa-trophy"></i>
-                        <span id="header-rank">#0</span>
-                    </div>
-                    <div class="stat-item">
-                        <i class="fas fa-chart-line"></i>
-                        <span id="header-level">1</span>
-                    </div>
-                    <div class="stat-item">
-                        <i class="fas fa-coins"></i>
-                        <span id="header-points">0</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="header-right">
-                <button id="refresh-dashboard" class="btn-icon" title="تحديث">
-                    <i class="fas fa-sync-alt"></i>
-                </button>
-                
-                <div class="notification-bell" id="notification-bell">
-                    <i class="fas fa-bell"></i>
-                    <span id="notification-count" class="badge">0</span>
-                    <div id="notification-dropdown" class="dropdown">
-                        <div class="dropdown-header">
-                            <h4>التنبيهات</h4>
-                            <button class="btn-link">عرض الكل</button>
-                        </div>
-                        <div class="dropdown-body" id="notification-list">
-                            <!-- التنبيهات تظهر هنا -->
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="user-menu" id="user-menu-toggle">
-                    <div class="user-avatar" id="dropdown-avatar">?</div>
-                    <div class="user-info">
-                        <div class="user-name" id="dropdown-username">مستخدم</div>
-                        <div class="user-level" id="dropdown-level">المستوى 1</div>
-                    </div>
-                    <i class="fas fa-chevron-down"></i>
-                    
-                    <div id="user-dropdown" class="dropdown">
-                        <a href="#" class="dropdown-item" data-page="profile">
-                            <i class="fas fa-user-circle"></i> الملف الشخصي
-                        </a>
-                        <a href="#" class="dropdown-item" data-page="settings">
-                            <i class="fas fa-cog"></i> الإعدادات
-                        </a>
-                        <div class="dropdown-divider"></div>
-                        <a href="#" class="dropdown-item" id="logout-btn">
-                            <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
-                        </a>
-                    </div>
-                </div>
-            </div>
+    <div class="container">
+        <header>
+            <h1>🎨 لعبة الألوان الذهنية 🧠</h1>
+            <p class="subtitle">اختبر تركيزك وسرعة رد فعلك في تمييز الألوان مع لاعبين آخرين!</p>
         </header>
-
-        <!-- القائمة الجانبية -->
-        <nav id="sidebar">
-            <div class="sidebar-header">
-                <div class="user-info">
-                    <div class="user-avatar" id="sidebar-avatar">?</div>
-                    <div class="user-details">
-                        <div class="user-name" id="sidebar-username">مستخدم</div>
-                        <div class="xp-progress">
-                            <div class="progress-bar">
-                                <div class="progress-fill" id="xp-progress"></div>
-                            </div>
-                            <span class="xp-text" id="xp-text">0/100</span>
-                        </div>
+        
+        <!-- شاشة تسجيل الدخول -->
+        <div id="loginScreen" class="screen active-screen">
+            <div class="login-box">
+                <h2>بدء اللعبة</h2>
+                <p>أدخل اسمك واختر نوع اللعبة</p>
+                
+                <div class="input-group">
+                    <label for="playerName">اسم اللاعب:</label>
+                    <input type="text" id="playerName" placeholder="أدخل اسمك هنا" maxlength="12" value="لاعب">
+                </div>
+                
+                <div class="input-group">
+                    <label for="gameMode">نوع اللعبة:</label>
+                    <select id="gameMode">
+                        <option value="create">إنشاء غرفة جديدة</option>
+                        <option value="join">الانضمام إلى غرفة</option>
+                        <option value="quick">لعبة سريعة</option>
+                    </select>
+                </div>
+                
+                <div class="input-group" id="roomCodeGroup" style="display: none;">
+                    <label for="roomCode">كود الغرفة:</label>
+                    <input type="text" id="roomCode" placeholder="أدخل كود الغرفة" maxlength="6">
+                </div>
+                
+                <div class="quick-actions" id="quickActions" style="display: none;">
+                    <div class="quick-action-btn" id="practiceBtn">
+                        <span>💪</span> تدريب
+                    </div>
+                    <div class="quick-action-btn" id="randomRoomBtn">
+                        <span>🎲</span> غرفة عشوائية
                     </div>
                 </div>
-                <button id="close-sidebar" class="btn-icon">
-                    <i class="fas fa-times"></i>
-                </button>
+                
+                <button id="startBtn">بدء اللعب</button>
+                
+                <div id="loginError" style="color: #ff6b6b; margin-top: 10px; display: none; font-size: 0.85rem;"></div>
             </div>
             
-            <div class="sidebar-menu">
-                <a href="#" class="menu-item active" data-page="dashboard">
-                    <i class="fas fa-home"></i>
-                    <span>لوحة التحكم</span>
-                </a>
-                
-                <a href="#" class="menu-item" data-page="challenges">
-                    <i class="fas fa-gamepad"></i>
-                    <span>التحديات</span>
-                </a>
-                
-                <a href="#" class="menu-item" data-page="tournaments">
-                    <i class="fas fa-chess-king"></i>
-                    <span>البطولات</span>
-                </a>
-                
-                <a href="#" class="menu-item" data-page="leaderboard">
-                    <i class="fas fa-trophy"></i>
-                    <span>التصنيف</span>
-                </a>
-                
-                <a href="#" class="menu-item" data-page="friends">
-                    <i class="fas fa-user-friends"></i>
-                    <span>الأصدقاء</span>
-                    <span id="friend-requests-badge" class="badge" style="display: none;">0</span>
-                </a>
-                
-                <a href="#" class="menu-item" data-page="shop">
-                    <i class="fas fa-shopping-cart"></i>
-                    <span>المتجر</span>
-                </a>
-                
-                <div class="sidebar-divider"></div>
-                
-                <a href="#" class="menu-item" data-page="help">
-                    <i class="fas fa-question-circle"></i>
-                    <span>المساعدة</span>
-                </a>
-                
-                <a href="#" class="menu-item" id="admin-menu-item" style="display: none;" data-page="admin">
-                    <i class="fas fa-user-shield"></i>
-                    <span>لوحة المشرف</span>
-                </a>
+            <div class="game-tips">
+                <h4>💡 نصائح للعبة:</h4>
+                <p>• ركز على التعليمات ولا تنخدع بالألوان</p>
+                <p>• استجب بسرعة قبل انتهاء الوقت</p>
+                <p>• كل جولة أسرع تمنحك نقاط إضافية</p>
+                <p>• يمكنك التدرب في وضع اللعب الفردي</p>
             </div>
             
-            <div class="sidebar-footer">
-                <div class="online-friends">
-                    <h4>المتصلون الآن</h4>
-                    <div class="friends-list" id="online-friends">
-                        <!-- الأصدقاء المتصلون يظهرون هنا -->
-                    </div>
-                </div>
+            <div class="system-message">
+                <p><strong>الجوائز:</strong> الفائز يحصل على 🏆، الثاني 🥈، الثالث 🥉</p>
             </div>
-        </nav>
-
-        <!-- المحتوى الرئيسي -->
-        <main id="main-content">
-            <!-- صفحات التطبيق -->
-            <div id="dashboard-page" class="page active">
-                <div class="page-header">
-                    <h1 class="page-title">
-                        <i class="fas fa-home"></i>
-                        لوحة التحكم
-                    </h1>
-                    <div class="header-actions">
-                        <button class="btn btn-outline" id="quick-challenge">
-                            <i class="fas fa-bolt"></i> تحدٍ سريع
-                        </button>
-                        <button class="btn btn-refresh" id="refresh-dashboard-btn">
-                            <i class="fas fa-sync-alt"></i>
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="dashboard-container">
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-icon">
-                                <i class="fas fa-trophy"></i>
-                            </div>
-                            <div class="stat-info">
-                                <div class="stat-value" id="stat-wins">0</div>
-                                <div class="stat-label">الانتصارات</div>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon">
-                                <i class="fas fa-coins"></i>
-                            </div>
-                            <div class="stat-info">
-                                <div class="stat-value" id="stat-points">0</div>
-                                <div class="stat-label">النقاط</div>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon">
-                                <i class="fas fa-gamepad"></i>
-                            </div>
-                            <div class="stat-info">
-                                <div class="stat-value" id="stat-matches">0</div>
-                                <div class="stat-label">المباريات</div>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon">
-                                <i class="fas fa-chart-line"></i>
-                            </div>
-                            <div class="stat-info">
-                                <div class="stat-value" id="stat-rank">#0</div>
-                                <div class="stat-label">الترتيب</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="dashboard-content">
-                        <div class="dashboard-section">
-                            <h3>التحديات القادمة</h3>
-                            <div class="challenges-preview" id="upcoming-challenges">
-                                <!-- التحديات القادمة تظهر هنا -->
-                            </div>
-                        </div>
-                        
-                        <div class="dashboard-section">
-                            <h3>البطولات النشطة</h3>
-                            <div class="tournaments-preview" id="upcoming-tournaments">
-                                <!-- البطولات تظهر هنا -->
-                            </div>
-                        </div>
-                        
-                        <div class="dashboard-section">
-                            <h3>الإنجازات الحديثة</h3>
-                            <div class="achievements-preview" id="recent-achievements">
-                                <!-- الإنجازات تظهر هنا -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div id="challenges-page" class="page"></div>
-            <div id="tournaments-page" class="page"></div>
-            <div id="leaderboard-page" class="page"></div>
-            <div id="friends-page" class="page"></div>
-            <div id="shop-page" class="page"></div>
-            <div id="profile-page" class="page"></div>
-            <div id="settings-page" class="page"></div>
-            <div id="admin-page" class="page"></div>
-            <div id="help-page" class="page"></div>
-        </main>
-
-        <!-- نافذة التحدي -->
-        <div id="challenge-window" style="display: none;">
-            <div class="challenge-container"></div>
         </div>
-
-        <!-- الفوتر -->
-        <footer id="main-footer">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h4>Quiz Masters</h4>
-                    <p>منصة الألعاب الذهنية الرائدة في العالم العربي</p>
-                </div>
+        
+        <!-- شاشة انتظار اللاعبين -->
+        <div id="waitingScreen" class="screen">
+            <div class="players-waiting">
+                <h2>💤 في انتظار اللاعبين...</h2>
+                <p>شارك كود الغرفة مع أصدقائك للانضمام</p>
                 
-                <div class="footer-section">
-                    <h4>إحصائيات المنصة</h4>
-                    <div class="footer-stats">
-                        <div class="footer-stat">
-                            <i class="fas fa-users"></i>
-                            <span id="footer-total-users">0</span>
-                            <span>لاعب</span>
-                        </div>
-                        <div class="footer-stat">
-                            <i class="fas fa-question-circle"></i>
-                            <span id="footer-total-questions">0</span>
-                            <span>سؤال</span>
-                        </div>
-                        <div class="footer-stat">
-                            <i class="fas fa-gamepad"></i>
-                            <span id="footer-total-matches">0</span>
-                            <span>مباراة</span>
-                        </div>
+                <div class="room-code-box">
+                    <div class="room-code-label">كود الغرفة:</div>
+                    <div class="room-code" id="displayRoomCode">ABCD12</div>
+                    <div class="copy-btn" id="copyCodeBtn">
+                        <span>📋</span> نسخ
                     </div>
                 </div>
                 
-                <div class="footer-section">
-                    <h4>روابط سريعة</h4>
-                    <div class="footer-links">
-                        <a href="#" data-page="help">المساعدة</a>
-                        <a href="#" data-page="settings">الإعدادات</a>
-                        <a href="#" data-page="profile">الملف الشخصي</a>
+                <div class="players-list" id="playersList">
+                    <!-- سيتم ملء اللاعبين هنا عبر JavaScript -->
+                </div>
+                
+                <div class="quick-actions">
+                    <div class="quick-action-btn" id="inviteBtn">
+                        <span>📤</span> دعوة
                     </div>
+                    <div class="quick-action-btn" id="refreshBtn">
+                        <span>🔄</span> تحديث
+                    </div>
+                </div>
+                
+                <div id="waitingMessage" class="system-message">
+                    <p>⏳ ينتظر النظام بدء اللعبة...</p>
+                </div>
+                
+                <div class="action-buttons">
+                    <button id="startGameBtn" style="display: none;">بدء اللعبة</button>
+                    <button id="leaveRoomBtn">ترك الغرفة</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- شاشة اللعبة -->
+        <div id="gameScreen" class="screen">
+            <div class="game-header">
+                <div class="game-stats">
+                    <div class="game-stat">الجولة: <span id="currentRound">1</span>/5</div>
+                    <div class="game-stat">النقاط: <span id="playerScore">0</span></div>
+                </div>
+                
+                <div class="round-info">
+                    <div class="round-title" id="roundTitle">المرحلة الأولى</div>
+                    <div class="round-desc" id="roundDescription">لون الزر والاسم بداخله واحد</div>
+                </div>
+                
+                <div class="game-stats">
+                    <div class="game-stat">اللاعبين: <span id="activePlayers">1</span></div>
+                    <div class="game-stat">الغرفة: <span id="currentRoomCode">ABCD12</span></div>
                 </div>
             </div>
             
-            <div class="footer-bottom">
-                <p>© <span id="footer-year">2024</span> Quiz Masters. جميع الحقوق محفوظة.</p>
+            <div class="timer-container">
+                <div class="timer" id="timer">10</div>
+                <div class="timer-bar">
+                    <div class="timer-progress" id="timerProgress"></div>
+                </div>
             </div>
-        </footer>
+            
+            <div class="question-box">
+                <div class="question-text" id="questionText">ما هو لون الزر؟</div>
+                <div class="question-instruction" id="questionInstruction">اختر الزر الذي يطابق لونه المطلوب</div>
+            </div>
+            
+            <div class="buttons-container" id="buttonsContainer">
+                <!-- سيتم إنشاء الأزرار هنا عبر JavaScript -->
+            </div>
+            
+            <div id="gameMessage" class="system-message">
+                <p>⏳ اختر إجابتك قبل انتهاء الوقت!</p>
+            </div>
+            
+            <div class="quick-actions">
+                <div class="quick-action-btn" id="hintBtn">
+                    <span>💡</span> تلميح
+                </div>
+                <div class="quick-action-btn" id="skipBtn" style="display: none;">
+                    <span>⏭️</span> تخطي
+                </div>
+            </div>
+        </div>
+        
+        <!-- شاشة النتائج -->
+        <div id="resultsScreen" class="screen">
+            <div class="results-container">
+                <h2 class="result-title">🎯 نتائج الجولة</h2>
+                
+                <div id="resultMessage" class="result-message">
+                    <!-- سيتم عرض نتيجة الجولة هنا -->
+                </div>
+                
+                <div id="bonusMessage" class="system-message" style="display: none;">
+                    <!-- رسائل المكافآت الإضافية -->
+                </div>
+                
+                <div id="winnerAnnouncement" class="winner-announcement" style="display: none;">
+                    <!-- سيتم عرض الفائز هنا -->
+                </div>
+                
+                <div class="final-scores" id="finalScores">
+                    <!-- سيتم عرض النتائج النهائية هنا -->
+                </div>
+                
+                <div class="action-buttons horizontal">
+                    <button id="nextRoundBtn">الجولة التالية</button>
+                    <button id="backToLobbyBtn">العودة إلى اللوبي</button>
+                </div>
+                
+                <div class="game-tips" id="resultsTips" style="display: none;">
+                    <h4>📊 تحليل أدائك:</h4>
+                    <p id="performanceAnalysis"></p>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- حاوية التنبيهات -->
-    <div id="toast-container"></div>
-
-    <!-- سكريبتات Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
-    <!-- الملفات المنقسمة -->
-    <script type="module" src="main.js"></script>
-   <script type="module" src="modals.js"></script>
-   <script type="module" src="notifications.js"></script>
-   <script type="module" src="ui.js"></script>
-   <script type="module" src="appConstants.js"></script>
-   <script type="module" src="auth.js"></script>
-    <script type="module" src="config.js"></script>
-    <script type="module" src="database.js"></script>
-    <script type="module" src="adminPanel.js"></script>
-    <script type="module" src="gameManager.js"></script>
-    <script type="module" src="admin.js"></script>
-    <script type="module" src="auth.js"></script>
-    <script type="module" src="challenges.js"></script>
-    <script type="module" src="dashboard.js"></script>
-    <script type="module" src="friendes.js"></script>
-    <script type="module" src="help.js"></script>
-    <script type="module" src="leaderboard.js"></script>
-    <script type="module" src="profile.js"></script>
-    <script type="module" src="settings.js"></script>
-    <script type="module" src="shop.js"></script>
-    <script type="module" src="tournaments.js"></script>
-
-
-
-
+    <script>
+        // تهيئة Firebase
+        const firebaseConfig = {
+          apiKey: "AIzaSyA7ob2UGfoF_WwN-Ishexk_JxbuUoAmV7g",
+          authDomain: "avargeqq.firebaseapp.com",
+          databaseURL: "https://avargeqq-default-rtdb.firebaseio.com",
+          projectId: "avargeqq",
+          storageBucket: "avargeqq.firebasestorage.app",
+          messagingSenderId: "419865018343",
+          appId: "1:419865018343:web:03b5fae49b54b3e3c84742",
+          measurementId: "G-900GCZ71R3"
+        };
+        
+        // تهيئة Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        
+        // متغيرات اللعبة
+        let playerId = null;
+        let playerName = "";
+        let roomCode = "";
+        let gameMode = "";
+        let playerScore = 0;
+        let currentRound = 1;
+        let selectedAnswer = null;
+        let gameData = null;
+        let players = {};
+        let timerInterval = null;
+        let timeLeft = 10;
+        let totalTime = 10;
+        let responseTime = 0;
+        let gameStartTime = 0;
+        let practiceMode = false;
+        let roundResults = [];
+        let hintsUsed = 0;
+        
+        // عناصر DOM
+        const loginScreen = document.getElementById('loginScreen');
+        const waitingScreen = document.getElementById('waitingScreen');
+        const gameScreen = document.getElementById('gameScreen');
+        const resultsScreen = document.getElementById('resultsScreen');
+        
+        const playerNameInput = document.getElementById('playerName');
+        const gameModeSelect = document.getElementById('gameMode');
+        const roomCodeGroup = document.getElementById('roomCodeGroup');
+        const roomCodeInput = document.getElementById('roomCode');
+        const quickActions = document.getElementById('quickActions');
+        const practiceBtn = document.getElementById('practiceBtn');
+        const randomRoomBtn = document.getElementById('randomRoomBtn');
+        const startBtn = document.getElementById('startBtn');
+        const loginError = document.getElementById('loginError');
+        
+        const displayRoomCode = document.getElementById('displayRoomCode');
+        const copyCodeBtn = document.getElementById('copyCodeBtn');
+        const inviteBtn = document.getElementById('inviteBtn');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const playersList = document.getElementById('playersList');
+        const startGameBtn = document.getElementById('startGameBtn');
+        const leaveRoomBtn = document.getElementById('leaveRoomBtn');
+        const waitingMessage = document.getElementById('waitingMessage');
+        
+        const currentRoundEl = document.getElementById('currentRound');
+        const playerScoreEl = document.getElementById('playerScore');
+        const roundTitleEl = document.getElementById('roundTitle');
+        const roundDescriptionEl = document.getElementById('roundDescription');
+        const activePlayersEl = document.getElementById('activePlayers');
+        const currentRoomCodeEl = document.getElementById('currentRoomCode');
+        const timerEl = document.getElementById('timer');
+        const timerProgress = document.getElementById('timerProgress');
+        const questionTextEl = document.getElementById('questionText');
+        const questionInstructionEl = document.getElementById('questionInstruction');
+        const buttonsContainer = document.getElementById('buttonsContainer');
+        const gameMessage = document.getElementById('gameMessage');
+        const hintBtn = document.getElementById('hintBtn');
+        const skipBtn = document.getElementById('skipBtn');
+        
+        const resultMessage = document.getElementById('resultMessage');
+        const bonusMessage = document.getElementById('bonusMessage');
+        const winnerAnnouncement = document.getElementById('winnerAnnouncement');
+        const finalScores = document.getElementById('finalScores');
+        const nextRoundBtn = document.getElementById('nextRoundBtn');
+        const backToLobbyBtn = document.getElementById('backToLobbyBtn');
+        const resultsTips = document.getElementById('resultsTips');
+        const performanceAnalysis = document.getElementById('performanceAnalysis');
+        
+        // بيانات اللعبة
+        const colors = {
+            أحمر: "#FF5252",
+            أزرق: "#448AFF",
+            أخضر: "#69F0AE",
+            أصفر: "#FFD740",
+            برتقالي: "#FFAB40",
+            بنفسجي: "#E040FB",
+            وردي: "#FF4081",
+            بني: "#8D6E63",
+            أسود: "#212121",
+            أبيض: "#F5F5F5",
+            رمادي: "#9E9E9E",
+            تركواز: "#18FFFF",
+            ذهبي: "#FFD700",
+            فضي: "#C0C0C0",
+            نحاسي: "#B87333"
+        };
+        
+        const colorNames = Object.keys(colors);
+        
+        // تعريف مراحل اللعبة
+        const gameRounds = [
+            {
+                title: "المرحلة الأولى",
+                description: "لون الزر والاسم بداخله واحد",
+                type: "match",
+                target: "button",
+                time: 10
+            },
+            {
+                title: "المرحلة الثانية",
+                description: "لون الزر يختلف عن الاسم - اختر لون الزر",
+                type: "mismatch",
+                target: "button",
+                time: 9
+            },
+            {
+                title: "المرحلة الثالثة",
+                description: "لون الزر يختلف عن الاسم - اختر اسم اللون",
+                type: "mismatch",
+                target: "text",
+                time: 8
+            },
+            {
+                title: "المرحلة الرابعة",
+                description: "لون الزر قريب من الاسم - اختر لون الزر",
+                type: "similar",
+                target: "button",
+                time: 7
+            },
+            {
+                title: "المرحلة الخامسة",
+                description: "لون الزر قريب من الاسم - اختر اسم اللون",
+                type: "similar",
+                target: "text",
+                time: 6
+            }
+        ];
+        
+        // تعريف الألوان المتشابهة
+        const similarColors = {
+            أحمر: ["وردي", "برتقالي"],
+            أزرق: ["تركواز", "بنفسجي"],
+            أخضر: ["أصفر", "تركواز"],
+            أصفر: ["أخضر", "برتقالي"],
+            برتقالي: ["أصفر", "أحمر"],
+            بنفسجي: ["أزرق", "وردي"],
+            وردي: ["أحمر", "بنفسجي"],
+            بني: ["أسود", "أحمر"],
+            أسود: ["بني", "رمادي"],
+            أبيض: ["رمادي", "أصفر"],
+            رمادي: ["أسود", "أبيض"],
+            تركواز: ["أزرق", "أخضر"],
+            ذهبي: ["أصفر", "برتقالي"],
+            فضي: ["رمادي", "أبيض"],
+            نحاسي: ["بني", "برتقالي"]
+        };
+        
+        // أحداث DOM
+        gameModeSelect.addEventListener('change', function() {
+            if (this.value === 'join') {
+                roomCodeGroup.style.display = 'block';
+                quickActions.style.display = 'none';
+            } else if (this.value === 'quick') {
+                roomCodeGroup.style.display = 'none';
+                quickActions.style.display = 'flex';
+            } else {
+                roomCodeGroup.style.display = 'none';
+                quickActions.style.display = 'none';
+            }
+        });
+        
+        practiceBtn.addEventListener('click', function() {
+            practiceMode = true;
+            gameModeSelect.value = 'create';
+            startGame();
+        });
+        
+        randomRoomBtn.addEventListener('click', function() {
+            // البحث عن غرفة عشوائية
+            findRandomRoom();
+        });
+        
+        startBtn.addEventListener('click', startGame);
+        copyCodeBtn.addEventListener('click', copyRoomCode);
+        inviteBtn.addEventListener('click', shareRoom);
+        refreshBtn.addEventListener('click', refreshPlayers);
+        startGameBtn.addEventListener('click', beginGame);
+        leaveRoomBtn.addEventListener('click', leaveRoom);
+        nextRoundBtn.addEventListener('click', nextRound);
+        backToLobbyBtn.addEventListener('click', backToLobby);
+        hintBtn.addEventListener('click', showHint);
+        skipBtn.addEventListener('click', skipQuestion);
+        
+        // توليد كود غرفة عشوائي
+        function generateRoomCode() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let code = '';
+            for (let i = 0; i < 6; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        }
+        
+        // بدء اللعبة
+        function startGame() {
+            playerName = playerNameInput.value.trim();
+            gameMode = gameModeSelect.value;
+            
+            if (!playerName) {
+                showLoginError("الرجاء إدخال اسم اللاعب");
+                return;
+            }
+            
+            if (gameMode === 'join') {
+                roomCode = roomCodeInput.value.trim().toUpperCase();
+                if (!roomCode || roomCode.length !== 6) {
+                    showLoginError("الرجاء إدخال كود غرفة صالح (6 أحرف)");
+                    return;
+                }
+            } else {
+                roomCode = generateRoomCode();
+            }
+            
+            // إنشاء معرف فريد للاعب
+            playerId = Date.now().toString() + Math.floor(Math.random() * 1000);
+            playerScore = 0;
+            currentRound = 1;
+            roundResults = [];
+            hintsUsed = 0;
+            
+            // الاتصال بالغرفة
+            connectToRoom();
+        }
+        
+        // البحث عن غرفة عشوائية
+        function findRandomRoom() {
+            db.collection('rooms')
+                .where('status', '==', 'waiting')
+                .limit(5)
+                .get()
+                .then((querySnapshot) => {
+                    if (!querySnapshot.empty) {
+                        const rooms = [];
+                        querySnapshot.forEach((doc) => {
+                            rooms.push({id: doc.id, data: doc.data()});
+                        });
+                        // اختيار غرفة عشوائية
+                        const randomRoom = rooms[Math.floor(Math.random() * rooms.length)];
+                        roomCodeInput.value = randomRoom.id;
+                        gameModeSelect.value = 'join';
+                        roomCodeGroup.style.display = 'block';
+                        showLoginError(`تم العثور على غرفة: ${randomRoom.id} (${Object.keys(randomRoom.data.players || {}).length} لاعب)`);
+                    } else {
+                        showLoginError("لا توجد غرف متاحة. أنشئ غرفة جديدة!");
+                    }
+                })
+                .catch((error) => {
+                    console.error("خطأ في البحث:", error);
+                    showLoginError("حدث خطأ في البحث عن الغرف");
+                });
+        }
+        
+        // عرض خطأ في تسجيل الدخول
+        function showLoginError(message) {
+            loginError.textContent = message;
+            loginError.style.display = 'block';
+            
+            setTimeout(() => {
+                loginError.style.display = 'none';
+            }, 3000);
+        }
+        
+        // نسخ كود الغرفة
+        function copyRoomCode() {
+            const code = displayRoomCode.textContent;
+            navigator.clipboard.writeText(code)
+                .then(() => {
+                    const originalText = copyCodeBtn.innerHTML;
+                    copyCodeBtn.innerHTML = '<span>✅</span> تم النسخ!';
+                    setTimeout(() => {
+                        copyCodeBtn.innerHTML = originalText;
+                    }, 2000);
+                })
+                .catch(err => {
+                    console.error('فشل نسخ النص: ', err);
+                });
+        }
+        
+        // مشاركة الغرفة
+        function shareRoom() {
+            const code = displayRoomCode.textContent;
+            const shareText = `انضم إلى لعبة الألوان الذهنية! كود الغرفة: ${code}`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'لعبة الألوان الذهنية',
+                    text: shareText,
+                    url: window.location.href
+                });
+            } else {
+                navigator.clipboard.writeText(shareText);
+                const originalText = inviteBtn.innerHTML;
+                inviteBtn.innerHTML = '<span>✅</span> تم النسخ!';
+                setTimeout(() => {
+                    inviteBtn.innerHTML = originalText;
+                }, 2000);
+            }
+        }
+        
+        // تحديث قائمة اللاعبين
+        function refreshPlayers() {
+            if (gameData && gameData.players) {
+                updatePlayersList();
+                refreshBtn.classList.add('bounce');
+                setTimeout(() => refreshBtn.classList.remove('bounce'), 500);
+            }
+        }
+        
+        // الاتصال بالغرفة
+        function connectToRoom() {
+            const roomRef = db.collection('rooms').doc(roomCode);
+            
+            roomRef.get().then((doc) => {
+                if (gameMode === 'join') {
+                    if (!doc.exists) {
+                        showLoginError("كود الغرفة غير موجود");
+                        return;
+                    }
+                    
+                    joinRoom(roomRef);
+                } else {
+                    if (doc.exists && !practiceMode) {
+                        // إذا كانت الغرفة موجودة بالفعل، ننشئ كود جديد
+                        roomCode = generateRoomCode();
+                        connectToRoom();
+                        return;
+                    }
+                    
+                    createRoom(roomRef);
+                }
+            }).catch((error) => {
+                console.error("خطأ في الاتصال:", error);
+                showLoginError("حدث خطأ في الاتصال. حاول مرة أخرى");
+            });
+        }
+        
+        // إنشاء غرفة جديدة
+        function createRoom(roomRef) {
+            const roomData = {
+                code: roomCode,
+                creator: playerId,
+                status: 'waiting',
+                players: {},
+                currentRound: 1,
+                gameState: 'waiting',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                maxPlayers: practiceMode ? 1 : 10,
+                isPractice: practiceMode
+            };
+            
+            roomRef.set(roomData).then(() => {
+                // إضافة اللاعب إلى الغرفة
+                addPlayerToRoom(roomRef);
+            }).catch((error) => {
+                console.error("خطأ في إنشاء الغرفة:", error);
+                showLoginError("حدث خطأ في إنشاء الغرفة");
+            });
+        }
+        
+        // الانضمام إلى غرفة موجودة
+        function joinRoom(roomRef) {
+            roomRef.get().then((doc) => {
+                if (!doc.exists) {
+                    showLoginError("الغرفة غير موجودة");
+                    return;
+                }
+                
+                const data = doc.data();
+                if (data.status !== 'waiting' && data.status !== 'playing') {
+                    showLoginError("اللعبة بدأت بالفعل في هذه الغرفة");
+                    return;
+                }
+                
+                // التحقق من عدد اللاعبين
+                if (Object.keys(data.players || {}).length >= (data.maxPlayers || 10)) {
+                    showLoginError("الغرفة ممتلئة!");
+                    return;
+                }
+                
+                // إضافة اللاعب إلى الغرفة
+                addPlayerToRoom(roomRef);
+            });
+        }
+        
+        // إضافة لاعب إلى الغرفة
+        function addPlayerToRoom(roomRef) {
+            const playerData = {
+                id: playerId,
+                name: playerName,
+                score: 0,
+                answered: false,
+                answer: null,
+                isCorrect: false,
+                isReady: false,
+                joinTime: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            roomRef.update({
+                [`players.${playerId}`]: playerData
+            }).then(() => {
+                // الانتقال إلى شاشة الانتظار
+                showScreen(waitingScreen);
+                displayRoomCode.textContent = roomCode;
+                
+                // الاستماع لتحديثات الغرفة
+                listenToRoomUpdates(roomRef);
+                
+                // تحديث قائمة اللاعبين
+                updatePlayersList();
+                
+                // إظهار زر بدء اللعبة للمنشئ فقط
+                roomRef.get().then((doc) => {
+                    const data = doc.data();
+                    if (data.creator === playerId) {
+                        startGameBtn.style.display = 'block';
+                        waitingMessage.innerHTML = practiceMode ? 
+                            "<p>وضع التدريب. ابدأ عندما تكون جاهزاً!</p>" : 
+                            "<p>أنت منشئ الغرفة. انتظر اللاعبين ثم ابدأ اللعبة.</p>";
+                    } else {
+                        startGameBtn.style.display = 'none';
+                        waitingMessage.innerHTML = "<p>في انتظار بدء اللعبة من قبل منشئ الغرفة...</p>";
+                    }
+                });
+            }).catch((error) => {
+                console.error("خطأ في الانضمام إلى الغرفة:", error);
+                showLoginError("حدث خطأ في الانضمام إلى الغرفة");
+            });
+        }
+        
+        // الاستماع لتحديثات الغرفة
+        function listenToRoomUpdates(roomRef) {
+            roomRef.onSnapshot((doc) => {
+                if (!doc.exists) {
+                    // الغرفة حذفت
+                    showLoginError("تم حذف الغرفة");
+                    showScreen(loginScreen);
+                    return;
+                }
+                
+                const data = doc.data();
+                gameData = data;
+                
+                // تحديث قائمة اللاعبين
+                updatePlayersList();
+                
+                // التحقق من حالة اللعبة
+                if (data.status === 'playing' && gameScreen.classList.contains('active-screen') === false) {
+                    // بدء اللعبة
+                    beginGameFromUpdate();
+                }
+                
+                if (data.status === 'results' && resultsScreen.classList.contains('active-screen') === false) {
+                    // عرض النتائج
+                    showResults();
+                }
+                
+                if (data.status === 'finished') {
+                    // انتهت اللعبة
+                    showFinalResults();
+                }
+            });
+        }
+        
+        // تحديث قائمة اللاعبين
+        function updatePlayersList() {
+            if (!gameData || !gameData.players) return;
+            
+            playersList.innerHTML = '';
+            players = gameData.players;
+            
+            Object.keys(players).forEach(playerKey => {
+                const player = players[playerKey];
+                const playerCard = document.createElement('div');
+                playerCard.className = 'player-card';
+                if (playerKey === playerId) {
+                    playerCard.classList.add('active');
+                }
+                
+                // إضافة شارة المنشئ
+                const isCreator = gameData.creator === playerKey;
+                const creatorBadge = isCreator ? ' 👑' : '';
+                
+                playerCard.innerHTML = `
+                    <div class="player-name">${player.name}${creatorBadge}</div>
+                    <div class="player-score">${player.score} 🏆</div>
+                `;
+                
+                playersList.appendChild(playerCard);
+            });
+            
+            // تحديث عدد اللاعبين النشطين
+            if (activePlayersEl) {
+                activePlayersEl.textContent = Object.keys(players).length;
+            }
+        }
+        
+        // بدء اللعبة
+        function beginGame() {
+            const roomRef = db.collection('rooms').doc(roomCode);
+            gameStartTime = Date.now();
+            
+            // إنشاء سؤال جديد
+            const question = generateQuestion(currentRound);
+            totalTime = gameRounds[currentRound - 1].time;
+            
+            roomRef.update({
+                status: 'playing',
+                gameState: 'question',
+                currentQuestion: question,
+                timerEnd: Date.now() + (totalTime * 1000),
+                playersAnswered: 0,
+                roundStartTime: Date.now()
+            }).then(() => {
+                // إعادة تعيين إجابات اللاعبين
+                Object.keys(players).forEach(playerKey => {
+                    roomRef.update({
+                        [`players.${playerKey}.answered`]: false,
+                        [`players.${playerKey}.answer`]: null,
+                        [`players.${playerKey}.isCorrect`]: false,
+                        [`players.${playerKey}.responseTime`]: 0
+                    });
+                });
+            }).catch((error) => {
+                console.error("خطأ في بدء اللعبة:", error);
+            });
+        }
+        
+        // بدء اللعبة من تحديث
+        function beginGameFromUpdate() {
+            showScreen(gameScreen);
+            currentRound = gameData.currentRound || 1;
+            selectedAnswer = null;
+            totalTime = gameRounds[currentRound - 1].time;
+            
+            // تحديث واجهة اللعبة
+            updateGameUI();
+            
+            // بدء العداد
+            startTimer();
+            
+            // إظهار زر التخطي في وضع التدريب
+            if (practiceMode) {
+                skipBtn.style.display = 'flex';
+            }
+        }
+        
+        // تحديث واجهة اللعبة
+        function updateGameUI() {
+            currentRoundEl.textContent = currentRound;
+            playerScoreEl.textContent = playerScore;
+            currentRoomCodeEl.textContent = roomCode;
+            
+            const roundInfo = gameRounds[currentRound - 1];
+            roundTitleEl.textContent = roundInfo.title;
+            roundDescriptionEl.textContent = roundInfo.description;
+            
+            // عرض السؤال
+            if (gameData.currentQuestion) {
+                const question = gameData.currentQuestion;
+                questionTextEl.textContent = question.question;
+                questionInstructionEl.textContent = question.instruction;
+                
+                // إنشاء الأزرار
+                createColorButtons(question);
+            }
+            
+            // تحديث الرسالة
+            if (gameData.gameState === 'question') {
+                gameMessage.innerHTML = "<p>⏳ اختر إجابتك قبل انتهاء الوقت!</p>";
+            } else if (gameData.gameState === 'answering') {
+                gameMessage.innerHTML = "<p>📊 يتم حساب النتائج...</p>";
+            }
+        }
+        
+        // إنشاء أزرار الألوان
+        function createColorButtons(question) {
+            buttonsContainer.innerHTML = '';
+            
+            question.options.forEach((option, index) => {
+                const button = document.createElement('div');
+                button.className = 'color-button';
+                button.style.backgroundColor = option.color;
+                button.textContent = option.text;
+                button.dataset.index = index;
+                
+                // إضافة تأثير اهتزاز للزر الصحيح (في وضع التدريب مع التلميح)
+                if (practiceMode && hintsUsed > 0) {
+                    if (index === question.correctAnswer) {
+                        button.style.boxShadow = '0 0 20px rgba(0, 255, 0, 0.5)';
+                    }
+                }
+                
+                // إضافة حدث النقر
+                button.addEventListener('click', () => selectAnswer(index));
+                
+                buttonsContainer.appendChild(button);
+            });
+        }
+        
+        // اختيار الإجابة
+        function selectAnswer(index) {
+            if (selectedAnswer !== null || gameData.gameState !== 'question') return;
+            
+            selectedAnswer = index;
+            responseTime = Math.floor((Date.now() - gameStartTime) / 1000);
+            
+            // تحديث مظهر الزر المحدد
+            const buttons = document.querySelectorAll('.color-button');
+            buttons.forEach(button => button.classList.remove('selected'));
+            buttons[index].classList.add('selected');
+            
+            // تأثير اهتزاز
+            if (gameData.currentQuestion.correctAnswer === index) {
+                buttons[index].classList.add('bounce');
+            } else {
+                buttons[index].classList.add('shake');
+            }
+            
+            // إرسال الإجابة إلى Firebase
+            const roomRef = db.collection('rooms').doc(roomCode);
+            const isCorrect = gameData.currentQuestion.correctAnswer === index;
+            
+            roomRef.update({
+                [`players.${playerId}.answered`]: true,
+                [`players.${playerId}.answer`]: index,
+                [`players.${playerId}.isCorrect`]: isCorrect,
+                [`players.${playerId}.responseTime`]: responseTime,
+                playersAnswered: firebase.firestore.FieldValue.increment(1)
+            }).then(() => {
+                // تحديث النتيجة المحلية
+                let pointsEarned = 0;
+                if (isCorrect) {
+                    // نقاط إضافية للإجابة السريعة
+                    const timeBonus = Math.max(1, Math.floor((totalTime - responseTime) / 2));
+                    pointsEarned = 1 + timeBonus;
+                    playerScore += pointsEarned;
+                } else {
+                    playerScore -= 1;
+                    pointsEarned = -1;
+                }
+                
+                playerScoreEl.textContent = playerScore;
+                
+                // تحديث الرسالة
+                gameMessage.innerHTML = isCorrect ? 
+                    `<p>✅ إجابة صحيحة! +${pointsEarned} نقطة</p>` : 
+                    "<p>❌ إجابة خاطئة! -1 نقطة</p>";
+                    
+                // حفظ نتيجة الجولة
+                roundResults.push({
+                    round: currentRound,
+                    correct: isCorrect,
+                    time: responseTime,
+                    points: pointsEarned
+                });
+            });
+        }
+        
+        // بدء العداد
+        function startTimer() {
+            clearInterval(timerInterval);
+            
+            if (!gameData.timerEnd) return;
+            
+            const updateTimer = () => {
+                const now = Date.now();
+                const timeRemaining = Math.max(0, Math.floor((gameData.timerEnd - now) / 1000));
+                const progressPercent = (timeRemaining / totalTime) * 100;
+                
+                timerEl.textContent = timeRemaining;
+                timerProgress.style.width = `${progressPercent}%`;
+                
+                // تغيير لون العداد مع مرور الوقت
+                if (timeRemaining <= 3) {
+                    timerEl.style.color = '#FF5252';
+                    timerProgress.style.background = 'linear-gradient(to right, #FF5252, #FF4081)';
+                } else if (timeRemaining <= 6) {
+                    timerEl.style.color = '#FFD740';
+                    timerProgress.style.background = 'linear-gradient(to right, #FFD740, #FFAB40)';
+                }
+                
+                if (timeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    
+                    // إذا انتهى الوقت ولم يتم اختيار إجابة
+                    if (selectedAnswer === null && gameData.gameState === 'question') {
+                        const roomRef = db.collection('rooms').doc(roomCode);
+                        roomRef.update({
+                            [`players.${playerId}.answered`]: true,
+                            playersAnswered: firebase.firestore.FieldValue.increment(1)
+                        });
+                    }
+                }
+            };
+            
+            updateTimer();
+            timerInterval = setInterval(updateTimer, 100);
+        }
+        
+        // عرض تلميح
+        function showHint() {
+            if (practiceMode && gameData && gameData.currentQuestion) {
+                hintsUsed++;
+                const correctIndex = gameData.currentQuestion.correctAnswer;
+                const buttons = document.querySelectorAll('.color-button');
+                
+                buttons.forEach((button, index) => {
+                    if (index === correctIndex) {
+                        button.style.boxShadow = '0 0 20px rgba(0, 255, 0, 0.5)';
+                        button.style.animation = 'pulse 1s infinite';
+                    }
+                });
+                
+                hintBtn.innerHTML = '<span>💡</span> تلميح مستخدم';
+                hintBtn.style.opacity = '0.7';
+                hintBtn.style.pointerEvents = 'none';
+            }
+        }
+        
+        // تخطي السؤال (في وضع التدريب)
+        function skipQuestion() {
+            if (practiceMode && gameData && gameData.currentQuestion) {
+                const correctIndex = gameData.currentQuestion.correctAnswer;
+                selectAnswer(correctIndex);
+            }
+        }
+        
+        // توليد سؤال
+        function generateQuestion(round) {
+            const roundInfo = gameRounds[round - 1];
+            let question, instruction, correctColor, correctText;
+            
+            // اختيار 3 ألوان عشوائية
+            const selectedColors = [];
+            const selectedColorNames = [];
+            
+            while (selectedColors.length < 3) {
+                const randomColorName = colorNames[Math.floor(Math.random() * colorNames.length)];
+                if (!selectedColorNames.includes(randomColorName)) {
+                    selectedColorNames.push(randomColorName);
+                    selectedColors.push(colors[randomColorName]);
+                }
+            }
+            
+            // إنشاء الخيارات بناءً على نوع الجولة
+            const options = [];
+            let correctAnswer = 0;
+            
+            if (roundInfo.type === 'match') {
+                // لون الزر والاسم بداخله واحد
+                correctColor = selectedColors[0];
+                correctText = selectedColorNames[0];
+                
+                for (let i = 0; i < 3; i++) {
+                    options.push({
+                        text: selectedColorNames[i],
+                        color: selectedColors[i]
+                    });
+                }
+                
+                if (roundInfo.target === 'button') {
+                    question = `ما هو لون الزر "${correctText}"؟`;
+                    instruction = "اختر الزر الذي يطابق لونه المطلوب";
+                } else {
+                    question = `ما هو اسم اللون "${correctColor}"؟`;
+                    instruction = "اختر الزر الذي يحتوي على اسم اللون المطلوب";
+                }
+                
+                // الإجابة الصحيحة هي الأولى
+                correctAnswer = 0;
+                
+            } else if (roundInfo.type === 'mismatch') {
+                // لون الزر يختلف عن لون الاسم
+                // اختيار ألوان وأسماء مختلفة
+                const shuffledNames = [...selectedColorNames].sort(() => Math.random() - 0.5);
+                
+                for (let i = 0; i < 3; i++) {
+                    // التأكد من أن اللون لا يطابق الاسم
+                    let colorIndex = i;
+                    while (colorNames[colorIndex] === shuffledNames[i]) {
+                        colorIndex = (colorIndex + 1) % 3;
+                    }
+                    
+                    options.push({
+                        text: shuffledNames[i],
+                        color: selectedColors[colorIndex]
+                    });
+                }
+                
+                // اختيار الإجابة الصحيحة عشوائياً
+                correctAnswer = Math.floor(Math.random() * 3);
+                
+                if (roundInfo.target === 'button') {
+                    correctColor = options[correctAnswer].color;
+                    question = `ما هو لون الزر "${options[correctAnswer].text}"؟`;
+                    instruction = "اختر الزر الذي يطابق لونه المطلوب";
+                } else {
+                    correctText = options[correctAnswer].text;
+                    question = `ما هو اسم اللون "${options[correctAnswer].color}"؟`;
+                    instruction = "اختر الزر الذي يحتوي على اسم اللون المطلوب";
+                }
+                
+            } else if (roundInfo.type === 'similar') {
+                // لون الزر قريب من لون الاسم
+                // اختيار لون واسم متشابهين
+                const mainColorName = selectedColorNames[0];
+                const similarOptions = similarColors[mainColorName] || [selectedColorNames[1], selectedColorNames[2]];
+                
+                // إنشاء الخيارات
+                options.push({
+                    text: mainColorName,
+                    color: colors[similarOptions[0]] // لون مشابه للاسم
+                });
+                
+                // خياران عشوائيان آخران
+                for (let i = 1; i < 3; i++) {
+                    let randomName;
+                    do {
+                        randomName = colorNames[Math.floor(Math.random() * colorNames.length)];
+                    } while (randomName === mainColorName || similarOptions.includes(randomName));
+                    
+                    let randomColor;
+                    do {
+                        const randomColorName = colorNames[Math.floor(Math.random() * colorNames.length)];
+                        randomColor = colors[randomColorName];
+                    } while (randomColor === colors[similarOptions[0]]);
+                    
+                    options.push({
+                        text: randomName,
+                        color: randomColor
+                    });
+                }
+                
+                // خلط الخيارات
+                for (let i = options.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [options[i], options[j]] = [options[j], options[i]];
+                }
+                
+                // تحديد الإجابة الصحيحة
+                correctAnswer = options.findIndex(option => 
+                    option.text === mainColorName && option.color === colors[similarOptions[0]]
+                );
+                
+                if (roundInfo.target === 'button') {
+                    question = `ما هو لون الزر "${mainColorName}"؟`;
+                    instruction = "اختر الزر الذي يطابق لونه المطلوب (لون مشابه)";
+                } else {
+                    question = `ما هو اسم اللون "${colors[similarOptions[0]]}"؟`;
+                    instruction = "اختر الزر الذي يحتوي على اسم اللون المطلوب (اسم مشابه)";
+                }
+            }
+            
+            return {
+                question,
+                instruction,
+                options,
+                correctAnswer,
+                round: round
+            };
+        }
+        
+        // عرض النتائج
+        function showResults() {
+            showScreen(resultsScreen);
+            clearInterval(timerInterval);
+            
+            if (!gameData || !gameData.currentQuestion) return;
+            
+            // الحصول على نتيجة اللاعب
+            const playerResult = gameData.players[playerId];
+            const isCorrect = playerResult && playerResult.isCorrect;
+            const playerAnswer = playerResult && playerResult.answer;
+            const responseTime = playerResult && playerResult.responseTime;
+            
+            // عرض رسالة النتيجة
+            let message = "";
+            if (isCorrect) {
+                const pointsEarned = roundResults[roundResults.length - 1]?.points || 1;
+                message = `🎉 إجابة صحيحة! +${pointsEarned} نقطة`;
+                if (responseTime < 5) {
+                    message += ` ⚡ سريع (${responseTime} ثانية)`;
+                }
+                resultMessage.className = "result-message correct";
+            } else if (playerAnswer !== null && playerAnswer !== undefined) {
+                message = "❌ إجابة خاطئة! -1 نقطة";
+                resultMessage.className = "result-message incorrect";
+            } else {
+                message = "⏰ انتهى الوقت! لم تختر إجابة!";
+                resultMessage.className = "result-message";
+            }
+            
+            resultMessage.textContent = message;
+            
+            // عرض مكافآت إضافية
+            if (isCorrect && responseTime < 3) {
+                bonusMessage.style.display = 'block';
+                bonusMessage.innerHTML = `<p>🎖️ مكافأة السرعة! +${Math.floor((5 - responseTime) / 2)} نقطة إضافية</p>`;
+            }
+            
+            // عرض النتائج النهائية
+            displayFinalScores();
+            
+            // إظهار تحليل الأداء
+            showPerformanceAnalysis();
+            
+            // إظهار زر الجولة التالية أو النتائج النهائية
+            if (currentRound >= 5) {
+                nextRoundBtn.textContent = "عرض النتائج النهائية";
+            }
+        }
+        
+        // عرض تحليل الأداء
+        function showPerformanceAnalysis() {
+            if (roundResults.length > 0) {
+                resultsTips.style.display = 'block';
+                const lastRound = roundResults[roundResults.length - 1];
+                const correctCount = roundResults.filter(r => r.correct).length;
+                const accuracy = Math.round((correctCount / roundResults.length) * 100);
+                const avgTime = Math.round(roundResults.reduce((sum, r) => sum + r.time, 0) / roundResults.length);
+                
+                performanceAnalysis.textContent = `
+                    دقتك: ${accuracy}% | متوسط الوقت: ${avgTime} ثانية
+                    ${lastRound.correct ? 'آخر إجابة: صحيحة' : 'آخر إجابة: خاطئة'}
+                `;
+            }
+        }
+        
+        // عرض النتائج النهائية
+        function showFinalResults() {
+            showScreen(resultsScreen);
+            
+            // إخفاء زر الجولة التالية
+            nextRoundBtn.style.display = 'none';
+            resultsTips.style.display = 'block';
+            
+            // حساب إحصائيات اللاعب
+            const correctCount = roundResults.filter(r => r.correct).length;
+            const accuracy = Math.round((correctCount / roundResults.length) * 100);
+            const avgTime = Math.round(roundResults.reduce((sum, r) => sum + r.time, 0) / roundResults.length);
+            const totalPoints = playerScore;
+            
+            performanceAnalysis.textContent = `
+                🎮 إنتهت اللعبة! 🎮
+                النقاط الكلية: ${totalPoints}
+                الدقة: ${accuracy}%
+                متوسط وقت الإجابة: ${avgTime} ثانية
+                ${practiceMode ? '(وضع التدريب)' : ''}
+            `;
+            
+            // تحديد الفائز
+            let winner = null;
+            let maxScore = -Infinity;
+            
+            Object.keys(gameData.players).forEach(playerKey => {
+                const player = gameData.players[playerKey];
+                if (player.score > maxScore) {
+                    maxScore = player.score;
+                    winner = player;
+                }
+            });
+            
+            // عرض إعلان الفائز
+            if (winner && !practiceMode) {
+                winnerAnnouncement.style.display = 'block';
+                if (winner.id === playerId) {
+                    winnerAnnouncement.textContent = "🎊 أنت الفائز! 🏆";
+                    createConfetti();
+                } else {
+                    winnerAnnouncement.textContent = `الفائز: ${winner.name} 🏆`;
+                }
+            }
+            
+            // عرض النتائج النهائية
+            displayFinalScores(true);
+        }
+        
+        // إنشاء تأثير الكونفيتي للفائز
+        function createConfetti() {
+            const colors = ['#FF5252', '#448AFF', '#69F0AE', '#FFD740', '#E040FB'];
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.opacity = '1';
+                confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+                document.body.appendChild(confetti);
+                
+                // تأثير السقوط
+                const animation = confetti.animate([
+                    { top: '-10px', transform: 'rotate(0deg)', opacity: 1 },
+                    { top: '100vh', transform: `rotate(${Math.random() * 720}deg)`, opacity: 0 }
+                ], {
+                    duration: 1000 + Math.random() * 2000,
+                    easing: 'cubic-bezier(0.215, 0.61, 0.355, 1)'
+                });
+                
+                animation.onfinish = () => confetti.remove();
+            }
+        }
+        
+        // عرض النتائج
+        function displayFinalScores(isFinal = false) {
+            finalScores.innerHTML = '';
+            
+            if (!gameData || !gameData.players) return;
+            
+            // ترتيب اللاعبين حسب النقاط
+            const sortedPlayers = Object.keys(gameData.players)
+                .map(key => ({ ...gameData.players[key], id: key }))
+                .sort((a, b) => b.score - a.score);
+            
+            sortedPlayers.forEach((player, index) => {
+                const scoreItem = document.createElement('div');
+                scoreItem.className = 'score-item';
+                
+                const rank = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `${index + 1}.`;
+                
+                scoreItem.innerHTML = `
+                    <div class="player-rank">${rank}</div>
+                    <div class="player-info">${player.name} ${player.id === playerId ? "<span style='color:#FFD700;'>(أنت)</span>" : ""}</div>
+                    <div class="player-score-value">${player.score} نقطة</div>
+                `;
+                
+                finalScores.appendChild(scoreItem);
+            });
+            
+            if (isFinal) {
+                resultMessage.textContent = "🎮 انتهت اللعبة!";
+                resultMessage.className = "result-message";
+            }
+        }
+        
+        // الجولة التالية
+        function nextRound() {
+            const roomRef = db.collection('rooms').doc(roomCode);
+            
+            if (currentRound >= 5) {
+                // انتهت اللعبة، عرض النتائج النهائية
+                roomRef.update({
+                    status: 'finished',
+                    gameState: 'finished'
+                });
+                return;
+            }
+            
+            currentRound++;
+            selectedAnswer = null;
+            hintsUsed = 0;
+            hintBtn.innerHTML = '<span>💡</span> تلميح';
+            hintBtn.style.opacity = '1';
+            hintBtn.style.pointerEvents = 'auto';
+            
+            // إنشاء سؤال جديد
+            const question = generateQuestion(currentRound);
+            totalTime = gameRounds[currentRound - 1].time;
+            gameStartTime = Date.now();
+            
+            roomRef.update({
+                status: 'playing',
+                gameState: 'question',
+                currentRound: currentRound,
+                currentQuestion: question,
+                timerEnd: Date.now() + (totalTime * 1000),
+                playersAnswered: 0,
+                roundStartTime: Date.now()
+            }).then(() => {
+                // إعادة تعيين إجابات اللاعبين
+                Object.keys(players).forEach(playerKey => {
+                    roomRef.update({
+                        [`players.${playerKey}.answered`]: false,
+                        [`players.${playerKey}.answer`]: null,
+                        [`players.${playerKey}.isCorrect`]: false,
+                        [`players.${playerKey}.responseTime`]: 0
+                    });
+                });
+            });
+        }
+        
+        // العودة إلى اللوبي
+        function backToLobby() {
+            if (practiceMode) {
+                // في وضع التدريب، نعود مباشرة إلى الشاشة الرئيسية
+                practiceMode = false;
+                showScreen(loginScreen);
+                clearInterval(timerInterval);
+            } else {
+                leaveRoom();
+            }
+        }
+        
+        // ترك الغرفة
+        function leaveRoom() {
+            const roomRef = db.collection('rooms').doc(roomCode);
+            
+            roomRef.update({
+                [`players.${playerId}`]: firebase.firestore.FieldValue.delete()
+            }).then(() => {
+                // التحقق إذا كانت الغرفة فارغة وحذفها
+                roomRef.get().then((doc) => {
+                    const data = doc.data();
+                    if (data && Object.keys(data.players || {}).length === 0) {
+                        roomRef.delete();
+                    }
+                });
+                
+                // العودة إلى شاشة تسجيل الدخول
+                showScreen(loginScreen);
+                clearInterval(timerInterval);
+                practiceMode = false;
+            });
+        }
+        
+        // تبديل الشاشات
+        function showScreen(screen) {
+            // إخفاء جميع الشاشات
+            loginScreen.classList.remove('active-screen');
+            waitingScreen.classList.remove('active-screen');
+            gameScreen.classList.remove('active-screen');
+            resultsScreen.classList.remove('active-screen');
+            
+            // إظهار الشاشة المطلوبة
+            screen.classList.add('active-screen');
+            
+            // إعادة تعيين المؤقت
+            timerEl.style.color = '#FFD700';
+            timerProgress.style.background = 'linear-gradient(to right, #00b09b, #96c93d)';
+        }
+        
+        // عند تحميل الصفحة، إضافة بعض البيانات الافتراضية
+        window.addEventListener('load', function() {
+            // تعيين اسم افتراضي عشوائي
+            const randomNames = ["أحمد", "سارة", "محمد", "فاطمة", "علي", "نور", "خالد", "ليلى", "يوسف", "مريم"];
+            const randomName = randomNames[Math.floor(Math.random() * randomNames.length)];
+            playerNameInput.value = randomName + Math.floor(Math.random() * 100);
+            
+            // إضافة تأثيرات تفاعلية للأزرار
+            document.querySelectorAll('button, .quick-action-btn').forEach(btn => {
+                btn.addEventListener('touchstart', function() {
+                    this.style.transform = 'scale(0.95)';
+                });
+                
+                btn.addEventListener('touchend', function() {
+                    this.style.transform = '';
+                });
+            });
+        });
+    </script>
 </body>
-
 </html>
