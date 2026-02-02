@@ -51,6 +51,186 @@
             </div>
         </div>
         
+<!-- شاشة إنشاء الغرفة -->
+<div id="createRoomScreen" class="screen">
+    <div class="room-header">
+        <button id="backToLobbyFromCreate" class="btn-back"><i class="fas fa-arrow-right"></i> العودة للصالة</button>
+        <h2><i class="fas fa-plus-circle"></i> إنشاء غرفة خاصة</h2>
+    </div>
+    
+    <div class="room-content">
+        <div class="room-settings">
+            <h3><i class="fas fa-cog"></i> إعدادات الغرفة</h3>
+            
+            <div class="form-group">
+                <label for="roomName"><i class="fas fa-heading"></i> اسم الغرفة</label>
+                <input type="text" id="roomName" placeholder="مثلاً: غرفة الأبطال" value="غرفتي">
+            </div>
+            
+            <div class="form-group">
+                <label for="roomType"><i class="fas fa-gamepad"></i> نوع الغرفة</label>
+                <select id="roomType">
+                    <option value="duel">مبارزة 1 ضد 1</option>
+                    <option value="team">فرق (2 ضد 2)</option>
+                    <option value="free">حرة (حتى 4 لاعبين)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="roomPrivacy"><i class="fas fa-lock"></i> الخصوصية</label>
+                <select id="roomPrivacy">
+                    <option value="private">خاصة (بالكود)</option>
+                    <option value="public">عامة</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="roomMaxPlayers"><i class="fas fa-users"></i> عدد اللاعبين الأقصى</label>
+                <select id="roomMaxPlayers">
+                    <option value="2">2 لاعبين</option>
+                    <option value="3">3 لاعبين</option>
+                    <option value="4">4 لاعبين</option>
+                </select>
+            </div>
+            
+            <button id="createRoomBtn" class="btn btn-primary btn-large">
+                <i class="fas fa-plus-circle"></i> إنشاء الغرفة
+            </button>
+        </div>
+        
+        <div class="room-preview">
+            <h3><i class="fas fa-eye"></i> معاينة الغرفة</h3>
+            <div class="preview-room">
+                <div class="room-info-preview">
+                    <h4 id="previewRoomName">غرفتي</h4>
+                    <div class="room-details">
+                        <div class="room-detail">
+                            <i class="fas fa-user"></i>
+                            <span>صاحب الغرفة: <span id="previewRoomOwner">أنت</span></span>
+                        </div>
+                        <div class="room-detail">
+                            <i class="fas fa-gamepad"></i>
+                            <span>النوع: <span id="previewRoomType">مبارزة 1 ضد 1</span></span>
+                        </div>
+                        <div class="room-detail">
+                            <i class="fas fa-users"></i>
+                            <span>اللاعبون: <span id="previewRoomPlayers">1/2</span></span>
+                        </div>
+                        <div class="room-detail">
+                            <i class="fas fa-lock"></i>
+                            <span>الحالة: <span id="previewRoomPrivacy">خاصة</span></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="room-code-section" id="roomCodeSection" style="display: none;">
+                    <h4><i class="fas fa-key"></i> كود الغرفة</h4>
+                    <div class="room-code-display">
+                        <span id="roomCodeDisplay">ABCD12</span>
+                        <button id="copyRoomCode" class="btn-small">
+                            <i class="fas fa-copy"></i> نسخ
+                        </button>
+                    </div>
+                    <p class="hint">شارك هذا الكود مع صديقك للانضمام للغرفة</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- شاشة الانضمام للغرفة -->
+<div id="joinRoomScreen" class="screen">
+    <div class="room-header">
+        <button id="backToLobbyFromJoin" class="btn-back"><i class="fas fa-arrow-right"></i> العودة للصالة</button>
+        <h2><i class="fas fa-sign-in-alt"></i> الانضمام لغرفة</h2>
+    </div>
+    
+    <div class="room-content">
+        <div class="join-methods">
+            <div class="join-method active" id="joinByCodeMethod">
+                <h3><i class="fas fa-key"></i> الانضمام بواسطة الكود</h3>
+                <div class="form-group">
+                    <label for="roomCodeInput">أدخل كود الغرفة</label>
+                    <input type="text" id="roomCodeInput" placeholder="مثلاً: ABCD12" maxlength="6">
+                    <div id="roomCodeError" class="error-message"></div>
+                </div>
+                <button id="joinRoomByCodeBtn" class="btn btn-primary">
+                    <i class="fas fa-sign-in-alt"></i> الانضمام للغرفة
+                </button>
+            </div>
+            
+            <div class="join-method" id="joinPublicMethod">
+                <h3><i class="fas fa-globe"></i> الغرف العامة المتاحة</h3>
+                <div class="public-rooms-list" id="publicRoomsList">
+                    <div class="no-rooms">جارٍ تحميل الغرف...</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="current-rooms">
+            <h3><i class="fas fa-history"></i> غرفك الأخيرة</h3>
+            <div class="recent-rooms" id="recentRooms">
+                <div class="no-rooms">لا توجد غرف سابقة</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- شاشة الغرفة -->
+<div id="roomScreen" class="screen">
+    <div class="room-lobby-header">
+        <button id="leaveRoomBtn" class="btn-back"><i class="fas fa-arrow-right"></i> مغادرة الغرفة</button>
+        <div class="room-info-header">
+            <h2 id="roomNameHeader">اسم الغرفة</h2>
+            <div class="room-code-header">
+                <i class="fas fa-key"></i>
+                <span id="roomCodeHeader">الكود: ABCD12</span>
+                <button id="copyRoomCodeHeader" class="btn-small">
+                    <i class="fas fa-copy"></i>
+                </button>
+            </div>
+        </div>
+        <div class="room-status">
+            <span id="roomStatus">في انتظار اللاعبين...</span>
+        </div>
+    </div>
+    
+    <div class="room-lobby-content">
+        <div class="players-list-container">
+            <h3><i class="fas fa-users"></i> اللاعبون في الغرفة (<span id="playersCount">1</span>/<span id="maxPlayers">4</span>)</h3>
+            <div class="players-list" id="roomPlayersList">
+                <!-- اللاعبون سيتم إضافتهم هنا -->
+            </div>
+            
+            <div class="room-actions">
+                <button id="startGameBtn" class="btn btn-primary btn-large" disabled>
+                    <i class="fas fa-play"></i> بدء اللعبة
+                </button>
+                <button id="kickPlayerBtn" class="btn btn-secondary" disabled>
+                    <i class="fas fa-user-slash"></i> طرد لاعب
+                </button>
+                <button id="changeSettingsBtn" class="btn btn-secondary">
+                    <i class="fas fa-cog"></i> تغيير الإعدادات
+                </button>
+            </div>
+        </div>
+        
+        <div class="chat-container">
+            <h3><i class="fas fa-comments"></i> دردشة الغرفة</h3>
+            <div class="chat-messages" id="roomChatMessages">
+                <div class="system-message">مرحباً في غرفة اللعبة! يمكنك الدردشة مع اللاعبين الآخرين هنا.</div>
+            </div>
+            
+            <div class="chat-input-container">
+                <input type="text" id="roomChatInput" placeholder="اكتب رسالة...">
+                <button id="sendChatMessage" class="btn-small">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+        
         <!-- شاشة التسجيل/تسجيل الدخول -->
         <div id="authScreen" class="screen">
             <button id="backToHome" class="btn-back"><i class="fas fa-arrow-right"></i> العودة</button>
@@ -140,6 +320,12 @@
                         <button id="findMatchBtn" class="btn-action btn-primary">
                             <i class="fas fa-search"></i> البحث عن معركة
                         </button>
+<button id="createRoomBtnMain" class="btn-action btn-room">
+    <i class="fas fa-plus-circle"></i> إنشاء غرفة
+</button>
+<button id="joinRoomBtn" class="btn-action btn-room">
+    <i class="fas fa-sign-in-alt"></i> الانضمام لغرفة
+</button>
                         <button id="upgradeBtn" class="btn-action btn-secondary">
                             <i class="fas fa-level-up-alt"></i> ترقية الجندي
                         </button>
