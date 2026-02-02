@@ -30,7 +30,15 @@ let gameState = {
         defense: 0,
         speed: 0,
         stamina: 0
-    }
+    },
+    // إضافة للغرف الخاصة
+    inRoom: false,
+    roomId: null,
+    roomCode: null,
+    isRoomOwner: false,
+    roomPlayers: [],
+    currentRoom: null,
+    roomListener: null
 };
 
 // تهيئة اللعبة عند تحميل الصفحة
@@ -63,6 +71,31 @@ function initializeEventListeners() {
         showScreen('leaderboard');
         loadLeaderboard('level');
     });
+    
+document.getElementById('createRoomBtnMain').addEventListener('click', () => showScreen('createRoom'));
+    
+// أحداث الغرف الخاصة
+document.getElementById('createRoomBtn').addEventListener('click', handleCreateRoom);
+document.getElementById('joinRoomBtn').addEventListener('click', () => showScreen('joinRoom'));
+document.getElementById('backToLobbyFromCreate').addEventListener('click', () => showScreen('lobby'));
+document.getElementById('backToLobbyFromJoin').addEventListener('click', () => showScreen('lobby'));
+document.getElementById('joinRoomByCodeBtn').addEventListener('click', handleJoinRoomByCode);
+document.getElementById('leaveRoomBtn').addEventListener('click', handleLeaveRoom);
+document.getElementById('startGameBtn').addEventListener('click', startRoomGame);
+document.getElementById('sendChatMessage').addEventListener('click', sendRoomChatMessage);
+document.getElementById('roomChatInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendRoomChatMessage();
+});
+
+// نسخ كود الغرفة
+document.getElementById('copyRoomCode').addEventListener('click', copyRoomCode);
+document.getElementById('copyRoomCodeHeader').addEventListener('click', copyRoomCodeHeader);
+
+// تحديث معاينة الغرفة
+document.getElementById('roomName').addEventListener('input', updateRoomPreview);
+document.getElementById('roomType').addEventListener('change', updateRoomPreview);
+document.getElementById('roomPrivacy').addEventListener('change', updateRoomPreview);
+document.getElementById('roomMaxPlayers').addEventListener('change', updateRoomPreview);
     
     // شاشة المعركة
     document.getElementById('leaveBattle').addEventListener('click', leaveBattle);
@@ -904,3 +937,555 @@ function getAuthErrorMessage(errorCode) {
     
     return messages[errorCode] || 'حدث خطأ غير معروف';
 }
+
+// نظام الغرف الخاصة
+function handleCreateRoom() {
+    if (!gameState.player) return;
+    
+    const roomName = document.getElementById('roomName').value || "غرفتي";
+    const roomType = document.getElementById('roomType').value;
+    const roomPrivacy = document.getElementById('roomPrivacy').value;
+    const maxPlayers = parseInt(document.getElementById('roomMaxPlayers').value);
+    
+    // إنشاء كود غرفة فريد
+    const roomCode = generateRoomCode();
+    
+    const roomData = {
+        name: roomName,
+        type: roomType,
+        privacy: roomPrivacy,
+        maxPlayers: maxPlayers,
+        ownerId: gameState.player.id,
+        ownerName: gameState.player.name,
+        players: {
+            [gameState.player.id]: {
+                id: gameState.player.id,
+                name: gameState.player.name,
+                level: gameState.player.level,
+                ready: false,
+                isOwner: true
+            }
+        },
+        playerCount: 1,
+        status: 'waiting',
+        code: roomCode,
+        createdAt: Date.now(),
+        chat: []
+    };
+    
+    // حفظ الغرفة في قاعدة البيانات
+    const newRoomRef = database.ref('rooms').push();
+    newRoomRef.set(roomData).then(() => {
+        gameState.roomId = newRoomRef.key;
+        gameState.roomCode = roomCode;
+        gameState.isRoomOwner = true;
+        gameState.currentRoom = roomData;
+        
+        // عرض كود الغرفة
+        document.getElementById('roomCodeDisplay').textContent = roomCode;
+        document.getElementById('roomCodeSection').style.display = 'block';
+        
+        // الانتقال إلى شاشة الغرفة بعد ثانيتين
+        setTimeout(() => {
+            showScreen('room');
+            initializeRoom();
+        }, 2000);
+        
+        showNotification(`تم إنشاء الغرفة! الكود: ${roomCode}`);
+    });
+}
+
+function generateRoomCode() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+}
+
+function updateRoomPreview() {
+    const roomName = document.getElementById('roomName').value || "غرفتي";
+    const roomType = document.getElementById('roomType').value;
+    const roomPrivacy = document.getElementById('roomPrivacy').value;
+    const maxPlayers = parseInt(document.getElementById('roomMaxPlayers').value);
+    
+    document.getElementById('previewRoomName').textContent = roomName;
+    document.getElementById('previewRoomOwner').textContent = gameState.player ? gameState.player.name : "أنت";
+    
+    const typeNames = {
+        duel: 'مبارزة 1 ضد 1',
+        team: 'فرق (2 ضد 2)',
+        free: 'حرة (حتى 4 لاعبين)'
+    };
+    
+    document.getElementById('previewRoomType').textContent = typeNames[roomType] || roomType;
+    document.getElementById('previewRoomPlayers').textContent = `1/${maxPlayers}`;
+    document.getElementById('previewRoomPrivacy').textContent = roomPrivacy === 'private' ? 'خاصة' : 'عامة';
+}
+
+function handleJoinRoomByCode() {
+    const roomCode = document.getElementById('roomCodeInput').value.trim().toUpperCase();
+    const errorElement = document.getElementById('roomCodeError');
+    
+    if (!roomCode || roomCode.length !== 6) {
+        errorElement.textContent = "كود الغرفة يجب أن يكون 6 أحرف";
+        return;
+    }
+    
+    errorElement.textContent = '';
+    
+    // البحث عن الغرفة بالكود
+    database.ref('rooms').orderByChild('code').equalTo(roomCode).once('value').then((snapshot) => {
+        if (!snapshot.exists()) {
+            errorElement.textContent = "لم يتم العثور على غرفة بهذا الكود";
+            return;
+        }
+        
+        snapshot.forEach((roomSnapshot) => {
+            const room = roomSnapshot.val();
+            
+            // التحقق من أن الغرفة ليست ممتلئة
+            if (room.playerCount >= room.maxPlayers) {
+                errorElement.textContent = "الغرفة ممتلئة";
+                return;
+            }
+            
+            // التحقق من أن اللاعب ليس بالفعل في الغرفة
+            if (room.players[gameState.player.id]) {
+                errorElement.textContent = "أنت بالفعل في هذه الغرفة";
+                return;
+            }
+            
+            // الانضمام للغرفة
+            joinRoom(roomSnapshot.key, room);
+        });
+    });
+}
+
+function joinRoom(roomId, roomData) {
+    const playerData = {
+        id: gameState.player.id,
+        name: gameState.player.name,
+        level: gameState.player.level,
+        ready: false,
+        isOwner: false
+    };
+    
+    // تحديث بيانات الغرفة
+    const updates = {};
+    updates[`players/${gameState.player.id}`] = playerData;
+    updates['playerCount'] = roomData.playerCount + 1;
+    
+    database.ref('rooms/' + roomId).update(updates).then(() => {
+        gameState.roomId = roomId;
+        gameState.roomCode = roomData.code;
+        gameState.isRoomOwner = false;
+        gameState.currentRoom = roomData;
+        
+        showNotification(`تم الانضمام للغرفة: ${roomData.name}`);
+        showScreen('room');
+        initializeRoom();
+    });
+}
+
+function initializeRoom() {
+    if (!gameState.roomId) return;
+    
+    // تحديث معلومات الغرفة في الواجهة
+    database.ref('rooms/' + gameState.roomId).once('value').then((snapshot) => {
+        const room = snapshot.val();
+        gameState.currentRoom = room;
+        
+        updateRoomUI(room);
+        
+        // بدء الاستماع لتحديثات الغرفة
+        startRoomListener();
+    });
+}
+
+function updateRoomUI(room) {
+    document.getElementById('roomNameHeader').textContent = room.name;
+    document.getElementById('roomCodeHeader').textContent = `الكود: ${room.code}`;
+    document.getElementById('maxPlayers').textContent = room.maxPlayers;
+    document.getElementById('roomStatus').textContent = room.status === 'waiting' ? 'في انتظار اللاعبين...' : 'جاري التحضير...';
+    
+    // تحديث قائمة اللاعبين
+    updateRoomPlayersList(room.players);
+    
+    // تحديث عدد اللاعبين
+    document.getElementById('playersCount').textContent = room.playerCount;
+    
+    // تحديث حالة زر البدء
+    const startBtn = document.getElementById('startGameBtn');
+    if (gameState.isRoomOwner && room.playerCount >= 2) {
+        startBtn.disabled = false;
+    } else {
+        startBtn.disabled = true;
+    }
+    
+    // تحديث زر الطرد (فقط لصاحب الغرفة)
+    document.getElementById('kickPlayerBtn').disabled = !gameState.isRoomOwner;
+    
+    // تحديث الدردشة
+    updateRoomChat(room.chat || []);
+}
+
+function updateRoomPlayersList(players) {
+    const playersList = document.getElementById('roomPlayersList');
+    playersList.innerHTML = '';
+    
+    Object.values(players).forEach(player => {
+        const playerElement = document.createElement('div');
+        playerElement.className = `player-room-item ${player.isOwner ? 'owner' : ''}`;
+        
+        playerElement.innerHTML = `
+            <div class="player-room-info">
+                <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(player.name)}&background=${player.isOwner ? 'FFD700' : '4A90E2'}&color=${player.isOwner ? '000' : 'fff'}" alt="صورة اللاعب">
+                <div>
+                    <h4>${player.name}</h4>
+                    <div class="player-room-status">
+                        <span>مستوى ${player.level}</span>
+                        <span class="${player.ready ? 'player-ready' : 'player-not-ready'}">
+                            ${player.ready ? 'جاهز ✓' : 'غير جاهز ✗'}
+                        </span>
+                        ${player.isOwner ? '<span>(صاحب الغرفة)</span>' : ''}
+                    </div>
+                </div>
+            </div>
+            <div class="player-actions">
+                ${!player.isOwner && gameState.isOwner ? '<button class="btn-small btn-danger kick-player" data-id="' + player.id + '">طرد</button>' : ''}
+            </div>
+        `;
+        
+        playersList.appendChild(playerElement);
+    });
+    
+    // إضافة مستمعي أحداث لأزرار الطرد
+    document.querySelectorAll('.kick-player').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const playerId = e.target.dataset.id;
+            kickPlayerFromRoom(playerId);
+        });
+    });
+}
+
+function updateRoomChat(chatMessages) {
+    const chatContainer = document.getElementById('roomChatMessages');
+    chatContainer.innerHTML = '';
+    
+    if (!chatMessages || chatMessages.length === 0) {
+        chatContainer.innerHTML = '<div class="system-message">لا توجد رسائل بعد. ابدأ المحادثة!</div>';
+        return;
+    }
+    
+    chatMessages.forEach(msg => {
+        const messageElement = document.createElement('div');
+        messageElement.className = msg.type === 'system' ? 'system-message' : 'chat-message player-message';
+        
+        if (msg.type === 'system') {
+            messageElement.textContent = msg.text;
+        } else {
+            messageElement.innerHTML = `
+                <div class="sender">${msg.sender}:</div>
+                <div class="message-text">${msg.text}</div>
+                <div class="message-time">${formatTime(msg.timestamp)}</div>
+            `;
+        }
+        
+        chatContainer.appendChild(messageElement);
+    });
+    
+    // التمرير للأسفل
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function formatTime(timestamp) {
+    const date = new Date(timestamp);
+    return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+}
+
+function startRoomListener() {
+    if (gameState.roomListener) {
+        database.ref('rooms/' + gameState.roomId).off('value', gameState.roomListener);
+    }
+    
+    gameState.roomListener = database.ref('rooms/' + gameState.roomId).on('value', (snapshot) => {
+        if (!snapshot.exists()) {
+            // الغرفة حذفت
+            showNotification("تم حذف الغرفة");
+            handleLeaveRoom();
+            return;
+        }
+        
+        const room = snapshot.val();
+        gameState.currentRoom = room;
+        
+        updateRoomUI(room);
+        
+        // إذا بدأت المعركة
+        if (room.status === 'battle' && room.battleId && !gameState.inBattle) {
+            joinRoomBattle(room.battleId);
+        }
+    });
+}
+
+function sendRoomChatMessage() {
+    const input = document.getElementById('roomChatInput');
+    const message = input.value.trim();
+    
+    if (!message || !gameState.roomId) return;
+    
+    const chatMessage = {
+        type: 'player',
+        sender: gameState.player.name,
+        senderId: gameState.player.id,
+        text: message,
+        timestamp: Date.now()
+    };
+    
+    // إضافة الرسالة للدردشة
+    const chatRef = database.ref('rooms/' + gameState.roomId + '/chat');
+    chatRef.push(chatMessage);
+    
+    input.value = '';
+}
+
+function kickPlayerFromRoom(playerId) {
+    if (!gameState.isRoomOwner || !gameState.roomId) return;
+    
+    if (confirm("هل تريد طرد هذا اللاعب من الغرفة؟")) {
+        const updates = {};
+        updates[`players/${playerId}`] = null;
+        updates['playerCount'] = gameState.currentRoom.playerCount - 1;
+        
+        // إضافة رسالة نظام
+        const systemMessage = {
+            type: 'system',
+            text: `تم طرد اللاعب من الغرفة`,
+            timestamp: Date.now()
+        };
+        
+        database.ref('rooms/' + gameState.roomId).update(updates).then(() => {
+            database.ref('rooms/' + gameState.roomId + '/chat').push(systemMessage);
+        });
+    }
+}
+
+function handleLeaveRoom() {
+    if (!gameState.roomId) {
+        showScreen('lobby');
+        return;
+    }
+    
+    if (confirm("هل تريد مغادرة الغرفة؟")) {
+        if (gameState.isRoomOwner) {
+            // صاحب الغرفة يغادر، حذف الغرفة
+            database.ref('rooms/' + gameState.roomId).remove().then(() => {
+                showNotification("تم حذف الغرفة");
+                cleanupRoomState();
+                showScreen('lobby');
+            });
+        } else {
+            // لاعب عادي يغادر
+            const updates = {};
+            updates[`players/${gameState.player.id}`] = null;
+            updates['playerCount'] = gameState.currentRoom.playerCount - 1;
+            
+            // إضافة رسالة نظام
+            const systemMessage = {
+                type: 'system',
+                text: `${gameState.player.name} غادر الغرفة`,
+                timestamp: Date.now()
+            };
+            
+            database.ref('rooms/' + gameState.roomId).update(updates).then(() => {
+                database.ref('rooms/' + gameState.roomId + '/chat').push(systemMessage);
+                cleanupRoomState();
+                showNotification("غادرت الغرفة");
+                showScreen('lobby');
+            });
+        }
+    }
+}
+
+function cleanupRoomState() {
+    if (gameState.roomListener) {
+        database.ref('rooms/' + gameState.roomId).off('value', gameState.roomListener);
+        gameState.roomListener = null;
+    }
+    
+    gameState.inRoom = false;
+    gameState.roomId = null;
+    gameState.roomCode = null;
+    gameState.isRoomOwner = false;
+    gameState.roomPlayers = [];
+    gameState.currentRoom = null;
+}
+
+function startRoomGame() {
+    if (!gameState.isRoomOwner || !gameState.roomId) return;
+    
+    const room = gameState.currentRoom;
+    
+    // التحقق من أن هناك لاعبين على الأقل
+    if (room.playerCount < 2) {
+        showNotification("تحتاج إلى لاعبين على الأقل لبدء اللعبة");
+        return;
+    }
+    
+    // التحقق من أن جميع اللاعبين جاهزون (اختياري)
+    const allReady = Object.values(room.players).every(player => player.ready);
+    
+    if (!allReady) {
+        if (!confirm("بعض اللاعبين ليسوا جاهزين. هل تريد بدء اللعبة على أي حال؟")) {
+            return;
+        }
+    }
+    
+    // إنشاء معركة جديدة
+    const battleData = {
+        type: 'room',
+        roomId: gameState.roomId,
+        players: room.players,
+        status: 'waiting',
+        createdAt: Date.now()
+    };
+    
+    const newBattleRef = database.ref('battles').push();
+    newBattleRef.set(battleData).then(() => {
+        // تحديث حالة الغرفة
+        database.ref('rooms/' + gameState.roomId).update({
+            status: 'battle',
+            battleId: newBattleRef.key
+        });
+        
+        // إضافة رسالة نظام
+        const systemMessage = {
+            type: 'system',
+            text: `بدأت المعركة!`,
+            timestamp: Date.now()
+        };
+        
+        database.ref('rooms/' + gameState.roomId + '/chat').push(systemMessage);
+        
+        // الانتقال للمعركة
+        gameState.battleId = newBattleRef.key;
+        joinRoomBattle(newBattleRef.key);
+    });
+}
+
+function joinRoomBattle(battleId) {
+    database.ref('battles/' + battleId).once('value').then((snapshot) => {
+        const battle = snapshot.val();
+        
+        if (!battle) {
+            showNotification("المعركة لم تعد موجودة");
+            return;
+        }
+        
+        // إعداد معركة خاصة بالغرفة
+        initializeRoomBattle(battle);
+    });
+}
+
+function initializeRoomBattle(battle) {
+    gameState.inBattle = true;
+    
+    // العثور على الخصم (أول لاعب ليس أنت)
+    const players = Object.values(battle.players);
+    const opponent = players.find(p => p.id !== gameState.player.id);
+    
+    if (opponent) {
+        gameState.opponent = opponent;
+        
+        // تحديث واجهة المعركة
+        document.getElementById('player1Name').textContent = gameState.player.name;
+        document.getElementById('player1Level').textContent = gameState.player.level;
+        document.getElementById('player1Weapon').textContent = gameState.player.weapon.name;
+        
+        document.getElementById('player2Name').textContent = opponent.name;
+        document.getElementById('player2Level').textContent = opponent.level;
+        document.getElementById('player2Weapon').textContent = "سلاح غير معروف";
+        
+        // بدء المؤقت
+        let battleTime = 0;
+        const timerElement = document.getElementById('battleTimer');
+        gameState.battleTimer = setInterval(() => {
+            battleTime++;
+            const minutes = Math.floor(battleTime / 60);
+            const seconds = battleTime % 60;
+            timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }, 1000);
+        
+        showScreen('battle');
+        showNotification("بدأت المعركة في الغرفة!");
+    }
+}
+
+function copyRoomCode() {
+    const roomCode = document.getElementById('roomCodeDisplay').textContent;
+    copyToClipboard(roomCode);
+    showNotification("تم نسخ كود الغرفة!");
+}
+
+function copyRoomCodeHeader() {
+    const roomCode = gameState.roomCode;
+    if (roomCode) {
+        copyToClipboard(roomCode);
+        showNotification("تم نسخ كود الغرفة!");
+    }
+}
+
+function copyToClipboard(text) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+}
+
+// تحديث قواعد Firebase للغرف
+function updateFirebaseRules() {
+    // قواعد الأمان المحدثة للغرف
+    const rules = {
+        "rules": {
+            "players": {
+                "$uid": {
+                    ".read": "auth != null && auth.uid == $uid",
+                    ".write": "auth != null && auth.uid == $uid"
+                }
+            },
+            "matches": {
+                ".read": "auth != null",
+                ".write": "auth != null"
+            },
+            "matchmaking": {
+                ".read": "auth != null",
+                ".write": "auth != null"
+            },
+            "rooms": {
+                ".read": "auth != null",
+                ".write": "auth != null",
+                "$roomId": {
+                    ".validate": "newData.hasChildren(['name', 'code', 'ownerId'])",
+                    "players": {
+                        "$playerId": {
+                            ".validate": "newData.hasChildren(['id', 'name', 'level'])"
+                        }
+                    }
+                }
+            },
+            "battles": {
+                ".read": "auth != null",
+                ".write": "auth != null"
+            }
+        }
+    };
+    
+    console.log("قم بتحديث قواعد Firebase في وحدة التحكم:");
+    console.log(JSON.stringify(rules, null, 2));
+}
+
+،
