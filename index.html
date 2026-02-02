@@ -2,1585 +2,531 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🎨 لعبة الألوان الذهنية - تصميم متطور</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أبطال الاستراتيجية</title>
+    <link rel="stylesheet" href="styles.css">
     <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <style>
-        :root {
-            --primary: #667eea;
-            --secondary: #764ba2;
-            --success: #43e97b;
-            --warning: #fa709a;
-            --danger: #ff0844;
-            --dark: #0f172a;
-            --light: #1e293b;
-            --text: #ffffff;
-            --text-secondary: #94a3b8;
-            --gold: #FFD700;
-            --silver: #C0C0C0;
-            --bronze: #CD7F32;
-        }
-        
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Cairo', sans-serif;
-            -webkit-tap-highlight-color: transparent;
-        }
-        
-        body {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: var(--text);
-            min-height: 100vh;
-            padding: 10px;
-            direction: rtl;
-            overflow-x: hidden;
-        }
-        
-        .container {
-            max-width: 500px;
-            margin: 0 auto;
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            min-height: calc(100vh - 20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        /* شاشة تسجيل الدخول */
-        .login-container {
-            text-align: center;
-            padding: 20px 0;
-        }
-        
-        .logo {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-        }
-        
-        .game-title {
-            font-size: 1.8rem;
-            margin-bottom: 5px;
-            background: linear-gradient(to right, var(--gold), #FFA500);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
-        .game-subtitle {
-            color: var(--text-secondary);
-            margin-bottom: 25px;
-            font-size: 0.9rem;
-        }
-        
-        .form-card {
-            background: rgba(30, 41, 59, 0.7);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .input-group {
-            margin-bottom: 15px;
-        }
-        
-        .input-label {
-            display: block;
-            margin-bottom: 5px;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-        
-        .input-field {
-            width: 100%;
-            padding: 12px 15px;
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            background: rgba(255, 255, 255, 0.05);
-            color: var(--text);
-            font-size: 1rem;
-        }
-        
-        .select-field {
-            width: 100%;
-            padding: 12px 15px;
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            background: rgba(255, 255, 255, 0.05);
-            color: var(--text);
-            font-size: 1rem;
-            appearance: none;
-        }
-        
-        .btn {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            border: none;
-            padding: 14px 20px;
-            border-radius: 12px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            width: 100%;
-            margin-top: 10px;
-            transition: all 0.2s;
-        }
-        
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, var(--success), #38f9d7);
-        }
-        
-        /* شاشة الانتظار */
-        .waiting-header {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-        
-        .room-code-display {
-            font-size: 2.5rem;
-            font-family: monospace;
-            letter-spacing: 5px;
-            color: var(--gold);
-            margin: 10px 0;
-            padding: 15px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 10px;
-            border: 2px solid rgba(255, 215, 0, 0.3);
-        }
-        
-        .players-container {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin: 15px 0;
-        }
-        
-        .player-badge {
-            background: rgba(30, 41, 59, 0.7);
-            border-radius: 10px;
-            padding: 12px;
-            text-align: center;
-            border: 2px solid transparent;
-        }
-        
-        .player-badge.active {
-            border-color: var(--gold);
-            background: rgba(255, 215, 0, 0.1);
-        }
-        
-        .player-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 8px;
-            font-size: 1.2rem;
-        }
-        
-        .player-name {
-            font-size: 0.85rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        /* شاشة اللعبة - تصميم جديد */
-        .game-top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(30, 41, 59, 0.7);
-            border-radius: 12px;
-            padding: 12px 15px;
-            margin-bottom: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .game-info {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-        }
-        
-        .info-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-width: 60px;
-        }
-        
-        .info-value {
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: var(--gold);
-        }
-        
-        .info-label {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            margin-top: 2px;
-        }
-        
-        .round-display {
-            background: linear-gradient(135deg, var(--warning), #fee140);
-            border-radius: 12px;
-            padding: 12px 15px;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-        
-        .round-title {
-            font-size: 1.1rem;
-            font-weight: bold;
-            margin-bottom: 3px;
-        }
-        
-        .round-desc {
-            font-size: 0.85rem;
-            opacity: 0.9;
-        }
-        
-        .timer-container {
-            text-align: center;
-            margin-bottom: 15px;
-        }
-        
-        .timer {
-            font-size: 2.8rem;
-            font-weight: bold;
-            color: var(--gold);
-            font-family: monospace;
-            margin-bottom: 5px;
-        }
-        
-        .timer-bar {
-            height: 6px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px;
-            overflow: hidden;
-        }
-        
-        .timer-progress {
-            height: 100%;
-            background: linear-gradient(135deg, var(--success), #38f9d7);
-            transition: width 1s linear;
-        }
-        
-        .question-box {
-            background: rgba(30, 41, 59, 0.7);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 15px;
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .question-text {
-            font-size: 1.3rem;
-            font-weight: bold;
-            margin-bottom: 8px;
-            color: var(--gold);
-        }
-        
-        .question-instruction {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-        }
-        
-        /* مربعات الألوان في صف واحد */
-        .colors-row {
-            display: flex;
-            gap: 10px;
-            margin: 15px 0;
-            flex-wrap: wrap;
-        }
-        
-        .color-box {
-            flex: 1;
-            min-width: 0;
-            height: 100px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: 3px solid transparent;
-            color: white;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-            padding: 10px;
-            word-break: break-word;
-            overflow: hidden;
-            min-height: 100px;
-        }
-        
-        .color-box:hover {
-            transform: translateY(-3px);
-        }
-        
-        .color-box.selected {
-            border-color: var(--gold);
-            transform: scale(1.05);
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
-        }
-        
-        .color-box.correct {
-            border-color: #00ff00;
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
-        }
-        
-        .color-box.incorrect {
-            border-color: #ff0000;
-            box-shadow: 0 0 20px rgba(255, 0, 0, 0.3);
-        }
-        
-        .progress-indicator {
-            background: rgba(30, 41, 59, 0.7);
-            border-radius: 10px;
-            padding: 12px;
-            margin: 15px 0;
-            text-align: center;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-        }
-        
-        /* شاشة النتائج */
-        .results-header {
-            text-align: center;
-            padding: 20px 0;
-        }
-        
-        .result-icon {
-            font-size: 3.5rem;
-            margin-bottom: 10px;
-        }
-        
-        .result-title {
-            font-size: 1.5rem;
-            margin-bottom: 5px;
-            color: var(--gold);
-        }
-        
-        .score-card {
-            background: rgba(30, 41, 59, 0.7);
-            border-radius: 15px;
-            padding: 20px;
-            margin: 15px 0;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .score-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .score-row:last-child {
-            border-bottom: none;
-        }
-        
-        .leaderboard {
-            background: rgba(30, 41, 59, 0.7);
-            border-radius: 15px;
-            padding: 15px;
-            margin: 15px 0;
-            max-height: 250px;
-            overflow-y: auto;
-        }
-        
-        .leaderboard-item {
-            display: flex;
-            align-items: center;
-            padding: 10px;
-            border-radius: 10px;
-            margin-bottom: 8px;
-            background: rgba(255, 255, 255, 0.05);
-        }
-        
-        .leaderboard-item.current {
-            background: rgba(255, 215, 0, 0.1);
-            border: 2px solid var(--gold);
-        }
-        
-        .rank {
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            margin-left: 10px;
-        }
-        
-        .rank-1 { background: var(--gold); color: #000; }
-        .rank-2 { background: var(--silver); color: #000; }
-        .rank-3 { background: var(--bronze); color: #fff; }
-        .rank-other { background: rgba(255, 255, 255, 0.1); }
-        
-        .countdown-timer {
-            background: linear-gradient(135deg, var(--warning), #fee140);
-            border-radius: 12px;
-            padding: 12px;
-            margin: 15px 0;
-            text-align: center;
-            font-size: 0.9rem;
-        }
-        
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-        
-        .action-buttons .btn {
-            flex: 1;
-        }
-        
-        /* إشعارات */
-        .notification {
-            position: fixed;
-            bottom: 15px;
-            right: 15px;
-            left: 15px;
-            background: rgba(30, 41, 59, 0.95);
-            border-radius: 12px;
-            padding: 15px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            z-index: 1000;
-            animation: slideUp 0.3s ease;
-            border-right: 4px solid var(--gold);
-        }
-        
-        @keyframes slideUp {
-            from { transform: translateY(100%); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-        
-        .notification-close {
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            font-size: 1.2rem;
-            cursor: pointer;
-            padding: 0 0 0 10px;
-        }
-        
-        /* تحسينات للشاشات الصغيرة */
-        @media (max-width: 480px) {
-            .container {
-                padding: 10px;
-                border-radius: 15px;
-            }
-            
-            .game-top-bar {
-                padding: 10px 12px;
-            }
-            
-            .game-info {
-                gap: 10px;
-            }
-            
-            .info-item {
-                min-width: 50px;
-            }
-            
-            .info-value {
-                font-size: 1rem;
-            }
-            
-            .colors-row {
-                gap: 8px;
-            }
-            
-            .color-box {
-                height: 90px;
-                font-size: 1rem;
-            }
-            
-            .timer {
-                font-size: 2.2rem;
-            }
-        }
-        
-        @media (max-width: 360px) {
-            .colors-row {
-                flex-direction: column;
-            }
-            
-            .color-box {
-                height: 70px;
-            }
-        }
-        
-        /* رسوميات */
-        .pulse {
-            animation: pulse 0.5s ease;
-        }
-        
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-        
-        .shake {
-            animation: shake 0.5s ease;
-        }
-        
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
-        }
-        
-        .confetti {
-            position: fixed;
-            width: 12px;
-            height: 12px;
-            opacity: 0;
-            z-index: 9999;
-            pointer-events: none;
-        }
-    </style>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <!-- شاشة تسجيل الدخول -->
-        <div id="loginScreen" class="screen active-screen">
-            <div class="login-container">
-                <div class="logo">🎨🧠</div>
-                <h1 class="game-title">لعبة الألوان الذهنية</h1>
-                <p class="game-subtitle">اختبر سرعتك ودقتك في تمييز الألوان</p>
-                
-                <div class="form-card">
-                    <div class="input-group">
-                        <label class="input-label">👤 اسم اللاعب</label>
-                        <input type="text" id="playerName" class="input-field" placeholder="أدخل اسمك" value="لاعب">
-                    </div>
-                    
-                    <div class="input-group">
-                        <label class="input-label">🎮 نوع اللعبة</label>
-                        <select id="gameMode" class="select-field">
-                            <option value="create">إنشاء غرفة جديدة</option>
-                            <option value="join">الانضمام إلى غرفة</option>
-                            <option value="quick">لعبة سريعة</option>
-                        </select>
-                    </div>
-                    
-                    <div class="input-group" id="roomCodeGroup" style="display: none;">
-                        <label class="input-label">🔢 كود الغرفة</label>
-                        <input type="text" id="roomCode" class="input-field" placeholder="أدخل كود الغرفة">
-                    </div>
-                    
-                    <button id="startBtn" class="btn btn-primary">▶️ بدء اللعب</button>
-                    
-                    <div id="loginError" style="color: #ff6b6b; margin-top: 10px; display: none; font-size: 0.85rem;"></div>
+        <!-- الشاشة الرئيسية -->
+        <div id="homeScreen" class="screen active">
+            <div class="logo">
+                <h1><i class="fas fa-crown"></i> أبطال الاستراتيجية</h1>
+                <p>لعبة استراتيجية متعددة اللاعبين في الوقت الحقيقي</p>
+            </div>
+            
+            <div class="auth-buttons">
+                <button id="loginBtn" class="btn btn-primary">
+                    <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
+                </button>
+                <button id="signupBtn" class="btn btn-secondary">
+                    <i class="fas fa-user-plus"></i> إنشاء حساب
+                </button>
+            </div>
+            
+            <div class="game-info">
+                <div class="info-card">
+                    <i class="fas fa-shield-alt"></i>
+                    <h3>تطوير الجنود</h3>
+                    <p>قم بتطوير جنديك عبر مستويات متعددة وافتح مهارات جديدة</p>
+                </div>
+                <div class="info-card">
+                    <i class="fas fa-fist-raised"></i>
+                    <h3>معارك حقيقية</h3>
+                    <p>قاتل في الوقت الحقيقي مع استراتيجيات متنوعة</p>
+                </div>
+                <div class="info-card">
+                    <i class="fas fa-tools"></i>
+                    <h3>ترقية الأسلحة</h3>
+                    <p>حسن أسلحتك البيضاء وأضف خصائص سحرية قوية</p>
                 </div>
             </div>
         </div>
         
-        <!-- شاشة انتظار اللاعبين -->
-        <div id="waitingScreen" class="screen">
-            <div class="waiting-header">
-                <h3>👥 غرفة الانتظار</h3>
-                <p>شارك كود الغرفة مع الأصدقاء</p>
+        <!-- شاشة التسجيل/تسجيل الدخول -->
+        <div id="authScreen" class="screen">
+            <button id="backToHome" class="btn-back"><i class="fas fa-arrow-right"></i> العودة</button>
+            
+            <div class="auth-form">
+                <h2 id="authTitle">تسجيل الدخول</h2>
                 
-                <div class="room-code-display" id="displayRoomCode">ABCD12</div>
-                
-                <div class="action-buttons">
-                    <button id="copyCodeBtn" class="btn">📋 نسخ الكود</button>
-                    <button id="inviteBtn" class="btn">📤 دعوة</button>
+                <div class="tabs">
+                    <button id="loginTab" class="tab active">تسجيل الدخول</button>
+                    <button id="signupTab" class="tab">إنشاء حساب</button>
                 </div>
-            </div>
-            
-            <h4 style="padding: 10px 5px;">اللاعبين (<span id="playersCount">0</span>)</h4>
-            <div class="players-container" id="playersList">
-                <!-- اللاعبون هنا -->
-            </div>
-            
-            <div class="progress-indicator" id="autoStartInfo" style="display: none;">
-                ⏳ سيبدأ اللعب تلقائياً عند اكتمال اللاعبين...
-            </div>
-            
-            <div class="action-buttons">
-                <button id="startGameBtn" class="btn btn-primary" style="display: none;">▶️ بدء اللعبة</button>
-                <button id="leaveRoomBtn" class="btn">🚪 ترك الغرفة</button>
+                
+                <form id="loginForm" class="auth-form-content active">
+                    <div class="form-group">
+                        <label for="loginEmail"><i class="fas fa-envelope"></i> البريد الإلكتروني</label>
+                        <input type="email" id="loginEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword"><i class="fas fa-lock"></i> كلمة المرور</label>
+                        <input type="password" id="loginPassword" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">تسجيل الدخول</button>
+                    <div id="loginError" class="error-message"></div>
+                </form>
+                
+                <form id="signupForm" class="auth-form-content">
+                    <div class="form-group">
+                        <label for="signupName"><i class="fas fa-user"></i> اسم اللاعب</label>
+                        <input type="text" id="signupName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="signupEmail"><i class="fas fa-envelope"></i> البريد الإلكتروني</label>
+                        <input type="email" id="signupEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="signupPassword"><i class="fas fa-lock"></i> كلمة المرور</label>
+                        <input type="password" id="signupPassword" required minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword"><i class="fas fa-lock"></i> تأكيد كلمة المرور</label>
+                        <input type="password" id="confirmPassword" required minlength="6">
+                    </div>
+                    <button type="submit" class="btn btn-primary">إنشاء حساب</button>
+                    <div id="signupError" class="error-message"></div>
+                </form>
             </div>
         </div>
         
-        <!-- شاشة اللعبة -->
-        <div id="gameScreen" class="screen">
-            <!-- شريط المعلومات العلوي -->
-            <div class="game-top-bar">
-                <div class="game-info">
-                    <div class="info-item">
-                        <div class="info-value" id="currentRound">1</div>
-                        <div class="info-label">الجولة</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-value" id="playerScore">0</div>
-                        <div class="info-label">النقاط</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-value" id="activePlayers">1</div>
-                        <div class="info-label">اللاعبين</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-value" id="roomCodeDisplay">ABCD</div>
-                        <div class="info-label">الغرفة</div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- معلومات الجولة -->
-            <div class="round-display">
-                <div class="round-title" id="roundTitle">المستوى المبتدئ</div>
-                <div class="round-desc" id="roundDescription">لون الزر والاسم متطابقان</div>
-            </div>
-            
-            <!-- المؤقت -->
-            <div class="timer-container">
-                <div class="timer" id="timer">10</div>
-                <div class="timer-bar">
-                    <div class="timer-progress" id="timerProgress"></div>
-                </div>
-            </div>
-            
-            <!-- السؤال -->
-            <div class="question-box">
-                <div class="question-text" id="questionText">ما هو لون هذا النص؟</div>
-                <div class="question-instruction" id="questionInstruction">اختر الزر الذي يطابق لونه المطلوب</div>
-            </div>
-            
-            <!-- مربعات الألوان في صف واحد -->
-            <div class="colors-row" id="colorsRow">
-                <!-- مربعات الألوان ستُنشأ هنا -->
-            </div>
-            
-            <!-- مؤشر التقدم -->
-            <div class="progress-indicator" id="gameProgress" style="display: none;">
-                <span id="progressText">ينتظر إجابة اللاعبين...</span>
-                <div style="margin-top: 5px;">
-                    <span id="answeredCount">0</span> / <span id="totalCount">0</span> أجابوا
-                </div>
-            </div>
-        </div>
-        
-        <!-- شاشة النتائج -->
-        <div id="resultsScreen" class="screen">
-            <div class="results-header">
-                <div class="result-icon" id="resultBadge">🏆</div>
-                <h2 class="result-title" id="resultTitle">نتائج الجولة</h2>
-            </div>
-            
-            <div class="score-card">
-                <div class="score-row">
-                    <span>الإجابة:</span>
-                    <span id="resultAnswer" style="color: #00ff00; font-weight: bold;">صحيحة</span>
-                </div>
-                <div class="score-row">
-                    <span>الوقت المستغرق:</span>
-                    <span id="resultTime" style="color: var(--gold);">3.2 ثانية</span>
-                </div>
-                <div class="score-row">
-                    <span>النقاط المكتسبة:</span>
-                    <span id="resultPoints" style="color: var(--gold); font-weight: bold;">+10</span>
-                </div>
-                <div class="score-row">
-                    <span>المجموع الكلي:</span>
-                    <span id="totalPoints" style="font-weight: bold; font-size: 1.1rem;">50 نقطة</span>
-                </div>
-            </div>
-            
-            <h4 style="padding: 10px 5px;">🏆 ترتيب اللاعبين</h4>
-            <div class="leaderboard" id="leaderboard">
-                <!-- ترتيب اللاعبين هنا -->
-            </div>
-            
-            <div class="countdown-timer" id="nextRoundTimer" style="display: none;">
-                ⏳ الجولة التالية تبدأ خلال: <span id="countdown">5</span> ثواني
-            </div>
-            
-            <div class="action-buttons">
-                <button id="nextRoundBtn" class="btn btn-primary">🔄 الجولة التالية</button>
-                <button id="backToLobbyBtn" class="btn">🏠 العودة</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- إشعار -->
-    <div id="notification" class="notification" style="display: none;">
-        <span id="notificationText"></span>
-        <button class="notification-close">✕</button>
-    </div>
-
-    <script>
-        // تهيئة Firebase
-        const firebaseConfig = {
-            apiKey: "AIzaSyA7ob2UGfoF_WwN-Ishexk_JxbuUoAmV7g",
-            authDomain: "avargeqq.firebaseapp.com",
-            databaseURL: "https://avargeqq-default-rtdb.firebaseio.com",
-            projectId: "avargeqq",
-            storageBucket: "avargeqq.firebasestorage.app",
-            messagingSenderId: "419865018343",
-            appId: "1:419865018343:web:03b5fae49b54b3e3c84742",
-            measurementId: "G-900GCZ71R3"
-        };
-        
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        
-        // متغيرات اللعبة
-        let playerId = null;
-        let playerName = "";
-        let roomCode = "";
-        let playerScore = 0;
-        let currentRound = 1;
-        let selectedAnswer = null;
-        let gameData = null;
-        let players = {};
-        let timerInterval = null;
-        let countdownInterval = null;
-        let totalTime = 10;
-        let roomRef = null;
-        
-        // عناصر DOM
-        const screens = {
-            login: document.getElementById('loginScreen'),
-            waiting: document.getElementById('waitingScreen'),
-            game: document.getElementById('gameScreen'),
-            results: document.getElementById('resultsScreen')
-        };
-        
-        // عناصر تسجيل الدخول
-        const playerNameInput = document.getElementById('playerName');
-        const gameModeSelect = document.getElementById('gameMode');
-        const roomCodeGroup = document.getElementById('roomCodeGroup');
-        const roomCodeInput = document.getElementById('roomCode');
-        const startBtn = document.getElementById('startBtn');
-        const loginError = document.getElementById('loginError');
-        
-        // عناصر الانتظار
-        const displayRoomCode = document.getElementById('displayRoomCode');
-        const copyCodeBtn = document.getElementById('copyCodeBtn');
-        const inviteBtn = document.getElementById('inviteBtn');
-        const playersList = document.getElementById('playersList');
-        const startGameBtn = document.getElementById('startGameBtn');
-        const leaveRoomBtn = document.getElementById('leaveRoomBtn');
-        const playersCount = document.getElementById('playersCount');
-        const autoStartInfo = document.getElementById('autoStartInfo');
-        
-        // عناصر اللعبة
-        const currentRoundEl = document.getElementById('currentRound');
-        const playerScoreEl = document.getElementById('playerScore');
-        const activePlayersEl = document.getElementById('activePlayers');
-        const roomCodeDisplay = document.getElementById('roomCodeDisplay');
-        const roundTitleEl = document.getElementById('roundTitle');
-        const roundDescriptionEl = document.getElementById('roundDescription');
-        const timerEl = document.getElementById('timer');
-        const timerProgress = document.getElementById('timerProgress');
-        const questionTextEl = document.getElementById('questionText');
-        const questionInstructionEl = document.getElementById('questionInstruction');
-        const colorsRow = document.getElementById('colorsRow');
-        const gameProgress = document.getElementById('gameProgress');
-        const progressText = document.getElementById('progressText');
-        const answeredCount = document.getElementById('answeredCount');
-        const totalCount = document.getElementById('totalCount');
-        
-        // عناصر النتائج
-        const resultBadge = document.getElementById('resultBadge');
-        const resultTitle = document.getElementById('resultTitle');
-        const resultAnswer = document.getElementById('resultAnswer');
-        const resultTime = document.getElementById('resultTime');
-        const resultPoints = document.getElementById('resultPoints');
-        const totalPointsEl = document.getElementById('totalPoints');
-        const leaderboard = document.getElementById('leaderboard');
-        const nextRoundTimer = document.getElementById('nextRoundTimer');
-        const countdownEl = document.getElementById('countdown');
-        const nextRoundBtn = document.getElementById('nextRoundBtn');
-        const backToLobbyBtn = document.getElementById('backToLobbyBtn');
-        
-        // عنصر الإشعار
-        const notification = document.getElementById('notification');
-        const notificationText = document.getElementById('notificationText');
-        const notificationClose = document.querySelector('.notification-close');
-        
-        // بيانات الألوان
-        const colors = {
-            أحمر: "#FF5252",
-            أزرق: "#448AFF",
-            أخضر: "#69F0AE",
-            أصفر: "#FFD740",
-            برتقالي: "#FFAB40",
-            بنفسجي: "#E040FB",
-            وردي: "#FF4081",
-            بني: "#8D6E63",
-            أسود: "#212121",
-            أبيض: "#F5F5F5",
-            رمادي: "#9E9E9E",
-            تركواز: "#18FFFF",
-            ذهبي: "#FFD700",
-            فضي: "#C0C0C0",
-            نحاسي: "#B87333"
-        };
-        
-        const colorNames = Object.keys(colors);
-        
-        // مراحل اللعبة
-        const gameRounds = [
-            { title: "المبتدئ", description: "اللون والاسم متطابقان", time: 12, points: 10 },
-            { title: "المتوسط", description: "اللون مختلف عن الاسم", time: 10, points: 15 },
-            { title: "المتقدم", description: "اختر اسم اللون", time: 8, points: 20 },
-            { title: "الخبير", description: "ألوان متشابهة", time: 7, points: 25 },
-            { title: "الأسطوري", description: "تحدي السرعة", time: 6, points: 30 }
-        ];
-        
-        // أحداث DOM
-        gameModeSelect.addEventListener('change', function() {
-            roomCodeGroup.style.display = this.value === 'join' ? 'block' : 'none';
-        });
-        
-        startBtn.addEventListener('click', startGame);
-        copyCodeBtn.addEventListener('click', copyRoomCode);
-        inviteBtn.addEventListener('click', shareRoom);
-        startGameBtn.addEventListener('click', beginGame);
-        leaveRoomBtn.addEventListener('click', leaveRoom);
-        nextRoundBtn.addEventListener('click', nextRound);
-        backToLobbyBtn.addEventListener('click', backToLobby);
-        notificationClose.addEventListener('click', () => {
-            notification.style.display = 'none';
-        });
-        
-        // توليد كود غرفة عشوائي
-        function generateRoomCode() {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let code = '';
-            for (let i = 0; i < 6; i++) {
-                code += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            return code;
-        }
-        
-        // بدء اللعبة
-        function startGame() {
-            playerName = playerNameInput.value.trim();
-            const mode = gameModeSelect.value;
-            
-            if (!playerName) {
-                showError("الرجاء إدخال اسم اللاعب");
-                return;
-            }
-            
-            if (mode === 'join') {
-                roomCode = roomCodeInput.value.trim().toUpperCase();
-                if (!roomCode || roomCode.length !== 6) {
-                    showError("كود الغرفة يجب أن يكون 6 أحرف");
-                    return;
-                }
-            } else {
-                roomCode = generateRoomCode();
-            }
-            
-            playerId = Date.now().toString();
-            playerScore = 0;
-            currentRound = 1;
-            
-            connectToRoom();
-        }
-        
-        // الاتصال بالغرفة
-        function connectToRoom() {
-            roomRef = db.collection('rooms').doc(roomCode);
-            
-            roomRef.get().then(doc => {
-                if (gameModeSelect.value === 'join') {
-                    if (!doc.exists) {
-                        showError("الغرفة غير موجودة");
-                        return;
-                    }
-                    joinRoom();
-                } else {
-                    if (doc.exists) {
-                        roomCode = generateRoomCode();
-                        connectToRoom();
-                        return;
-                    }
-                    createRoom();
-                }
-            }).catch(error => {
-                showError("حدث خطأ في الاتصال");
-                console.error(error);
-            });
-        }
-        
-        // إنشاء غرفة
-        function createRoom() {
-            roomRef.set({
-                code: roomCode,
-                creator: playerId,
-                status: 'waiting',
-                players: {},
-                currentRound: 1,
-                gameState: 'waiting',
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                settings: {
-                    autoProgress: true,
-                    maxPlayers: 8
-                }
-            }).then(() => {
-                addPlayerToRoom();
-            });
-        }
-        
-        // الانضمام للغرفة
-        function joinRoom() {
-            roomRef.get().then(doc => {
-                const data = doc.data();
-                if (data.status !== 'waiting') {
-                    showError("اللعبة بدأت بالفعل");
-                    return;
-                }
-                if (Object.keys(data.players).length >= (data.settings?.maxPlayers || 8)) {
-                    showError("الغرفة ممتلئة");
-                    return;
-                }
-                addPlayerToRoom();
-            });
-        }
-        
-        // إضافة لاعب للغرفة
-        function addPlayerToRoom() {
-            roomRef.update({
-                [`players.${playerId}`]: {
-                    id: playerId,
-                    name: playerName,
-                    score: 0,
-                    answered: false,
-                    answer: null,
-                    isCorrect: false,
-                    responseTime: 0,
-                    joinTime: Date.now()
-                }
-            }).then(() => {
-                showScreen('waiting');
-                displayRoomCode.textContent = roomCode;
-                roomCodeDisplay.textContent = roomCode.substring(0, 4);
-                
-                // الاستماع للتحديثات
-                listenToRoomUpdates();
-                
-                // إظهار زر البداية للمنشئ
-                roomRef.get().then(doc => {
-                    const data = doc.data();
-                    if (data.creator === playerId) {
-                        startGameBtn.style.display = 'block';
-                        autoStartInfo.style.display = 'block';
-                    }
-                });
-            });
-        }
-        
-        // الاستماع لتحديثات الغرفة
-        function listenToRoomUpdates() {
-            roomRef.onSnapshot(doc => {
-                if (!doc.exists) {
-                    showError("تم حذف الغرفة");
-                    showScreen('login');
-                    return;
-                }
-                
-                const data = doc.data();
-                gameData = data;
-                
-                // تحديث اللاعبين
-                updatePlayersList(data.players);
-                
-                // بدء اللعبة تلقائياً
-                if (data.status === 'waiting' && data.creator === playerId && 
-                    Object.keys(data.players).length >= 2) {
-                    autoStartInfo.textContent = "⏳ سيبدأ اللعب تلقائياً خلال 3 ثواني...";
-                    setTimeout(() => {
-                        if (data.status === 'waiting') {
-                            beginGame();
-                        }
-                    }, 3000);
-                }
-                
-                // تحديث حالة اللعبة
-                if (data.status === 'playing' && getCurrentScreen() !== 'game') {
-                    beginGameFromUpdate();
-                }
-                
-                if (data.status === 'results' && getCurrentScreen() !== 'results') {
-                    showResults();
-                }
-                
-                // التحقق من اكتمال الإجابات
-                if (data.status === 'playing' && data.gameState === 'question') {
-                    checkAllPlayersAnswered();
-                }
-            });
-        }
-        
-        // تحديث قائمة اللاعبين
-        function updatePlayersList(playersData) {
-            playersList.innerHTML = '';
-            if (!playersData) return;
-            
-            players = playersData;
-            playersCount.textContent = Object.keys(players).length;
-            
-            Object.entries(players).forEach(([id, player]) => {
-                const badge = document.createElement('div');
-                badge.className = 'player-badge' + (id === playerId ? ' active' : '');
-                
-                const avatarColors = ['#667eea', '#764ba2', '#f093fb', '#f5576c'];
-                const avatarColor = avatarColors[Math.floor(Math.random() * avatarColors.length)];
-                
-                badge.innerHTML = `
-                    <div class="player-avatar" style="background: ${avatarColor}">
-                        ${player.name.charAt(0)}
-                    </div>
-                    <div class="player-name">${player.name}</div>
-                    <div style="font-size: 0.8rem; color: var(--gold); margin-top: 3px;">
-                        ${player.score} 🏆
-                    </div>
-                `;
-                
-                playersList.appendChild(badge);
-            });
-        }
-        
-        // بدء اللعبة
-        function beginGame() {
-            if (!roomRef) return;
-            
-            const question = generateQuestion(currentRound);
-            totalTime = gameRounds[currentRound - 1].time;
-            
-            roomRef.update({
-                status: 'playing',
-                gameState: 'question',
-                currentQuestion: question,
-                timerEnd: Date.now() + (totalTime * 1000),
-                roundStartTime: Date.now(),
-                playersAnswered: 0
-            });
-        }
-        
-        // بدء اللعبة من تحديث
-        function beginGameFromUpdate() {
-            showScreen('game');
-            currentRound = gameData.currentRound || 1;
-            selectedAnswer = null;
-            totalTime = gameRounds[currentRound - 1].time;
-            
-            updateGameUI();
-            startTimer();
-        }
-        
-        // تحديث واجهة اللعبة
-        function updateGameUI() {
-            currentRoundEl.textContent = currentRound;
-            playerScoreEl.textContent = playerScore;
-            activePlayersEl.textContent = Object.keys(players).length;
-            
-            const round = gameRounds[currentRound - 1];
-            roundTitleEl.textContent = round.title;
-            roundDescriptionEl.textContent = round.description;
-            
-            if (gameData.currentQuestion) {
-                const q = gameData.currentQuestion;
-                questionTextEl.textContent = q.question;
-                questionInstructionEl.textContent = q.instruction;
-                
-                createColorBoxes(q);
-            }
-            
-            gameProgress.style.display = 'none';
-        }
-        
-        // إنشاء مربعات الألوان في صف واحد
-        function createColorBoxes(question) {
-            colorsRow.innerHTML = '';
-            
-            question.options.forEach((option, index) => {
-                const box = document.createElement('div');
-                box.className = 'color-box';
-                box.style.backgroundColor = option.color;
-                box.textContent = option.text;
-                box.dataset.index = index;
-                
-                if (gameData.gameState === 'question' && !selectedAnswer) {
-                    box.addEventListener('click', () => selectAnswer(index));
-                }
-                
-                colorsRow.appendChild(box);
-            });
-        }
-        
-        // اختيار الإجابة
-        function selectAnswer(index) {
-            if (selectedAnswer !== null || gameData.gameState !== 'question') return;
-            
-            selectedAnswer = index;
-            const responseTime = ((Date.now() - gameData.roundStartTime) / 1000).toFixed(1);
-            const isCorrect = gameData.currentQuestion.correctAnswer === index;
-            
-            // تحديث الواجهة
-            const boxes = document.querySelectorAll('.color-box');
-            boxes.forEach(box => box.classList.remove('selected'));
-            boxes[index].classList.add('selected');
-            
-            if (isCorrect) {
-                boxes[index].classList.add('correct');
-                boxes[index].classList.add('pulse');
-                
-                const points = gameRounds[currentRound - 1].points;
-                const timeBonus = Math.max(0, Math.floor((totalTime - responseTime) / 2));
-                const totalPoints = points + timeBonus;
-                
-                playerScore += totalPoints;
-                playerScoreEl.textContent = playerScore;
-                
-                showNotification(`إجابة صحيحة! 🎉 +${totalPoints} نقطة`);
-            } else {
-                boxes[index].classList.add('incorrect');
-                boxes[index].classList.add('shake');
-                
-                playerScore -= 5;
-                playerScoreEl.textContent = playerScore;
-                
-                showNotification("إجابة خاطئة! ❌ -5 نقاط");
-            }
-            
-            // إرسال الإجابة إلى Firebase
-            roomRef.update({
-                [`players.${playerId}.answered`]: true,
-                [`players.${playerId}.answer`]: index,
-                [`players.${playerId}.isCorrect`]: isCorrect,
-                [`players.${playerId}.responseTime`]: parseFloat(responseTime),
-                [`players.${playerId}.score`]: playerScore,
-                playersAnswered: firebase.firestore.FieldValue.increment(1)
-            });
-        }
-        
-        // بدء المؤقت
-        function startTimer() {
-            clearInterval(timerInterval);
-            
-            const update = () => {
-                if (!gameData || !gameData.timerEnd) return;
-                
-                const now = Date.now();
-                const timeLeft = Math.max(0, Math.floor((gameData.timerEnd - now) / 1000));
-                const percent = (timeLeft / totalTime) * 100;
-                
-                timerEl.textContent = timeLeft;
-                timerProgress.style.width = `${percent}%`;
-                
-                // تغيير لون المؤقت
-                if (timeLeft <= 3) {
-                    timerEl.style.color = '#ff5252';
-                    timerProgress.style.background = 'linear-gradient(135deg, var(--danger), #ffb199)';
-                } else if (timeLeft <= 6) {
-                    timerEl.style.color = '#FFD740';
-                    timerProgress.style.background = 'linear-gradient(135deg, var(--warning), #fee140)';
-                }
-                
-                if (timeLeft <= 0) {
-                    clearInterval(timerInterval);
-                    if (!selectedAnswer) {
-                        roomRef.update({
-                            [`players.${playerId}.answered`]: true,
-                            playersAnswered: firebase.firestore.FieldValue.increment(1)
-                        });
-                        showNotification("انتهى الوقت! ⏰");
-                    }
-                }
-            };
-            
-            update();
-            timerInterval = setInterval(update, 100);
-        }
-        
-        // التحقق من اكتمال الإجابات
-        function checkAllPlayersAnswered() {
-            if (!gameData || !gameData.players) return;
-            
-            const total = Object.keys(gameData.players).length;
-            const answered = Object.values(gameData.players).filter(p => p.answered).length;
-            
-            answeredCount.textContent = answered;
-            totalCount.textContent = total;
-            
-            if (answered > 0) {
-                gameProgress.style.display = 'block';
-                progressText.textContent = answered === total ? 
-                    "✅ اكتملت إجابات جميع اللاعبين!" : 
-                    "⏳ ينتظر إجابة اللاعبين...";
-            }
-            
-            // إذا أجاب الجميع، الانتقال للنتائج
-            if (answered === total && total > 0) {
-                if (gameData.gameState === 'question') {
-                    setTimeout(() => {
-                        roomRef.update({
-                            gameState: 'results',
-                            timerEnd: Date.now() + 8000
-                        });
-                    }, 1500);
-                }
-            }
-        }
-        
-        // عرض النتائج
-        function showResults() {
-            showScreen('results');
-            clearInterval(timerInterval);
-            
-            if (!gameData) return;
-            
-            const player = gameData.players[playerId];
-            const isCorrect = player && player.isCorrect;
-            const responseTime = player && player.responseTime;
-            
-            // تحديث النتائج
-            if (isCorrect) {
-                resultBadge.textContent = '🏆';
-                resultTitle.textContent = 'إجابة صحيحة!';
-                resultAnswer.textContent = '✅ صحيحة';
-                resultAnswer.style.color = '#00ff00';
-            } else if (player && player.answer !== null) {
-                resultBadge.textContent = '❌';
-                resultTitle.textContent = 'إجابة خاطئة';
-                resultAnswer.textContent = '❌ خاطئة';
-                resultAnswer.style.color = '#ff0000';
-            } else {
-                resultBadge.textContent = '⏰';
-                resultTitle.textContent = 'انتهى الوقت';
-                resultAnswer.textContent = '⏰ لم يجب';
-                resultAnswer.style.color = '#ffa500';
-            }
-            
-            resultTime.textContent = responseTime ? `${responseTime} ثانية` : '--';
-            
-            // حساب النقاط
-            const lastRoundPoints = playerScore - (player?.previousScore || 0);
-            resultPoints.textContent = lastRoundPoints > 0 ? `+${lastRoundPoints}` : `${lastRoundPoints}`;
-            totalPointsEl.textContent = `${playerScore} نقطة`;
-            
-            // عرض الترتيب
-            displayLeaderboard();
-            
-            // بدء العد التنازلي للجولة التالية
-            if (gameData.settings?.autoProgress && currentRound < 5) {
-                startNextRoundCountdown();
-            }
-        }
-        
-        // عرض الترتيب
-        function displayLeaderboard() {
-            leaderboard.innerHTML = '';
-            
-            if (!gameData || !gameData.players) return;
-            
-            const sorted = Object.values(gameData.players)
-                .sort((a, b) => b.score - a.score);
-            
-            sorted.forEach((player, index) => {
-                const item = document.createElement('div');
-                item.className = 'leaderboard-item' + (player.id === playerId ? ' current' : '');
-                
-                const rank = index + 1;
-                const rankClass = rank === 1 ? 'rank-1' : 
-                                 rank === 2 ? 'rank-2' : 
-                                 rank === 3 ? 'rank-3' : 'rank-other';
-                const rankEmoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
-                
-                item.innerHTML = `
-                    <div class="rank ${rankClass}">${rankEmoji}</div>
-                    <div style="flex-grow: 1; text-align: right;">
-                        <div style="font-weight: bold; font-size: 1rem;">${player.name}</div>
-                        <div style="font-size: 0.8rem; color: var(--text-secondary);">
-                            ${player.isCorrect ? '✅' : '❌'} | ${player.responseTime || 0} ث
+        <!-- شاشة الصالة الرئيسية -->
+        <div id="lobbyScreen" class="screen">
+            <header class="game-header">
+                <div class="player-info">
+                    <img src="https://ui-avatars.com/api/?name=Player&background=4A90E2&color=fff" id="playerAvatar" alt="صورة اللاعب">
+                    <div>
+                        <h3 id="playerName">اسم اللاعب</h3>
+                        <div class="level-badge">
+                            <i class="fas fa-star"></i> مستوى <span id="playerLevel">1</span>
                         </div>
                     </div>
-                    <div style="font-weight: bold; color: var(--gold); font-size: 1.1rem;">
-                        ${player.score}
+                </div>
+                
+                <div class="stats">
+                    <div class="stat">
+                        <i class="fas fa-heart"></i>
+                        <span id="playerHP">100/100</span>
                     </div>
-                `;
+                    <div class="stat">
+                        <i class="fas fa-bolt"></i>
+                        <span id="playerStamina">50/50</span>
+                    </div>
+                    <div class="stat">
+                        <i class="fas fa-trophy"></i>
+                        <span id="playerXP">0/100</span>
+                    </div>
+                </div>
                 
-                leaderboard.appendChild(item);
-            });
-        }
-        
-        // العد التنازلي للجولة التالية
-        function startNextRoundCountdown() {
-            let countdown = 8;
-            nextRoundTimer.style.display = 'block';
-            countdownEl.textContent = countdown;
+                <button id="logoutBtn" class="btn-logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </header>
             
-            countdownInterval = setInterval(() => {
-                countdown--;
-                countdownEl.textContent = countdown;
-                
-                if (countdown <= 0) {
-                    clearInterval(countdownInterval);
-                    nextRoundTimer.style.display = 'none';
-                    nextRound();
-                }
-            }, 1000);
-        }
-        
-        // الجولة التالية
-        function nextRound() {
-            if (!roomRef) return;
-            
-            if (currentRound >= 5) {
-                showNotification("🎉 انتهت اللعبة!");
-                nextRoundBtn.textContent = "انتهت اللعبة";
-                nextRoundBtn.disabled = true;
-                return;
-            }
-            
-            currentRound++;
-            selectedAnswer = null;
-            
-            const question = generateQuestion(currentRound);
-            totalTime = gameRounds[currentRound - 1].time;
-            
-            // تحديث حالة جميع اللاعبين
-            const updates = {};
-            Object.keys(players).forEach(id => {
-                updates[`players.${id}.answered`] = false;
-                updates[`players.${id}.answer`] = null;
-                updates[`players.${id}.isCorrect`] = false;
-                updates[`players.${id}.responseTime`] = 0;
-            });
-            
-            updates.status = 'playing';
-            updates.gameState = 'question';
-            updates.currentRound = currentRound;
-            updates.currentQuestion = question;
-            updates.timerEnd = Date.now() + (totalTime * 1000);
-            updates.roundStartTime = Date.now();
-            updates.playersAnswered = 0;
-            
-            roomRef.update(updates);
-        }
-        
-        // توليد سؤال
-        function generateQuestion(round) {
-            let type;
-            if (round <= 2) type = 'match';
-            else if (round <= 4) type = 'mismatch';
-            else type = 'similar';
-            
-            // اختيار 3 ألوان عشوائية
-            const selected = [];
-            while (selected.length < 3) {
-                const name = colorNames[Math.floor(Math.random() * colorNames.length)];
-                if (!selected.includes(name)) selected.push(name);
-            }
-            
-            const options = [];
-            let correctAnswer = 0;
-            let question = '';
-            let instruction = '';
-            
-            if (type === 'match') {
-                // لون واسم متطابقان
-                for (let i = 0; i < 3; i++) {
-                    options.push({
-                        text: selected[i],
-                        color: colors[selected[i]]
-                    });
-                }
-                
-                question = `ما هو لون "${selected[0]}"؟`;
-                instruction = "اللون والاسم متطابقان";
-                correctAnswer = 0;
-                
-            } else if (type === 'mismatch') {
-                // لون مختلف عن الاسم
-                const shuffled = [...selected].sort(() => Math.random() - 0.5);
-                
-                for (let i = 0; i < 3; i++) {
-                    let colorIndex = (i + 1) % 3;
-                    options.push({
-                        text: shuffled[i],
-                        color: colors[selected[colorIndex]]
-                    });
-                }
-                
-                correctAnswer = Math.floor(Math.random() * 3);
-                question = `ما هو لون "${options[correctAnswer].text}"؟`;
-                instruction = "اللون يختلف عن الاسم";
-                
-            } else {
-                // ألوان متشابهة
-                const mainColor = selected[0];
-                const similarColors = [
-                    colorNames[(colorNames.indexOf(mainColor) + 1) % colorNames.length],
-                    colorNames[(colorNames.indexOf(mainColor) + 2) % colorNames.length]
-                ];
-                
-                options.push({
-                    text: mainColor,
-                    color: colors[similarColors[0]]
-                });
-                
-                for (let i = 1; i < 3; i++) {
-                    let randomName, randomColorName;
-                    do {
-                        randomName = colorNames[Math.floor(Math.random() * colorNames.length)];
-                        randomColorName = colorNames[Math.floor(Math.random() * colorNames.length)];
-                    } while (randomName === mainColor || similarColors.includes(randomName));
+            <div class="lobby-content">
+                <div class="lobby-actions">
+                    <h2><i class="fas fa-home"></i> الصالة الرئيسية</h2>
                     
-                    options.push({
-                        text: randomName,
-                        color: colors[randomColorName]
-                    });
-                }
+                    <div class="action-buttons">
+                        <button id="findMatchBtn" class="btn-action btn-primary">
+                            <i class="fas fa-search"></i> البحث عن معركة
+                        </button>
+                        <button id="upgradeBtn" class="btn-action btn-secondary">
+                            <i class="fas fa-level-up-alt"></i> ترقية الجندي
+                        </button>
+                        <button id="weaponsBtn" class="btn-action btn-secondary">
+                            <i class="fas fa-gavel"></i> ترقية الأسلحة
+                        </button>
+                        <button id="skillsBtn" class="btn-action btn-secondary">
+                            <i class="fas fa-magic"></i> المهارات
+                        </button>
+                        <button id="leaderboardBtn" class="btn-action btn-secondary">
+                            <i class="fas fa-list-ol"></i> قائمة المتصدرين
+                        </button>
+                    </div>
+                    
+                    <div id="matchmakingStatus" class="matchmaking-status">
+                        <div class="searching" style="display: none;">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <span>جاري البحث عن خصم...</span>
+                            <button id="cancelMatchmaking" class="btn-small">إلغاء</button>
+                        </div>
+                        <div id="matchFound" class="match-found" style="display: none;">
+                            <i class="fas fa-check-circle"></i>
+                            <span>تم العثور على خصم!</span>
+                            <button id="enterBattle" class="btn-small btn-primary">الدخول للمعركة</button>
+                        </div>
+                    </div>
+                </div>
                 
-                question = `ما هو لون "${mainColor}"؟`;
-                instruction = "اختر لوناً مشابهاً";
-                correctAnswer = 0;
-            }
+                <div class="player-stats-card">
+                    <h3><i class="fas fa-user"></i> إحصائيات الجندي</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-label">الهجوم</span>
+                            <div class="stat-bar">
+                                <div class="stat-fill" id="attackStat" style="width: 60%"></div>
+                            </div>
+                            <span class="stat-value" id="attackValue">15</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">الدفاع</span>
+                            <div class="stat-bar">
+                                <div class="stat-fill" id="defenseStat" style="width: 40%"></div>
+                            </div>
+                            <span class="stat-value" id="defenseValue">10</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">السرعة</span>
+                            <div class="stat-bar">
+                                <div class="stat-fill" id="speedStat" style="width: 70%"></div>
+                            </div>
+                            <span class="stat-value" id="speedValue">20</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">التحمل</span>
+                            <div class="stat-bar">
+                                <div class="stat-fill" id="staminaStat" style="width: 50%"></div>
+                            </div>
+                            <span class="stat-value" id="staminaValue">50</span>
+                        </div>
+                    </div>
+                    
+                    <div class="current-weapon">
+                        <h4><i class="fas fa-gavel"></i> السلاح الحالي</h4>
+                        <div class="weapon-info">
+                            <div class="weapon-icon">
+                                <i class="fas fa-sword"></i>
+                            </div>
+                            <div class="weapon-details">
+                                <h5 id="weaponName">سيف مبتدئ</h5>
+                                <p id="weaponDamage">الضرر: <span>10-15</span></p>
+                                <p id="weaponProperties">الخصائص: <span>لا يوجد</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- شاشة المعركة -->
+        <div id="battleScreen" class="screen">
+            <div class="battle-header">
+                <div class="battle-timer">
+                    <i class="fas fa-clock"></i> <span id="battleTimer">0:00</span>
+                </div>
+                <button id="leaveBattle" class="btn-small btn-danger">
+                    <i class="fas fa-times"></i> ترك المعركة
+                </button>
+            </div>
             
-            return { question, instruction, options, correctAnswer, round };
-        }
-        
-        // العودة للشاشة الرئيسية
-        function backToLobby() {
-            leaveRoom();
-        }
-        
-        // ترك الغرفة
-        function leaveRoom() {
-            if (roomRef) {
-                roomRef.update({
-                    [`players.${playerId}`]: firebase.firestore.FieldValue.delete()
-                }).then(() => {
-                    roomRef.get().then(doc => {
-                        if (doc.exists && Object.keys(doc.data().players).length === 0) {
-                            roomRef.delete();
-                        }
-                    });
-                });
-            }
-            
-            showScreen('login');
-            clearAllIntervals();
-        }
-        
-        // مسح جميع المؤقتات
-        function clearAllIntervals() {
-            clearInterval(timerInterval);
-            clearInterval(countdownInterval);
-        }
-        
-        // نسخ كود الغرفة
-        function copyRoomCode() {
-            navigator.clipboard.writeText(displayRoomCode.textContent)
-                .then(() => showNotification("✅ تم نسخ كود الغرفة!"))
-                .catch(() => showError("❌ فشل نسخ الكود"));
-        }
-        
-        // مشاركة الغرفة
-        function shareRoom() {
-            const text = `🎮 انضم إلى لعبة الألوان الذهنية!\nالكود: ${displayRoomCode.textContent}\n${window.location.href}`;
-            
-            if (navigator.share) {
-                navigator.share({
-                    title: 'لعبة الألوان الذهنية',
-                    text: text
-                });
-            } else {
-                navigator.clipboard.writeText(text);
-                showNotification("✅ تم نسخ رابط الدعوة!");
-            }
-        }
-        
-        // إظهار إشعار
-        function showNotification(message) {
-            notificationText.textContent = message;
-            notification.style.display = 'flex';
-            
-            setTimeout(() => {
-                notification.style.display = 'none';
-            }, 4000);
-        }
-        
-        // إظهار خطأ
-        function showError(message) {
-            loginError.textContent = message;
-            loginError.style.display = 'block';
-            setTimeout(() => loginError.style.display = 'none', 3000);
-        }
-        
-        // تبديل الشاشات
-        function showScreen(screenName) {
-            Object.values(screens).forEach(screen => {
-                screen.classList.remove('active-screen');
-            });
-            
-            screens[screenName].classList.add('active-screen');
-        }
-        
-        function getCurrentScreen() {
-            for (const [name, screen] of Object.entries(screens)) {
-                if (screen.classList.contains('active-screen')) {
-                    return name;
-                }
-            }
-            return 'login';
-        }
-        
-        // عند تحميل الصفحة
-        window.addEventListener('load', () => {
-            // اسم عشوائي
-            const names = ["أحمد", "سارة", "محمد", "فاطمة", "علي", "نور", "يوسف", "مريم"];
-            playerNameInput.value = names[Math.floor(Math.random() * names.length)] + 
-                Math.floor(Math.random() * 100);
-            
-            // تأثيرات اللمس
-            document.querySelectorAll('.btn, .color-box, .player-badge').forEach(el => {
-                el.addEventListener('touchstart', () => {
-                    el.style.transform = 'scale(0.98)';
-                    el.style.opacity = '0.9';
-                });
+            <div class="battle-arena">
+                <!-- معلومات اللاعب -->
+                <div class="player-battle-info player1">
+                    <div class="battle-player-header">
+                        <h3 id="player1Name">أنت</h3>
+                        <div class="battle-level">مستوى <span id="player1Level">1</span></div>
+                    </div>
+                    
+                    <div class="health-bar-container">
+                        <div class="health-bar">
+                            <div class="health-fill" id="player1Health" style="width: 100%"></div>
+                        </div>
+                        <span class="health-text" id="player1HealthText">100/100</span>
+                    </div>
+                    
+                    <div class="stamina-bar-container">
+                        <div class="stamina-bar">
+                            <div class="stamina-fill" id="player1Stamina" style="width: 100%"></div>
+                        </div>
+                        <span class="stamina-text" id="player1StaminaText">50/50</span>
+                    </div>
+                    
+                    <div class="status-effects" id="player1Status">
+                        <!-- ستظهر التأثيرات المستمرة هنا -->
+                    </div>
+                    
+                    <div class="player-weapon">
+                        <i class="fas fa-sword"></i>
+                        <span id="player1Weapon">سيف مبتدئ</span>
+                    </div>
+                </div>
                 
-                el.addEventListener('touchend', () => {
-                    el.style.transform = '';
-                    el.style.opacity = '';
-                });
-            });
-        });
-    </script>
+                <!-- منطقة المعركة -->
+                <div class="battle-center">
+                    <div class="vs-circle">
+                        <span>VS</span>
+                    </div>
+                    
+                    <div class="battle-log" id="battleLog">
+                        <div class="log-entry">بدأت المعركة!</div>
+                    </div>
+                    
+                    <div class="action-buttons battle-actions">
+                        <button id="basicAttack" class="btn-battle btn-attack">
+                            <i class="fas fa-fist-raised"></i> هجوم أساسي
+                        </button>
+                        <button id="skill1" class="btn-battle btn-skill" data-cooldown="5">
+                            <i class="fas fa-bolt"></i> ضربة سريعة
+                        </button>
+                        <button id="skill2" class="btn-battle btn-skill" data-cooldown="10">
+                            <i class="fas fa-shield-alt"></i> دفاع
+                        </button>
+                        <button id="skill3" class="btn-battle btn-skill" data-cooldown="15">
+                            <i class="fas fa-fire"></i> ضربة نارية
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- معلومات الخصم -->
+                <div class="player-battle-info player2">
+                    <div class="battle-player-header">
+                        <h3 id="player2Name">الخصم</h3>
+                        <div class="battle-level">مستوى <span id="player2Level">1</span></div>
+                    </div>
+                    
+                    <div class="health-bar-container">
+                        <div class="health-bar">
+                            <div class="health-fill" id="player2Health" style="width: 100%"></div>
+                        </div>
+                        <span class="health-text" id="player2HealthText">100/100</span>
+                    </div>
+                    
+                    <div class="stamina-bar-container">
+                        <div class="stamina-bar">
+                            <div class="stamina-fill" id="player2Stamina" style="width: 100%"></div>
+                        </div>
+                        <span class="stamina-text" id="player2StaminaText">50/50</span>
+                    </div>
+                    
+                    <div class="status-effects" id="player2Status">
+                        <!-- ستظهر التأثيرات المستمرة هنا -->
+                    </div>
+                    
+                    <div class="player-weapon">
+                        <i class="fas fa-sword"></i>
+                        <span id="player2Weapon">سيف مبتدئ</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- شاشة الترقية -->
+        <div id="upgradeScreen" class="screen">
+            <div class="upgrade-header">
+                <button id="backToLobby" class="btn-back"><i class="fas fa-arrow-right"></i> العودة للصالة</button>
+                <h2><i class="fas fa-level-up-alt"></i> ترقية الجندي</h2>
+                <div class="upgrade-points">
+                    نقاط الترقية: <span id="upgradePoints">5</span>
+                </div>
+            </div>
+            
+            <div class="upgrade-content">
+                <div class="upgrade-stats">
+                    <h3>خصائص الجندي</h3>
+                    
+                    <div class="upgrade-item">
+                        <div class="upgrade-info">
+                            <i class="fas fa-heart"></i>
+                            <div>
+                                <h4>الصحة</h4>
+                                <p>زيادة الحد الأقصى لنقاط الصحة</p>
+                            </div>
+                        </div>
+                        <div class="upgrade-controls">
+                            <span class="current-value" id="healthValue">100</span>
+                            <button class="btn-upgrade" data-stat="health">+</button>
+                        </div>
+                    </div>
+                    
+                    <div class="upgrade-item">
+                        <div class="upgrade-info">
+                            <i class="fas fa-fist-raised"></i>
+                            <div>
+                                <h4>الهجوم</h4>
+                                <p>زيادة قوة الضرر الأساسية</p>
+                            </div>
+                        </div>
+                        <div class="upgrade-controls">
+                            <span class="current-value" id="attackUpgradeValue">15</span>
+                            <button class="btn-upgrade" data-stat="attack">+</button>
+                        </div>
+                    </div>
+                    
+                    <div class="upgrade-item">
+                        <div class="upgrade-info">
+                            <i class="fas fa-shield-alt"></i>
+                            <div>
+                                <h4>الدفاع</h4>
+                                <p>تقليل الضرر المستلم من الهجمات</p>
+                            </div>
+                        </div>
+                        <div class="upgrade-controls">
+                            <span class="current-value" id="defenseUpgradeValue">10</span>
+                            <button class="btn-upgrade" data-stat="defense">+</button>
+                        </div>
+                    </div>
+                    
+                    <div class="upgrade-item">
+                        <div class="upgrade-info">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <div>
+                                <h4>السرعة</h4>
+                                <p>زيادة سرعة الهجوم ورد الفعل</p>
+                            </div>
+                        </div>
+                        <div class="upgrade-controls">
+                            <span class="current-value" id="speedUpgradeValue">20</span>
+                            <button class="btn-upgrade" data-stat="speed">+</button>
+                        </div>
+                    </div>
+                    
+                    <div class="upgrade-item">
+                        <div class="upgrade-info">
+                            <i class="fas fa-bolt"></i>
+                            <div>
+                                <h4>التحمل</h4>
+                                <p>زيادة الحد الأقصى لنقاط التحمل</p>
+                            </div>
+                        </div>
+                        <div class="upgrade-controls">
+                            <span class="current-value" id="staminaUpgradeValue">50</span>
+                            <button class="btn-upgrade" data-stat="stamina">+</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="upgrade-preview">
+                    <h3>معاينة الجندي بعد الترقية</h3>
+                    <div class="preview-card">
+                        <div class="preview-stats">
+                            <div class="preview-stat">
+                                <span>الصحة:</span>
+                                <span id="previewHealth">100</span>
+                            </div>
+                            <div class="preview-stat">
+                                <span>الهجوم:</span>
+                                <span id="previewAttack">15</span>
+                            </div>
+                            <div class="preview-stat">
+                                <span>الدفاع:</span>
+                                <span id="previewDefense">10</span>
+                            </div>
+                            <div class="preview-stat">
+                                <span>السرعة:</span>
+                                <span id="previewSpeed">20</span>
+                            </div>
+                            <div class="preview-stat">
+                                <span>التحمل:</span>
+                                <span id="previewStamina">50</span>
+                            </div>
+                        </div>
+                        <button id="applyUpgrades" class="btn btn-primary">تطبيق الترقيات</button>
+                        <p class="hint">سيتم خصم نقاط الترقية بعد الضغط على تطبيق الترقيات</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- شاشة قائمة المتصدرين -->
+        <div id="leaderboardScreen" class="screen">
+            <div class="leaderboard-header">
+                <button id="backToLobbyFromLeaderboard" class="btn-back"><i class="fas fa-arrow-right"></i> العودة</button>
+                <h2><i class="fas fa-list-ol"></i> قائمة المتصدرين</h2>
+            </div>
+            
+            <div class="leaderboard-content">
+                <div class="leaderboard-tabs">
+                    <button class="leaderboard-tab active" data-type="level">أعلى المستويات</button>
+                    <button class="leaderboard-tab" data-type="wins">أكثر الانتصارات</button>
+                    <button class="leaderboard-tab" data-type="rating">التقييم العام</button>
+                </div>
+                
+                <div class="leaderboard-list" id="leaderboardList">
+                    <div class="leaderboard-item">
+                        <div class="rank">1</div>
+                        <div class="player-leaderboard-info">
+                            <img src="https://ui-avatars.com/api/?name=Player1&background=FFD700&color=000" alt="صورة اللاعب">
+                            <div>
+                                <h4>البطل الأول</h4>
+                                <p>مستوى 25</p>
+                            </div>
+                        </div>
+                        <div class="leaderboard-stat">
+                            <span class="stat-label">الانتصارات</span>
+                            <span class="stat-value">150</span>
+                        </div>
+                    </div>
+                    <!-- سيتم ملء البقية من Firebase -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- نافذة النتائج -->
+        <div id="resultsModal" class="modal">
+            <div class="modal-content">
+                <h2 id="resultTitle">نتيجة المعركة</h2>
+                <div class="result-details">
+                    <div class="result-player">
+                        <h3 id="resultPlayerName">أنت</h3>
+                        <div class="result-stat">
+                            <span>الصحة المتبقية:</span>
+                            <span id="resultPlayerHP">50/100</span>
+                        </div>
+                        <div class="result-stat">
+                            <span>الضرر المسبب:</span>
+                            <span id="resultPlayerDamage">120</span>
+                        </div>
+                    </div>
+                    
+                    <div class="result-vs">VS</div>
+                    
+                    <div class="result-player">
+                        <h3 id="resultOpponentName">الخصم</h3>
+                        <div class="result-stat">
+                            <span>الصحة المتبقية:</span>
+                            <span id="resultOpponentHP">0/100</span>
+                        </div>
+                        <div class="result-stat">
+                            <span>الضرر المسبب:</span>
+                            <span id="resultOpponentDamage">80</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="result-rewards">
+                    <h3><i class="fas fa-trophy"></i> المكافآت</h3>
+                    <div class="rewards-list">
+                        <div class="reward-item">
+                            <i class="fas fa-star"></i>
+                            <span>+<span id="resultXP">50</span> نقطة خبرة</span>
+                        </div>
+                        <div class="reward-item">
+                            <i class="fas fa-coins"></i>
+                            <span>+<span id="resultPoints">2</span> نقطة ترقية</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <button id="closeResults" class="btn btn-primary">العودة للصالة</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- إشعارات -->
+    <div id="notification" class="notification">
+        <span id="notificationText"></span>
+    </div>
+    
+    <script src="app.js"></script>
 </body>
 </html>
