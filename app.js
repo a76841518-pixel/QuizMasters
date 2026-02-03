@@ -1488,4 +1488,3 @@ function updateFirebaseRules() {
     console.log(JSON.stringify(rules, null, 2));
 }
 
-،
