@@ -3,716 +3,602 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>أبطال الاستراتيجية</title>
+    <title>لعبة الزومبي - معركة التطور</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- Firebase SDK -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-    <!-- Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <!-- الشاشة الرئيسية -->
-        <div id="homeScreen" class="screen active">
-            <div class="logo">
-                <h1><i class="fas fa-crown"></i> أبطال الاستراتيجية</h1>
-                <p>لعبة استراتيجية متعددة اللاعبين في الوقت الحقيقي</p>
+    <!-- شاشة البداية -->
+    <div id="loadingScreen" class="screen active">
+        <div class="loading-container">
+            <div class="zombie-logo">
+                <i class="fas fa-skull-crossbones"></i>
+                <h1>عالم الزومبي</h1>
+            </div>
+            <div class="loading-progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="loadingProgress"></div>
+                </div>
+                <div class="loading-text" id="loadingText">جاري تحميل عالم الزومبي...</div>
+            </div>
+            <div class="game-intro">
+                <p>💀 اختر زومبيك، طوّره، واصنع أسطورتك!</p>
+                <p>🧠 كل زومبي فريد بمهاراته وقدراته</p>
+                <p>⚔️ اصنع استراتيجيتك وكن الأسطور!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- شاشة المصادقة -->
+    <div id="authScreen" class="screen">
+        <div class="auth-container">
+            <div class="auth-header">
+                <i class="fas fa-user-shield"></i>
+                <h2>تسجيل الدخول / إنشاء حساب</h2>
             </div>
             
-            <div class="auth-buttons">
-                <button id="loginBtn" class="btn btn-primary">
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="login">تسجيل الدخول</button>
+                <button class="auth-tab" data-tab="register">إنشاء حساب</button>
+            </div>
+            
+            <div class="auth-form active" id="loginForm">
+                <div class="form-group">
+                    <label for="loginEmail"><i class="fas fa-envelope"></i> البريد الإلكتروني</label>
+                    <input type="email" id="loginEmail" placeholder="example@game.com">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword"><i class="fas fa-lock"></i> كلمة المرور</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••">
+                </div>
+                <button class="auth-btn" id="loginBtn">
                     <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
                 </button>
-                <button id="signupBtn" class="btn btn-secondary">
+            </div>
+            
+            <div class="auth-form" id="registerForm">
+                <div class="form-group">
+                    <label for="registerName"><i class="fas fa-user"></i> اسم اللاعب</label>
+                    <input type="text" id="registerName" placeholder="اسمك في اللعبة">
+                </div>
+                <div class="form-group">
+                    <label for="registerEmail"><i class="fas fa-envelope"></i> البريد الإلكتروني</label>
+                    <input type="email" id="registerEmail" placeholder="example@game.com">
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword"><i class="fas fa-lock"></i> كلمة المرور</label>
+                    <input type="password" id="registerPassword" placeholder="••••••••">
+                </div>
+                <div class="form-group">
+                    <label for="registerPasswordConfirm"><i class="fas fa-lock"></i> تأكيد كلمة المرور</label>
+                    <input type="password" id="registerPasswordConfirm" placeholder="••••••••">
+                </div>
+                <button class="auth-btn" id="registerBtn">
                     <i class="fas fa-user-plus"></i> إنشاء حساب
                 </button>
             </div>
             
-            <div class="game-info">
-                <div class="info-card">
-                    <i class="fas fa-shield-alt"></i>
-                    <h3>تطوير الجنود</h3>
-                    <p>قم بتطوير جنديك عبر مستويات متعددة وافتح مهارات جديدة</p>
-                </div>
-                <div class="info-card">
-                    <i class="fas fa-fist-raised"></i>
-                    <h3>معارك حقيقية</h3>
-                    <p>قاتل في الوقت الحقيقي مع استراتيجيات متنوعة</p>
-                </div>
-                <div class="info-card">
-                    <i class="fas fa-tools"></i>
-                    <h3>ترقية الأسلحة</h3>
-                    <p>حسن أسلحتك البيضاء وأضف خصائص سحرية قوية</p>
-                </div>
+            <div class="auth-footer">
+                <p>عالم الزومبي - كل الحقوق محفوظة 2024</p>
             </div>
         </div>
-        
-<!-- شاشة إنشاء الغرفة -->
-<div id="createRoomScreen" class="screen">
-    <div class="room-header">
-        <button id="backToLobbyFromCreate" class="btn-back"><i class="fas fa-arrow-right"></i> العودة للصالة</button>
-        <h2><i class="fas fa-plus-circle"></i> إنشاء غرفة خاصة</h2>
     </div>
-    
-    <div class="room-content">
-        <div class="room-settings">
-            <h3><i class="fas fa-cog"></i> إعدادات الغرفة</h3>
-            
-            <div class="form-group">
-                <label for="roomName"><i class="fas fa-heading"></i> اسم الغرفة</label>
-                <input type="text" id="roomName" placeholder="مثلاً: غرفة الأبطال" value="غرفتي">
+
+    <!-- شاشة اختيار الزومبي -->
+    <div id="zombieSelectionScreen" class="screen">
+        <div class="selection-container">
+            <div class="selection-header">
+                <h2><i class="fas fa-skull"></i> اختر زومبيك الأول</h2>
+                <p>اختر زومبيك بعناية! هذا الاختيار دائم</p>
             </div>
             
-            <div class="form-group">
-                <label for="roomType"><i class="fas fa-gamepad"></i> نوع الغرفة</label>
-                <select id="roomType">
-                    <option value="duel">مبارزة 1 ضد 1</option>
-                    <option value="team">فرق (2 ضد 2)</option>
-                    <option value="free">حرة (حتى 4 لاعبين)</option>
-                </select>
+            <div class="zombie-categories">
+                <div class="category-tabs">
+                    <button class="category-tab active" data-category="combat">⚔️ قتالي</button>
+                    <button class="category-tab" data-category="protection">🛡️ حماية</button>
+                    <button class="category-tab" data-category="disease">☣️ أمراض</button>
+                    <button class="category-tab" data-category="shadow">👻 ظلال</button>
+                    <button class="category-tab" data-category="support">🧠 داعم</button>
+                    <button class="category-tab" data-category="legendary">🔥 أسطوري</button>
+                </div>
+                
+                <div class="zombies-grid" id="zombiesGrid">
+                    <!-- سيتم ملؤها بالزومبي -->
+                </div>
             </div>
             
-            <div class="form-group">
-                <label for="roomPrivacy"><i class="fas fa-lock"></i> الخصوصية</label>
-                <select id="roomPrivacy">
-                    <option value="private">خاصة (بالكود)</option>
-                    <option value="public">عامة</option>
-                </select>
+            <div class="selected-zombie-preview" id="selectedZombiePreview">
+                <div class="preview-header">
+                    <h3>اختر زومبياً لعرض التفاصيل</h3>
+                </div>
+                <div class="preview-content">
+                    <p>انقر على زومبي لرؤية تفاصيله ومهاراته</p>
+                </div>
             </div>
             
-            <div class="form-group">
-                <label for="roomMaxPlayers"><i class="fas fa-users"></i> عدد اللاعبين الأقصى</label>
-                <select id="roomMaxPlayers">
-                    <option value="2">2 لاعبين</option>
-                    <option value="3">3 لاعبين</option>
-                    <option value="4">4 لاعبين</option>
-                </select>
-            </div>
-            
-            <button id="createRoomBtn" class="btn btn-primary btn-large">
-                <i class="fas fa-plus-circle"></i> إنشاء الغرفة
+            <button class="confirm-btn" id="confirmZombieBtn" disabled>
+                <i class="fas fa-check-circle"></i> تأكيد الاختيار
             </button>
         </div>
-        
-        <div class="room-preview">
-            <h3><i class="fas fa-eye"></i> معاينة الغرفة</h3>
-            <div class="preview-room">
-                <div class="room-info-preview">
-                    <h4 id="previewRoomName">غرفتي</h4>
-                    <div class="room-details">
-                        <div class="room-detail">
-                            <i class="fas fa-user"></i>
-                            <span>صاحب الغرفة: <span id="previewRoomOwner">أنت</span></span>
-                        </div>
-                        <div class="room-detail">
-                            <i class="fas fa-gamepad"></i>
-                            <span>النوع: <span id="previewRoomType">مبارزة 1 ضد 1</span></span>
-                        </div>
-                        <div class="room-detail">
-                            <i class="fas fa-users"></i>
-                            <span>اللاعبون: <span id="previewRoomPlayers">1/2</span></span>
-                        </div>
-                        <div class="room-detail">
-                            <i class="fas fa-lock"></i>
-                            <span>الحالة: <span id="previewRoomPrivacy">خاصة</span></span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="room-code-section" id="roomCodeSection" style="display: none;">
-                    <h4><i class="fas fa-key"></i> كود الغرفة</h4>
-                    <div class="room-code-display">
-                        <span id="roomCodeDisplay">ABCD12</span>
-                        <button id="copyRoomCode" class="btn-small">
-                            <i class="fas fa-copy"></i> نسخ
-                        </button>
-                    </div>
-                    <p class="hint">شارك هذا الكود مع صديقك للانضمام للغرفة</p>
-                </div>
-            </div>
-        </div>
     </div>
-</div>
 
-<!-- شاشة الانضمام للغرفة -->
-<div id="joinRoomScreen" class="screen">
-    <div class="room-header">
-        <button id="backToLobbyFromJoin" class="btn-back"><i class="fas fa-arrow-right"></i> العودة للصالة</button>
-        <h2><i class="fas fa-sign-in-alt"></i> الانضمام لغرفة</h2>
-    </div>
-    
-    <div class="room-content">
-        <div class="join-methods">
-            <div class="join-method active" id="joinByCodeMethod">
-                <h3><i class="fas fa-key"></i> الانضمام بواسطة الكود</h3>
-                <div class="form-group">
-                    <label for="roomCodeInput">أدخل كود الغرفة</label>
-                    <input type="text" id="roomCodeInput" placeholder="مثلاً: ABCD12" maxlength="6">
-                    <div id="roomCodeError" class="error-message"></div>
-                </div>
-                <button id="joinRoomByCodeBtn" class="btn btn-primary">
-                    <i class="fas fa-sign-in-alt"></i> الانضمام للغرفة
-                </button>
-            </div>
-            
-            <div class="join-method" id="joinPublicMethod">
-                <h3><i class="fas fa-globe"></i> الغرف العامة المتاحة</h3>
-                <div class="public-rooms-list" id="publicRoomsList">
-                    <div class="no-rooms">جارٍ تحميل الغرف...</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="current-rooms">
-            <h3><i class="fas fa-history"></i> غرفك الأخيرة</h3>
-            <div class="recent-rooms" id="recentRooms">
-                <div class="no-rooms">لا توجد غرف سابقة</div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- شاشة الغرفة -->
-<div id="roomScreen" class="screen">
-    <div class="room-lobby-header">
-        <button id="leaveRoomBtn" class="btn-back"><i class="fas fa-arrow-right"></i> مغادرة الغرفة</button>
-        <div class="room-info-header">
-            <h2 id="roomNameHeader">اسم الغرفة</h2>
-            <div class="room-code-header">
-                <i class="fas fa-key"></i>
-                <span id="roomCodeHeader">الكود: ABCD12</span>
-                <button id="copyRoomCodeHeader" class="btn-small">
-                    <i class="fas fa-copy"></i>
-                </button>
-            </div>
-        </div>
-        <div class="room-status">
-            <span id="roomStatus">في انتظار اللاعبين...</span>
-        </div>
-    </div>
-    
-    <div class="room-lobby-content">
-        <div class="players-list-container">
-            <h3><i class="fas fa-users"></i> اللاعبون في الغرفة (<span id="playersCount">1</span>/<span id="maxPlayers">4</span>)</h3>
-            <div class="players-list" id="roomPlayersList">
-                <!-- اللاعبون سيتم إضافتهم هنا -->
-            </div>
-            
-            <div class="room-actions">
-                <button id="startGameBtn" class="btn btn-primary btn-large" disabled>
-                    <i class="fas fa-play"></i> بدء اللعبة
-                </button>
-                <button id="kickPlayerBtn" class="btn btn-secondary" disabled>
-                    <i class="fas fa-user-slash"></i> طرد لاعب
-                </button>
-                <button id="changeSettingsBtn" class="btn btn-secondary">
-                    <i class="fas fa-cog"></i> تغيير الإعدادات
-                </button>
-            </div>
-        </div>
-        
-        <div class="chat-container">
-            <h3><i class="fas fa-comments"></i> دردشة الغرفة</h3>
-            <div class="chat-messages" id="roomChatMessages">
-                <div class="system-message">مرحباً في غرفة اللعبة! يمكنك الدردشة مع اللاعبين الآخرين هنا.</div>
-            </div>
-            
-            <div class="chat-input-container">
-                <input type="text" id="roomChatInput" placeholder="اكتب رسالة...">
-                <button id="sendChatMessage" class="btn-small">
-                    <i class="fas fa-paper-plane"></i>
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-        
-        <!-- شاشة التسجيل/تسجيل الدخول -->
-        <div id="authScreen" class="screen">
-            <button id="backToHome" class="btn-back"><i class="fas fa-arrow-right"></i> العودة</button>
-            
-            <div class="auth-form">
-                <h2 id="authTitle">تسجيل الدخول</h2>
-                
-                <div class="tabs">
-                    <button id="loginTab" class="tab active">تسجيل الدخول</button>
-                    <button id="signupTab" class="tab">إنشاء حساب</button>
-                </div>
-                
-                <form id="loginForm" class="auth-form-content active">
-                    <div class="form-group">
-                        <label for="loginEmail"><i class="fas fa-envelope"></i> البريد الإلكتروني</label>
-                        <input type="email" id="loginEmail" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="loginPassword"><i class="fas fa-lock"></i> كلمة المرور</label>
-                        <input type="password" id="loginPassword" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary">تسجيل الدخول</button>
-                    <div id="loginError" class="error-message"></div>
-                </form>
-                
-                <form id="signupForm" class="auth-form-content">
-                    <div class="form-group">
-                        <label for="signupName"><i class="fas fa-user"></i> اسم اللاعب</label>
-                        <input type="text" id="signupName" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="signupEmail"><i class="fas fa-envelope"></i> البريد الإلكتروني</label>
-                        <input type="email" id="signupEmail" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="signupPassword"><i class="fas fa-lock"></i> كلمة المرور</label>
-                        <input type="password" id="signupPassword" required minlength="6">
-                    </div>
-                    <div class="form-group">
-                        <label for="confirmPassword"><i class="fas fa-lock"></i> تأكيد كلمة المرور</label>
-                        <input type="password" id="confirmPassword" required minlength="6">
-                    </div>
-                    <button type="submit" class="btn btn-primary">إنشاء حساب</button>
-                    <div id="signupError" class="error-message"></div>
-                </form>
-            </div>
-        </div>
-        
-        <!-- شاشة الصالة الرئيسية -->
-        <div id="lobbyScreen" class="screen">
-            <header class="game-header">
+    <!-- شاشة اللعبة الرئيسية -->
+    <div id="gameScreen" class="screen">
+        <!-- رأس الصفحة -->
+        <header class="game-header">
+            <div class="header-left">
                 <div class="player-info">
-                    <img src="https://ui-avatars.com/api/?name=Player&background=4A90E2&color=fff" id="playerAvatar" alt="صورة اللاعب">
-                    <div>
-                        <h3 id="playerName">اسم اللاعب</h3>
-                        <div class="level-badge">
-                            <i class="fas fa-star"></i> مستوى <span id="playerLevel">1</span>
+                    <div class="player-avatar">
+                        <i class="fas fa-skull" id="playerZombieIcon"></i>
+                    </div>
+                    <div class="player-details">
+                        <h3 id="playerName">اللاعب</h3>
+                        <div class="player-level">
+                            <span>المستوى: <span id="playerLevel">1</span></span>
+                            <div class="level-progress">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="levelProgress"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                
-                <div class="stats">
-                    <div class="stat">
-                        <i class="fas fa-heart"></i>
-                        <span id="playerHP">100/100</span>
+            </div>
+            
+            <div class="header-center">
+                <h1 class="game-title">
+                    <i class="fas fa-brain"></i>
+                    عالم الزومبي
+                </h1>
+            </div>
+            
+            <div class="header-right">
+                <div class="player-resources">
+                    <div class="resource gold">
+                        <i class="fas fa-coins"></i>
+                        <span id="goldAmount">1000</span>
                     </div>
-                    <div class="stat">
+                    <div class="resource dna">
+                        <i class="fas fa-dna"></i>
+                        <span id="dnaAmount">50</span>
+                    </div>
+                    <div class="resource energy">
                         <i class="fas fa-bolt"></i>
-                        <span id="playerStamina">50/50</span>
-                    </div>
-                    <div class="stat">
-                        <i class="fas fa-trophy"></i>
-                        <span id="playerXP">0/100</span>
+                        <span id="energyAmount">100/100</span>
                     </div>
                 </div>
-                
-                <button id="logoutBtn" class="btn-logout">
-                    <i class="fas fa-sign-out-alt"></i>
-                </button>
-            </header>
-            
-            <div class="lobby-content">
-                <div class="lobby-actions">
-                    <h2><i class="fas fa-home"></i> الصالة الرئيسية</h2>
-                    
-                    <div class="action-buttons">
-                        <button id="findMatchBtn" class="btn-action btn-primary">
-                            <i class="fas fa-search"></i> البحث عن معركة
-                        </button>
-<button id="createRoomBtnMain" class="btn-action btn-room">
-    <i class="fas fa-plus-circle"></i> إنشاء غرفة
-</button>
-<button id="joinRoomBtn" class="btn-action btn-room">
-    <i class="fas fa-sign-in-alt"></i> الانضمام لغرفة
-</button>
-                        <button id="upgradeBtn" class="btn-action btn-secondary">
-                            <i class="fas fa-level-up-alt"></i> ترقية الجندي
-                        </button>
-                        <button id="weaponsBtn" class="btn-action btn-secondary">
-                            <i class="fas fa-gavel"></i> ترقية الأسلحة
-                        </button>
-                        <button id="skillsBtn" class="btn-action btn-secondary">
-                            <i class="fas fa-magic"></i> المهارات
-                        </button>
-                        <button id="leaderboardBtn" class="btn-action btn-secondary">
-                            <i class="fas fa-list-ol"></i> قائمة المتصدرين
-                        </button>
+            </div>
+        </header>
+
+        <!-- القائمة الرئيسية -->
+        <nav class="main-nav">
+            <button class="nav-btn active" data-tab="dashboard">
+                <i class="fas fa-home"></i>
+                <span>الرئيسية</span>
+            </button>
+            <button class="nav-btn" data-tab="zombie">
+                <i class="fas fa-skull"></i>
+                <span>زومبيك</span>
+            </button>
+            <button class="nav-btn" data-tab="skills">
+                <i class="fas fa-brain"></i>
+                <span>المهارات</span>
+            </button>
+            <button class="nav-btn" data-tab="battle">
+                <i class="fas fa-crosshairs"></i>
+                <span>المعارك</span>
+            </button>
+            <button class="nav-btn" data-tab="path">
+                <i class="fas fa-route"></i>
+                <span>المسار</span>
+            </button>
+            <button class="nav-btn" data-tab="leaderboard">
+                <i class="fas fa-trophy"></i>
+                <span>المتصدرون</span>
+            </button>
+            <button class="nav-btn" data-tab="market">
+                <i class="fas fa-store"></i>
+                <span>السوق</span>
+            </button>
+            <button class="nav-btn logout-btn" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>خروج</span>
+            </button>
+        </nav>
+
+        <!-- المحتوى الرئيسي -->
+        <main class="main-content">
+            <!-- لوحة التحكم -->
+            <div class="tab-content active" id="dashboard">
+                <div class="dashboard-grid">
+                    <!-- بطاقة الزومبي -->
+                    <div class="card zombie-card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-skull"></i> زومبيك</h3>
+                            <span class="card-badge" id="zombieType">قاتلي</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="zombie-display">
+                                <div class="zombie-avatar" id="zombieAvatar">
+                                    <i class="fas fa-user-injured"></i>
+                                </div>
+                                <div class="zombie-stats">
+                                    <div class="stat">
+                                        <span class="stat-label">الهجوم</span>
+                                        <span class="stat-value" id="zombieAttack">50</span>
+                                    </div>
+                                    <div class="stat">
+                                        <span class="stat-label">الدفاع</span>
+                                        <span class="stat-value" id="zombieDefense">30</span>
+                                    </div>
+                                    <div class="stat">
+                                        <span class="stat-label">السرعة</span>
+                                        <span class="stat-value" id="zombieSpeed">20</span>
+                                    </div>
+                                    <div class="stat">
+                                        <span class="stat-label">القوة</span>
+                                        <span class="stat-value" id="zombiePower">100</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="zombie-health">
+                                <span>الصحة: <span id="zombieHealth">500/500</span></span>
+                                <div class="progress-bar">
+                                    <div class="progress-fill health" id="healthBar"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    
-                    <div id="matchmakingStatus" class="matchmaking-status">
-                        <div class="searching" style="display: none;">
-                            <i class="fas fa-spinner fa-spin"></i>
-                            <span>جاري البحث عن خصم...</span>
-                            <button id="cancelMatchmaking" class="btn-small">إلغاء</button>
+
+                    <!-- البطاقات السريعة -->
+                    <div class="card quick-actions">
+                        <div class="card-header">
+                            <h3><i class="fas fa-bolt"></i> إجراءات سريعة</h3>
                         </div>
-                        <div id="matchFound" class="match-found" style="display: none;">
-                            <i class="fas fa-check-circle"></i>
-                            <span>تم العثور على خصم!</span>
-                            <button id="enterBattle" class="btn-small btn-primary">الدخول للمعركة</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="player-stats-card">
-                    <h3><i class="fas fa-user"></i> إحصائيات الجندي</h3>
-                    <div class="stats-grid">
-                        <div class="stat-item">
-                            <span class="stat-label">الهجوم</span>
-                            <div class="stat-bar">
-                                <div class="stat-fill" id="attackStat" style="width: 60%"></div>
-                            </div>
-                            <span class="stat-value" id="attackValue">15</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">الدفاع</span>
-                            <div class="stat-bar">
-                                <div class="stat-fill" id="defenseStat" style="width: 40%"></div>
-                            </div>
-                            <span class="stat-value" id="defenseValue">10</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">السرعة</span>
-                            <div class="stat-bar">
-                                <div class="stat-fill" id="speedStat" style="width: 70%"></div>
-                            </div>
-                            <span class="stat-value" id="speedValue">20</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">التحمل</span>
-                            <div class="stat-bar">
-                                <div class="stat-fill" id="staminaStat" style="width: 50%"></div>
-                            </div>
-                            <span class="stat-value" id="staminaValue">50</span>
+                        <div class="card-body">
+                            <button class="quick-btn battle" id="quickBattle">
+                                <i class="fas fa-crosshairs"></i>
+                                <span>معركة عشوائية</span>
+                            </button>
+                            <button class="quick-btn upgrade" id="quickUpgrade">
+                                <i class="fas fa-level-up-alt"></i>
+                                <span>ترقية زومبي</span>
+                            </button>
+                            <button class="quick-btn skill" id="quickSkill">
+                                <i class="fas fa-brain"></i>
+                                <span>تعلم مهارة</span>
+                            </button>
+                            <button class="quick-btn market" id="quickMarket">
+                                <i class="fas fa-shopping-cart"></i>
+                                <span>زيارة السوق</span>
+                            </button>
                         </div>
                     </div>
-                    
-                    <div class="current-weapon">
-                        <h4><i class="fas fa-gavel"></i> السلاح الحالي</h4>
-                        <div class="weapon-info">
-                            <div class="weapon-icon">
-                                <i class="fas fa-sword"></i>
+
+                    <!-- المهام اليومية -->
+                    <div class="card daily-quests">
+                        <div class="card-header">
+                            <h3><i class="fas fa-tasks"></i> المهام اليومية</h3>
+                            <span class="timer" id="questTimer">23:59:59</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="quest-list" id="questList">
+                                <!-- المهام ستظهر هنا -->
                             </div>
-                            <div class="weapon-details">
-                                <h5 id="weaponName">سيف مبتدئ</h5>
-                                <p id="weaponDamage">الضرر: <span>10-15</span></p>
-                                <p id="weaponProperties">الخصائص: <span>لا يوجد</span></p>
+                        </div>
+                    </div>
+
+                    <!-- الإحصائيات -->
+                    <div class="card stats-card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-chart-line"></i> إحصائياتك</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="stats-grid">
+                                <div class="stat-item">
+                                    <i class="fas fa-trophy"></i>
+                                    <div>
+                                        <div class="stat-number" id="battlesWon">0</div>
+                                        <div class="stat-label">معارك فوز</div>
+                                    </div>
+                                </div>
+                                <div class="stat-item">
+                                    <i class="fas fa-skull-crossbones"></i>
+                                    <div>
+                                        <div class="stat-number" id="zombiesKilled">0</div>
+                                        <div class="stat-label">زومبي قتلت</div>
+                                    </div>
+                                </div>
+                                <div class="stat-item">
+                                    <i class="fas fa-star"></i>
+                                    <div>
+                                        <div class="stat-number" id="totalXp">0</div>
+                                        <div class="stat-label">خبرة مكتسبة</div>
+                                    </div>
+                                </div>
+                                <div class="stat-item">
+                                    <i class="fas fa-ranking-star"></i>
+                                    <div>
+                                        <div class="stat-number" id="playerRank">#1</div>
+                                        <div class="stat-label">ترتيب عالمي</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-        
-        <!-- شاشة المعركة -->
-        <div id="battleScreen" class="screen">
-            <div class="battle-header">
-                <div class="battle-timer">
-                    <i class="fas fa-clock"></i> <span id="battleTimer">0:00</span>
-                </div>
-                <button id="leaveBattle" class="btn-small btn-danger">
-                    <i class="fas fa-times"></i> ترك المعركة
-                </button>
-            </div>
-            
-            <div class="battle-arena">
-                <!-- معلومات اللاعب -->
-                <div class="player-battle-info player1">
-                    <div class="battle-player-header">
-                        <h3 id="player1Name">أنت</h3>
-                        <div class="battle-level">مستوى <span id="player1Level">1</span></div>
-                    </div>
-                    
-                    <div class="health-bar-container">
-                        <div class="health-bar">
-                            <div class="health-fill" id="player1Health" style="width: 100%"></div>
+
+            <!-- شاشة الزومبي -->
+            <div class="tab-content" id="zombie">
+                <div class="zombie-management">
+                    <div class="zombie-upgrade-section">
+                        <h3><i class="fas fa-level-up-alt"></i> تطوير الزومبي</h3>
+                        <div class="upgrade-categories">
+                            <div class="upgrade-category active" data-upgrade="attack">
+                                <i class="fas fa-fist-raised"></i>
+                                <span>الهجوم</span>
+                            </div>
+                            <div class="upgrade-category" data-upgrade="defense">
+                                <i class="fas fa-shield-alt"></i>
+                                <span>الدفاع</span>
+                            </div>
+                            <div class="upgrade-category" data-upgrade="health">
+                                <i class="fas fa-heart"></i>
+                                <span>الصحة</span>
+                            </div>
+                            <div class="upgrade-category" data-upgrade="speed">
+                                <i class="fas fa-tachometer-alt"></i>
+                                <span>السرعة</span>
+                            </div>
+                            <div class="upgrade-category" data-upgrade="special">
+                                <i class="fas fa-star"></i>
+                                <span>القدرات الخاصة</span>
+                            </div>
                         </div>
-                        <span class="health-text" id="player1HealthText">100/100</span>
-                    </div>
-                    
-                    <div class="stamina-bar-container">
-                        <div class="stamina-bar">
-                            <div class="stamina-fill" id="player1Stamina" style="width: 100%"></div>
+                        
+                        <div class="upgrade-content" id="upgradeContent">
+                            <!-- محتوى الترقيات -->
                         </div>
-                        <span class="stamina-text" id="player1StaminaText">50/50</span>
                     </div>
                     
-                    <div class="status-effects" id="player1Status">
-                        <!-- ستظهر التأثيرات المستمرة هنا -->
-                    </div>
-                    
-                    <div class="player-weapon">
-                        <i class="fas fa-sword"></i>
-                        <span id="player1Weapon">سيف مبتدئ</span>
-                    </div>
-                </div>
-                
-                <!-- منطقة المعركة -->
-                <div class="battle-center">
-                    <div class="vs-circle">
-                        <span>VS</span>
-                    </div>
-                    
-                    <div class="battle-log" id="battleLog">
-                        <div class="log-entry">بدأت المعركة!</div>
-                    </div>
-                    
-                    <div class="action-buttons battle-actions">
-                        <button id="basicAttack" class="btn-battle btn-attack">
-                            <i class="fas fa-fist-raised"></i> هجوم أساسي
-                        </button>
-                        <button id="skill1" class="btn-battle btn-skill" data-cooldown="5">
-                            <i class="fas fa-bolt"></i> ضربة سريعة
-                        </button>
-                        <button id="skill2" class="btn-battle btn-skill" data-cooldown="10">
-                            <i class="fas fa-shield-alt"></i> دفاع
-                        </button>
-                        <button id="skill3" class="btn-battle btn-skill" data-cooldown="15">
-                            <i class="fas fa-fire"></i> ضربة نارية
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- معلومات الخصم -->
-                <div class="player-battle-info player2">
-                    <div class="battle-player-header">
-                        <h3 id="player2Name">الخصم</h3>
-                        <div class="battle-level">مستوى <span id="player2Level">1</span></div>
-                    </div>
-                    
-                    <div class="health-bar-container">
-                        <div class="health-bar">
-                            <div class="health-fill" id="player2Health" style="width: 100%"></div>
+                    <div class="zombie-info-section">
+                        <h3><i class="fas fa-info-circle"></i> معلومات الزومبي</h3>
+                        <div class="zombie-details" id="zombieDetails">
+                            <!-- تفاصيل الزومبي -->
                         </div>
-                        <span class="health-text" id="player2HealthText">100/100</span>
-                    </div>
-                    
-                    <div class="stamina-bar-container">
-                        <div class="stamina-bar">
-                            <div class="stamina-fill" id="player2Stamina" style="width: 100%"></div>
-                        </div>
-                        <span class="stamina-text" id="player2StaminaText">50/50</span>
-                    </div>
-                    
-                    <div class="status-effects" id="player2Status">
-                        <!-- ستظهر التأثيرات المستمرة هنا -->
-                    </div>
-                    
-                    <div class="player-weapon">
-                        <i class="fas fa-sword"></i>
-                        <span id="player2Weapon">سيف مبتدئ</span>
                     </div>
                 </div>
             </div>
-        </div>
-        
-        <!-- شاشة الترقية -->
-        <div id="upgradeScreen" class="screen">
-            <div class="upgrade-header">
-                <button id="backToLobby" class="btn-back"><i class="fas fa-arrow-right"></i> العودة للصالة</button>
-                <h2><i class="fas fa-level-up-alt"></i> ترقية الجندي</h2>
-                <div class="upgrade-points">
-                    نقاط الترقية: <span id="upgradePoints">5</span>
+
+            <!-- شاشة المهارات -->
+            <div class="tab-content" id="skills">
+                <div class="skills-management">
+                    <div class="skills-header">
+                        <h3><i class="fas fa-brain"></i> شجرة المهارات</h3>
+                        <div class="skill-points">
+                            <i class="fas fa-dna"></i>
+                            <span>نقاط المهارة: <strong id="skillPoints">5</strong></span>
+                        </div>
+                    </div>
+                    
+                    <div class="skills-tabs">
+                        <button class="skill-tab active" data-skill="attack">⚔️ هجومية</button>
+                        <button class="skill-tab" data-skill="defense">🛡️ دفاعية</button>
+                        <button class="skill-tab" data-skill="poison">☣️ سموم</button>
+                        <button class="skill-tab" data-skill="agility">👻 سرعة</button>
+                        <button class="skill-tab" data-skill="support">🧠 دعم</button>
+                    </div>
+                    
+                    <div class="skills-grid" id="skillsGrid">
+                        <!-- المهارات ستظهر هنا -->
+                    </div>
                 </div>
             </div>
-            
-            <div class="upgrade-content">
-                <div class="upgrade-stats">
-                    <h3>خصائص الجندي</h3>
-                    
-                    <div class="upgrade-item">
-                        <div class="upgrade-info">
-                            <i class="fas fa-heart"></i>
-                            <div>
-                                <h4>الصحة</h4>
-                                <p>زيادة الحد الأقصى لنقاط الصحة</p>
-                            </div>
-                        </div>
-                        <div class="upgrade-controls">
-                            <span class="current-value" id="healthValue">100</span>
-                            <button class="btn-upgrade" data-stat="health">+</button>
+
+            <!-- شاشة المعارك -->
+            <div class="tab-content" id="battle">
+                <div class="battle-arena">
+                    <div class="battle-header">
+                        <h3><i class="fas fa-crosshairs"></i> ساحة المعارك</h3>
+                        <div class="battle-info">
+                            <span>طاقة: <span id="battleEnergy">100</span></span>
+                            <span>تحديث: <span id="energyRefresh">5:00</span></span>
                         </div>
                     </div>
                     
-                    <div class="upgrade-item">
-                        <div class="upgrade-info">
-                            <i class="fas fa-fist-raised"></i>
-                            <div>
-                                <h4>الهجوم</h4>
-                                <p>زيادة قوة الضرر الأساسية</p>
-                            </div>
-                        </div>
-                        <div class="upgrade-controls">
-                            <span class="current-value" id="attackUpgradeValue">15</span>
-                            <button class="btn-upgrade" data-stat="attack">+</button>
-                        </div>
-                    </div>
-                    
-                    <div class="upgrade-item">
-                        <div class="upgrade-info">
-                            <i class="fas fa-shield-alt"></i>
-                            <div>
-                                <h4>الدفاع</h4>
-                                <p>تقليل الضرر المستلم من الهجمات</p>
-                            </div>
-                        </div>
-                        <div class="upgrade-controls">
-                            <span class="current-value" id="defenseUpgradeValue">10</span>
-                            <button class="btn-upgrade" data-stat="defense">+</button>
-                        </div>
-                    </div>
-                    
-                    <div class="upgrade-item">
-                        <div class="upgrade-info">
-                            <i class="fas fa-tachometer-alt"></i>
-                            <div>
-                                <h4>السرعة</h4>
-                                <p>زيادة سرعة الهجوم ورد الفعل</p>
-                            </div>
-                        </div>
-                        <div class="upgrade-controls">
-                            <span class="current-value" id="speedUpgradeValue">20</span>
-                            <button class="btn-upgrade" data-stat="speed">+</button>
-                        </div>
-                    </div>
-                    
-                    <div class="upgrade-item">
-                        <div class="upgrade-info">
+                    <div class="battle-options">
+                        <div class="battle-option" data-type="quick">
                             <i class="fas fa-bolt"></i>
-                            <div>
-                                <h4>التحمل</h4>
-                                <p>زيادة الحد الأقصى لنقاط التحمل</p>
-                            </div>
+                            <h4>معركة سريعة</h4>
+                            <p>مواجهة عشوائية - 10 طاقة</p>
+                            <button class="battle-start-btn" data-battle="quick">ابدأ</button>
                         </div>
-                        <div class="upgrade-controls">
-                            <span class="current-value" id="staminaUpgradeValue">50</span>
-                            <button class="btn-upgrade" data-stat="stamina">+</button>
+                        <div class="battle-option" data-type="training">
+                            <i class="fas fa-dumbbell"></i>
+                            <h4>تدريب</h4>
+                            <p>معركة ضد زومبي ضعيف - 5 طاقة</p>
+                            <button class="battle-start-btn" data-battle="training">ابدأ</button>
+                        </div>
+                        <div class="battle-option" data-type="tournament">
+                            <i class="fas fa-trophy"></i>
+                            <h4>البطولة</h4>
+                            <p>سلسلة معارك - 30 طاقة</p>
+                            <button class="battle-start-btn" data-battle="tournament">ابدأ</button>
+                        </div>
+                        <div class="battle-option" data-type="boss">
+                            <i class="fas fa-dragon"></i>
+                            <h4>الزعيم</h4>
+                            <p>مواجهة أسطورية - 50 طاقة</p>
+                            <button class="battle-start-btn" data-battle="boss">ابدأ</button>
+                        </div>
+                    </div>
+                    
+                    <div class="battle-history">
+                        <h4><i class="fas fa-history"></i> سجل المعارك</h4>
+                        <div class="history-list" id="battleHistory">
+                            <!-- سجل المعارك -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- شاشة المسار -->
+            <div class="tab-content" id="path">
+                <div class="path-selection">
+                    <div class="path-header">
+                        <h3><i class="fas fa-route"></i> مسار تطور الزومبي</h3>
+                        <p class="path-warning">⚠️ يمكنك اختيار مسار واحد فقط! هذا الاختيار نهائي</p>
+                    </div>
+                    
+                    <div class="paths-grid" id="pathsGrid">
+                        <!-- المسارات ستظهر هنا -->
+                    </div>
+                    
+                    <div class="selected-path" id="selectedPath">
+                        <h4>المسار المختار: <span id="currentPathName">لم يتم الاختيار بعد</span></h4>
+                        <div class="path-details" id="pathDetails">
+                            <p>اختر مساراً لعرض تفاصيله</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- شاشة المتصدرين -->
+            <div class="tab-content" id="leaderboard">
+                <div class="leaderboard-container">
+                    <h3><i class="fas fa-trophy"></i> لوحة المتصدرين</h3>
+                    
+                    <div class="leaderboard-tabs">
+                        <button class="lb-tab active" data-board="global">🌍 العالمي</button>
+                        <button class="lb-tab" data-board="weekly">📅 الأسبوعي</button>
+                        <button class="lb-tab" data-board="friends">👥 الأصدقاء</button>
+                    </div>
+                    
+                    <div class="leaderboard-list" id="leaderboardList">
+                        <!-- المتصدرون -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- شاشة السوق -->
+            <div class="tab-content" id="market">
+                <div class="market-container">
+                    <h3><i class="fas fa-store"></i> سوق الزومبي</h3>
+                    
+                    <div class="market-tabs">
+                        <button class="market-tab active" data-market="items">🛒 معدات</button>
+                        <button class="market-tab" data-market="potions">🧪 جرعات</button>
+                        <button class="market-tab" data-market="special">✨ مميزات</button>
+                        <button class="market-tab" data-market="skins">🎨 مظاهر</button>
+                    </div>
+                    
+                    <div class="market-items" id="marketItems">
+                        <!-- العناصر -->
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- الإشعارات -->
+        <div class="notification-container" id="notificationContainer"></div>
+    </div>
+
+    <!-- نافذة المعركة -->
+    <div id="battleModal" class="modal">
+        <div class="modal-content battle-modal">
+            <div class="battle-container">
+                <div class="battle-player">
+                    <div class="fighter-avatar player">
+                        <i class="fas fa-skull" id="playerFighterIcon"></i>
+                    </div>
+                    <div class="fighter-info">
+                        <h4 id="playerFighterName">زومبيك</h4>
+                        <div class="fighter-health">
+                            <div class="progress-bar">
+                                <div class="progress-fill health" id="playerHealthBar"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
-                <div class="upgrade-preview">
-                    <h3>معاينة الجندي بعد الترقية</h3>
-                    <div class="preview-card">
-                        <div class="preview-stats">
-                            <div class="preview-stat">
-                                <span>الصحة:</span>
-                                <span id="previewHealth">100</span>
-                            </div>
-                            <div class="preview-stat">
-                                <span>الهجوم:</span>
-                                <span id="previewAttack">15</span>
-                            </div>
-                            <div class="preview-stat">
-                                <span>الدفاع:</span>
-                                <span id="previewDefense">10</span>
-                            </div>
-                            <div class="preview-stat">
-                                <span>السرعة:</span>
-                                <span id="previewSpeed">20</span>
-                            </div>
-                            <div class="preview-stat">
-                                <span>التحمل:</span>
-                                <span id="previewStamina">50</span>
-                            </div>
-                        </div>
-                        <button id="applyUpgrades" class="btn btn-primary">تطبيق الترقيات</button>
-                        <p class="hint">سيتم خصم نقاط الترقية بعد الضغط على تطبيق الترقيات</p>
+                <div class="battle-center">
+                    <div class="vs-badge">VS</div>
+                    <div class="battle-log" id="battleLog">
+                        <!-- سجل القتال -->
                     </div>
                 </div>
-            </div>
-        </div>
-        
-        <!-- شاشة قائمة المتصدرين -->
-        <div id="leaderboardScreen" class="screen">
-            <div class="leaderboard-header">
-                <button id="backToLobbyFromLeaderboard" class="btn-back"><i class="fas fa-arrow-right"></i> العودة</button>
-                <h2><i class="fas fa-list-ol"></i> قائمة المتصدرين</h2>
+                
+                <div class="battle-opponent">
+                    <div class="fighter-avatar opponent">
+                        <i class="fas fa-robot" id="opponentFighterIcon"></i>
+                    </div>
+                    <div class="fighter-info">
+                        <h4 id="opponentFighterName">الخصم</h4>
+                        <div class="fighter-health">
+                            <div class="progress-bar">
+                                <div class="progress-fill health" id="opponentHealthBar"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             
-            <div class="leaderboard-content">
-                <div class="leaderboard-tabs">
-                    <button class="leaderboard-tab active" data-type="level">أعلى المستويات</button>
-                    <button class="leaderboard-tab" data-type="wins">أكثر الانتصارات</button>
-                    <button class="leaderboard-tab" data-type="rating">التقييم العام</button>
-                </div>
-                
-                <div class="leaderboard-list" id="leaderboardList">
-                    <div class="leaderboard-item">
-                        <div class="rank">1</div>
-                        <div class="player-leaderboard-info">
-                            <img src="https://ui-avatars.com/api/?name=Player1&background=FFD700&color=000" alt="صورة اللاعب">
-                            <div>
-                                <h4>البطل الأول</h4>
-                                <p>مستوى 25</p>
-                            </div>
-                        </div>
-                        <div class="leaderboard-stat">
-                            <span class="stat-label">الانتصارات</span>
-                            <span class="stat-value">150</span>
-                        </div>
-                    </div>
-                    <!-- سيتم ملء البقية من Firebase -->
-                </div>
+            <div class="battle-actions">
+                <button class="battle-action-btn" data-action="attack">
+                    <i class="fas fa-fist-raised"></i> هجوم
+                </button>
+                <button class="battle-action-btn" data-action="skill">
+                    <i class="fas fa-brain"></i> مهارة
+                </button>
+                <button class="battle-action-btn" data-action="defend">
+                    <i class="fas fa-shield-alt"></i> دفاع
+                </button>
+                <button class="battle-action-btn" data-action="special">
+                    <i class="fas fa-star"></i> خاص
+                </button>
+            </div>
+            
+            <div class="battle-controls">
+                <button class="modal-close-btn" id="closeBattleModal">
+                    <i class="fas fa-times"></i> إلغاء
+                </button>
+                <button class="auto-battle-btn" id="autoBattleBtn">
+                    <i class="fas fa-robot"></i> معركة تلقائية
+                </button>
             </div>
         </div>
-        
-        <!-- نافذة النتائج -->
-        <div id="resultsModal" class="modal">
-            <div class="modal-content">
-                <h2 id="resultTitle">نتيجة المعركة</h2>
-                <div class="result-details">
-                    <div class="result-player">
-                        <h3 id="resultPlayerName">أنت</h3>
-                        <div class="result-stat">
-                            <span>الصحة المتبقية:</span>
-                            <span id="resultPlayerHP">50/100</span>
-                        </div>
-                        <div class="result-stat">
-                            <span>الضرر المسبب:</span>
-                            <span id="resultPlayerDamage">120</span>
-                        </div>
-                    </div>
-                    
-                    <div class="result-vs">VS</div>
-                    
-                    <div class="result-player">
-                        <h3 id="resultOpponentName">الخصم</h3>
-                        <div class="result-stat">
-                            <span>الصحة المتبقية:</span>
-                            <span id="resultOpponentHP">0/100</span>
-                        </div>
-                        <div class="result-stat">
-                            <span>الضرر المسبب:</span>
-                            <span id="resultOpponentDamage">80</span>
-                        </div>
-                    </div>
-                </div>
+    </div>
+
+    <!-- نافذة النتائج -->
+    <div id="resultModal" class="modal">
+        <div class="modal-content result-modal">
+            <div class="result-header">
+                <i class="fas fa-trophy" id="resultIcon"></i>
+                <h3 id="resultTitle">نتيجة المعركة</h3>
+            </div>
+            
+            <div class="result-body">
+                <div class="result-message" id="resultMessage"></div>
                 
                 <div class="result-rewards">
-                    <h3><i class="fas fa-trophy"></i> المكافآت</h3>
-                    <div class="rewards-list">
-                        <div class="reward-item">
-                            <i class="fas fa-star"></i>
-                            <span>+<span id="resultXP">50</span> نقطة خبرة</span>
-                        </div>
-                        <div class="reward-item">
-                            <i class="fas fa-coins"></i>
-                            <span>+<span id="resultPoints">2</span> نقطة ترقية</span>
-                        </div>
-                    </div>
+                    <h4>🏆 المكافآت</h4>
+                    <div class="rewards-list" id="rewardsList"></div>
                 </div>
-                
-                <button id="closeResults" class="btn btn-primary">العودة للصالة</button>
+            </div>
+            
+            <div class="result-footer">
+                <button class="result-btn" id="closeResultModal">
+                    <i class="fas fa-check"></i> موافق
+                </button>
             </div>
         </div>
     </div>
-    
-    <!-- إشعارات -->
-    <div id="notification" class="notification">
-        <span id="notificationText"></span>
-    </div>
-    
+
     <script src="app.js"></script>
 </body>
 </html>
