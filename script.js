@@ -85,13 +85,11 @@ function safeGetElement(id) {
 
 var navLinks = document.querySelectorAll('.nav-link');
 var pages = {
-    home: safeGetElement('page-home'),
+    posts: safeGetElement('page-posts'),
+    materials: safeGetElement('page-materials'),
     profile: safeGetElement('page-profile'),
-    colleges: safeGetElement('page-colleges'),
-    specialties: safeGetElement('page-specialties'),
     users: safeGetElement('page-users'),
     admins: safeGetElement('page-admins'),
-    compare: safeGetElement('page-compare'),
     settings: safeGetElement('page-settings'),
     admin: safeGetElement('page-admin')
 };
@@ -203,6 +201,52 @@ var userProfileClose = safeGetElement('userProfileClose');
 var isLoginMode = true;
 var isApplyingCustomizations = false;
 
+var isNewUser = false; // ✅ علامة لتحديد إذا كان المستخدم جديداً
+
+// ===== متغيرات التعديل المتقدم =====
+var editInterests = [];
+var editSkills = [];
+var tempAvatarFile = null;
+
+// ============================================================
+//  أنواع الأدوار الجديدة
+// ============================================================
+var ROLES = {
+    SUPER_ADMIN: 'super_admin',      // المشرف الرئيسي - صلاحيات كاملة، يوافق على الإجراءات الخطيرة
+    GENERAL_ADMIN: 'general_admin',  // المشرف العام - ينفذ كل شيء، لكن الإجراءات الخطيرة تحتاج موافقة
+    TASK_ADMIN: 'task_admin',        // مشرف مهمة محددة - صلاحيات محدودة حسب المهام الموكلة
+    USER: 'user'                     // مستخدم عادي
+};
+
+var ROLE_LABELS = {
+    'super_admin': '👑 المشرف الرئيسي',
+    'general_admin': '🛡️ مشرف عام',
+    'task_admin': '📋 مشرف مهمة',
+    'user': '👤 مستخدم'
+};
+
+var ROLE_COLORS = {
+    'super_admin': '#ffd700',
+    'general_admin': '#3b82f6',
+    'task_admin': '#8b5cf6',
+    'user': '#6b7280'
+};
+
+// ============================================================
+//  الإجراءات الخطيرة (تحتاج موافقة المشرف الرئيسي)
+// ============================================================
+var CRITICAL_ACTIONS = [
+    'deleteAccount',        // حذف الحساب نهائياً
+    'clearVotes',           // مسح كل التصويتات
+    'clearComments',        // مسح كل التعليقات
+    'deleteCourse',         // حذف مادة (مع كل بياناتها)
+    'permanentBan',         // حظر دائم (لا يمكن التراجع)
+    'changeSuperAdminRole', // تغيير دور مشرف رئيسي
+    'clearAllData',         // مسح كل بيانات المنصة
+    'deleteCollege',        // حذف كلية (مع تخصصاتها وموادها)
+    'deleteSpecialty'       // حذف تخصص (مع مواده)
+];
+
 // ============================================================
 //  TOAST SYSTEM
 // ============================================================
@@ -226,6 +270,42 @@ function toggleTheme() {
     if (themeToggle) {
         themeToggle.innerHTML = theme === 'light' ? '<i class="fas fa-moon"></i>' : '<i class="fas fa-sun"></i>';
     }
+
+    // تطبيق جميع التخصيصات على الملف الشخصي الرئيسي
+    if (currentUserData) {
+        applyAllCustomizations(currentUserData);
+    }
+
+    // تحديث جميع البطاقات
+    applyCustomizationsToUserCards();
+    applyCustomizationsToAdminCards();
+
+    // تحديث مودال المستخدم المفتوح إن وجد
+    if (isModalOpen('userProfileModal') && currentViewedUserUid) {
+        refreshUserProfileModal();
+    }
+
+    // تحديث المعاينة في مودال التخصيصات
+    if (isModalOpen('customizationModal')) {
+        applyInstantPreviewWithPending();
+    }
+
+    console.log('✅ الثيم تم تغييره إلى: ' + theme);
+}
+
+function applyThemeToDynamicContent() {
+    var currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    var textColor = currentTheme === 'dark' ? '#f1f5f9' : '#1e293b';
+    var bgColor = currentTheme === 'dark' ? '#1e293b' : '#ffffff';
+    var borderColor = currentTheme === 'dark' ? '#334155' : '#e2e8f0';
+    
+    document.querySelectorAll('.modal-content, .modal-header, .modal-body').forEach(function(el) {
+        if (!el.closest('.user-profile-view') && !el.closest('.profile-container')) {
+            el.style.color = textColor;
+            el.style.background = bgColor;
+            el.style.borderColor = borderColor;
+        }
+    });
 }
 
 function loadTheme() {
@@ -239,9 +319,32 @@ if (themeToggle) {
     themeToggle.addEventListener('click', toggleTheme);
 }
 
-// ============================================================
-//  IMAGE HANDLING
-// ============================================================
+// رفع الصورة من مودال التعديل
+document.addEventListener('DOMContentLoaded', function() {
+    const avatarInput = document.getElementById('editAvatarInput');
+    if (avatarInput) {
+        avatarInput.addEventListener('change', function(e) {
+            if (!this.files || !this.files[0]) return;
+            const file = this.files[0];
+            if (file.size > 5 * 1024 * 1024) {
+                showToast('حجم الصورة يجب أن يكون أقل من 5 ميجابايت', 'error');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = document.getElementById('editAvatarImg');
+                if (img) {
+                    img.src = event.target.result;
+                    tempAvatarFile = file;
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+});
+
+// تحسين دالة resizeImage
 function resizeImage(file, maxWidth, maxHeight) {
     return new Promise(function(resolve, reject) {
         var reader = new FileReader();
@@ -251,24 +354,37 @@ function resizeImage(file, maxWidth, maxHeight) {
                 var canvas = document.createElement('canvas');
                 var width = img.width;
                 var height = img.height;
-                if (width > maxWidth) {
-                    height = height * (maxWidth / width);
-                    width = maxWidth;
+                
+                // حساب الأبعاد الجديدة مع الحفاظ على النسبة
+                if (width > height) {
+                    if (width > maxWidth) {
+                        height = height * (maxWidth / width);
+                        width = maxWidth;
+                    }
+                } else {
+                    if (height > maxHeight) {
+                        width = width * (maxHeight / height);
+                        height = maxHeight;
+                    }
                 }
-                if (height > maxHeight) {
-                    width = width * (maxHeight / height);
-                    height = maxHeight;
-                }
+                
                 canvas.width = width;
                 canvas.height = height;
                 var ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
-                resolve(canvas.toDataURL('image/jpeg', 0.7));
+                
+                // تحويل إلى base64 مع جودة 0.8
+                var base64 = canvas.toDataURL('image/jpeg', 0.8);
+                resolve(base64);
             };
-            img.onerror = reject;
+            img.onerror = function() {
+                reject(new Error('فشل في تحميل الصورة'));
+            };
             img.src = e.target.result;
         };
-        reader.onerror = reject;
+        reader.onerror = function() {
+            reject(new Error('فشل في قراءة الملف'));
+        };
         reader.readAsDataURL(file);
     });
 }
@@ -290,6 +406,8 @@ if (changeAvatarBtn && avatarInput) {
             await db.collection('users').doc(currentUser.uid).update({ avatar: base64 });
             currentUserData.avatar = base64;
             if (profileAvatar) profileAvatar.src = base64;
+                        updatePostBoxUserInfo();
+
             showToast('تم تحديث الصورة الشخصية بنجاح! 📸');
             updateUserInList(currentUserData);
             renderUsers();
@@ -297,6 +415,26 @@ if (changeAvatarBtn && avatarInput) {
             console.error('Error uploading avatar:', error);
             showToast('حدث خطأ في رفع الصورة: ' + error.message, 'error');
         }
+    });
+}
+
+function listenToUserData(uid) {
+    if (window._userDataListener) {
+        window._userDataListener();
+    }
+    window._userDataListener = db.collection('users').doc(uid).onSnapshot(function(doc) {
+        if (doc.exists) {
+            var newData = doc.data();
+            // تحديث البيانات المحلية
+            currentUserData = newData;
+            currentUserData.uid = uid;
+            // تحديث صندوق النشر
+            updatePostBoxUserInfo();
+            // تحديث الواجهة الأخرى
+            updateUI();
+        }
+    }, function(error) {
+        console.error('Error listening to user data:', error);
     });
 }
 
@@ -356,35 +494,79 @@ var ACHIEVEMENTS = {
 // ============================================================
 //  AUTH FUNCTIONS
 // ============================================================
-async function loginUser(email, password) {
+async function loginUser(identifier, password) {
+    let email = identifier;
+    if (!identifier.includes('@')) {
+        try {
+            const snapshot = await db.collection('users')
+                .where('username', '==', identifier.toLowerCase().trim())
+                .limit(1)
+                .get();
+            if (snapshot.empty) {
+                showToast('اسم المستخدم غير صحيح', 'error');
+                return false;
+            }
+            email = snapshot.docs[0].data().email;
+        } catch (error) {
+            console.error('Error finding username:', error);
+            showToast('حدث خطأ في البحث عن اسم المستخدم', 'error');
+            return false;
+        }
+    }
+
     try {
-        var cred = await auth.signInWithEmailAndPassword(email, password);
+        const cred = await auth.signInWithEmailAndPassword(email, password);
         currentUser = cred.user;
+        
+        // ✅ إعادة تعيين isNewUser قبل تحميل البيانات
+        isNewUser = false;
+        
         await loadUserData(currentUser.uid);
         showToast('تم تسجيل الدخول بنجاح! 👋');
         return true;
     } catch (error) {
         console.error('Firebase auth error:', error);
-        showToast('خطأ في تسجيل الدخول: ' + error.message, 'error');
+        showToast('بيانات الدخول غير صحيحة', 'error');
         return false;
     }
 }
 
-async function registerUser(email, password, displayName) {
+async function registerUser(email, password, displayName, username) {
+    const normalizedUsername = username ? username.toLowerCase().trim() : '';
+    if (!normalizedUsername) {
+        showToast('يرجى إدخال اسم مستخدم', 'error');
+        return false;
+    }
+    if (!isValidUsername(normalizedUsername)) {
+        showToast('اسم المستخدم غير صالح (3-20 حرف، أحرف/أرقام/_)', 'error');
+        return false;
+    }
+    const available = await isUsernameAvailable(normalizedUsername);
+    if (!available) {
+        showToast('اسم المستخدم مستخدم بالفعل', 'error');
+        return false;
+    }
+
     try {
-        var cred = await auth.createUserWithEmailAndPassword(email, password);
+        // ✅ تعيين العلامة قبل إنشاء الحساب
+        isNewUser = true;
+
+        const cred = await auth.createUserWithEmailAndPassword(email, password);
         await cred.user.updateProfile({ displayName: displayName || email.split('@')[0] });
-        var userDoc = {
+        const avatarUrl = generateDefaultAvatar(displayName || email.split('@')[0]);
+
+        const userDoc = {
             uid: cred.user.uid,
             email: email,
             displayName: displayName || email.split('@')[0],
+            username: normalizedUsername, // ✅ تم حفظ اسم المستخدم
             role: 'user',
             college: '',
             specialty: '',
             year: '1',
             branch: '',
             bio: '',
-            avatar: '',
+            avatar: avatarUrl,
             favorites: [],
             completed: [],
             votes: 0,
@@ -392,19 +574,22 @@ async function registerUser(email, password, displayName) {
             reports: [],
             friends: [],
             pendingRequests: [],
-                sentRequests: [],
-    blockedUsers: [], // <-- إضافة هذا
+            sentRequests: [],
+            blockedUsers: [],
             privacy: { hideFromUsersList: false, hiddenFields: [], lockProfile: false },
             profileCompleted: false,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         };
         await db.collection('users').doc(cred.user.uid).set(userDoc);
+
         currentUser = cred.user;
         currentUserData = userDoc;
         isAdmin = false;
+
         await populateProfileRequiredDropdowns();
         isProfileRequired = true;
         if (profileRequiredModal) profileRequiredModal.classList.add('active');
+
         showToast('تم إنشاء الحساب بنجاح! 🎉');
         return true;
     } catch (error) {
@@ -413,6 +598,10 @@ async function registerUser(email, password, displayName) {
         return false;
     }
 }
+
+
+
+
 
 async function logoutUser(showMessage = true) {
     try {
@@ -442,7 +631,7 @@ async function logoutUser(showMessage = true) {
     updateUI();
     renderCourses();
     renderUsers();
-    showPage('home');
+    showPage('posts');
     hideNavLinksForGuest();
     
     // إزالة شعار الحظر إن وجد
@@ -501,38 +690,30 @@ async function loadUserData(uid) {
             currentUserData = doc.data();
             currentUserData.uid = uid;
             isAdmin = currentUserData.role === 'admin';
-            
-            // ===== التحقق من المشرف الرئيسي =====
-            // نبحث عن أول مشرف تم إنشاؤه (أقدم مشرف)
-            var admins = users.filter(function(u) { return u.role === 'admin'; });
-            if (admins.length > 0) {
-                // ترتيب حسب تاريخ الإنشاء
-                admins.sort(function(a, b) {
-                    var aTime = a.createdAt?.seconds || 0;
-                    var bTime = b.createdAt?.seconds || 0;
-                    return aTime - bTime;
-                });
-                var superAdmin = admins[0];
-                
-                // إذا كان المستخدم الحالي هو أقدم مشرف
-                if (currentUserData.uid === superAdmin.uid) {
-                    currentUserData.isSuperAdmin = true;
-                    isAdmin = true;
-                } else {
-                    currentUserData.isSuperAdmin = false;
-                }
-            }
-            
-if (!currentUserData.friends) currentUserData.friends = [];
-if (!currentUserData.sentRequests) currentUserData.sentRequests = [];
-if (!currentUserData.pendingRequests) currentUserData.pendingRequests = [];
 
-if (!currentUserData.blockedUsers) currentUserData.blockedUsers = [];
-if (!currentUserData.blockedBy) currentUserData.blockedBy = [];
+            // ✅ تأكد من تحميل username
+            console.log('📝 بيانات المستخدم:', {
+                displayName: currentUserData.displayName,
+                username: currentUserData.username,
+                email: currentUserData.email,
+                isNewUser: isNewUser,
+            });
 
+
+
+            // التأكد من وجود الحقول الأساسية (للتوافق مع الإصدارات السابقة)
+            if (!currentUserData.friends) currentUserData.friends = [];
+            if (!currentUserData.sentRequests) currentUserData.sentRequests = [];
+            if (!currentUserData.pendingRequests) currentUserData.pendingRequests = [];
+            if (!currentUserData.blockedUsers) currentUserData.blockedUsers = [];
+            if (!currentUserData.blockedBy) currentUserData.blockedBy = [];
             if (!currentUserData.privacy) {
                 currentUserData.privacy = { hideFromUsersList: false, hiddenFields: [], lockProfile: false };
             }
+
+
+
+            // التحقق من اكتمال الملف الشخصي للمستخدمين العاديين
             if (!currentUserData.profileCompleted && !isAdmin) {
                 isProfileRequired = true;
                 await populateProfileRequiredDropdowns();
@@ -540,7 +721,9 @@ if (!currentUserData.blockedBy) currentUserData.blockedBy = [];
                     profileRequiredModal.classList.add('active');
                 }
             }
+
         } else {
+            // إذا لم تكن الوثيقة موجودة (مستخدم جديد تم إنشاؤه عبر Firebase Auth)
             var newUserData = {
                 uid: uid,
                 email: currentUser.email,
@@ -551,7 +734,7 @@ if (!currentUserData.blockedBy) currentUserData.blockedBy = [];
                 year: '1',
                 branch: '',
                 bio: '',
-                avatar: '',
+                avatar: generateDefaultAvatar(currentUser.displayName || currentUser.email.split('@')[0]),
                 favorites: [],
                 completed: [],
                 votes: 0,
@@ -559,18 +742,30 @@ if (!currentUserData.blockedBy) currentUserData.blockedBy = [];
                 reports: [],
                 friends: [],
                 pendingRequests: [],
+                sentRequests: [],
+                blockedUsers: [],
                 privacy: { hideFromUsersList: false, hiddenFields: [], lockProfile: false },
-                profileCompleted: false
+                profileCompleted: false,
+                // 🆕 اسم المستخدم غير موجود، سيطلب منه اختياره لاحقاً
+                username: null
             };
             await db.collection('users').doc(uid).set(newUserData);
             currentUserData = newUserData;
             isAdmin = false;
             isProfileRequired = true;
+            
+            // عرض مودال إكمال الملف الشخصي
             await populateProfileRequiredDropdowns();
             if (profileRequiredModal) profileRequiredModal.classList.add('active');
+            
+            // عرض مودال اختيار اسم المستخدم أيضاً
+            setTimeout(function() {
+                showChooseUsernameModal();
+            }, 700);
+                        listenToUserData(uid);
         }
     } catch (error) {
-        console.error('Error loading user data:', error);
+        console.error('❌ خطأ في loadUserData:', error);
     }
 }
 
@@ -669,11 +864,18 @@ function openAuthModal(login) {
             'ليس لديك حساب؟ سجل الآن' :
             'لديك حساب؟ سجل دخول';
     }
-    if (authNameGroup) {
-        authNameGroup.style.display = login ? 'none' : 'block';
-    }
+    // إظهار/إخفاء حقل الاسم المعروض واسم المستخدم
+    if (authNameGroup) authNameGroup.style.display = login ? 'none' : 'block';
+    const usernameGroup = document.getElementById('authUsernameGroup');
+    if (usernameGroup) usernameGroup.style.display = login ? 'none' : 'block';
     if (authDisplayName) authDisplayName.required = !login;
     if (authForm) authForm.reset();
+
+    // تغيير placeholder حقل البريد
+    const emailInput = document.getElementById('authEmail');
+    if (emailInput) {
+        emailInput.placeholder = login ? 'البريد الإلكتروني أو اسم المستخدم' : 'البريد الإلكتروني';
+    }
 }
 
 if (authSwitchBtn) {
@@ -696,9 +898,12 @@ if (authForm) {
         if (isLoginMode) {
             success = await loginUser(email, password);
         } else {
-            success = await registerUser(email, password, displayName);
-        }
+const usernameInput = document.getElementById('authUsernameInput');
+const username = usernameInput ? usernameInput.value.trim() : '';
+success = await registerUser(email, password, displayName, username);        }
         if (success) {
+              isNewUser = false;
+
             if (authModal) authModal.classList.remove('active');
             updateUI();
             await loadAllData();
@@ -745,7 +950,7 @@ auth.onAuthStateChanged(async function(user) {
             // المستخدم غير محظور - تحميل البيانات كاملة
             updateUI();
             await loadAllData();
-            showPage('home');
+            showPage('posts');
             
         } catch (error) {
             console.error('Error loading user data:', error);
@@ -765,10 +970,11 @@ auth.onAuthStateChanged(async function(user) {
         allUsers = [];
         renderCourses();
         renderUsers();
-        showPage('home');
+        showPage('posts');
         hideNavLinksForGuest();
     }
 });
+
 
 // ============================================================
 //  دوال صفحة الحظر
@@ -1240,76 +1446,67 @@ function showAllNavLinks() {
 //  UI UPDATE - النسخة المُصلحة
 // ============================================================
 function updateUI() {
-    // تحديث واجهة المستخدم العامة
+    // إظهار/إخفاء أزرار تسجيل الدخول/الخروج
     if (loginBtn) loginBtn.style.display = currentUser ? 'none' : 'inline-flex';
     if (registerBtn) registerBtn.style.display = currentUser ? 'none' : 'inline-flex';
     if (logoutBtn) logoutBtn.style.display = currentUser ? 'inline-flex' : 'none';
-    
+
     // التحقق من الحظر أولاً
     if (currentUserData && currentUserData.banned) {
         hideNavLinksForBannedUser();
         return;
     }
-    
-    // إظهار أو إخفاء الروابط حسب حالة المستخدم
+
+    // إذا كان المستخدم مسجلاً
     if (currentUser) {
         showAllNavLinks();
-        
-        // إظهار/إخفاء روابط خاصة
+
+        // إظهار الروابط الخاصة
         document.querySelectorAll('.nav-link[data-page="profile"]').forEach(function(el) {
             if (el) el.style.display = 'inline-flex';
         });
-        
-        // إظهار رابط الإعدادات
+
         var settingsLink = document.getElementById('navSettingsLink');
         if (settingsLink) settingsLink.style.display = 'inline-flex';
-        
-        // رابط المشرف
+
         if (adminLink) {
             adminLink.style.display = (currentUser && isAdmin) ? 'inline-flex' : 'none';
         }
-        
-        // تحديث بيانات الملف الشخصي
-        if (currentUserData && profileName && profileEmail && profileRole) {
-            profileName.textContent = currentUserData.displayName || currentUser?.email || 'مستخدم';
-            profileEmail.textContent = currentUser?.email || '';
-            
-            // ===== تحسين عرض شارة المشرف (استخدام textContent بدلاً من innerHTML) =====
-            var isAdminUser = currentUserData.role === 'admin';
-            var isSuperAdmin = currentUserData.isSuperAdmin || false;
-            
-            // إزالة أي محتوى سابق (نستخدم عنصر span منفصل إذا أردنا أيقونات)
-            profileRole.textContent = ''; // نمسح النص القديم
-            
-            // نضيف النص الجديد مع الرموز عبر textContent (الرموز الإيموجي تعمل)
-            if (isSuperAdmin) {
-                profileRole.textContent = '👑 المشرف الرئيسي';
-                profileRole.style.background = 'linear-gradient(135deg, #ffd700, #f59e0b)';
-                profileRole.style.color = '#78350f';
-                profileRole.style.fontWeight = '700';
-                profileRole.style.padding = '0.25rem 1rem';
-                profileRole.style.borderRadius = '20px';
-            } else if (isAdminUser) {
-                profileRole.textContent = '🛡️ مشرف';
-                profileRole.style.background = 'var(--primary-light)';
-                profileRole.style.color = 'var(--primary-dark)';
-                profileRole.style.fontWeight = '600';
-                profileRole.style.padding = '0.25rem 1rem';
-                profileRole.style.borderRadius = '20px';
-            } else {
-                profileRole.textContent = '🎓 طالب';
-                profileRole.style.background = 'var(--gray-100)';
-                profileRole.style.color = 'var(--gray-600)';
-                profileRole.style.fontWeight = '600';
-                profileRole.style.padding = '0.25rem 1rem';
-                profileRole.style.borderRadius = '20px';
-            }
-            
-            var bioDisplay = document.getElementById('profileBioDisplay');
-            if (bioDisplay) {
-                bioDisplay.textContent = currentUserData.bio || '';
-            }
-            
+
+    if (currentUserData && profileName) {
+        // 1. الاسم المعروض
+        profileName.textContent = currentUserData.displayName || currentUser?.email || 'مستخدم';
+
+        // 2. ✅ اسم المستخدم
+        const usernameSpan = document.getElementById('profileUsername');
+        const usernameDisplay = document.getElementById('profileUsernameDisplay');
+        if (usernameSpan && usernameDisplay) {
+if (currentUserData.username) {
+    usernameSpan.textContent = currentUserData.username;
+    usernameSpan.style.color = 'var(--gray-500)'; // ✅ أصبح رمادياً
+    usernameDisplay.innerHTML = `
+        <span>${currentUserData.username}</span>
+        <i class="fas fa-at"></i>
+    `;
+    usernameDisplay.style.display = 'inline-flex';
+} else {
+    usernameSpan.textContent = 'غير محدد';
+    usernameSpan.style.color = 'var(--gray-400)';
+    usernameDisplay.innerHTML = `
+        <span>غير محدد</span>
+        <i class="fas fa-at"></i>
+    `;
+    usernameDisplay.style.display = 'inline-flex';
+}
+        }
+
+        // 3. السيرة الذاتية
+        const bioDisplay = document.getElementById('profileBioDisplay');
+        if (bioDisplay) {
+            bioDisplay.textContent = currentUserData.bio || '';
+        }
+
+            // 6. باقي الحقول (الكلية، السنة، إلخ)
             if (profileCollege) profileCollege.value = currentUserData.college || '';
             if (profileYear) profileYear.value = currentUserData.year || '1';
             if (profileBio) profileBio.value = currentUserData.bio || '';
@@ -1317,7 +1514,8 @@ function updateUI() {
             if (profileAvatar && currentUserData.avatar) {
                 profileAvatar.src = currentUserData.avatar;
             }
-            
+
+            // 7. الإحصائيات
             var favCount = (currentUserData.favorites || []).length;
             var compCount = (currentUserData.completed || []).length;
             var trustCount = (currentUserData.trustedBy || []).length;
@@ -1325,13 +1523,16 @@ function updateUI() {
             if (profileCompleteCount) profileCompleteCount.textContent = compCount;
             if (profileVoteCount) profileVoteCount.textContent = currentUserData.votes || 0;
             if (profileTrustCount) profileTrustCount.textContent = trustCount;
-            
+
+            // 8. تحديث الشارات والنقاط والتخصيصات
             updateBadges();
             updateAdvancedBadges();
             updatePointsDisplay();
-            applyAllCustomizations(currentUserData); // تطبيق التخصيصات على الملف الرئيسي
+            applyAllCustomizations(currentUserData);
         }
+
     } else {
+        // مستخدم غير مسجل
         hideNavLinksForGuest();
     }
 }
@@ -1545,17 +1746,18 @@ function renderAdminsCards() {
 }
 
 // ============================================================
-//  بناء بطاقة مشرف - التصميم النهائي
-//  الصورة في الطرف الأيمن، الاسم بجانبها، الشارة المميزة أسفل الاسم
+//  بناء بطاقة مشرف - أحجام محددة
+//  الصورة: 44px | الشارة المميزة: أصغر
 // ============================================================
 function buildAdminCardSimple(user) {
     if (!user) return '';
 
     var uid = user.uid;
     var customization = user.customization || {};
+    var currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
 
     // ============================================================
-    //  1. الصورة الشخصية - تطبيق جميع التخصيصات
+    //  1. الصورة الشخصية - الحجم 44px
     // ============================================================
     var avatarBorderColor = customization.avatarBorder || '#2563eb';
     var avatarBorderWidth = customization.avatarBorderWidth || '3';
@@ -1573,7 +1775,6 @@ function buildAdminCardSimple(user) {
     avatarStyles += 'border-width:' + borderWidthFinal + ';';
     avatarStyles += 'border-style:' + borderStyleFinal + ';';
 
-    // ظل الصورة
     if (avatarShadow && avatarShadow !== 'none') {
         var shadowMap = {
             'small': '0 2px 8px rgba(0,0,0,0.15)',
@@ -1586,7 +1787,6 @@ function buildAdminCardSimple(user) {
         }
     }
 
-    // شكل الصورة
     if (profileFrame && profileFrame !== 'default') {
         var frameStyles = {
             'rounded': 'border-radius:20%;',
@@ -1600,20 +1800,15 @@ function buildAdminCardSimple(user) {
         }
     }
 
-    // تأثير الصورة
     var effectClass = (avatarEffect && avatarEffect !== 'none') ? 'effect-' + avatarEffect : '';
 
     // ============================================================
-    //  2. الاسم - تطبيق لون الاسم وتأثير الاسم
+    //  2. الاسم - لون وتأثير
     // ============================================================
-    var nameColor = '';
-    if (customization.nameColor && customization.nameColor !== 'default') {
-        nameColor = 'color:' + customization.nameColor + ';';
-    } else {
-        // إذا لم يكن هناك لون مخصص، نستخدم لون النص الافتراضي حسب الثيم
-        var currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
-        nameColor = 'color:' + (currentTheme === 'dark' ? '#f1f5f9' : '#1e293b') + ';';
-    }
+var defaultNameColor = currentTheme === 'dark' ? '#ffffff' : '#000000';
+var nameColor = customization.nameColor && customization.nameColor !== 'default' 
+    ? customization.nameColor 
+    : defaultNameColor;
 
     var nameGlow = '';
     if (customization.nameGlow) {
@@ -1631,13 +1826,15 @@ function buildAdminCardSimple(user) {
     // ============================================================
     var specialBadgeHTML = '';
     if (customization.specialBadge && customization.specialBadge !== 'none') {
-        // نطبق نفس لون الاسم على الشارة الخاصة
-        var specialColor = customization.nameColor || (document.documentElement.getAttribute('data-theme') === 'dark' ? '#f1f5f9' : '#1e293b');
-        specialBadgeHTML = '<span class="admin-special-badge" style="color:' + specialColor + ';' + nameGlow + '"><i class="fas ' + customization.specialBadge + '"></i></span>';
+        specialBadgeHTML = `
+            <span class="admin-special-badge" style="color:${nameColor};${nameGlow}">
+                <i class="fas ${customization.specialBadge}"></i>
+            </span>
+        `;
     }
 
     // ============================================================
-    //  4. صندوق الشارة المميزة - مع تطبيق اللون المختار مباشرة
+    //  4. صندوق الشارة المميزة - أصغر حجماً
     // ============================================================
     var featuredBadge = customization.featuredBadge || 'none';
     var featuredBadgeHTML = '';
@@ -1660,19 +1857,35 @@ function buildAdminCardSimple(user) {
             var boxBorder = customization.featuredBadgeBoxBorder || 'none';
             var boxBorderColor = customization.featuredBadgeBoxBorderColor || 'default';
 
-            // ===== أنماط الشارة =====
-            var badgeStyles = [];
+            // ===== أنماط الشارة - أصغر =====
+var badgeStyles = [];
+if (textColor && textColor !== 'default') {
+    badgeStyles.push('color:' + textColor + ' !important');
+}
+
+// ✅ استخدام الدالة المساعدة للحصول على خلفية الشارة
+var bgValue = getBadgeBgStyle(bg);
+badgeStyles.push('background:' + bgValue + ' !important');
             
             if (textColor && textColor !== 'default') {
                 badgeStyles.push('color:' + textColor + ' !important');
             }
             
-            var bgMap = {
-                'gradient1': 'background:linear-gradient(135deg,#667eea,#764ba2)',
-                'gradient2': 'background:linear-gradient(135deg,#f093fb,#f5576c)',
-                'gold': 'background:linear-gradient(135deg,#ffd700,#f59e0b)',
-                'neon': 'background:linear-gradient(135deg,#00ffff,#ff00ff)',
-                'dark': 'background:#1e293b'
+       var bgMap = {
+                'gradient1': 'linear-gradient(135deg,#667eea,#764ba2)',
+                'gradient2': 'linear-gradient(135deg,#f093fb,#f5576c)',
+                'gold': 'linear-gradient(135deg,#ffd700,#f59e0b)',
+                'neon': 'linear-gradient(135deg,#00ffff,#ff00ff)',
+                'dark': '#1e293b',
+                'gradient3': 'linear-gradient(135deg,#89f7fe,#66a6ff)',
+                'gradient4': 'linear-gradient(135deg,#4facfe,#00f2fe)',
+                'ocean': 'linear-gradient(135deg,#2b5876,#4e4376)',
+                'sunset': 'linear-gradient(135deg,#f12711,#f5af19)',
+                'forest': 'linear-gradient(135deg,#134e5e,#71b280)',
+                'rainbow': 'linear-gradient(135deg,#ff0000,#ff8800,#ffff00,#00ff00,#0088ff,#8800ff)',
+                'galaxy': 'linear-gradient(135deg,#0c0c1d,#1a1a3e,#2d1b69)',
+                'candy': 'linear-gradient(135deg,#ff6b6b,#ff9ff3,#feca57)',
+                'lavender': 'linear-gradient(135deg,#e8d5f5,#b8a9c9,#9b8bb5)'
             };
             if (bg && bg !== 'default' && bgMap[bg]) {
                 badgeStyles.push(bgMap[bg] + ' !important');
@@ -1680,12 +1893,13 @@ function buildAdminCardSimple(user) {
                 badgeStyles.push('background:var(--primary-light) !important');
             }
 
+            // حجم أصغر للشارة
             if (size === 'small') {
-                badgeStyles.push('font-size:0.6rem;padding:0.1rem 0.5rem');
+                badgeStyles.push('font-size:0.5rem;padding:0.05rem 0.3rem');
             } else if (size === 'large') {
-                badgeStyles.push('font-size:0.9rem;padding:0.3rem 1.2rem');
+                badgeStyles.push('font-size:0.7rem;padding:0.15rem 0.7rem');
             } else {
-                badgeStyles.push('font-size:0.75rem;padding:0.2rem 0.8rem');
+                badgeStyles.push('font-size:0.55rem;padding:0.08rem 0.4rem');
             }
 
             if (effect === 'glow') {
@@ -1704,7 +1918,7 @@ function buildAdminCardSimple(user) {
             if (badgeStyle && badgeStyle !== 'default') {
                 var styleMap = {
                     'glow': 'animation:glowBadge 2s ease-in-out infinite;',
-                    'rounded': 'border-radius:50px;padding:0.2rem 1rem;',
+                    'rounded': 'border-radius:50px;padding:0.08rem 0.6rem;',
                     'shadow': 'box-shadow:0 4px 15px rgba(0,0,0,0.15);',
                     'gradient': 'background:linear-gradient(135deg,#f093fb,#f5576c);color:white;',
                     'neon': 'box-shadow:0 0 20px rgba(37,99,235,0.5);border:1px solid rgba(37,99,235,0.3);'
@@ -1714,35 +1928,36 @@ function buildAdminCardSimple(user) {
                 }
             }
 
-            // ===== أنماط صندوق الشارة - نطبق اللون المختار مباشرة =====
-            var boxStyles = [];
-            var boxBgMap = {
-                'gradient1': 'background:linear-gradient(135deg,#667eea,#764ba2)',
-                'gradient2': 'background:linear-gradient(135deg,#f093fb,#f5576c)',
-                'gold': 'background:linear-gradient(135deg,#ffd700,#f59e0b)',
-                'dark': 'background:#1e293b'
-            };
-            
-            // تطبيق خلفية الصندوق المختارة مباشرة مع !important
-            if (boxBg && boxBg !== 'default' && boxBgMap[boxBg]) {
-                boxStyles.push('background:' + boxBgMap[boxBg] + ' !important');
-            } else {
-                // إذا كان default، نستخدم خلفية البطاقة
-                boxStyles.push('background:var(--card-bg) !important');
-            }
-            
-            if (boxBorder !== 'none') {
-                var bBoxColor = (boxBorderColor && boxBorderColor !== 'default') ? boxBorderColor : 'var(--primary)';
-                boxStyles.push('border:' + boxBorder + ' 2px ' + bBoxColor + ' !important');
-            }
-            boxStyles.push('border-radius:12px;padding:0.2rem 0.7rem;');
-            boxStyles.push('display:inline-flex;align-items:center;gap:0.4rem;');
-            boxStyles.push('margin-top:0.2rem;');
-            boxStyles.push('width:fit-content;');
+            // ===== أنماط صندوق الشارة - أصغر =====
+var boxStyles = [];
+var boxBgMap = {
+    'gradient1': 'background:linear-gradient(135deg,#667eea,#764ba2)',
+    'gradient2': 'background:linear-gradient(135deg,#f093fb,#f5576c)',
+    'gold': 'background:linear-gradient(135deg,#ffd700,#f59e0b)',
+    'dark': 'background:#1e293b'
+};
+
+if (boxBg && boxBg !== 'default' && boxBgMap[boxBg]) {
+    boxStyles.push('background:' + boxBgMap[boxBg] + ' !important');
+} else {
+    boxStyles.push('background:transparent !important');
+}
+
+if (boxBorder !== 'none') {
+    var bBoxColor = (boxBorderColor && boxBorderColor !== 'default') ? boxBorderColor : 'var(--primary)';
+    boxStyles.push('border:' + boxBorder + ' 2px ' + bBoxColor + ' !important');
+} else {
+    boxStyles.push('border:none !important');
+}
+
+boxStyles.push('border-radius:5px;padding:0.05rem 0.35rem;');
+boxStyles.push('display:inline-flex;align-items:center;gap:0.2rem;');
+boxStyles.push('margin-top:0.1rem;');
+boxStyles.push('width:fit-content;');
 
             featuredBadgeHTML = `
                 <div class="admin-featured-badge-container" style="${boxStyles.join(';')}">
-                    <span style="font-size:0.5rem;color:var(--gray-400);font-weight:600;">⭐</span>
+                    <span style="font-size:0.4rem;color:var(--gray-400);font-weight:600;">⭐</span>
                     <span class="admin-featured-badge" style="${badgeStyles.join(';')}">
                         <i class="fas ${badge.icon}"></i> ${badge.name}
                     </span>
@@ -1765,39 +1980,31 @@ function buildAdminCardSimple(user) {
     }
 
     // ============================================================
-    //  6. لون النصوص الثانوية (للاسم إذا لم يكن هناك لون مخصص)
-    // ============================================================
-    var textSecondaryColor = '';
-    if (customization.textColor && customization.textColor !== 'default') {
-        textSecondaryColor = 'color:' + customization.textColor + ';';
-    }
-
-    // ============================================================
-    //  7. بناء البطاقة - التصميم النهائي
-    //    الصورة في الطرف الأيمن، الاسم بجانبها، الشارة المميزة أسفل الاسم
+    //  6. بناء البطاقة - الصورة 44px
     // ============================================================
     var html = `
-        <div class="admin-card-simple horizontal" style="${bgStyle} ${textColorStyle}" data-uid="${uid}" onclick="viewUserProfile('${uid}')">
-            <div class="admin-card-simple-content horizontal">
-                <!-- الصورة الشخصية - في الطرف الأيمن -->
+        <div class="admin-card-simple" style="${bgStyle} ${textColorStyle}" data-uid="${uid}" onclick="viewUserProfile('${uid}')">
+            <div class="admin-card-simple-content">
+                <!-- الصورة - 44px -->
                 <div class="admin-card-simple-avatar ${effectClass}">
                     <img src="${user.avatar || ''}" onerror="this.src=''" alt="${escapeHtml(user.displayName || 'مستخدم')}" style="${avatarStyles}" />
                 </div>
                 
-                <!-- المعلومات (الاسم + الشارة المميزة أسفله) -->
-                <div class="admin-card-simple-info">
-                    <div class="admin-card-simple-name" style="${nameColor} ${nameGlow}">
-                        ${escapeHtml(user.displayName || 'مستخدم')}
-                        ${specialBadgeHTML}
-                    </div>
-                    
-                    <!-- الشارة المميزة - أسفل الاسم -->
-                    ${featuredBadgeHTML}
+            <!-- المعلومات -->
+            <div class="admin-card-simple-info">
+                <div class="admin-card-simple-name" style="color:${nameColor};${nameGlow}">
+                    ${escapeHtml(user.displayName || 'مستخدم')}
+                    ${specialBadgeHTML}
                 </div>
+                <!-- ✅ إضافة اسم المستخدم هنا -->
+                <div class="admin-username" style="font-size:0.65rem;color:var(--gray-400);direction:rtl;display:flex;align-items:center;gap:0.2rem;margin-top:0.05rem;">
+                    <i class="fas fa-at" style="font-size:0.5rem;"></i>
+                    <span>${user.username || 'غير محدد'}</span>
+                </div>
+                ${featuredBadgeHTML}
             </div>
         </div>
     `;
-
     return html;
 }
 
@@ -1806,16 +2013,16 @@ function buildAdminCardSimple(user) {
 // ============================================================
 function applyCustomizationsToAdminCards() {
     var cards = document.querySelectorAll('.admin-card-simple');
-    
+    var currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+
     cards.forEach(function(card) {
         var uid = card.dataset.uid;
         var user = users.find(function(u) { return u.uid === uid; });
         if (!user) return;
 
         var customization = user.customization || {};
-        var currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
-        
-        // ===== 1. خلفية البطاقة =====
+
+        // ---- خلفية البطاقة ----
         if (customization.profileBg && customization.profileBg !== 'default') {
             var bgInfo = BG_STYLES[customization.profileBg];
             if (bgInfo) {
@@ -1824,7 +2031,7 @@ function applyCustomizationsToAdminCards() {
             }
         }
 
-        // ===== 2. شكل البطاقة =====
+        // ---- شكل البطاقة ----
         if (customization.cardStyle && customization.cardStyle !== 'default') {
             var cardStyles = {
                 'glass': 'backdrop-filter:blur(10px);background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);',
@@ -1838,68 +2045,110 @@ function applyCustomizationsToAdminCards() {
             }
         }
 
-        // ===== 3. سرعة الحركة =====
+        // ---- سرعة الحركة ----
+        var speeds = { 'slow': '0.8s', 'normal': '0.25s', 'fast': '0.1s', 'none': '0s' };
         if (customization.animationSpeed && customization.animationSpeed !== 'none') {
-            var speeds = { 'slow': '0.8s', 'normal': '0.25s', 'fast': '0.1s' };
-            if (speeds[customization.animationSpeed]) {
-                card.style.transition = 'all ' + speeds[customization.animationSpeed] + ' cubic-bezier(0.4,0,0.2,1)';
-            }
+            var duration = speeds[customization.animationSpeed] || '0.25s';
+            card.style.transition = 'all ' + duration + ' cubic-bezier(0.4,0,0.2,1)';
+        } else {
+            card.style.transition = '';
         }
 
-        // ===== 4. نوع الخط =====
+        // ---- نوع الخط ----
         if (customization.fontStyle && customization.fontStyle !== 'default') {
             var fonts = {
-                'modern': 'Inter, "Segoe UI", sans-serif',
-                'elegant': 'Georgia, "Times New Roman", serif',
-                'bold': '"Arial Black", "Segoe UI", sans-serif',
-                'handwriting': '"Comic Sans MS", cursive',
-                'playful': '"Fredoka One", "Segoe UI", sans-serif'
+                'tajawal': 'Tajawal, sans-serif',
+                'cairo': 'Cairo, sans-serif',
+                'readex': 'Readex Pro, sans-serif',
+                'noto': 'Noto Sans Arabic, sans-serif',
+                'amiri': 'Amiri, serif',
+                'lateef': 'Lateef, serif',
+                'scheherazade': 'Scheherazade New, serif',
+                'modern': 'Inter, sans-serif',
+                'elegant': 'Georgia, serif',
+                'bold': 'Arial Black, sans-serif',
+                'handwriting': 'Comic Sans MS, cursive',
+                'playful': 'Fredoka One, sans-serif',
+                'mono': 'Courier New, monospace',
+                'serif': 'Times New Roman, serif',
+                'sans': 'Helvetica, sans-serif'
             };
             if (fonts[customization.fontStyle]) {
                 card.style.fontFamily = fonts[customization.fontStyle];
             }
         }
 
-        // ===== 5. تحديث صندوق الشارة المميزة - تطبيق اللون المختار =====
+        // ---- لون الاسم ----
+        var nameElement = card.querySelector('.admin-card-simple-name');
+        if (nameElement) {
+            var defaultNameColor = currentTheme === 'dark' ? '#ffffff' : '#000000';
+            var nameColor = (customization.nameColor && customization.nameColor !== 'default') 
+                ? customization.nameColor 
+                : defaultNameColor;
+            nameElement.style.setProperty('color', nameColor, 'important');
+        }
+
+        // ---- تأثير الاسم ----
+        if (nameElement && customization.nameGlow && customization.nameGlow !== 'none') {
+            var glowEffects = {
+                'soft': 'text-shadow:0 0 20px rgba(37,99,235,0.3);',
+                'strong': 'text-shadow:0 0 30px rgba(37,99,235,0.6),0 0 60px rgba(37,99,235,0.3);',
+                'rainbow': 'animation:rainbowGlow 3s ease infinite;',
+                'underline': 'text-decoration:underline;text-decoration-color:currentColor;text-decoration-thickness:2px;',
+                'strikethrough': 'text-decoration:line-through;',
+                'uppercase': 'text-transform:uppercase;',
+                'spacing': 'letter-spacing:4px;',
+                'flip': 'transform:scaleX(-1);display:inline-block;',
+                'shadow-text': 'text-shadow:2px 2px 4px rgba(0,0,0,0.3);'
+            };
+            if (glowEffects[customization.nameGlow]) {
+                nameElement.style.cssText += glowEffects[customization.nameGlow];
+            }
+        }
+
+        // ---- الشارة الخاصة ----
+        var specialElement = card.querySelector('.admin-special-badge');
+        if (specialElement) {
+            var defaultNameColor = currentTheme === 'dark' ? '#ffffff' : '#000000';
+            var nameColor = (customization.nameColor && customization.nameColor !== 'default') 
+                ? customization.nameColor 
+                : defaultNameColor;
+            specialElement.style.setProperty('color', nameColor, 'important');
+        }
+
+        // ---- صندوق الشارة المميزة (خلفية الصندوق) ----
         var featuredBadge = customization.featuredBadge;
         if (featuredBadge && featuredBadge !== 'none') {
             var container = card.querySelector('.admin-featured-badge-container');
             var badgeElement = card.querySelector('.admin-featured-badge');
-            
+
             if (container) {
-                // تطبيق خلفية الصندوق المختارة
                 var boxBg = customization.featuredBadgeBoxBg || 'default';
                 var boxBorder = customization.featuredBadgeBoxBorder || 'none';
                 var boxBorderColor = customization.featuredBadgeBoxBorderColor || 'default';
 
-                var boxStyles = [];
-                var boxBgMap = {
-                    'gradient1': 'background:linear-gradient(135deg,#667eea,#764ba2)',
-                    'gradient2': 'background:linear-gradient(135deg,#f093fb,#f5576c)',
-                    'gold': 'background:linear-gradient(135deg,#ffd700,#f59e0b)',
-                    'dark': 'background:#1e293b'
-                };
-                
-                // تطبيق الخلفية المختارة مع !important
-                if (boxBg && boxBg !== 'default' && boxBgMap[boxBg]) {
-                    boxStyles.push('background:' + boxBgMap[boxBg] + ' !important');
-                } else {
-                    boxStyles.push('background:var(--card-bg) !important');
-                }
-                
+                // ✅ استخدام الدالة المساعدة الموحدة لخلفية الصندوق
+                var bgValue = getBoxBgStyle(boxBg);
+                container.style.setProperty('background', bgValue, 'important');
+
                 if (boxBorder !== 'none') {
                     var bBoxColor = (boxBorderColor && boxBorderColor !== 'default') ? boxBorderColor : 'var(--primary)';
-                    boxStyles.push('border:' + boxBorder + ' 2px ' + bBoxColor + ' !important');
+                    container.style.setProperty('border', boxBorder + ' 2px ' + bBoxColor, 'important');
+                } else {
+                    container.style.setProperty('border', 'none', 'important');
                 }
-                boxStyles.push('border-radius:12px;padding:0.2rem 0.7rem;');
-                boxStyles.push('display:inline-flex;align-items:center;gap:0.4rem;');
-                boxStyles.push('margin-top:0.2rem;');
-                boxStyles.push('width:fit-content;');
-                container.style.cssText = boxStyles.join(';');
+
+                container.style.borderRadius = '5px';
+                container.style.padding = '0.05rem 0.35rem';
+                container.style.display = 'inline-flex';
+                container.style.alignItems = 'center';
+                container.style.gap = '0.2rem';
+                container.style.marginTop = '0.1rem';
+                container.style.width = 'fit-content';
             }
 
             if (badgeElement) {
-                // تحديث أنماط الشارة
+                // ✅ خلفية الشارة نفسها (استخدام الدالة المساعدة الموحدة)
                 var textColor = customization.featuredBadgeTextColor || 'default';
                 var bg = customization.featuredBadgeBg || 'default';
                 var size = customization.featuredBadgeSize || 'medium';
@@ -1908,104 +2157,164 @@ function applyCustomizationsToAdminCards() {
                 var borderColor = customization.featuredBadgeBorderColor || 'default';
                 var badgeStyle = customization.badgeStyle || 'default';
 
-                var badgeStyles = [];
+                var badgeStyles = {};
+                
+                // لون النص
                 if (textColor && textColor !== 'default') {
-                    badgeStyles.push('color:' + textColor + ' !important');
+                    badgeStyles.color = textColor + ' !important';
                 }
                 
-                var bgMap = {
-                    'gradient1': 'background:linear-gradient(135deg,#667eea,#764ba2)',
-                    'gradient2': 'background:linear-gradient(135deg,#f093fb,#f5576c)',
-                    'gold': 'background:linear-gradient(135deg,#ffd700,#f59e0b)',
-                    'neon': 'background:linear-gradient(135deg,#00ffff,#ff00ff)',
-                    'dark': 'background:#1e293b'
-                };
-                if (bg && bg !== 'default' && bgMap[bg]) {
-                    badgeStyles.push(bgMap[bg] + ' !important');
-                } else {
-                    badgeStyles.push('background:var(--primary-light) !important');
-                }
+                // ✅ خلفية الشارة (استخدام الدالة المساعدة)
+                var bgValue = getBadgeBgStyle(bg);
+                badgeStyles.background = bgValue + ' !important';
 
+                // الحجم
                 if (size === 'small') {
-                    badgeStyles.push('font-size:0.6rem;padding:0.1rem 0.5rem');
+                    badgeStyles.fontSize = '0.5rem';
+                    badgeStyles.padding = '0.05rem 0.3rem';
                 } else if (size === 'large') {
-                    badgeStyles.push('font-size:0.9rem;padding:0.3rem 1.2rem');
+                    badgeStyles.fontSize = '0.7rem';
+                    badgeStyles.padding = '0.15rem 0.7rem';
                 } else {
-                    badgeStyles.push('font-size:0.75rem;padding:0.2rem 0.8rem');
+                    badgeStyles.fontSize = '0.55rem';
+                    badgeStyles.padding = '0.08rem 0.4rem';
                 }
 
-                if (effect === 'glow') {
-                    badgeStyles.push('animation:glowBadge 2s ease-in-out infinite');
-                } else if (effect === 'pulse') {
-                    badgeStyles.push('animation:pulse 1.5s ease-in-out infinite');
-                } else if (effect === 'shine') {
-                    badgeStyles.push('background:linear-gradient(135deg,#f093fb,#f5576c,#f093fb);background-size:200% 200%;animation:shine 3s ease infinite');
+                // التأثير
+                var effectMap = {
+                    'glow': 'glowBadge 2s ease-in-out infinite',
+                    'pulse': 'pulse 1.5s ease-in-out infinite',
+                    'shine': 'shine 3s ease infinite',
+                    'float': 'floatEffect 3s ease-in-out infinite',
+                    'bounce': 'bounceEffect 2s ease infinite',
+                    'rotate-slow': 'rotateEffect 8s linear infinite',
+                    'scale-in': 'scaleInEffect 3s ease-in-out infinite',
+                    'glow-pulse': 'glowPulseEffect 2s ease-in-out infinite'
+                };
+                if (effect && effect !== 'none' && effectMap[effect]) {
+                    badgeStyles.animation = effectMap[effect] + ' !important';
                 }
 
+                // الإطار
                 if (border !== 'none') {
                     var bColor = (borderColor && borderColor !== 'default') ? borderColor : 'var(--primary)';
-                    badgeStyles.push('border:' + border + ' 2px ' + bColor);
+                    badgeStyles.border = border + ' 2px ' + bColor;
                 }
 
+                // شكل الشارة
                 if (badgeStyle && badgeStyle !== 'default') {
-                    var styleMap = {
-                        'glow': 'animation:glowBadge 2s ease-in-out infinite;',
-                        'rounded': 'border-radius:50px;padding:0.2rem 1rem;',
-                        'shadow': 'box-shadow:0 4px 15px rgba(0,0,0,0.15);',
-                        'gradient': 'background:linear-gradient(135deg,#f093fb,#f5576c);color:white;',
-                        'neon': 'box-shadow:0 0 20px rgba(37,99,235,0.5);border:1px solid rgba(37,99,235,0.3);'
-                    };
-                    if (styleMap[badgeStyle]) {
-                        badgeStyles.push(styleMap[badgeStyle]);
-                    }
+                    badgeElement.className = 'admin-featured-badge';
+                    badgeElement.classList.add('style-' + badgeStyle);
                 }
 
-                badgeElement.style.cssText = badgeStyles.join(';');
+                // تطبيق الأنماط
+                Object.keys(badgeStyles).forEach(function(prop) {
+                    badgeElement.style.setProperty(prop, badgeStyles[prop], 'important');
+                });
             }
         }
 
-        // ===== 6. تحديث الشارة الخاصة - جعلها نفس لون الاسم =====
-        var specialBadge = customization.specialBadge;
-        if (specialBadge && specialBadge !== 'none') {
-            var specialElement = card.querySelector('.admin-special-badge');
-            if (specialElement) {
-                // نطبق لون الاسم على الشارة الخاصة
-                var nameColor = customization.nameColor || (currentTheme === 'dark' ? '#f1f5f9' : '#1e293b');
-                specialElement.style.color = nameColor + ' !important';
-                
-                // إذا كان هناك تأثير للاسم نطبقه أيضاً
-                var nameGlow = customization.nameGlow;
-                if (nameGlow) {
-                    if (nameGlow === 'soft') {
-                        specialElement.style.textShadow = '0 0 20px rgba(37,99,235,0.3)';
-                    } else if (nameGlow === 'strong') {
-                        specialElement.style.textShadow = '0 0 30px rgba(37,99,235,0.6), 0 0 60px rgba(37,99,235,0.3)';
-                    } else if (nameGlow === 'rainbow') {
-                        specialElement.style.animation = 'rainbowGlow 3s ease infinite';
-                    }
-                }
-            }
-        }
-
-        // ===== 7. تحديث لون الاسم =====
-        if (customization.nameColor && customization.nameColor !== 'default') {
-            var nameElement = card.querySelector('.admin-card-simple-name');
-            if (nameElement) {
-                nameElement.style.color = customization.nameColor + ' !important';
-            }
-        }
-
-        // ===== 8. تحديث لون النصوص الثانوية =====
+        // ---- لون النصوص الثانوية ----
         if (customization.textColor && customization.textColor !== 'default') {
             var infoElement = card.querySelector('.admin-card-simple-info');
             if (infoElement) {
-                infoElement.style.color = customization.textColor + ' !important';
+                infoElement.style.setProperty('color', customization.textColor, 'important');
             }
+        }
+
+        // ---- التخصيصات المتقدمة ----
+        if (customization.cardSize) {
+            applyCardSizeToAll(customization.cardSize);
+        }
+        if (customization.borderRadius) {
+            applyBorderRadiusToAll(customization.borderRadius);
+        }
+        if (customization.hoverEffect) {
+            applyHoverEffectToAll(customization.hoverEffect);
+        }
+        if (customization.opacity) {
+            applyOpacityToAll(customization.opacity);
         }
     });
 
-    console.log('✅ تم تطبيق التخصيصات على بطاقات المشرفين');
+    console.log('✅ تم تحديث تخصيصات بطاقات المشرفين');
 }
+
+// ============================================================
+//  دالة موحدة للحصول على خلفية الشارة الداخلية (badge background)
+//  تحتوي على جميع الخيارات المتاحة في واجهة التخصيص
+// ============================================================
+// ============================================================
+//  دالة موحدة للحصول على خلفية الشارة الداخلية (badge background)
+//  تحتوي على جميع الخيارات المتاحة في واجهة التخصيص
+// ============================================================
+function getBadgeBgStyle(bg) {
+    // خريطة كاملة لجميع خلفيات الشارة المتاحة
+    const badgeBgMap = {
+        // ===== التدرجات الأساسية =====
+        'gradient1': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'gradient2': 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        'gradient3': 'linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)',
+        'gradient4': 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+        'gold': 'linear-gradient(135deg, #ffd700 0%, #f59e0b 100%)',
+        'neon': 'linear-gradient(135deg, #00ffff 0%, #ff00ff 100%)',
+        'dark': '#1e293b',
+        
+        // ===== التدرجات الطبيعية =====
+        'ocean': 'linear-gradient(135deg, #2b5876 0%, #4e4376 100%)',
+        'sunset': 'linear-gradient(135deg, #f12711 0%, #f5af19 100%)',
+        'forest': 'linear-gradient(135deg, #134e5e 0%, #71b280 100%)',
+        'rainbow': 'linear-gradient(135deg, #ff0000, #ff8800, #ffff00, #00ff00, #0088ff, #8800ff)',
+        'galaxy': 'linear-gradient(135deg, #0c0c1d 0%, #1a1a3e 50%, #2d1b69 100%)',
+        'candy': 'linear-gradient(135deg, #ff6b6b 0%, #ff9ff3 50%, #feca57 100%)',
+        'lavender': 'linear-gradient(135deg, #e8d5f5 0%, #b8a9c9 50%, #9b8bb5 100%)',
+        'sunrise': 'linear-gradient(135deg, #ff6b6b 0%, #feca57 50%, #ff9ff3 100%)',
+        'midnight': 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)',
+        
+        // ===== خلفيات إضافية من BG_STYLES =====
+        'cherry': 'linear-gradient(135deg, #800000 0%, #dc143c 100%)',
+        'mint': 'linear-gradient(135deg, #00b894 0%, #00cec9 100%)',
+        'peach': 'linear-gradient(135deg, #fd79a8 0%, #fdcb6e 100%)',
+        'grape': 'linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%)',
+        'coffee': 'linear-gradient(135deg, #6f4e37 0%, #d4a574 100%)',
+        'ice': 'linear-gradient(135deg, #dfe6e9 0%, #b2bec3 100%)',
+        'fire': 'linear-gradient(135deg, #e17055 0%, #d63031 100%)',
+        'space': 'linear-gradient(135deg, #0c0c1d 0%, #1a1a3e 30%, #2d1b69 60%, #1a1a3e 100%)',
+        'retro': 'linear-gradient(135deg, #2d3436 0%, #fd79a8 50%, #fdcb6e 100%)',
+        'vintage': 'linear-gradient(135deg, #d4a574 0%, #b8956a 50%, #8b6b4a 100%)',
+        'modern': 'linear-gradient(135deg, #2d3436 0%, #dfe6e9 100%)',
+        'pastel': 'linear-gradient(135deg, #fd79a8 0%, #a29bfe 50%, #74b9ff 100%)',
+        'vibrant': 'linear-gradient(135deg, #ff6b6b 0%, #feca57 50%, #48dbfb 100%)',
+        'monochrome': 'linear-gradient(135deg, #ffffff 0%, #dfe6e9 50%, #2d3436 100%)',
+        'sepia': 'linear-gradient(135deg, #d4a574 0%, #bf953f 50%, #8b6b4a 100%)',
+        
+        // ===== الألوان الصلبة =====
+        'solid-blue': '#2563eb',
+        'solid-red': '#ef4444',
+        'solid-green': '#22c55e',
+        'solid-gold': '#f59e0b',
+        'solid-purple': '#8b5cf6',
+        'solid-pink': '#ec4899',
+        'solid-teal': '#14b8a6',
+        'solid-orange': '#f97316',
+        'solid-white': '#ffffff',
+        'solid-black': '#000000',
+        'solid-gray': '#6b7280',
+        'solid-cyan': '#06b6d4',
+        'solid-lime': '#84cc16',
+        'solid-rose': '#f43f5e',
+        'solid-indigo': '#6366f1'
+    };
+
+    // إذا كان المفتاح موجوداً في الخريطة، نعيد النمط
+    if (bg && bg !== 'default' && badgeBgMap[bg]) {
+        return badgeBgMap[bg];
+    }
+    
+    // القيمة الافتراضية (خلفية الشارة الأساسية)
+    return 'var(--primary-light)';
+}
+
 // ============================================================
 //  التأكد من وجود حاويات المشرفين
 // ============================================================
@@ -2187,88 +2496,70 @@ function buildAdminCard(user) {
 
 // ابحث عن دالة showPage واستبدلها بهذا
 function showPage(page) {
-    // التحقق من الحظر أولاً
-    if (currentUserData && currentUserData.banned === true) {
-        if (page !== 'home' && page !== 'admins') {
-            showToast('🚫 حسابك محظور، لا يمكنك الوصول إلى هذه الصفحة', 'error');
-            page = 'home';
-        }
+    // ===== التحقق من صحة الوسيط =====
+    if (typeof page !== 'string' || !page) {
+        console.warn('⚠️ Invalid page parameter:', page);
+        page = 'posts'; // الصفحة الافتراضية
     }
     
-    // إخفاء جميع الصفحات
+    console.log('📄 showPage called with:', page);
+    
+    // ===== إخفاء جميع الصفحات =====
     Object.keys(pages).forEach(function(key) {
         if (pages[key]) {
             pages[key].classList.remove('active');
+            pages[key].style.display = 'none';
         }
     });
-    
-    // إظهار الصفحة المطلوبة
+
+    // ===== إظهار الصفحة المطلوبة =====
     if (pages[page]) {
         pages[page].classList.add('active');
+        pages[page].style.display = 'block';
+        console.log('✅ Page shown:', page);
+    } else {
+        console.warn('⚠️ Page not found:', page);
+        // عرض الصفحة الرئيسية كحل احتياطي
+        if (pages['posts']) {
+            pages['posts'].classList.add('active');
+            pages['posts'].style.display = 'block';
+            console.log('🔄 Fallback to posts page');
+        }
     }
-    
-    // تحديث الروابط
+
+    // ===== تحديث الروابط النشطة =====
     navLinks.forEach(function(link) {
         link.classList.toggle('active', link.dataset.page === page);
     });
-    
-    // تحميل البيانات حسب الصفحة
-    if (page === 'admin' && isAdmin) {
-        loadAdminData();
-    }
-    if (page === 'colleges') {
-        loadColleges();
-    }
-    if (page === 'specialties') {
-        loadSpecialties();
-    }
-    if (page === 'profile') {
-        if (currentUserData && currentUserData.banned === true) {
-            showToast('🚫 حسابك محظور، لا يمكنك الوصول إلى ملفك الشخصي', 'error');
-            page = 'home';
-            showPage('home');
-            return;
-        }
-        updateProfileUI();
-    }
-    if (page === 'users') {
-        if (currentUserData && currentUserData.banned === true) {
-            showToast('🚫 حسابك محظور، لا يمكنك الوصول إلى هذه الصفحة', 'error');
-            page = 'home';
-            showPage('home');
-            return;
-        }
-        loadUsersPage();
-    }
-    if (page === 'admins') {
-        if (currentUserData && currentUserData.banned === true) {
-            showToast('🚫 حسابك محظور، لا يمكنك الوصول إلى هذه الصفحة', 'error');
-            page = 'home';
-            showPage('home');
-            return;
-        }
-        loadAdminsPage();
-    }
-    if (page === 'compare') {
-        if (currentUserData && currentUserData.banned === true) {
-            showToast('🚫 حسابك محظور، لا يمكنك الوصول إلى هذه الصفحة', 'error');
-            page = 'home';
-            showPage('home');
-            return;
-        }
-        renderCompare();
-    }
-    if (page === 'settings') {
-        if (currentUserData && currentUserData.banned === true) {
-            showToast('🚫 حسابك محظور، لا يمكنك الوصول إلى الإعدادات', 'error');
-            page = 'home';
-            showPage('home');
-            return;
-        }
-        showPrivacySettings();
+
+    // ===== تحميل البيانات حسب الصفحة =====
+    switch(page) {
+        case 'posts':
+            loadPosts(currentPostFilter, postsPage);
+            break;
+        case 'materials':
+            renderCourses();
+            renderCompare();
+            break;
+        case 'profile':
+            if (currentUserData) updateProfileUI();
+            break;
+        case 'users':
+            loadUsersPage();
+            break;
+        case 'admins':
+            loadAdminsPage();
+            break;
+        case 'settings':
+            showPrivacySettings();
+            break;
+        case 'admin':
+            if (isAdmin) loadAdminData();
+            break;
+        default:
+            console.log('ℹ️ No specific data to load for page:', page);
     }
 }
-
 // ============================================================
 //  إضافة دوال showPage إلى النافذة
 // ============================================================
@@ -2357,6 +2648,7 @@ async function loadAllData() {
             }
         }
 
+        applyAllCustomizationsToAllCards(); // ✅ إضافة
         populateCollegeDropdowns();
         populateFilters();
         populateUsersFilters();
@@ -2786,19 +3078,28 @@ var isCourseActionsModalOpening = false;
 //  دوال الإغلاق والرجوع
 // ============================================================
 
-// ===== إغلاق مودال المستخدم =====
 function closeUserProfileModal() {
-    console.log('🔒 إغلاق مودال المستخدم');
-    if (isModalOpen('courseActionsModal')) {
-        closeModal('courseActionsModal');
-    }
+    console.log('🔒 إغلاق مودال المستخدم المصغر');
+    
+    // إغلاق المودال
     closeModal('userProfileModal');
     currentViewedUserUid = null;
+    
     // إزالة أي style مخصص للمستخدم
     var styleElements = document.querySelectorAll('style[id^="modal-custom-style-"]');
     styleElements.forEach(function(el) {
         el.remove();
     });
+    
+    // إعادة فتح المودال السابق إن وجد
+    if (modalHistory.length > 0 && modalHistory[modalHistory.length - 1] !== 'userProfileModal') {
+        var previousModal = modalHistory[modalHistory.length - 1];
+        if (previousModal && document.getElementById(previousModal)) {
+            setTimeout(function() {
+                openModal(previousModal, { layer: 1 });
+            }, 300);
+        }
+    }
 }
 
 
@@ -2991,14 +3292,12 @@ function handleQuickAnalytics(courseId) {
 // ============================================================
 //  أحداث المودالات العامة
 // ============================================================
-
-// إغلاق المودال عند النقر على الخلفية
+// إغلاق القائمة المنسدلة عند النقر خارجها
 document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('modal')) {
-        var modalId = e.target.id;
-        if (modalStack.length > 0 && modalStack[modalStack.length - 1] === modalId) {
-            closeModal(modalId);
-        }
+    if (!e.target.closest('.user-profile-mini-dropdown')) {
+        document.querySelectorAll('.user-profile-mini-dropdown .dropdown-menu').forEach(function(menu) {
+            menu.style.display = 'none';
+        });
     }
 });
 
@@ -3034,7 +3333,7 @@ function buildUserProfileHTML(user) {
     var viewerUid = currentUser ? currentUser.uid : null;
     var isCurrentUser = viewerUid === uid;
 
-    // استخدام الدالة المساعدة
+    // استخدام الدالة المساعدة للخصوصية
     function canView(field) {
         return canViewUserData(user, field, viewerUid);
     }
@@ -3043,24 +3342,23 @@ function buildUserProfileHTML(user) {
     var isBlocked = isUserBlocked(uid);
     var isBlockedBy = isUserBlockedBy(uid);
 
-    var friendshipStatus = getFriendshipStatus(uid);
-    var friendshipBadge = getFriendshipBadge(friendshipStatus);
+    // ===== نظام المتابعة =====
+    var followStatus = getFollowStatus(uid);
+    var followBadge = getFollowBadge(followStatus);
 
     var customization = user.customization || {};
     var avatarBorderColor = customization.avatarBorder || '#2563eb';
-	var avatarBorderWidth = customization.avatarBorderWidth || '3';
+    var avatarBorderWidth = customization.avatarBorderWidth || '3';
     var avatarBorderStyle = customization.avatarBorderStyle || 'solid';
-	// إذا كان السمك 'none'، نضع border-width: 0
-var borderWidthAttr = (avatarBorderWidth === 'none' || !avatarBorderWidth) ? '0px' : avatarBorderWidth + 'px';
-var borderStyleAttr = (avatarBorderWidth === 'none' || !avatarBorderWidth) ? 'none' : (avatarBorderStyle || 'solid');
+    
+    var borderWidthAttr = (avatarBorderWidth === 'none' || !avatarBorderWidth) ? '0px' : avatarBorderWidth + 'px';
+    var borderStyleAttr = (avatarBorderWidth === 'none' || !avatarBorderWidth) ? 'none' : (avatarBorderStyle || 'solid');
 
-var imgStyle = '';
-imgStyle += 'border-color:' + avatarBorderColor + ';';
-imgStyle += 'border-width:' + borderWidthAttr + ';';
-imgStyle += 'border-style:' + borderStyleAttr + ';';
+    var imgStyle = '';
+    imgStyle += 'border-color:' + avatarBorderColor + ';';
+    imgStyle += 'border-width:' + borderWidthAttr + ';';
+    imgStyle += 'border-style:' + borderStyleAttr + ';';
 
-// ثم في عنصر img:
-html += '<img src="' + (user.avatar || '') + '" style="width:80px;height:80px;border-radius:50%;object-fit:cover;' + imgStyle + '" />';
     var avatarEffect = customization.avatarEffect || 'none';
     var profileBg = customization.profileBg || 'default';
     var nameColor = customization.nameColor || '';
@@ -3075,7 +3373,8 @@ html += '<img src="' + (user.avatar || '') + '" style="width:80px;height:80px;bo
     var favCount = (user.favorites || []).length;
     var compCount = (user.completed || []).length;
     var voteCount = user.votes || 0;
-    var friendsCount = (user.friends || []).length;
+    var followingCount = (user.following || []).length;
+    var followersCount = (user.followers || []).length;
     var trustCount = (user.trustedBy || []).length;
     var reportCount = (user.reports || []).length;
     var badges = calculateBadges(user);
@@ -3089,17 +3388,16 @@ html += '<img src="' + (user.avatar || '') + '" style="width:80px;height:80px;bo
         }
     }
 
+    var userRole = user.role || 'user';
+    var isAdminUser = userRole === 'admin';
+    var isSuperAdmin = user.isSuperAdmin || false;
 
-var userRole = user.role || 'user';
-var isAdminUser = userRole === 'admin';
-var isSuperAdmin = user.isSuperAdmin || false;
-
-var roleBadge = '';
-if (isSuperAdmin) {
-    roleBadge = '<span class="role-badge super-admin" style="background:linear-gradient(135deg,#ffd700,#f59e0b);color:#78350f;padding:0.2rem 0.8rem;border-radius:20px;font-weight:700;font-size:0.75rem;"><i class="fas fa-crown"></i> المشرف الرئيسي</span>';
-} else if (isAdminUser) {
-    roleBadge = '<span class="role-badge admin" style="background:var(--primary-light);color:var(--primary-dark);padding:0.2rem 0.8rem;border-radius:20px;font-weight:600;font-size:0.75rem;"><i class="fas fa-shield-alt"></i> مشرف</span>';
-}
+    var roleBadge = '';
+    if (isSuperAdmin) {
+        roleBadge = '<span class="role-badge super-admin" style="background:linear-gradient(135deg,#ffd700,#f59e0b);color:#78350f;padding:0.2rem 0.8rem;border-radius:20px;font-weight:700;font-size:0.75rem;"><i class="fas fa-crown"></i> المشرف الرئيسي</span>';
+    } else if (isAdminUser) {
+        roleBadge = '<span class="role-badge admin" style="background:var(--primary-light);color:var(--primary-dark);padding:0.2rem 0.8rem;border-radius:20px;font-weight:600;font-size:0.75rem;"><i class="fas fa-shield-alt"></i> مشرف</span>';
+    }
 
     var specialBadgeHTML = '';
     if (specialBadge && specialBadge !== 'none') {
@@ -3135,73 +3433,64 @@ if (isSuperAdmin) {
 
     if (!isCurrentUser) {
         html += '<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">';
-        html += friendshipBadge;
-        if (friendshipStatus === 'none') {
-            html += '<button class="btn btn-primary btn-sm" onclick="sendFriendRequest(\'' + uid + '\')"><i class="fas fa-user-plus"></i> إضافة</button>';
-        } else if (friendshipStatus === 'pending_from_them') {
-            html += '<button class="btn btn-success btn-sm" onclick="acceptFriendRequest(\'' + uid + '\')"><i class="fas fa-check"></i> قبول</button>';
-            html += '<button class="btn btn-danger btn-sm" onclick="rejectFriendRequest(\'' + uid + '\')"><i class="fas fa-times"></i> رفض</button>';
-        } else if (friendshipStatus === 'friend') {
-            html += '<button class="btn btn-danger btn-sm" onclick="unfriend(\'' + uid + '\')"><i class="fas fa-user-minus"></i> إلغاء</button>';
-        } else if (friendshipStatus === 'pending_from_me') {
-            html += '<button class="btn btn-warning btn-sm" onclick="cancelFriendRequest(\'' + uid + '\')"><i class="fas fa-times"></i> إلغاء الطلب</button>';
+        html += followBadge;
+        
+        // ===== أزرار المتابعة =====
+        if (followStatus === 'following') {
+            html += '<button class="btn btn-danger btn-sm" onclick="unfollowUser(\'' + uid + '\')"><i class="fas fa-user-minus"></i> إلغاء المتابعة</button>';
+        } else {
+            html += '<button class="btn btn-primary btn-sm" onclick="followUser(\'' + uid + '\')"><i class="fas fa-user-plus"></i> متابعة</button>';
         }
         html += '</div>';
     } else {
         html += '<span style="font-weight:600;color:var(--gray-500);">👤 أنت</span>';
     }
-// ===== زر 3 نقاط (القائمة المنسدلة) =====
-if (!isCurrentUser && (isAdmin || currentUser)) {
-    html += `
-    <div class="user-actions-dropdown" style="position:relative;">
-        <button class="dropdown-toggle-btn" onclick="toggleUserActionsMenu('${uid}')" title="إجراءات إضافية">
-            <i class="fas fa-ellipsis-v"></i>
-        </button>
-        <div class="dropdown-menu" id="userActionsMenu_${uid}" style="display:none;position:absolute;top:100%;left:0;background:var(--card-bg);border:1px solid var(--border-color);border-radius:12px;box-shadow:var(--shadow-lg);z-index:1000;min-width:180px;padding:0.3rem 0;">
-            
 
-            
-            ${isAdmin ? `
-                ${isBanned ? 
-                    `<button class="dropdown-item" onclick="unbanUser('${uid}')"><i class="fas fa-user-check" style="color:#22c55e;"></i> إلغاء الحظر</button>` :
-                    `<button class="dropdown-item" onclick="banUser('${uid}')"><i class="fas fa-ban" style="color:#dc2626;"></i> حظر المستخدم</button>`
-                }
-                <button class="dropdown-item" onclick="toggleUserRole('${uid}')"><i class="fas fa-exchange-alt" style="color:#3b82f6;"></i> تغيير الدور</button>
-                <button class="dropdown-item" onclick="adminGivePointsFromModal('${uid}')"><i class="fas fa-gem" style="color:#f59e0b;"></i> إعطاء نقاط</button>
+    // ===== زر 3 نقاط (القائمة المنسدلة) =====
+    if (!isCurrentUser && (isAdmin || currentUser)) {
+        html += `
+        <div class="user-actions-dropdown" style="position:relative;">
+            <button class="dropdown-toggle-btn" onclick="toggleUserActionsMenu('${uid}')" title="إجراءات إضافية">
+                <i class="fas fa-ellipsis-v"></i>
+            </button>
+            <div class="dropdown-menu" id="userActionsMenu_${uid}" style="display:none;position:absolute;top:100%;left:0;background:var(--card-bg);border:1px solid var(--border-color);border-radius:12px;box-shadow:var(--shadow-lg);z-index:1000;min-width:180px;padding:0.3rem 0;">
+                ${isAdmin ? `
+                    ${isBanned ? 
+                        `<button class="dropdown-item" onclick="unbanUser('${uid}')"><i class="fas fa-user-check" style="color:#22c55e;"></i> إلغاء الحظر</button>` :
+                        `<button class="dropdown-item" onclick="banUser('${uid}')"><i class="fas fa-ban" style="color:#dc2626;"></i> حظر المستخدم</button>`
+                    }
+                    <button class="dropdown-item" onclick="toggleUserRole('${uid}')"><i class="fas fa-exchange-alt" style="color:#3b82f6;"></i> تغيير الدور</button>
+                    <button class="dropdown-item" onclick="adminGivePointsFromModal('${uid}')"><i class="fas fa-gem" style="color:#f59e0b;"></i> إعطاء نقاط</button>
+                    <hr style="margin:0.2rem 0;border-color:var(--border-color);">
+                ` : ''}
+                
+                <button class="dropdown-item" onclick="event.stopPropagation(); sendPrivateMessage('${uid}')">
+                    <i class="fas fa-envelope" style="color:#8b5cf6;"></i> مراسلة
+                </button>
+                <button class="dropdown-item" onclick="event.stopPropagation(); showSendGiftModal('${uid}')">
+                    <i class="fas fa-gift" style="color:#f59e0b;"></i> إهداء نقاط
+                </button>
+                <button class="dropdown-item" onclick="event.stopPropagation(); trustUser('${uid}')">
+                    <i class="fas fa-handshake" style="color:#10b981;"></i> ${user.trustedBy && user.trustedBy.indexOf(currentUser?.uid) !== -1 ? 'إلغاء الثقة' : 'ثق بي'}
+                </button>
+                <button class="dropdown-item" onclick="event.stopPropagation(); reportUser('${uid}')">
+                    <i class="fas fa-flag" style="color:#ef4444;"></i> ${user.reports && user.reports.indexOf(currentUser?.uid) !== -1 ? 'إلغاء الإبلاغ' : 'الإبلاغ'}
+                </button>
+                <button class="dropdown-item" onclick="event.stopPropagation(); ${isBlocked ? `unblockUser('${uid}')` : `blockUser('${uid}')`}">
+                    <i class="fas ${isBlocked ? 'fa-undo' : 'fa-ban'}" style="color:${isBlocked ? '#22c55e' : '#dc2626'};"></i> 
+                    ${isBlocked ? 'إلغاء الحظر' : 'حظر المستخدم'}
+                </button>
                 <hr style="margin:0.2rem 0;border-color:var(--border-color);">
-            ` : ''}
-            
-            <button class="dropdown-item" onclick="event.stopPropagation(); sendPrivateMessage('${uid}')">
-                <i class="fas fa-envelope" style="color:#8b5cf6;"></i> مراسلة
-            </button>
-                        <!-- ===== زر الإهداء (جديد) ===== -->
-            <button class="dropdown-item" onclick="event.stopPropagation(); showSendGiftModal('${uid}')">
-                <i class="fas fa-gift" style="color:#f59e0b;"></i> إهداء نقاط
-            </button>
-            <button class="dropdown-item" onclick="event.stopPropagation(); trustUser('${uid}')">
-                <i class="fas fa-handshake" style="color:#10b981;"></i> ${user.trustedBy && user.trustedBy.indexOf(currentUser?.uid) !== -1 ? 'إلغاء الثقة' : 'ثق بي'}
-            </button>
-            <button class="dropdown-item" onclick="event.stopPropagation(); reportUser('${uid}')">
-                <i class="fas fa-flag" style="color:#ef4444;"></i> ${user.reports && user.reports.indexOf(currentUser?.uid) !== -1 ? 'إلغاء الإبلاغ' : 'الإبلاغ'}
-            </button>
-            <button class="dropdown-item" onclick="event.stopPropagation(); ${isBlocked ? `unblockUser('${uid}')` : `blockUser('${uid}')`}">
-                <i class="fas ${isBlocked ? 'fa-undo' : 'fa-ban'}" style="color:${isBlocked ? '#22c55e' : '#dc2626'};"></i> 
-                ${isBlocked ? 'إلغاء الحظر' : 'حظر المستخدم'}
-            </button>
-            <hr style="margin:0.2rem 0;border-color:var(--border-color);">
-            <button class="dropdown-item" onclick="event.stopPropagation(); viewUserProfile('${uid}')">
-                <i class="fas fa-external-link-alt"></i> فتح الملف
-            </button>
+                <button class="dropdown-item" onclick="event.stopPropagation(); viewUserProfile('${uid}')">
+                    <i class="fas fa-external-link-alt"></i> فتح الملف
+                </button>
+            </div>
         </div>
-    </div>
-    `;
-}  
-
-
+        `;
+    }
 
     html += '</div>';
     
-    // ===== رأس الملف الشخصي =====
     // ===== رأس الملف الشخصي =====
     html += '<div class="view-header" style="display:flex;align-items:center;gap:1rem;padding-bottom:0.75rem;border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:0.75rem;">';
 
@@ -3232,101 +3521,93 @@ if (!isCurrentUser && (isAdmin || currentUser)) {
     html += '<h3 style="margin:0;font-size:1.2rem;' + nameStyle + '">';
     html += escapeHtml(user.displayName || 'مستخدم');
     html += ' ' + specialBadgeHTML;
-    html += ' <span class="badge" style="font-size:0.65rem;background:rgba(255,255,255,0.2);color:inherit;">' + result.tier.name + '</span>';
     if (isBanned) html += ' <span style="font-size:0.6rem;background:#dc2626;color:white;padding:0.05rem 0.5rem;border-radius:20px;">🚫 محظور</span>';
     html += '</h3>';
 
-    html += '<div style="display:flex;gap:0.3rem;flex-wrap:wrap;margin:0.2rem 0;">';
-    html += roleBadge;
-    html += '</div>';
-
-// ===== عرض الشارة المميزة =====
-var featuredBadge = customization.featuredBadge;
-if (featuredBadge && featuredBadge !== 'none') {
-    var allBadges = getAllBadges();
-    var badge = allBadges.find(function(b) { return b.name === featuredBadge; });
-    if (badge) {
-        var textColor = customization.featuredBadgeTextColor || 'default';
-        var bg = customization.featuredBadgeBg || 'default';
-        var size = customization.featuredBadgeSize || 'medium';
-        var effect = customization.featuredBadgeEffect || 'none';
-        var border = customization.featuredBadgeBorder || 'none';
-        var borderColor = customization.featuredBadgeBorderColor || 'default';
-        var boxBg = customization.featuredBadgeBoxBg || 'default';
-        var boxBorder = customization.featuredBadgeBoxBorder || 'none';
-        var boxBorderColor = customization.featuredBadgeBoxBorderColor || 'default';
-
-        var badgeStyles = [];
-        if (textColor && textColor !== 'default') badgeStyles.push('color:' + textColor);
-        var bgMap = {
-            'gradient1': 'background:linear-gradient(135deg,#667eea,#764ba2)',
-            'gradient2': 'background:linear-gradient(135deg,#f093fb,#f5576c)',
-            'gold': 'background:linear-gradient(135deg,#ffd700,#f59e0b)',
-            'neon': 'background:linear-gradient(135deg,#00ffff,#ff00ff)',
-            'dark': 'background:#1e293b'
-        };
-        if (bg && bg !== 'default' && bgMap[bg]) {
-            badgeStyles.push(bgMap[bg]);
-        } else {
-            badgeStyles.push('background:var(--primary-light)');
-        }
-        if (size === 'small') badgeStyles.push('font-size:0.6rem;padding:0.1rem 0.5rem');
-        else if (size === 'large') badgeStyles.push('font-size:0.9rem;padding:0.3rem 1.2rem');
-        else badgeStyles.push('font-size:0.75rem;padding:0.2rem 0.8rem');
-        if (effect === 'glow') badgeStyles.push('animation:glowBadge 2s ease-in-out infinite');
-        else if (effect === 'pulse') badgeStyles.push('animation:pulse 1.5s ease-in-out infinite');
-        else if (effect === 'shine') badgeStyles.push('background:linear-gradient(135deg,#f093fb,#f5576c,#f093fb);background-size:200% 200%;animation:shine 3s ease infinite');
-        if (border !== 'none') {
-            var bColor = (borderColor && borderColor !== 'default') ? borderColor : '#2563eb';
-            badgeStyles.push('border:' + border + ' 2px ' + bColor);
-        }
-
-        var boxStyles = [];
-        var boxBgMap = {
-            'gradient1': 'background:linear-gradient(135deg,#667eea,#764ba2)',
-            'gradient2': 'background:linear-gradient(135deg,#f093fb,#f5576c)',
-            'gold': 'background:linear-gradient(135deg,#ffd700,#f59e0b)',
-            'dark': 'background:#1e293b'
-        };
-        if (boxBg && boxBg !== 'default' && boxBgMap[boxBg]) {
-            boxStyles.push(boxBgMap[boxBg]);
-        } else {
-            boxStyles.push('background:var(--gray-50)');
-        }
-        if (boxBorder !== 'none') {
-            var bBoxColor = (boxBorderColor && boxBorderColor !== 'default') ? boxBorderColor : '#2563eb';
-            boxStyles.push('border:' + boxBorder + ' 2px ' + bBoxColor);
-        }
-        boxStyles.push('border-radius:12px;padding:0.3rem 0.8rem;display:flex;align-items:center;gap:0.5rem;margin:0.3rem 0');
-
-        html += `
-            <div class="featured-badge-container" style="${boxStyles.join(';')}">
-                <span style="font-size:0.65rem;color:var(--gray-500);font-weight:600;">⭐</span>
-                <span class="badge-item ${badge.class}" style="${badgeStyles.join(';')}">
-                    <i class="fas ${badge.icon}"></i> ${badge.name}
-                </span>
-                <span style="font-size:0.55rem;color:var(--gray-400);">شارة مميزة</span>
-            </div>
-        `;
+    // اسم المستخدم
+    if (user.username) {
+        html += '<div class="view-username">';
+        html += '<i class="fas fa-at"></i> ' + escapeHtml(user.username);
+        html += '</div>';
     }
-}
+
+    // ===== عرض الشارة المميزة =====
+    var featuredBadge = customization.featuredBadge;
+    if (featuredBadge && featuredBadge !== 'none') {
+        var allBadges = getAllBadges();
+        var badge = allBadges.find(function(b) { return b.name === featuredBadge; });
+        if (badge) {
+            var textColor = customization.featuredBadgeTextColor || 'default';
+            var bg = customization.featuredBadgeBg || 'default';
+            var size = customization.featuredBadgeSize || 'medium';
+            var effect = customization.featuredBadgeEffect || 'none';
+            var border = customization.featuredBadgeBorder || 'none';
+            var borderColor = customization.featuredBadgeBorderColor || 'default';
+            var boxBg = customization.featuredBadgeBoxBg || 'default';
+            var boxBorder = customization.featuredBadgeBoxBorder || 'none';
+            var boxBorderColor = customization.featuredBadgeBoxBorderColor || 'default';
+
+            var badgeStyles = [];
+            if (textColor && textColor !== 'default') {
+                badgeStyles.push('color:' + textColor + ' !important');
+            }
+            var bgValue = getBadgeBgStyle(bg);
+            badgeStyles.push('background:' + bgValue + ' !important');
+
+            if (size === 'small') badgeStyles.push('font-size:0.6rem;padding:0.1rem 0.5rem');
+            else if (size === 'large') badgeStyles.push('font-size:0.9rem;padding:0.3rem 1.2rem');
+            else badgeStyles.push('font-size:0.75rem;padding:0.2rem 0.8rem');
+            
+            if (effect === 'glow') badgeStyles.push('animation:glowBadge 2s ease-in-out infinite');
+            else if (effect === 'pulse') badgeStyles.push('animation:pulse 1.5s ease-in-out infinite');
+            else if (effect === 'shine') badgeStyles.push('background:linear-gradient(135deg,#f093fb,#f5576c,#f093fb);background-size:200% 200%;animation:shine 3s ease infinite');
+            
+            if (border !== 'none') {
+                var bColor = (borderColor && borderColor !== 'default') ? borderColor : '#2563eb';
+                badgeStyles.push('border:' + border + ' 2px ' + bColor);
+            }
+
+            var boxStyles = [];
+            var boxBgMap = {
+                'gradient1': 'background:linear-gradient(135deg,#667eea,#764ba2)',
+                'gradient2': 'background:linear-gradient(135deg,#f093fb,#f5576c)',
+                'gold': 'background:linear-gradient(135deg,#ffd700,#f59e0b)',
+                'dark': 'background:#1e293b'
+            };
+            if (boxBg && boxBg !== 'default' && boxBgMap[boxBg]) {
+                boxStyles.push(boxBgMap[boxBg]);
+            } else {
+                boxStyles.push('background:var(--gray-50)');
+            }
+            if (boxBorder !== 'none') {
+                var bBoxColor = (boxBorderColor && boxBorderColor !== 'default') ? boxBorderColor : '#2563eb';
+                boxStyles.push('border:' + boxBorder + ' 2px ' + bBoxColor);
+            }
+            boxStyles.push('border-radius:12px;padding:0.3rem 0.8rem;display:flex;align-items:center;gap:0.5rem;margin:0.3rem 0');
+
+            html += `
+                <div class="featured-badge-container" style="${boxStyles.join(';')}">
+                    <span style="font-size:0.65rem;color:var(--gray-500);font-weight:600;">⭐</span>
+                    <span class="badge-item ${badge.class}" style="${badgeStyles.join(';')}">
+                        <i class="fas ${badge.icon}"></i> ${badge.name}
+                    </span>
+                </div>
+            `;
+        }
+    }
 
     // عرض المعلومات مع التحقق من الخصوصية
     var textColorStyle = textColor && textColor !== 'default' ? 'color:' + textColor + ';' : '';
 
-    if (canView('email')) {
-        html += '<p style="margin:0.1rem 0;font-size:0.85rem;opacity:0.8;' + textColorStyle + '"><i class="fas fa-envelope"></i> ' + escapeHtml(user.email) + '</p>';
-    }
     if (canView('college')) {
         html += '<p style="margin:0.1rem 0;font-size:0.85rem;opacity:0.8;' + textColorStyle + '"><i class="fas fa-university"></i> ' + escapeHtml(collegeName) + '</p>';
     }
     if (canView('specialty')) {
         html += '<p style="margin:0.1rem 0;font-size:0.85rem;opacity:0.8;' + textColorStyle + '"><i class="fas fa-tag"></i> ' + escapeHtml(specName) + '</p>';
     }
-    // السنة غير قابلة للتحكم فيها بشكل فردي، نعرضها دائماً (يمكن إضافتها لاحقاً)
-if (canView('year')) {
-    html += '<p style="margin:0.1rem 0;font-size:0.85rem;opacity:0.8;' + textColorStyle + '"><i class="fas fa-calendar-alt"></i> السنة ' + (user.year || '?') + '</p>';
-}
+    if (canView('year')) {
+        html += '<p style="margin:0.1rem 0;font-size:0.85rem;opacity:0.8;' + textColorStyle + '"><i class="fas fa-calendar-alt"></i> السنة ' + (user.year || '?') + '</p>';
+    }
     if (canView('branch') && user.branch) {
         html += '<p style="margin:0.1rem 0;font-size:0.85rem;opacity:0.8;' + textColorStyle + '"><i class="fas fa-city"></i> ' + escapeHtml(user.branch) + '</p>';
     }
@@ -3343,13 +3624,13 @@ if (canView('year')) {
     // ===== الأزرار التسعة (الإحصائيات) =====
     html += '<div class="view-stats-row" style="display:flex;flex-wrap:wrap;gap:0.3rem;margin:0.5rem 0;padding:0.4rem;background:rgba(255,255,255,0.05);border-radius:12px;border:1px solid rgba(255,255,255,0.05);justify-content:center;">';
 
-    // نحدد القوائم التي يمكن عرضها بناءً على الخصوصية
     var stats = [];
     if (canView('completed')) stats.push({ key: 'completed', icon: 'fa-check-circle', label: 'مجتازة', value: compCount });
     if (canView('badges')) stats.push({ key: 'badges', icon: 'fa-trophy', label: 'شارة', value: badges.length });
     if (canView('favorites')) stats.push({ key: 'favorites', icon: 'fa-star', label: 'مفضلة', value: favCount });
     if (canView('votes')) stats.push({ key: 'votes', icon: 'fa-vote-yea', label: 'تصويت', value: voteCount });
-    if (canView('friendsList')) stats.push({ key: 'friends', icon: 'fa-users', label: 'أصدقاء', value: friendsCount });
+    if (canView('following')) stats.push({ key: 'following', icon: 'fa-user-plus', label: 'متابع', value: followingCount });
+    if (canView('followers')) stats.push({ key: 'followers', icon: 'fa-user-friends', label: 'متابعيني', value: followersCount });
     if (canView('trustedBy')) stats.push({ key: 'trusted', icon: 'fa-handshake', label: 'ثقة', value: trustCount });
     if (canView('reports')) stats.push({ key: 'reports', icon: 'fa-flag', label: 'إبلاغ', value: reportCount });
     if (canView('collectibles')) stats.push({ key: 'collectibles', icon: 'fa-palette', label: 'مقتنيات', value: collectiblesCount, action: 'showUserCollectibles' });
@@ -3371,42 +3652,26 @@ if (canView('year')) {
 
     html += '</div>';
 
-   // ===== منطقة المحتوى الديناميكي =====
-html += '<div id="userProfileTabContent" class="profile-tab-content" style="min-height:100px;margin-top:0.5rem;">';
+    // ===== منطقة المحتوى الديناميكي =====
+    html += '<div id="userProfileTabContent" class="profile-tab-content" style="min-height:100px;margin-top:0.5rem;">';
 
-// التحقق من عدد القوائم المتاحة (غير المخفية)
-var visibleStatsCount = 0;
-// نقوم بحساب القوائم التي يمكن عرضها (نفس القائمة المستخدمة في stats)
-// نعيد استخدام نفس المنطق ولكن بدون بناء HTML
-var tempStats = [];
-if (canView('completed')) tempStats.push('completed');
-if (canView('badges')) tempStats.push('badges');
-if (canView('favorites')) tempStats.push('favorites');
-if (canView('votes')) tempStats.push('votes');
-if (canView('friendsList')) tempStats.push('friends');
-if (canView('trustedBy')) tempStats.push('trusted');
-if (canView('reports')) tempStats.push('reports');
-if (canView('collectibles')) tempStats.push('collectibles');
-if (canView('gifts')) tempStats.push('gifts');
-visibleStatsCount = tempStats.length;
+    var visibleStatsCount = stats.length;
 
-if (visibleStatsCount === 0) {
-    // جميع القوائم مخفية
-    html += '<div style="text-align:center;padding:1.5rem 0.5rem;color:var(--gray-400);">';
-    html += '<i class="fas fa-lock" style="font-size:2rem;display:block;margin-bottom:0.5rem;color:var(--gray-300);"></i>';
-    html += '<h4 style="color:var(--gray-500);margin-bottom:0.3rem;">🔒 قام المستخدم بإخفاء جميع قوائمه</h4>';
-    html += '<p style="font-size:0.85rem;">لا توجد قوائم متاحة للعرض حالياً</p>';
+    if (visibleStatsCount === 0) {
+        html += '<div style="text-align:center;padding:1.5rem 0.5rem;color:var(--gray-400);">';
+        html += '<i class="fas fa-lock" style="font-size:2rem;display:block;margin-bottom:0.5rem;color:var(--gray-300);"></i>';
+        html += '<h4 style="color:var(--gray-500);margin-bottom:0.3rem;">🔒 قام المستخدم بإخفاء جميع قوائمه</h4>';
+        html += '<p style="font-size:0.85rem;">لا توجد قوائم متاحة للعرض حالياً</p>';
+        html += '</div>';
+    } else {
+        html += '<div style="text-align:center;opacity:0.5;padding:0.5rem 0;font-size:0.8rem;">';
+        html += '<i class="fas fa-hand-pointer" style="font-size:1.2rem;display:block;margin-bottom:0.3rem;"></i>';
+        html += 'اختر أحد الأزرار أعلاه لعرض التفاصيل';
+        html += '</div>';
+    }
+
     html += '</div>';
-} else {
-    html += '<div style="text-align:center;opacity:0.5;padding:0.5rem 0;font-size:0.8rem;">';
-    html += '<i class="fas fa-hand-pointer" style="font-size:1.2rem;display:block;margin-bottom:0.3rem;"></i>';
-    html += 'اختر أحد الأزرار أعلاه لعرض التفاصيل';
-    html += '</div>';
-}
 
-html += '</div>';
-
-    
     // ===== CSS =====
     html += '<style id="modal-custom-style-' + uid + '">';
     var css = '';
@@ -3485,18 +3750,13 @@ html += '</div>';
 //  renderBlockedList - عرض قائمة المستخدمين المحظورين
 // ============================================================
 
-// ============================================================
-//  renderBlockedList - عرض جميع المحظورين (بما فيهم المشرفين)
-// ============================================================
-
 function renderBlockedList(container) {
     if (!currentUserData) {
         container.innerHTML = '<div class="empty-state-modern"><i class="fas fa-ban"></i><h4>يرجى تسجيل الدخول</h4></div>';
         return;
     }
-    
+
     var blockedUids = currentUserData.blockedUsers || [];
-    
     if (blockedUids.length === 0) {
         container.innerHTML = `
             <div class="empty-state-modern">
@@ -3507,12 +3767,11 @@ function renderBlockedList(container) {
         `;
         return;
     }
-    
-    // جلب جميع المستخدمين المحظورين (بما فيهم المشرفين)
+
     var blockedUsers = users.filter(function(u) {
         return blockedUids.indexOf(u.uid) !== -1;
     });
-    
+
     if (blockedUsers.length === 0) {
         container.innerHTML = `
             <div class="empty-state-modern">
@@ -3523,25 +3782,24 @@ function renderBlockedList(container) {
         `;
         return;
     }
-    
-    var html = `
-        <div style="margin-bottom:0.75rem;padding:0.5rem 1rem;background:#fef2f2;border-radius:12px;border:1px solid #fca5a5;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
-            <span style="font-weight:600;color:#dc2626;">
-                <i class="fas fa-ban"></i> المحظورين (${blockedUsers.length})
-            </span>
-            <button class="btn btn-sm btn-outline" onclick="unblockAllUsers()" style="color:#dc2626;border-color:#dc2626;">
-                <i class="fas fa-undo"></i> إلغاء حظر الكل
-            </button>
-        </div>
-        <div class="students-grid-modern">
-    `;
-    
+
+    var html = '<div class="users-cards-grid">';
     blockedUsers.forEach(function(user) {
-        html += buildBlockedUserCard(user);
+        html += buildUserCardSimple(user, true);
     });
-    
     html += '</div>';
     container.innerHTML = html;
+
+setTimeout(function() {
+    applyCustomizationsToUserCards();
+    // تطبيق التخصيصات الجديدة أيضاً
+    var customization = currentUserData ? currentUserData.customization || {} : {};
+    applyCardSizeToAll(customization.cardSize);
+    applyCursorStyleToAll(customization.cursorStyle);
+    applyBorderRadiusToAll(customization.borderRadius);
+    applyHoverEffectToAll(customization.hoverEffect);
+    applyOpacityToAll(customization.opacity);
+}, 50);
 }
 
 // ============================================================
@@ -3649,15 +3907,49 @@ function toggleUserActionsMenu(uid) {
     if (!menu) return;
     
     // إغلاق جميع القوائم الأخرى
-    document.querySelectorAll('.dropdown-menu').forEach(function(m) {
+    document.querySelectorAll('.user-mini-dropdown .dropdown-menu').forEach(function(m) {
         if (m.id !== 'userActionsMenu_' + uid) {
             m.style.display = 'none';
         }
     });
     
     // تبديل القائمة الحالية
-    menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+    var isVisible = menu.style.display === 'block';
+    menu.style.display = isVisible ? 'none' : 'block';
+    
+    if (!isVisible) {
+        // التحقق من المساحة المتاحة
+        var rect = menu.parentElement.getBoundingClientRect();
+        var spaceAbove = rect.top;
+        var spaceBelow = window.innerHeight - rect.bottom;
+        
+        // إذا كانت المساحة فوق أقل من 300px، نعرض للأسفل
+        if (spaceAbove < 300 && spaceBelow > 200) {
+            menu.classList.add('show-down');
+        } else {
+            menu.classList.remove('show-down');
+        }
+    }
 }
+
+// إغلاق القائمة عند النقر خارجها
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.user-mini-dropdown')) {
+        document.querySelectorAll('.user-mini-dropdown .dropdown-menu').forEach(function(menu) {
+            menu.style.display = 'none';
+            menu.classList.remove('show-down');
+        });
+    }
+});
+
+// إغلاق القائمة عند النقر خارجها
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.user-mini-dropdown')) {
+        document.querySelectorAll('.user-mini-dropdown .dropdown-menu').forEach(function(menu) {
+            menu.style.display = 'none';
+        });
+    }
+});
 
 // إغلاق القائمة عند النقر خارجها
 document.addEventListener('click', function(e) {
@@ -4002,21 +4294,36 @@ function updateStudentsStats() {
         return u.role !== 'admin' && !u.privacy?.hideFromUsersList; 
     }).length;
     
-    var friendsCount = currentUserData ? (currentUserData.friends || []).length : 0;
+    var followingCount = currentUserData ? (currentUserData.following || []).length : 0;
+    var followersCount = currentUserData ? (currentUserData.followers || []).length : 0;
     var trustedCount = currentUserData ? (currentUserData.trustedBy || []).length : 0;
     var reportsCount = currentUserData ? (currentUserData.reports || []).length : 0;
     var giftsCount = currentUserData ? (currentUserData.receivedGifts || []).length : 0;
     var bannedCount = isAdmin ? users.filter(function(u) { return u.banned === true && u.role !== 'admin'; }).length : 0;
     var blockedCount = currentUserData ? (currentUserData.blockedUsers || []).length : 0;
 
-    // تحديث الإحصائيات
+    // تحديث الإحصائيات - التحقق من وجود العناصر
     setElementText('totalStudentsCount', totalStudents);
-    setElementText('friendsCount', friendsCount);
+    setElementText('followingTabBadge', followingCount);
+    setElementText('followersTabBadge', followersCount);
+    setElementText('friendsTabBadge', followingCount); // للتوافق مع القوائم القديمة
     setElementText('trustedCount', trustedCount);
+    setElementText('trustedTabBadge', trustedCount);
     setElementText('reportsCount', reportsCount);
+    setElementText('reportsTabBadge', reportsCount);
     setElementText('giftsCount', giftsCount);
+    setElementText('giftsTabBadge', giftsCount);
     setElementText('blockedCount', blockedCount);
-setElementText('blockedTabBadge', blockedCount);
+    setElementText('blockedTabBadge', blockedCount);
+    
+    // تحديث عدد المتابعين والمتابعين في الملف الشخصي
+    var profileFollowing = document.getElementById('profileFollowingCount');
+    var profileFollowers = document.getElementById('profileFollowersCount');
+    if (profileFollowing) profileFollowing.textContent = followingCount;
+    if (profileFollowers) profileFollowers.textContent = followersCount;
+    
+    // تحديث شارات التبويبات
+    setElementText('allTabBadge', totalStudents);
     
     if (isAdmin) {
         var bannedCard = document.getElementById('bannedStatCard');
@@ -4026,13 +4333,6 @@ setElementText('blockedTabBadge', blockedCount);
         setElementText('bannedCount', bannedCount);
         setElementText('bannedTabBadge', bannedCount);
     }
-    
-    // تحديث شارات التبويبات
-    setElementText('allTabBadge', totalStudents);
-    setElementText('friendsTabBadge', friendsCount);
-    setElementText('trustedTabBadge', trustedCount);
-    setElementText('reportsTabBadge', reportsCount);
-    setElementText('giftsTabBadge', giftsCount);
 }
 
 // ============================================================
@@ -4041,7 +4341,11 @@ setElementText('blockedTabBadge', blockedCount);
 
 function setElementText(id, value) {
     var el = document.getElementById(id);
-    if (el) el.textContent = value;
+    if (el) {
+        el.textContent = value;
+    } else {
+        // console.warn('⚠️ Element not found:', id);
+    }
 }
 
 // ============================================================
@@ -4051,38 +4355,39 @@ function setElementText(id, value) {
 function switchStudentList(listType) {
     currentStudentList = listType;
     console.log('🔄 تبديل إلى:', listType);
-    
+
     // تحديث التبويبات
-    document.querySelectorAll('.students-tab').forEach(function(tab) {
+    document.querySelectorAll('.students-tab, .view-tab').forEach(function(tab) {
         tab.classList.remove('active');
         if (tab.dataset.view === listType) {
             tab.classList.add('active');
         }
     });
-    
+
     // إظهار/إخفاء الفلاتر
     var filters = document.getElementById('studentsFiltersContainer');
     if (filters) {
         filters.style.display = (listType === 'all') ? 'flex' : 'none';
     }
-    
-    // الحصول على الحاوية
+
     var container = document.getElementById('studentListContainer');
     if (!container) {
         console.error('❌ studentListContainer غير موجود');
         return;
     }
-    
+
     container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> جاري التحميل...</div>';
-    
-    // عرض القائمة المناسبة
+
     setTimeout(function() {
         switch(listType) {
             case 'all':
                 renderAllStudents(container);
                 break;
-            case 'friends':
-                renderFriendsList(container);
+            case 'following':
+                renderFollowingList(container);
+                break;
+            case 'followers':
+                renderFollowersList(container);
                 break;
             case 'trusted':
                 renderTrustedList(container);
@@ -4100,9 +4405,9 @@ function switchStudentList(listType) {
             case 'messages':
                 renderMessagesList(container);
                 break;
-                case 'blocked':
-    renderBlockedList(container);
-    break;
+            case 'blocked':
+                renderBlockedList(container);
+                break;
             default:
                 renderAllStudents(container);
         }
@@ -4115,12 +4420,10 @@ function switchStudentList(listType) {
 
 function renderAllStudents(container) {
     if (!container) return;
-    
     if (!users || users.length === 0) {
         container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> جاري تحميل المستخدمين...</div>';
         return;
     }
-    
     filterStudents();
 }
 
@@ -4133,38 +4436,37 @@ function filterStudents() {
     
     var container = document.getElementById('studentListContainer');
     if (!container) return;
-    
+
     var searchInput = document.getElementById('studentsSearchInput');
     var collegeSelect = document.getElementById('studentsFilterCollege');
     var yearSelect = document.getElementById('studentsFilterYear');
     var sortSelect = document.getElementById('studentsFilterSort');
-    
+
     var search = searchInput ? searchInput.value.trim().toLowerCase() : '';
     var college = collegeSelect ? collegeSelect.value : 'all';
     var year = yearSelect ? yearSelect.value : 'all';
     var sortBy = sortSelect ? sortSelect.value : 'name';
-    
+
     var filtered = users.filter(function(u) {
         if (u.role === 'admin') return false;
         if (u.privacy && u.privacy.hideFromUsersList) return false;
-        
         if (search) {
             var nameMatch = u.displayName && u.displayName.toLowerCase().includes(search);
             var emailMatch = u.email && u.email.toLowerCase().includes(search);
-            if (!nameMatch && !emailMatch) return false;
+            var usernameMatch = u.username && u.username.toLowerCase().includes(search); // <-- جديد
+            if (!nameMatch && !emailMatch && !usernameMatch) return false;
         }
         if (college !== 'all' && u.college !== college) return false;
         if (year !== 'all' && u.year !== year) return false;
         return true;
     });
-    
-    // ترتيب
+
     filtered.sort(function(a, b) {
         switch(sortBy) {
             case 'name': return (a.displayName || '').localeCompare(b.displayName || '');
             case 'points': 
-                var aP = calculateUserPoints(a).earnedPoints || 0;
-                var bP = calculateUserPoints(b).earnedPoints || 0;
+                var aP = calculateUserPoints(a).points || 0;
+                var bP = calculateUserPoints(b).points || 0;
                 return bP - aP;
             case 'votes': return (b.votes || 0) - (a.votes || 0);
             case 'friends': return (b.friends || []).length - (a.friends || []).length;
@@ -4173,10 +4475,10 @@ function filterStudents() {
             default: return 0;
         }
     });
-    
+
     studentsFilteredData = filtered;
     studentsCurrentPage = 1;
-    
+
     if (filtered.length === 0) {
         container.innerHTML = `
             <div class="empty-state-modern">
@@ -4188,19 +4490,32 @@ function filterStudents() {
         updatePagination();
         return;
     }
-    
+
+    // استخدام البطاقات الجديدة
     var start = (studentsCurrentPage - 1) * studentsPerPage;
     var end = start + studentsPerPage;
     var pageStudents = filtered.slice(start, end);
-    
-    var html = '<div class="students-grid-modern">';
+
+    var html = '<div class="users-cards-grid">';
     pageStudents.forEach(function(user) {
-        html += buildStudentCard(user);
+        html += buildUserCardSimple(user, true); // true = عرض معلومات إضافية
     });
     html += '</div>';
-    
+
     container.innerHTML = html;
     updatePagination();
+
+    // تطبيق التخصيصات على البطاقات
+setTimeout(function() {
+    applyCustomizationsToUserCards();
+    // تطبيق التخصيصات الجديدة أيضاً
+    var customization = currentUserData ? currentUserData.customization || {} : {};
+    applyCardSizeToAll(customization.cardSize);
+    applyCursorStyleToAll(customization.cursorStyle);
+    applyBorderRadiusToAll(customization.borderRadius);
+    applyHoverEffectToAll(customization.hoverEffect);
+    applyOpacityToAll(customization.opacity);
+}, 50);
 }
 
 // ============================================================
@@ -4213,32 +4528,40 @@ function renderFriendsList(container) {
         container.innerHTML = '<div class="empty-state-modern"><i class="fas fa-user-friends"></i><h4>يرجى تسجيل الدخول</h4></div>';
         return;
     }
-    
+
     var friendsUids = currentUserData.friends || [];
     var friends = users.filter(function(u) {
         return friendsUids.indexOf(u.uid) !== -1 && u.role !== 'admin';
     });
-    
+
     if (friends.length === 0) {
         container.innerHTML = `
             <div class="empty-state-modern">
                 <i class="fas fa-user-friends"></i>
                 <h4>لا يوجد أصدقاء</h4>
                 <p>قم بإضافة أصدقاء من خلال عرض ملفات الطلاب الأخرى</p>
-                <button class="btn btn-primary" onclick="switchStudentList('all')" style="margin-top:0.5rem;">
-                    <i class="fas fa-users"></i> عرض جميع الطلاب
-                </button>
             </div>
         `;
         return;
     }
-    
-    var html = '<div class="students-grid-modern">';
+
+    var html = '<div class="users-cards-grid">';
     friends.forEach(function(user) {
-        html += buildStudentCard(user);
+        html += buildUserCardSimple(user, true);
     });
     html += '</div>';
     container.innerHTML = html;
+
+setTimeout(function() {
+    applyCustomizationsToUserCards();
+    // تطبيق التخصيصات الجديدة أيضاً
+    var customization = currentUserData ? currentUserData.customization || {} : {};
+    applyCardSizeToAll(customization.cardSize);
+    applyCursorStyleToAll(customization.cursorStyle);
+    applyBorderRadiusToAll(customization.borderRadius);
+    applyHoverEffectToAll(customization.hoverEffect);
+    applyOpacityToAll(customization.opacity);
+}, 50);
 }
 
 // ============================================================
@@ -4472,36 +4795,24 @@ function loadChatsAlternative(container) {
 
 function renderMessagesList(container) {
     if (!currentUser) {
-        if (container) {
-            container.innerHTML = '<div class="empty-state-modern"><i class="fas fa-envelope"></i><h4>يرجى تسجيل الدخول</h4></div>';
-        }
+        container.innerHTML = '<div class="empty-state-modern"><i class="fas fa-envelope"></i><h4>يرجى تسجيل الدخول</h4></div>';
         return;
     }
-    
-    if (!container) {
-        console.error('❌ container غير موجود في renderMessagesList');
-        return;
-    }
-    
+
     container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> جاري تحميل المحادثات...</div>';
-    
-    // جلب المحادثات من خلال الأصدقاء
+
     var friendsUids = currentUserData?.friends || [];
-    
     if (friendsUids.length === 0) {
         container.innerHTML = `
             <div class="empty-state-modern">
                 <i class="fas fa-inbox"></i>
                 <h4>لا توجد محادثات</h4>
                 <p>ليس لديك أصدقاء بعد، أضف أصدقاء لبدء المحادثات</p>
-                <button class="btn btn-primary" onclick="switchStudentList('all')" style="margin-top:0.5rem;">
-                    <i class="fas fa-users"></i> عرض الطلاب
-                </button>
             </div>
         `;
         return;
     }
-    
+
     var chatPromises = friendsUids.map(function(uid) {
         var chatId = [currentUser.uid, uid].sort().join('_');
         return db.collection('chats').doc(chatId).get()
@@ -4513,17 +4824,16 @@ function renderMessagesList(container) {
             })
             .catch(function() { return null; });
     });
-    
+
     Promise.all(chatPromises)
         .then(function(results) {
             var chats = results.filter(function(r) { return r !== null; });
-            
             chats.sort(function(a, b) {
                 var aTime = a.lastTimestamp?.seconds || 0;
                 var bTime = b.lastTimestamp?.seconds || 0;
                 return bTime - aTime;
             });
-            
+
             if (chats.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state-modern">
@@ -4534,53 +4844,48 @@ function renderMessagesList(container) {
                 `;
                 return;
             }
-            
-            var html = '<div class="students-grid-modern">';
-            
+
+            var html = '<div class="users-cards-grid">';
             chats.forEach(function(chat) {
                 var otherUser = users.find(function(u) { return u.uid === chat.otherUid; });
                 if (otherUser) {
-                    // بناء بطاقة المستخدم مع معلومات المحادثة
-                    var cardHtml = buildStudentCard(otherUser);
-                    
-                    // إضافة آخر رسالة
+                    var cardHtml = buildUserCardSimple(otherUser, true);
+                    // إضافة معلومات آخر رسالة
                     var lastMessage = chat.lastMessage || 'لا توجد رسائل';
                     var isFromMe = chat.lastSender === currentUser.uid;
                     var time = chat.lastTimestamp?.seconds ? 
                         new Date(chat.lastTimestamp.seconds * 1000).toLocaleString('ar', { 
-                            day: '2-digit', 
-                            month: '2-digit', 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                        }) : 
-                        '';
-                    
-                    // تعديل البطاقة لإضافة معلومات المحادثة
+                            day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' 
+                        }) : '';
+
+                    // إضافة شريط آخر رسالة أسفل البطاقة
                     var modifiedCard = cardHtml.replace(
-                        '<div class="student-bottom">',
-                        `<div class="student-bottom">
-                            <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.7rem;color:var(--gray-500);width:100%;flex-wrap:wrap;">
-                                <i class="fas fa-comment" style="color:${isFromMe ? 'var(--primary)' : 'var(--gray-400)'};"></i>
-                                ${isFromMe ? '<span style="font-weight:600;color:var(--primary);">أنت:</span>' : ''}
-                                <span>${escapeHtml(lastMessage.length > 30 ? lastMessage.substring(0, 30) + '...' : lastMessage)}</span>
-                                <span style="font-size:0.55rem;color:var(--gray-400);margin-right:auto;">${time}</span>
+                        '</div>',
+                        `
+                            <div class="chat-last-message" style="font-size:0.55rem;color:var(--gray-400);padding-right:0.5rem;margin-top:0.1rem;display:flex;align-items:center;gap:0.3rem;border-top:1px solid var(--border-color);padding-top:0.15rem;">
+                                <i class="fas fa-comment" style="font-size:0.4rem;color:${isFromMe ? 'var(--primary)' : 'var(--gray-400)'};"></i>
+                                ${isFromMe ? '<span style="font-weight:600;color:var(--primary);font-size:0.5rem;">أنت:</span>' : ''}
+                                <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;">${escapeHtml(lastMessage.length > 30 ? lastMessage.substring(0, 30) + '...' : lastMessage)}</span>
+                                <span style="font-size:0.45rem;color:var(--gray-400);margin-right:auto;">${time}</span>
                             </div>
                         </div>
-                        <div class="student-bottom" style="border-top:none;padding-top:0;">`
-                    );
+                    `);
                     html += modifiedCard;
                 }
             });
-            
             html += '</div>';
             container.innerHTML = html;
-            
-            // تحديث عدد الرسائل - مع التحقق من وجود العناصر
-            var messagesEl = document.getElementById('messagesCount');
-            if (messagesEl) messagesEl.textContent = chats.length;
-            
-            var badgeEl = document.getElementById('messagesTabBadge');
-            if (badgeEl) badgeEl.textContent = chats.length;
+
+setTimeout(function() {
+    applyCustomizationsToUserCards();
+    // تطبيق التخصيصات الجديدة أيضاً
+    var customization = currentUserData ? currentUserData.customization || {} : {};
+    applyCardSizeToAll(customization.cardSize);
+    applyCursorStyleToAll(customization.cursorStyle);
+    applyBorderRadiusToAll(customization.borderRadius);
+    applyHoverEffectToAll(customization.hoverEffect);
+    applyOpacityToAll(customization.opacity);
+}, 50);
         })
         .catch(function(error) {
             console.error('Error loading chats:', error);
@@ -4589,9 +4894,6 @@ function renderMessagesList(container) {
                     <i class="fas fa-exclamation-circle" style="color:var(--warning);"></i>
                     <h4>حدث خطأ</h4>
                     <p>فشل تحميل المحادثات. يرجى المحاولة مرة أخرى.</p>
-                    <button class="btn btn-primary" onclick="renderMessagesList(document.getElementById('studentListContainer'))" style="margin-top:0.5rem;">
-                        <i class="fas fa-sync"></i> إعادة المحاولة
-                    </button>
                 </div>
             `;
         });
@@ -4763,6 +5065,10 @@ function createMessageModal() {
 //  تحديث openUserProfileTab - إصلاح عنوان قائمة الإبلاغات
 // ============================================================
 
+// ============================================================
+//  دوال عرض القوائم في مودال المستخدم
+// ============================================================
+
 function openUserProfileTab(tabKey, uid) {
     console.log('🔍 فتح علامة التبويب:', tabKey, 'للمستخدم:', uid);
     
@@ -4785,49 +5091,130 @@ function openUserProfileTab(tabKey, uid) {
         }
     }
     
-    var title = '';
-    var html = '';
+    var titles = {
+        'completed': '📚 المواد المجتازة',
+        'badges': '🏅 الشارات',
+        'favorites': '⭐ المواد المفضلة',
+        'votes': '🗳️ التصويتات',
+        'following': '👥 المتابعين',
+        'followers': '👤 المتابعين لي',
+        'trusted': '🤝 الثقات',
+        'reports': '🚩 البلاغات',
+        'collectibles': '🎨 المقتنيات',
+        'gifts': '🎁 الهدايا'
+    };
     
-    switch (tabKey) {
-        case 'completed':
-            title = '📚 المواد المجتازة';
-            html = buildCompletedList(user);
-            break;
-        case 'badges':
-            title = '🏅 الشارات';
-            html = buildBadgesList(user);
-            break;
-        case 'favorites':
-            title = '⭐ المواد المفضلة';
-            html = buildFavoritesList(user);
-            break;
-        case 'votes':
-            title = '🗳️ التصويتات';
-            html = buildVotesList(user);
-            break;
-        case 'friends':
-            title = '👥 الأصدقاء';
-            html = buildFriendsList(user);
-            break;
-        case 'trusted':
-            title = '🤝 الثقات';
-            html = buildTrustedList(user);
-            break;
-        case 'reports':
-            title = '🚩 قائمة الإبلاغات';
-            html = buildReportsList(user);
-            break;
-        default:
-            title = 'تفاصيل';
-            html = '<div style="text-align:center;color:var(--gray-400);padding:1rem;">لا توجد بيانات</div>';
-    }
+    var title = titles[tabKey] || 'تفاصيل';
     
     var titleEl = document.getElementById('userTabModalTitle');
     if (titleEl) {
-        titleEl.textContent = title + ' - ' + (user.displayName || 'مستخدم');
+        titleEl.innerHTML = `<i class="fas fa-list-ul"></i> ${title} - ${escapeHtml(user.displayName || 'مستخدم')}`;
     }
+    
+    var html = '';
+    switch (tabKey) {
+        case 'completed':
+            html = buildCompletedList(user);
+            break;
+        case 'badges':
+            html = buildBadgesList(user);
+            break;
+        case 'favorites':
+            html = buildFavoritesList(user);
+            break;
+        case 'votes':
+            html = buildVotesList(user);
+            break;
+        case 'following':
+            html = buildFollowingList(user);
+            break;
+        case 'followers':
+            html = buildFollowersList(user);
+            break;
+        case 'trusted':
+            html = buildTrustedList(user);
+            break;
+        case 'reports':
+            html = buildReportsList(user);
+            break;
+        default:
+            html = '<div style="text-align:center;color:var(--gray-400);padding:1rem;">لا توجد بيانات</div>';
+    }
+    
     content.innerHTML = html;
     openModal('userTabModal');
+}
+
+// ===== بناء قائمة المتابعين =====
+function buildFollowingList(user) {
+    var viewerUid = currentUser ? currentUser.uid : null;
+    if (!canViewUserData(user, 'following', viewerUid)) {
+        return '<div class="empty-state-modern"><i class="fas fa-lock"></i><h4>هذه القائمة مخفية</h4><p>المستخدم قام بإخفاء قائمة متابعيه</p></div>';
+    }
+    
+    var followingUids = user.following || [];
+    if (followingUids.length === 0) {
+        return '<div class="empty-state-modern"><i class="fas fa-user-plus"></i><h4>لا يتابع أحداً</h4><p>هذا المستخدم لا يتابع أي شخص بعد</p></div>';
+    }
+    
+    var html = '<div class="users-cards-grid" style="max-height:400px;overflow-y:auto;padding:0.25rem;">';
+    followingUids.forEach(function(uid) {
+        var person = users.find(function(u) { return u.uid === uid; });
+        if (person) {
+            // استخدام نفس بطاقة المستخدم مع التخصيصات
+            html += buildUserCardSimple(person, true);
+        }
+    });
+    html += '</div>';
+    
+    // تطبيق التخصيصات بعد إضافة البطاقات
+    setTimeout(function() {
+        applyCustomizationsToUserCards();
+        var customization = currentUserData ? currentUserData.customization || {} : {};
+        applyCardSizeToAll(customization.cardSize);
+        applyCursorStyleToAll(customization.cursorStyle);
+        applyBorderRadiusToAll(customization.borderRadius);
+        applyHoverEffectToAll(customization.hoverEffect);
+        applyOpacityToAll(customization.opacity);
+    }, 100);
+    
+    return html;
+}
+
+// ===== بناء قائمة المتابعين لي =====
+function buildFollowersList(user) {
+    var viewerUid = currentUser ? currentUser.uid : null;
+    if (!canViewUserData(user, 'followers', viewerUid)) {
+        return '<div class="empty-state-modern"><i class="fas fa-lock"></i><h4>هذه القائمة مخفية</h4><p>المستخدم قام بإخفاء قائمة متابعيه</p></div>';
+    }
+    
+    var followersUids = user.followers || [];
+    if (followersUids.length === 0) {
+        return '<div class="empty-state-modern"><i class="fas fa-user-friends"></i><h4>لا يوجد متابعين</h4><p>لم يتابع هذا المستخدم أحد بعد</p></div>';
+    }
+    
+    var html = '<div class="users-cards-grid" style="max-height:400px;overflow-y:auto;padding:0.25rem;">';
+    followersUids.forEach(function(uid) {
+        var person = users.find(function(u) { return u.uid === uid; });
+        if (person) {
+            // استخدام نفس بطاقة المستخدم مع التخصيصات
+            html += buildUserCardSimple(person, true);
+        }
+    });
+    html += '</div>';
+    
+    // تطبيق التخصيصات بعد إضافة البطاقات
+    setTimeout(function() {
+        applyCustomizationsToUserCards();
+        var customization = currentUserData ? currentUserData.customization || {} : {};
+        applyCardSizeToAll(customization.cardSize);
+        applyCursorStyleToAll(customization.cursorStyle);
+        applyBorderRadiusToAll(customization.borderRadius);
+        applyHoverEffectToAll(customization.hoverEffect);
+        applyOpacityToAll(customization.opacity);
+    }, 100);
+    
+    return html;
 }
 
 
@@ -5314,36 +5701,6 @@ function refreshCurrentUserProfileModal() {
 }
 
 // دوال بديلة (handlers) تستدعي الدوال الأصلية ثم تحديث المودال
-function handleSendFriend(uid) {
-    sendFriendRequest(uid).then(function() {
-        refreshCurrentUserProfileModal();
-        renderUsers();
-    });
-}
-function handleAcceptFriend(uid) {
-    acceptFriendRequest(uid).then(function() {
-        refreshCurrentUserProfileModal();
-        renderUsers();
-    });
-}
-function handleRejectFriend(uid) {
-    rejectFriendRequest(uid).then(function() {
-        refreshCurrentUserProfileModal();
-        renderUsers();
-    });
-}
-function handleCancelFriend(uid) {
-    cancelFriendRequest(uid).then(function() {
-        refreshCurrentUserProfileModal();
-        renderUsers();
-    });
-}
-function handleUnfriend(uid) {
-    unfriend(uid).then(function() {
-        refreshCurrentUserProfileModal();
-        renderUsers();
-    });
-}
 function handleTrustUser(uid) {
     trustUser(uid).then(function() {
         refreshCurrentUserProfileModal();
@@ -5428,16 +5785,17 @@ function renderStudentsPage() {
 // ============================================================
 
 function renderTrustedList(container) {
+    if (!container) return;
     if (!currentUserData) {
         container.innerHTML = '<div class="empty-state-modern"><i class="fas fa-handshake"></i><h4>يرجى تسجيل الدخول</h4></div>';
         return;
     }
-    
+
     var trustedUids = currentUserData.trustedBy || [];
     var trusted = users.filter(function(u) {
         return trustedUids.indexOf(u.uid) !== -1 && u.role !== 'admin';
     });
-    
+
     if (trusted.length === 0) {
         container.innerHTML = `
             <div class="empty-state-modern">
@@ -5448,13 +5806,24 @@ function renderTrustedList(container) {
         `;
         return;
     }
-    
-    var html = '<div class="students-grid-modern">';
+
+    var html = '<div class="users-cards-grid">';
     trusted.forEach(function(user) {
-        html += buildStudentCard(user);
+        html += buildUserCardSimple(user, true);
     });
     html += '</div>';
     container.innerHTML = html;
+
+setTimeout(function() {
+    applyCustomizationsToUserCards();
+    // تطبيق التخصيصات الجديدة أيضاً
+    var customization = currentUserData ? currentUserData.customization || {} : {};
+    applyCardSizeToAll(customization.cardSize);
+    applyCursorStyleToAll(customization.cursorStyle);
+    applyBorderRadiusToAll(customization.borderRadius);
+    applyHoverEffectToAll(customization.hoverEffect);
+    applyOpacityToAll(customization.opacity);
+}, 50);
 }
 
 // ============================================================
@@ -5462,16 +5831,17 @@ function renderTrustedList(container) {
 // ============================================================
 
 function renderReportsList(container) {
+    if (!container) return;
     if (!currentUserData) {
         container.innerHTML = '<div class="empty-state-modern"><i class="fas fa-flag"></i><h4>يرجى تسجيل الدخول</h4></div>';
         return;
     }
-    
+
     var reportsUids = currentUserData.reports || [];
     var reports = users.filter(function(u) {
         return reportsUids.indexOf(u.uid) !== -1 && u.role !== 'admin';
     });
-    
+
     if (reports.length === 0) {
         container.innerHTML = `
             <div class="empty-state-modern">
@@ -5482,13 +5852,24 @@ function renderReportsList(container) {
         `;
         return;
     }
-    
-    var html = '<div class="students-grid-modern">';
+
+    var html = '<div class="users-cards-grid">';
     reports.forEach(function(user) {
-        html += buildStudentCard(user);
+        html += buildUserCardSimple(user, true);
     });
     html += '</div>';
     container.innerHTML = html;
+
+setTimeout(function() {
+    applyCustomizationsToUserCards();
+    // تطبيق التخصيصات الجديدة أيضاً
+    var customization = currentUserData ? currentUserData.customization || {} : {};
+    applyCardSizeToAll(customization.cardSize);
+    applyCursorStyleToAll(customization.cursorStyle);
+    applyBorderRadiusToAll(customization.borderRadius);
+    applyHoverEffectToAll(customization.hoverEffect);
+    applyOpacityToAll(customization.opacity);
+}, 50);
 }
 // إضافة CSS للـ list-header
 // في style.css أضف:
@@ -5522,11 +5903,11 @@ function renderBannedList(container) {
         container.innerHTML = '<div class="empty-state-modern"><i class="fas fa-lock"></i><h4>غير مصرح</h4><p>هذه القائمة للمشرفين فقط</p></div>';
         return;
     }
-    
+
     var banned = users.filter(function(u) {
         return u.banned === true && u.role !== 'admin';
     });
-    
+
     if (banned.length === 0) {
         container.innerHTML = `
             <div class="empty-state-modern">
@@ -5537,18 +5918,24 @@ function renderBannedList(container) {
         `;
         return;
     }
-    
-    var html = '<div style="margin-bottom:0.75rem;padding:0.5rem 1rem;background:#fef2f2;border-radius:12px;border:1px solid #fca5a5;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">';
-    html += '<span style="font-weight:600;color:#dc2626;"><i class="fas fa-ban"></i> المحظورين (' + banned.length + ')</span>';
-    html += '<span style="font-size:0.8rem;color:var(--gray-400);">🚫 ' + banned.length + ' محظور</span>';
-    html += '</div>';
-    
-    html += '<div class="students-grid-modern">';
+
+    var html = '<div class="users-cards-grid">';
     banned.forEach(function(user) {
-        html += buildStudentCard(user);
+        html += buildUserCardSimple(user, true);
     });
     html += '</div>';
     container.innerHTML = html;
+
+setTimeout(function() {
+    applyCustomizationsToUserCards();
+    // تطبيق التخصيصات الجديدة أيضاً
+    var customization = currentUserData ? currentUserData.customization || {} : {};
+    applyCardSizeToAll(customization.cardSize);
+    applyCursorStyleToAll(customization.cursorStyle);
+    applyBorderRadiusToAll(customization.borderRadius);
+    applyHoverEffectToAll(customization.hoverEffect);
+    applyOpacityToAll(customization.opacity);
+}, 50);
 }
 
 // ============================================================
@@ -5560,9 +5947,8 @@ function renderGiftsList(container) {
         container.innerHTML = '<div class="empty-state-modern"><i class="fas fa-gift"></i><h4>يرجى تسجيل الدخول</h4></div>';
         return;
     }
-    
+
     var gifts = currentUserData.receivedGifts || [];
-    
     if (gifts.length === 0) {
         container.innerHTML = `
             <div class="empty-state-modern">
@@ -5573,57 +5959,71 @@ function renderGiftsList(container) {
         `;
         return;
     }
-    
-    var totalPoints = gifts.reduce(function(sum, g) { return sum + (g.amount || 0); }, 0);
-    var senders = new Set(gifts.map(function(g) { return g.from; })).size;
-    
-    var html = `
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;margin-bottom:0.75rem;">
-            <div class="gifts-stat" style="text-align:center;padding:0.5rem;background:var(--gray-50);border-radius:12px;border:1px solid var(--border-color);">
-                <i class="fas fa-gift" style="color:#f59e0b;font-size:1.2rem;display:block;"></i>
-                <span style="font-size:1.2rem;font-weight:800;">${gifts.length}</span>
-                <label style="font-size:0.6rem;color:var(--gray-400);display:block;">عدد الهدايا</label>
-            </div>
-            <div class="gifts-stat" style="text-align:center;padding:0.5rem;background:var(--gray-50);border-radius:12px;border:1px solid var(--border-color);">
-                <i class="fas fa-coins" style="color:#f59e0b;font-size:1.2rem;display:block;"></i>
-                <span style="font-size:1.2rem;font-weight:800;">${totalPoints}</span>
-                <label style="font-size:0.6rem;color:var(--gray-400);display:block;">إجمالي النقاط</label>
-            </div>
-            <div class="gifts-stat" style="text-align:center;padding:0.5rem;background:var(--gray-50);border-radius:12px;border:1px solid var(--border-color);">
-                <i class="fas fa-users" style="color:#f59e0b;font-size:1.2rem;display:block;"></i>
-                <span style="font-size:1.2rem;font-weight:800;">${senders}</span>
-                <label style="font-size:0.6rem;color:var(--gray-400);display:block;">عدد المرسلين</label>
-            </div>
-        </div>
-    `;
-    
-    html += '<div style="max-height:500px;overflow-y:auto;">';
-    var sortedGifts = gifts.slice().reverse();
-    sortedGifts.forEach(function(gift) {
-        var sender = users.find(function(u) { return u.uid === gift.from; });
-        var senderName = sender ? (sender.displayName || 'مستخدم') : 'مستخدم غير معروف';
-        var senderAvatar = sender ? (sender.avatar || '') : '';
-        var date = gift.timestamp ? new Date(gift.timestamp).toLocaleDateString('ar') : 'تاريخ غير معروف';
-        var amount = gift.amount || 0;
-        var reason = gift.reason || 'هدية';
-        
-        html += `
-            <div class="gift-item-modern" onclick="${sender ? `viewUserProfile('${gift.from}')` : ''}" style="cursor:${sender ? 'pointer' : 'default'};display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;background:var(--gray-50);border-radius:10px;border:1px solid var(--border-color);margin-bottom:0.3rem;">
-                <img src="${senderAvatar}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'" />
-                <div style="flex:1;">
-                    <div style="font-weight:600;font-size:0.8rem;">${escapeHtml(senderName)}</div>
-                    <div style="font-size:0.7rem;color:var(--gray-500);">${escapeHtml(reason)}</div>
-                </div>
-                <div style="text-align:center;padding:0.1rem 0.5rem;background:#dbeafe;border-radius:8px;">
-                    <span style="font-weight:700;color:#1d4ed8;">${amount}</span>
-                    <span style="font-size:0.5rem;color:var(--gray-400);display:block;">نقطة</span>
-                </div>
-                <div style="font-size:0.6rem;color:var(--gray-400);">${date}</div>
+
+    // تجميع الهدايا حسب المرسل
+    var senderMap = {};
+    gifts.forEach(function(gift) {
+        if (!senderMap[gift.from]) {
+            senderMap[gift.from] = { total: 0, count: 0, lastGift: gift };
+        }
+        senderMap[gift.from].total += gift.amount || 0;
+        senderMap[gift.from].count++;
+        if (!senderMap[gift.from].lastGift || new Date(gift.timestamp) > new Date(senderMap[gift.from].lastGift.timestamp)) {
+            senderMap[gift.from].lastGift = gift;
+        }
+    });
+
+    var senders = Object.keys(senderMap);
+    var senderUsers = users.filter(function(u) {
+        return senders.indexOf(u.uid) !== -1 && u.role !== 'admin';
+    });
+
+    // ترتيب حسب عدد الهدايا
+    senderUsers.sort(function(a, b) {
+        return (senderMap[b.uid]?.count || 0) - (senderMap[a.uid]?.count || 0);
+    });
+
+    if (senderUsers.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state-modern">
+                <i class="fas fa-gift"></i>
+                <h4>لا يوجد مرسلين</h4>
+                <p>لم يتم العثور على معلومات المرسلين</p>
             </div>
         `;
+        return;
+    }
+
+    var html = '<div class="users-cards-grid">';
+    senderUsers.forEach(function(user) {
+        var data = senderMap[user.uid] || { total: 0, count: 0 };
+        var cardHtml = buildUserCardSimple(user, true);
+        // إضافة معلومات الهدايا
+        var modifiedCard = cardHtml.replace(
+            '</div>',
+            `
+                <div class="gift-info" style="display:flex;gap:0.5rem;font-size:0.55rem;color:var(--gray-400);padding-right:0.5rem;margin-top:0.1rem;border-top:1px solid var(--border-color);padding-top:0.15rem;">
+                    <span><i class="fas fa-gift" style="color:#f59e0b;"></i> ${data.count} هدية</span>
+                    <span><i class="fas fa-coins" style="color:#f59e0b;"></i> ${data.total} نقطة</span>
+                    ${data.lastGift?.reason ? `<span><i class="fas fa-quote-right"></i> ${escapeHtml(data.lastGift.reason.substring(0, 15))}${data.lastGift.reason.length > 15 ? '...' : ''}</span>` : ''}
+                </div>
+            </div>
+        `);
+        html += modifiedCard;
     });
     html += '</div>';
     container.innerHTML = html;
+
+setTimeout(function() {
+    applyCustomizationsToUserCards();
+    // تطبيق التخصيصات الجديدة أيضاً
+    var customization = currentUserData ? currentUserData.customization || {} : {};
+    applyCardSizeToAll(customization.cardSize);
+    applyCursorStyleToAll(customization.cursorStyle);
+    applyBorderRadiusToAll(customization.borderRadius);
+    applyHoverEffectToAll(customization.hoverEffect);
+    applyOpacityToAll(customization.opacity);
+}, 50);
 }
 
 // ============================================================
@@ -5799,7 +6199,6 @@ function buildStudentCard(user) {
         </div>`;
     }
 
-    var relationship = getFriendshipStatus(uid);
     var isFriend = relationship === 'friend';
     var isPendingFromMe = relationship === 'pending_from_me';
     var isPendingFromThem = relationship === 'pending_from_them';
@@ -5866,10 +6265,6 @@ function buildStudentCard(user) {
             </div>
             <div class="student-actions" onclick="event.stopPropagation();">
                 ${!isCurrentUser ? `
-                    ${!isFriend && !isPendingFromMe && !isPendingFromThem ? `<button class="btn btn-primary btn-sm" onclick="sendFriendRequest('${uid}')"><i class="fas fa-user-plus"></i></button>` : ''}
-                    ${isPendingFromMe ? `<button class="btn btn-warning btn-sm" onclick="cancelFriendRequest('${uid}')"><i class="fas fa-clock"></i></button>` : ''}
-                    ${isPendingFromThem ? `<button class="btn btn-success btn-sm" onclick="acceptFriendRequest('${uid}')"><i class="fas fa-check"></i></button><button class="btn btn-danger btn-sm" onclick="rejectFriendRequest('${uid}')"><i class="fas fa-times"></i></button>` : ''}
-                    ${isFriend ? `<button class="btn btn-danger btn-sm" onclick="unfriend('${uid}')"><i class="fas fa-user-minus"></i></button>` : ''}
                     <button class="btn btn-outline btn-sm" onclick="viewUserProfile('${uid}')"><i class="fas fa-user"></i></button>
                     ${isAdmin && !isCurrentUser ? `<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();banUser('${uid}')" style="color:var(--danger);"><i class="fas fa-ban"></i></button>` : ''}
                 ` : `<span class="self-label">👤 هذا أنت</span>`}
@@ -5946,61 +6341,6 @@ function changeStudentsPage(page) {
     }
 }
 
-// ============================================================
-//  تحديث دوال الأصدقاء لتحديث صفحة الطلاب تلقائياً
-// ============================================================
-
-// تعديل دوال الأصدقاء لإعادة تحميل صفحة الطلاب
-var originalSendFriendRequest = sendFriendRequest;
-sendFriendRequest = async function(uid) {
-    await originalSendFriendRequest(uid);
-    if (document.getElementById('page-users')?.classList.contains('active')) {
-        setTimeout(function() {
-            filterStudents();
-        }, 500);
-    }
-};
-
-var originalAcceptFriendRequest = acceptFriendRequest;
-acceptFriendRequest = async function(uid) {
-    await originalAcceptFriendRequest(uid);
-    if (document.getElementById('page-users')?.classList.contains('active')) {
-        setTimeout(function() {
-            filterStudents();
-        }, 500);
-    }
-};
-
-var originalRejectFriendRequest = rejectFriendRequest;
-rejectFriendRequest = async function(uid) {
-    await originalRejectFriendRequest(uid);
-    if (document.getElementById('page-users')?.classList.contains('active')) {
-        setTimeout(function() {
-            filterStudents();
-        }, 500);
-    }
-};
-
-var originalUnfriend = unfriend;
-unfriend = async function(uid) {
-    await originalUnfriend(uid);
-    if (document.getElementById('page-users')?.classList.contains('active')) {
-        setTimeout(function() {
-            filterStudents();
-        }, 500);
-    }
-};
-
-var originalCancelFriendRequest = cancelFriendRequest;
-cancelFriendRequest = async function(uid) {
-    await originalCancelFriendRequest(uid);
-    if (document.getElementById('page-users')?.classList.contains('active')) {
-        setTimeout(function() {
-            filterStudents();
-        }, 500);
-    }
-};
-
 async function refreshUsersData() {
     try {
         var usersSnap = await db.collection('users').get();
@@ -6046,13 +6386,23 @@ function renderUsers() {
         return;
     }
 
-    var html = '';
-    for (var i = 0; i < filtered.length; i++) {
-        var user = filtered[i];
-        // نستخدم buildStudentCard الجديدة
-        html += buildStudentCard(user);
-    }
+    var html = '<div class="users-cards-grid">';
+    filtered.forEach(function(user) {
+        html += buildUserCardSimple(user, true);
+    });
+    html += '</div>';
     usersList.innerHTML = html;
+
+setTimeout(function() {
+    applyCustomizationsToUserCards();
+    // تطبيق التخصيصات الجديدة أيضاً
+    var customization = currentUserData ? currentUserData.customization || {} : {};
+    applyCardSizeToAll(customization.cardSize);
+    applyCursorStyleToAll(customization.cursorStyle);
+    applyBorderRadiusToAll(customization.borderRadius);
+    applyHoverEffectToAll(customization.hoverEffect);
+    applyOpacityToAll(customization.opacity);
+}, 50);
 }
 
 // ============================================================
@@ -6248,330 +6598,6 @@ async function toggleCompleted(courseId) {
     }
 }
 
-// ============================================================
-//  نظام الأصدقاء المتقدم (مع إشعارات)
-// ============================================================
-
-// إرسال طلب صداقة
-async function sendFriendRequest(uid) {
-    if (isUserBlocked(uid) || isUserBlockedBy(uid)) {
-        showToast('لا يمكنك إرسال طلب صداقة لهذا المستخدم', 'error');
-        return;
-    }
-    if (!currentUser) { showToast('يرجى تسجيل الدخول', 'error'); return; }
-    if (uid === currentUser.uid) { showToast('لا يمكنك إضافة نفسك', 'warning'); return; }
-    if (currentUserData && currentUserData.banned) {
-        showToast('حسابك محظور، لا يمكنك إرسال طلبات صداقة', 'error');
-        return;
-    }
-    // التحقق من وجود currentUserData
-    if (!currentUserData) {
-        showToast('يرجى تحديث الصفحة', 'error');
-        return;
-    }
-
-    try {
-        const targetRef = db.collection('users').doc(uid);
-        const targetDoc = await targetRef.get();
-        if (!targetDoc.exists) { showToast('المستخدم غير موجود', 'error'); return; }
-        const targetData = targetDoc.data();
-
-        if (targetData.privacy?.lockProfile) {
-            showToast('هذا المستخدم قام بقفل ملفه الشخصي', 'warning');
-            return;
-        }
-
-        // التحقق من العلاقة الحالية
-        const friends = currentUserData.friends || [];
-        if (friends.includes(uid)) {
-            showToast('أنتم أصدقاء بالفعل', 'warning');
-            return;
-        }
-        const sentRequests = currentUserData.sentRequests || [];
-        if (sentRequests.includes(uid)) {
-            showToast('لقد أرسلت طلب صداقة بالفعل', 'warning');
-            return;
-        }
-        const pendingRequests = currentUserData.pendingRequests || [];
-        if (pendingRequests.includes(uid)) {
-            showToast('طلب صداقة قيد الانتظار من هذا المستخدم', 'info');
-            return;
-        }
-
-        // تحديث المستخدم الحالي
-        const newSentRequests = [...sentRequests, uid];
-        await db.collection('users').doc(currentUser.uid).update({
-            sentRequests: newSentRequests
-        });
-
-        // تحديث الطرف الآخر
-        const targetPending = targetData.pendingRequests || [];
-        if (!targetPending.includes(currentUser.uid)) {
-            await targetRef.update({
-                pendingRequests: [...targetPending, currentUser.uid]
-            });
-        }
-
-        // تحديث البيانات المحلية
-        currentUserData.sentRequests = newSentRequests;
-        updateUserInList(currentUserData); // تحديث في قائمة users
-
-        // إرسال إشعار للطرف الآخر
-        await sendNotification(uid, {
-            message: `📩 ${currentUserData.displayName || currentUser.email} أرسل لك طلب صداقة`,
-            type: 'friend',
-            link: '/users',
-            data: { senderUid: currentUser.uid } // نضيف بيانات إضافية
-        });
-
-        showToast('✅ تم إرسال طلب الصداقة بنجاح!', 'success');
-        renderUsers(); // تحديث الواجهة فوراً
-       return; // إعادة Promise
-
-    } catch (error) {
-        console.error('Error sending friend request:', error);
-        showToast('حدث خطأ: ' + error.message, 'error');
-    }
-}
-
-// قبول طلب صداقة
-async function acceptFriendRequest(uid) {
-    if (!currentUser || !currentUserData) {
-        showToast('يرجى تسجيل الدخول', 'error');
-        return;
-    }
-
-    try {
-        const currentUserRef = db.collection('users').doc(currentUser.uid);
-        const currentDoc = await currentUserRef.get();
-        const currentData = currentDoc.data();
-
-        // إزالة من قائمة الطلبات المعلقة
-        let pendingRequests = currentData.pendingRequests || [];
-        const idx = pendingRequests.indexOf(uid);
-        if (idx === -1) {
-            showToast('لا يوجد طلب صداقة من هذا المستخدم', 'warning');
-            return;
-        }
-        pendingRequests.splice(idx, 1);
-
-        // إضافة إلى الأصدقاء
-        let friends = currentData.friends || [];
-        if (!friends.includes(uid)) {
-            friends.push(uid);
-        }
-
-        // تحديث المستخدم الحالي
-        await currentUserRef.update({
-            pendingRequests: pendingRequests,
-            friends: friends
-        });
-
-        // تحديث الطرف الآخر
-        const targetRef = db.collection('users').doc(uid);
-        const targetDoc = await targetRef.get();
-        if (targetDoc.exists) {
-            const targetData = targetDoc.data();
-            let targetSentRequests = targetData.sentRequests || [];
-            const sentIdx = targetSentRequests.indexOf(currentUser.uid);
-            if (sentIdx !== -1) {
-                targetSentRequests.splice(sentIdx, 1);
-            }
-            let targetFriends = targetData.friends || [];
-            if (!targetFriends.includes(currentUser.uid)) {
-                targetFriends.push(currentUser.uid);
-            }
-            await targetRef.update({
-                sentRequests: targetSentRequests,
-                friends: targetFriends
-            });
-        }
-
-        // تحديث البيانات المحلية
-        currentUserData.pendingRequests = pendingRequests;
-        currentUserData.friends = friends;
-        updateUserInList(currentUserData);
-
-        // تحديث المستخدم الآخر في قائمة users إذا كان موجوداً
-        const targetUser = users.find(u => u.uid === uid);
-        if (targetUser) {
-            targetUser.friends = targetUser.friends || [];
-            if (!targetUser.friends.includes(currentUser.uid)) {
-                targetUser.friends.push(currentUser.uid);
-            }
-            targetUser.sentRequests = (targetUser.sentRequests || []).filter(id => id !== currentUser.uid);
-        }
-
-        // إرسال إشعار للمرسل
-        await sendNotification(uid, {
-            message: `✅ ${currentUserData.displayName || currentUser.email} قبل طلب صداقتك`,
-            type: 'friend',
-            link: '/users',
-            data: { senderUid: currentUser.uid }
-        });
-
-        showToast('✅ تم قبول طلب الصداقة!', 'success');
-        renderUsers(); // تحديث الواجهة
-       return; // إعادة Promise
-
-    } catch (error) {
-        console.error('Error accepting friend request:', error);
-        showToast('حدث خطأ: ' + error.message, 'error');
-    }
-}
-
-
-
-// رفض طلب صداقة
-async function rejectFriendRequest(uid) {
-    if (!currentUser || !currentUserData) {
-        showToast('يرجى تسجيل الدخول', 'error');
-        return;
-    }
-
-    try {
-        const currentUserRef = db.collection('users').doc(currentUser.uid);
-        const currentDoc = await currentUserRef.get();
-        const currentData = currentDoc.data();
-
-        let pendingRequests = currentData.pendingRequests || [];
-        const idx = pendingRequests.indexOf(uid);
-        if (idx === -1) {
-            showToast('لا يوجد طلب صداقة من هذا المستخدم', 'warning');
-            return;
-        }
-        pendingRequests.splice(idx, 1);
-        await currentUserRef.update({ pendingRequests: pendingRequests });
-
-        // إزالة من sentRequests عند الطرف الآخر
-        const targetRef = db.collection('users').doc(uid);
-        const targetDoc = await targetRef.get();
-        if (targetDoc.exists) {
-            const targetData = targetDoc.data();
-            const sentRequests = targetData.sentRequests || [];
-            const sentIdx = sentRequests.indexOf(currentUser.uid);
-            if (sentIdx !== -1) {
-                sentRequests.splice(sentIdx, 1);
-                await targetRef.update({ sentRequests: sentRequests });
-            }
-        }
-
-        // تحديث محلي
-        currentUserData.pendingRequests = pendingRequests;
-        updateUserInList(currentUserData);
-
-        showToast('تم رفض طلب الصداقة', 'warning');
-        renderUsers();
-       return; // إعادة Promise
-
-    } catch (error) {
-        console.error('Error rejecting friend request:', error);
-        showToast('حدث خطأ: ' + error.message, 'error');
-    }
-}
-
-// إلغاء الصداقة
-async function unfriend(uid) {
-    if (!currentUser || !currentUserData) {
-        showToast('يرجى تسجيل الدخول', 'error');
-        return;
-    }
-    if (!confirm('هل أنت متأكد من إلغاء الصداقة؟')) return;
-
-    try {
-        const currentUserRef = db.collection('users').doc(currentUser.uid);
-        const currentDoc = await currentUserRef.get();
-        const currentData = currentDoc.data();
-
-        let friends = currentData.friends || [];
-        const idx = friends.indexOf(uid);
-        if (idx !== -1) {
-            friends.splice(idx, 1);
-            await currentUserRef.update({ friends: friends });
-        }
-
-        // تحديث الطرف الآخر
-        const targetRef = db.collection('users').doc(uid);
-        const targetDoc = await targetRef.get();
-        if (targetDoc.exists) {
-            const targetData = targetDoc.data();
-            let targetFriends = targetData.friends || [];
-            const targetIdx = targetFriends.indexOf(currentUser.uid);
-            if (targetIdx !== -1) {
-                targetFriends.splice(targetIdx, 1);
-                await targetRef.update({ friends: targetFriends });
-            }
-        }
-
-        // تحديث محلي
-        currentUserData.friends = friends;
-        updateUserInList(currentUserData);
-
-        showToast('تم إلغاء الصداقة', 'warning');
-        renderUsers();
-       return; // إعادة Promise
-
-    } catch (error) {
-        console.error('Error unfriending:', error);
-        showToast('حدث خطأ: ' + error.message, 'error');
-    }
-}
-
-// إلغاء طلب صداقة مرسل
-async function cancelFriendRequest(uid) {
-    if (!currentUser || !currentUserData) {
-        showToast('يرجى تسجيل الدخول', 'error');
-        return;
-    }
-
-    try {
-        const currentUserRef = db.collection('users').doc(currentUser.uid);
-        const currentDoc = await currentUserRef.get();
-        const currentData = currentDoc.data();
-
-        let sentRequests = currentData.sentRequests || [];
-        const idx = sentRequests.indexOf(uid);
-        if (idx === -1) {
-            showToast('لا يوجد طلب مرسل لهذا المستخدم', 'warning');
-            return;
-        }
-        sentRequests.splice(idx, 1);
-        await currentUserRef.update({ sentRequests: sentRequests });
-
-        // إزالة من pendingRequests للطرف الآخر
-        const targetRef = db.collection('users').doc(uid);
-        const targetDoc = await targetRef.get();
-        if (targetDoc.exists) {
-            const targetData = targetDoc.data();
-            let targetPending = targetData.pendingRequests || [];
-            const pendingIdx = targetPending.indexOf(currentUser.uid);
-            if (pendingIdx !== -1) {
-                targetPending.splice(pendingIdx, 1);
-                await targetRef.update({ pendingRequests: targetPending });
-            }
-        }
-
-        // تحديث محلي
-        currentUserData.sentRequests = sentRequests;
-        updateUserInList(currentUserData);
-
-        showToast('تم إلغاء طلب الصداقة', 'warning');
-        renderUsers();
-       return; // إعادة Promise
-
-    } catch (error) {
-        console.error('Error canceling friend request:', error);
-        showToast('حدث خطأ: ' + error.message, 'error');
-    }
-}
-
-
-
-// ===== دوال مساعدة للتحكم في المودالات =====
-
-// التحقق من وجود مودال مفتوح
-
-
 // الحصول على آخر مودال مفتوح
 function getTopModal() {
     if (modalStack.length === 0) return null;
@@ -6639,60 +6665,184 @@ async function updateProfileUI() {
         return;
     }
     window._updatingProfile = true;
-        try {
+    
+    try {
         if (!currentUserData || !currentUser) {
             window._updatingProfile = false;
             return;
         }
 
-    if (!currentUserData || !currentUser) return;
-    if (profileName) { profileName.textContent = currentUserData.displayName || currentUser.email; }
-    if (profileEmail) { profileEmail.textContent = currentUser.email; }
-    if (profileRole) { profileRole.textContent = currentUserData.role === 'admin' ? '👑 مشرف' : '🎓 طالب'; }
-    if (profileCollege) { profileCollege.value = currentUserData.college || ''; }
-    if (profileYear) { profileYear.value = currentUserData.year || '1'; }
-    if (profileBio) { profileBio.value = currentUserData.bio || ''; }
-    if (profileBranch) { profileBranch.value = currentUserData.branch || ''; }
-    if (profileAvatar && currentUserData.avatar) { profileAvatar.src = currentUserData.avatar; }
-    var favCount = (currentUserData.favorites || []).length;
-    var compCount = (currentUserData.completed || []).length;
-    var trustCount = (currentUserData.trustedBy || []).length;
-    if (profileFavCount) profileFavCount.textContent = favCount;
-    if (profileCompleteCount) profileCompleteCount.textContent = compCount;
-    if (profileVoteCount) profileVoteCount.textContent = currentUserData.votes || 0;
-    if (profileTrustCount) profileTrustCount.textContent = trustCount;
-    updateBadges();
-    updateAdvancedBadges();
-    var collegeId = profileCollege ? profileCollege.value : '';
-    var select = profileSpecialty;
-    if (select) {
-        select.innerHTML = '<option value="">اختر التخصص</option>';
-        allSpecialties.filter(function(s) { return s.collegeId === collegeId; }).forEach(function(spec) {
-            var opt = document.createElement('option');
-            opt.value = spec.id;
-            opt.textContent = spec.name + (spec.hours ? ' (' + spec.hours + ' س)' : '');
-            if (spec.id === currentUserData.specialty) opt.selected = true;
-            select.appendChild(opt);
-        });
+        console.log('🔄 تحديث الملف الشخصي...');
+
+        // 1. تحديث الاسم
+        if (profileName) {
+            profileName.textContent = currentUserData.displayName || currentUser.email;
+        }
+
+        // 2. تحديث اسم المستخدم
+        const usernameSpan = document.getElementById('profileUsername');
+        const usernameDisplay = document.getElementById('profileUsernameDisplay');
+        if (usernameSpan && usernameDisplay) {
+if (currentUserData.username) {
+    usernameSpan.textContent = currentUserData.username;
+    usernameSpan.style.color = 'var(--gray-500)'; // ✅ أصبح رمادياً
+    usernameDisplay.innerHTML = `
+        <span>${currentUserData.username}</span>
+        <i class="fas fa-at"></i>
+    `;
+    usernameDisplay.style.display = 'inline-flex';
+} else {
+    usernameSpan.textContent = 'غير محدد';
+    usernameSpan.style.color = 'var(--gray-400)';
+    usernameDisplay.innerHTML = `
+        <span>غير محدد</span>
+        <i class="fas fa-at"></i>
+    `;
+    usernameDisplay.style.display = 'inline-flex';
+}
+        }
+
+    // تطبيق الشارة المميزة
+    if (currentUserData && currentUserData.customization) {
+        var featured = currentUserData.customization.featuredBadge;
+        if (featured && featured !== 'none') {
+            applyFeaturedBadgeToMain(featured);
+        }
     }
-    renderFavoriteCourses();
-    renderCompletedCourses();
-    updateUserInList(currentUserData);
-           // تحديث الشارات
+
+        // 3. تحديث البريد الإلكتروني
+        if (profileEmail) {
+            profileEmail.textContent = currentUser.email;
+        }
+
+        // 4. تحديث الدور
+        if (profileRole) {
+            var isAdminUser = currentUserData.role === 'admin';
+            var isSuperAdmin = currentUserData.isSuperAdmin || false;
+            
+            profileRole.textContent = '';
+            if (isSuperAdmin) {
+                profileRole.textContent = '👑 المشرف الرئيسي';
+                profileRole.style.background = 'linear-gradient(135deg, #ffd700, #f59e0b)';
+                profileRole.style.color = '#78350f';
+                profileRole.style.fontWeight = '700';
+                profileRole.style.padding = '0.25rem 1rem';
+                profileRole.style.borderRadius = '20px';
+            } else if (isAdminUser) {
+                profileRole.textContent = '🛡️ مشرف';
+                profileRole.style.background = 'var(--primary-light)';
+                profileRole.style.color = 'var(--primary-dark)';
+                profileRole.style.fontWeight = '600';
+                profileRole.style.padding = '0.25rem 1rem';
+                profileRole.style.borderRadius = '20px';
+            } else {
+                profileRole.textContent = '🎓 طالب';
+                profileRole.style.background = 'var(--gray-100)';
+                profileRole.style.color = 'var(--gray-600)';
+                profileRole.style.fontWeight = '600';
+                profileRole.style.padding = '0.25rem 1rem';
+                profileRole.style.borderRadius = '20px';
+            }
+        }
+
+        // 5. تحديث السيرة الذاتية
+        if (profileBio) {
+            profileBio.value = currentUserData.bio || '';
+        }
+        const bioDisplay = document.getElementById('profileBioDisplay');
+        if (bioDisplay) {
+            bioDisplay.textContent = currentUserData.bio || '';
+        }
+
+        // 6. تحديث الكلية
+        if (profileCollege) {
+            profileCollege.value = currentUserData.college || '';
+        }
+
+        // 7. تحديث السنة
+        if (profileYear) {
+            profileYear.value = currentUserData.year || '1';
+        }
+
+        // 8. تحديث الفرع
+        if (profileBranch) {
+            profileBranch.value = currentUserData.branch || '';
+        }
+
+        // 9. تحديث الصورة الشخصية
+        if (profileAvatar && currentUserData.avatar) {
+            profileAvatar.src = currentUserData.avatar;
+        }
+
+        // 10. تحديث الإحصائيات
+        var favCount = (currentUserData.favorites || []).length;
+        var compCount = (currentUserData.completed || []).length;
+        var trustCount = (currentUserData.trustedBy || []).length;
+        var voteCount = currentUserData.votes || 0;
+        var badgeCount = calculateBadges(currentUserData).length;
+
+        if (profileFavCount) profileFavCount.textContent = favCount;
+        if (profileCompleteCount) profileCompleteCount.textContent = compCount;
+        if (profileVoteCount) profileVoteCount.textContent = voteCount;
+        if (profileTrustCount) profileTrustCount.textContent = trustCount;
+        if (profileBadgeCount) profileBadgeCount.textContent = badgeCount;
+
+        // 11. تحديث المواد المفضلة والمجتازة
+        renderFavoriteCourses();
+        renderCompletedCourses();
+
+        // 12. تحديث الشارات والإنجازات والنقاط
         updateBadges();
         updateAdvancedBadges();
-        
-        // تحديث التخصيصات
-        applyAllCustomizations(currentUserData);
-        
-        // تحديث النقاط
         updatePointsDisplay();
-        
+
+        // 13. تطبيق التخصيصات
+        applyAllCustomizations(currentUserData);
+
+        // 14. تحديث قائمة المستخدمين
+        updateUserInList(currentUserData);
+
+        // 15. إعادة ترتيب العناصر
+        reorderProfileElements();
+
+        updatePostBoxAvatar();
+        console.log('✅ تم تحديث الملف الشخصي بنجاح');
+
     } catch (error) {
         console.error('Error updating profile UI:', error);
     } finally {
         window._updatingProfile = false;
     }
+}
+
+function reorderProfileElements() {
+    var profileInfo = document.querySelector('.profile-info');
+    if (!profileInfo) return;
+
+    // قائمة العناصر بالترتيب المطلوب (من الأعلى إلى الأسفل)
+    var nameElement = document.getElementById('profileName');
+    var usernameDisplay = document.getElementById('profileUsernameDisplay');
+    var roleElement = document.getElementById('profileRole');
+    var featuredBadgeContainer = document.getElementById('featuredBadgeContainer'); // ✅
+    var bioDisplay = document.getElementById('profileBioDisplay');
+    var statsElement = document.querySelector('.profile-stats');
+
+    // مصفوفة العناصر بالترتيب الصحيح
+    var elements = [
+        nameElement,
+        usernameDisplay,
+        roleElement,
+        featuredBadgeContainer, // الآن تحت اسم المستخدم وقبل النبذة
+        bioDisplay,
+        statsElement
+    ];
+
+    // إعادة ترتيب العناصر داخل profileInfo
+    elements.forEach(function(el) {
+        if (el && el.parentNode) {
+            profileInfo.appendChild(el);
+        }
+    });
 }
 
 function renderFavoriteCourses() {
@@ -6755,6 +6905,7 @@ if (profileForm) {
     profileForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         if (!currentUser) return;
+        
         try {
             var updates = {};
             if (profileCollege) updates.college = profileCollege.value;
@@ -6762,12 +6913,28 @@ if (profileForm) {
             if (profileYear) updates.year = profileYear.value;
             if (profileBio) updates.bio = profileBio.value;
             if (profileBranch) updates.branch = profileBranch.value;
+            
+            // ✅ تحديث في Firestore
             await db.collection('users').doc(currentUser.uid).update(updates);
+            
+            // ✅ تحديث البيانات المحلية
             Object.assign(currentUserData, updates);
+            
+            // ✅ تحديث قائمة المستخدمين
             updateUserInList(currentUserData);
+            
+            // ✅ تحديث الشارات والإنجازات
             updateBadges();
             updateAdvancedBadges();
+            
+            // ✅ تحديث واجهة الملف الشخصي
+            await updateProfileUI();
+            
+            // ✅ تحديث جميع البيانات من Firestore
+            await loadAllData();
+            
             showToast('تم حفظ الملف الشخصي بنجاح! ✅');
+            
         } catch (error) {
             console.error('Error saving profile:', error);
             showToast('حدث خطأ في حفظ الملف الشخصي: ' + error.message, 'error');
@@ -7025,6 +7192,23 @@ function showPrivacySettings() {
                 </div>
             </div>
 
+    <!-- ===== تغيير اسم المستخدم ===== -->
+    <div class="settings-section">
+        <h3><i class="fas fa-user-tag"></i> اسم المستخدم</h3>
+        <div class="settings-grid">
+            <div class="setting-item">
+                <label>اسم المستخدم الحالي: <strong id="currentUsernameDisplay">@${currentUserData.username || 'غير محدد'}</strong></label>
+                <div style="display:flex;gap:0.5rem;margin-top:0.3rem;flex-wrap:wrap;">
+                    <input type="text" id="changeUsernameInput" placeholder="اسم مستخدم جديد" style="flex:1;min-width:150px;" />
+                    <button class="btn btn-primary" onclick="changeUsername()">
+                        <i class="fas fa-save"></i> تغيير
+                    </button>
+                </div>
+                <small style="color:var(--gray-400);display:block;margin-top:0.2rem;">3-20 حرف، أحرف/أرقام/ _ فقط</small>
+            </div>
+        </div>
+    </div>
+
             <!-- ===== 6. إدارة الحظر ===== -->
             <div class="settings-section">
                 <h3><i class="fas fa-ban" style="color:#dc2626;"></i> إدارة الحظر</h3>
@@ -7048,6 +7232,45 @@ function showPrivacySettings() {
     `;
 
     container.innerHTML = html;
+}
+
+async function changeUsername() {
+    const input = document.getElementById('changeUsernameInput');
+    if (!input) return;
+    const newUsername = input.value.trim().toLowerCase();
+
+    if (!newUsername) {
+        showToast('يرجى إدخال اسم مستخدم', 'error');
+        return;
+    }
+    if (newUsername === currentUserData.username) {
+        showToast('هذا هو اسمك الحالي', 'warning');
+        return;
+    }
+    if (!isValidUsername(newUsername)) {
+        showToast('اسم غير صالح (3-20 حرف، أحرف/أرقام/_)', 'error');
+        return;
+    }
+
+    const available = await isUsernameAvailable(newUsername);
+    if (!available) {
+        showToast('اسم المستخدم مستخدم بالفعل', 'error');
+        return;
+    }
+
+    try {
+        await db.collection('users').doc(currentUser.uid).update({ username: newUsername });
+        currentUserData.username = newUsername;
+        showToast('✅ تم تغيير اسم المستخدم بنجاح!');
+        updateUI();
+        // تحديث شاشة الإعدادات
+        showPrivacySettings();
+        // تحديث أي مودالات مفتوحة
+        refreshCurrentUserProfileModal();
+    } catch (error) {
+        console.error('Error changing username:', error);
+        showToast('حدث خطأ: ' + error.message, 'error');
+    }
 }
 
 // ============================================================
@@ -7638,47 +7861,81 @@ async function cleanupAllData() {
 }
 
 window.deleteUserCompletely = async function(uid) {
-    if (!isAdmin) { showToast('هذه العملية مخصصة للمشرفين فقط', 'error'); return; }
-    if (uid === currentUser?.uid) { showToast('لا يمكن حذف حسابك بنفسك', 'error'); return; }
+    if (!isAdmin) {
+        showToast('هذه العملية مخصصة للمشرفين فقط', 'error');
+        return;
+    }
+    if (uid === currentUser?.uid) {
+        showToast('لا يمكن حذف حسابك بنفسك', 'error');
+        return;
+    }
     if (!confirm('⚠️ هل أنت متأكد من حذف هذا المستخدم مع جميع بياناته؟')) return;
+
     try {
+        // 1. حذف وثيقة المستخدم
         await db.collection('users').doc(uid).delete();
+
+        // 2. جلب اسم المستخدم (مرة واحدة)
+        var userDoc = await db.collection('users').doc(uid).get();
+        var userName = userDoc.exists ? userDoc.data().displayName : '';
+
+        // 3. جلب جميع المواد
         var coursesSnap = await db.collection('courses').get();
-        for (var i = 0; i < coursesSnap.docs.length; i++) {
-            var doc = coursesSnap.docs[i];
+        var updatePromises = [];
+
+        coursesSnap.forEach(function(doc) {
             var courseData = doc.data();
             var needsUpdate = false;
+            var updatedData = {};
+
+            // حذف تصويتات المستخدم
             if (courseData.voters && courseData.voters[uid]) {
+                var oldRating = courseData.voters[uid];
                 delete courseData.voters[uid];
                 courseData.votes = (courseData.votes || 1) - 1;
-                courseData.totalRating = (courseData.totalRating || 0) - courseData.voters[uid];
+                courseData.totalRating = (courseData.totalRating || 0) - oldRating;
                 courseData.avgRating = courseData.votes > 0 ? courseData.totalRating / courseData.votes : 0;
                 needsUpdate = true;
             }
-            if (courseData.comments) {
-                var userName = '';
-                var userDoc = await db.collection('users').doc(uid).get();
-                if (userDoc.exists) { userName = userDoc.data().displayName || ''; }
-                if (userName) {
-                    var newComments = [];
-                    for (var j = 0; j < courseData.comments.length; j++) {
-                        if (!courseData.comments[j].startsWith(userName + ':')) {
-                            newComments.push(courseData.comments[j]);
-                        } else { needsUpdate = true; }
-                    }
+
+            // حذف تعليقات المستخدم
+            if (courseData.comments && userName) {
+                var newComments = courseData.comments.filter(function(comment) {
+                    return !comment.startsWith(userName + ':');
+                });
+                if (newComments.length !== courseData.comments.length) {
                     courseData.comments = newComments;
+                    needsUpdate = true;
                 }
             }
+
+            // إذا كان هناك تغيير، أضف promise للتحديث
             if (needsUpdate) {
-                await doc.ref.update({ voters: courseData.voters || {}, votes: courseData.votes || 0, totalRating: courseData.totalRating || 0, avgRating: courseData.avgRating || 0, comments: courseData.comments || [] });
+                var ref = doc.ref;
+                updatePromises.push(ref.update({
+                    voters: courseData.voters || {},
+                    votes: courseData.votes || 0,
+                    totalRating: courseData.totalRating || 0,
+                    avgRating: courseData.avgRating || 0,
+                    comments: courseData.comments || []
+                }));
             }
+        });
+
+        // 4. تنفيذ جميع التحديثات دفعة واحدة
+        if (updatePromises.length > 0) {
+            await Promise.all(updatePromises);
         }
+
+        // 5. تحديث القوائم المحلية وإعادة التحميل
         users = users.filter(function(u) { return u.uid !== uid; });
         allUsers = allUsers.filter(function(u) { return u.uid !== uid; });
+
         showToast('✅ تم حذف المستخدم وجميع بياناته!', 'success');
         await loadAllData();
         loadAdminUsers();
         renderUsers();
+
     } catch (error) {
         console.error('Error deleting user completely:', error);
         showToast('حدث خطأ: ' + error.message, 'error');
@@ -8244,9 +8501,10 @@ CUSTOMIZATION_OPTIONS.buttonColor = {
 };
 
 // ============================================================
-//  CUSTOMIZATION OPTIONS - الهيكل الجديد
+//  CUSTOMIZATION OPTIONS - النسخة الموسعة
 // ============================================================
 var CUSTOMIZATION_OPTIONS = {
+    // ===== المظهر =====
     appearance: {
         label: 'المظهر',
         icon: 'fa-palette',
@@ -8256,6 +8514,7 @@ var CUSTOMIZATION_OPTIONS = {
                 cost: 50,
                 type: 'bg',
                 options: [
+                    // الخلفيات الأصلية
                     { key: 'default', label: 'افتراضي' },
                     { key: 'gradient1', label: 'أرجواني-أزرق' },
                     { key: 'gradient2', label: 'فيروزي-أزرق' },
@@ -8271,20 +8530,48 @@ var CUSTOMIZATION_OPTIONS = {
                     { key: 'sunrise', label: 'شروق' },
                     { key: 'lavender', label: 'لافندر' },
                     { key: 'candy', label: 'حلوى' },
-                    { key: 'gold', label: 'ذهبي' }
+                    { key: 'gold', label: 'ذهبي' },
+                    // خلفيات جديدة
+                    { key: 'cherry', label: 'كرز' },
+                    { key: 'mint', label: 'نعناع' },
+                    { key: 'peach', label: 'خوخ' },
+                    { key: 'grape', label: 'عنب' },
+                    { key: 'coffee', label: 'قهوة' },
+                    { key: 'ice', label: 'جليد' },
+                    { key: 'fire', label: 'نار' },
+                    { key: 'space', label: 'فضاء' },
+                    { key: 'retro', label: 'ريترو' },
+                    { key: 'vintage', label: 'قديم' },
+                    { key: 'modern', label: 'حديث' },
+                    { key: 'pastel', label: 'باستيل' },
+                    { key: 'vibrant', label: 'زاهي' },
+                    { key: 'monochrome', label: 'أبيض وأسود' },
+                    { key: 'sepia', label: 'سيبيا' }
                 ]
             },
             fontStyle: {
-                label: 'نوع الخط',
+                label: 'نوع الخط (🌟 تدعم العربية)',
                 cost: 45,
                 type: 'select',
                 options: [
-                    { key: 'default', label: 'افتراضي' },
-                    { key: 'modern', label: 'حديث' },
-                    { key: 'elegant', label: 'أنيق' },
-                    { key: 'bold', label: 'غامق' },
-                    { key: 'handwriting', label: 'خط يد' },
-                    { key: 'playful', label: 'مرح' }
+                    // تدعم العربية (✅)
+                    { key: 'default', label: 'افتراضي (Segoe UI) ✅' },
+                    { key: 'tajawal', label: 'تجوال (Tajawal) ✅' },
+                    { key: 'cairo', label: 'القاهرة (Cairo) ✅' },
+                    { key: 'readex', label: 'Readex Pro ✅' },
+                    { key: 'noto', label: 'Noto Sans Arabic ✅' },
+                    { key: 'amiri', label: 'أميري (Amiri) ✅' },
+                    { key: 'lateef', label: 'لطيف (Lateef) ✅' },
+                    { key: 'scheherazade', label: 'شهرزاد (Scheherazade) ✅' },
+                    // لا تدعم العربية (❌)
+                    { key: 'modern', label: 'حديث (Inter) ❌' },
+                    { key: 'elegant', label: 'أنيق (Georgia) ❌' },
+                    { key: 'bold', label: 'غامق (Arial Black) ❌' },
+                    { key: 'handwriting', label: 'خط يد (Comic Sans) ❌' },
+                    { key: 'playful', label: 'مرح (Fredoka) ❌' },
+                    { key: 'mono', label: 'مونو سبيس (Courier) ❌' },
+                    { key: 'serif', label: 'سيرف (Times) ❌' },
+                    { key: 'sans', label: 'سانس (Helvetica) ❌' }
                 ]
             },
             animationSpeed: {
@@ -8292,14 +8579,16 @@ var CUSTOMIZATION_OPTIONS = {
                 cost: 50,
                 type: 'select',
                 options: [
-                    { key: 'slow', label: 'بطيء' },
-                    { key: 'normal', label: 'طبيعي' },
-                    { key: 'fast', label: 'سريع' },
-                    { key: 'none', label: 'بدون' }
+                    { key: 'slow', label: 'بطيء (0.8s)' },
+                    { key: 'normal', label: 'طبيعي (0.3s)' },
+                    { key: 'fast', label: 'سريع (0.1s)' },
+                    { key: 'none', label: 'بدون (0s)' }
                 ]
             }
         }
     },
+
+    // ===== الصورة =====
     avatar: {
         label: 'الصورة',
         icon: 'fa-user-circle',
@@ -8312,9 +8601,16 @@ var CUSTOMIZATION_OPTIONS = {
                     { key: 'default', label: 'دائرة' },
                     { key: 'rounded', label: 'مدور' },
                     { key: 'square', label: 'مربع' },
-                    { key: 'star', label: 'نجمة' },
-                    { key: 'heart', label: 'قلب' },
-                    { key: 'diamond', label: 'ماسة' }
+                    { key: 'star', label: 'نجمة 5' },
+                    { key: 'star6', label: 'نجمة 6' },
+                    { key: 'heart', label: 'قلب (إصلاح)' },
+                    { key: 'diamond', label: 'ماسة' },
+                    { key: 'oval', label: 'بيضاوي' },
+                    { key: 'triangle', label: 'مثلث' },
+                    { key: 'pentagon', label: 'خماسي' },
+                    { key: 'hexagon', label: 'سداسي' },
+                    { key: 'flower', label: 'زهرة' },
+                    { key: 'blob', label: 'قطرة' }
                 ]
             },
             avatarEffect: {
@@ -8326,7 +8622,12 @@ var CUSTOMIZATION_OPTIONS = {
                     { key: 'glow', label: 'توهج' },
                     { key: 'pulse', label: 'نبض' },
                     { key: 'rotate', label: 'دوران' },
-                    { key: 'shake', label: 'اهتزاز' }
+                    { key: 'shake', label: 'اهتزاز' },
+                    { key: 'bounce', label: 'ارتداد' },
+                    { key: 'float', label: 'طفو' },
+                    { key: 'spin-slow', label: 'دوران بطيء' },
+                    { key: 'zoom-in', label: 'تكبير' },
+                    { key: 'glow-move', label: 'توهج متحرك' }
                 ]
             },
             avatarBorderWidth: {
@@ -8355,7 +8656,16 @@ var CUSTOMIZATION_OPTIONS = {
                     { key: '#14b8a6', label: 'فيروزي' },
                     { key: '#f97316', label: 'برتقالي' },
                     { key: '#ffffff', label: 'أبيض' },
-                    { key: '#000000', label: 'أسود' }
+                    { key: '#000000', label: 'أسود' },
+                    // ألوان جديدة
+                    { key: '#ff6b6b', label: 'مرجاني' },
+                    { key: '#ffd93d', label: 'ليموني' },
+                    { key: '#6bcb77', label: 'نعناعي' },
+                    { key: '#4d96ff', label: 'أزرق فاتح' },
+                    { key: '#9b59b6', label: 'بنفسجي غامق' },
+                    { key: '#e67e22', label: 'برتقالي غامق' },
+                    { key: '#1abc9c', label: 'فيروزي غامق' },
+                    { key: '#e74c3c', label: 'أحمر غامق' }
                 ]
             },
             avatarBorderStyle: {
@@ -8366,7 +8676,11 @@ var CUSTOMIZATION_OPTIONS = {
                     { key: 'solid', label: 'عادي' },
                     { key: 'dashed', label: 'متقطع' },
                     { key: 'dotted', label: 'منقط' },
-                    { key: 'double', label: 'مزدوج' }
+                    { key: 'double', label: 'مزدوج' },
+                    { key: 'inset', label: 'داخلي' },
+                    { key: 'outset', label: 'خارجي' },
+                    { key: 'ridge', label: 'حافة مرتفعة' },
+                    { key: 'groove', label: 'حافة منخفضة' }
                 ]
             },
             avatarShadow: {
@@ -8378,7 +8692,12 @@ var CUSTOMIZATION_OPTIONS = {
                     { key: 'small', label: 'صغير' },
                     { key: 'medium', label: 'متوسط' },
                     { key: 'large', label: 'كبير' },
-                    { key: 'colored', label: 'ملون' }
+                    { key: 'colored', label: 'ملون' },
+                    { key: 'inset-shadow', label: 'ظل داخلي' },
+                    { key: 'neon-glow', label: 'توهج نيون' },
+                    { key: 'soft-glow', label: 'توهج ناعم' },
+                    { key: 'drop-shadow', label: 'ظل ساقط' },
+                    { key: 'blur-shadow', label: 'ظل ضبابي' }
                 ]
             },
             avatarShadowColor: {
@@ -8393,11 +8712,21 @@ var CUSTOMIZATION_OPTIONS = {
                     { key: '#f59e0b', label: 'ذهبي' },
                     { key: '#8b5cf6', label: 'بنفسجي' },
                     { key: '#ec4899', label: 'وردي' },
-                    { key: '#14b8a6', label: 'فيروزي' }
+                    { key: '#14b8a6', label: 'فيروزي' },
+                    { key: '#ff6b6b', label: 'مرجاني' },
+                    { key: '#ffd93d', label: 'ليموني' },
+                    { key: '#6bcb77', label: 'نعناعي' },
+                    { key: '#4d96ff', label: 'أزرق فاتح' },
+                    { key: '#9b59b6', label: 'بنفسجي غامق' },
+                    { key: '#e67e22', label: 'برتقالي' },
+                    { key: '#1abc9c', label: 'فيروزي غامق' },
+                    { key: '#e74c3c', label: 'أحمر غامق' }
                 ]
             }
         }
     },
+
+    // ===== الاسم =====
     name: {
         label: 'الاسم',
         icon: 'fa-signature',
@@ -8407,41 +8736,7 @@ var CUSTOMIZATION_OPTIONS = {
                 cost: 35,
                 type: 'color',
                 options: [
-                    { key: '#2563eb', label: 'أزرق' },
-                    { key: '#ef4444', label: 'أحمر' },
-                    { key: '#22c55e', label: 'أخضر' },
-                    { key: '#f59e0b', label: 'ذهبي' },
-                    { key: '#8b5cf6', label: 'بنفسجي' },
-                    { key: '#ec4899', label: 'وردي' },
-                    { key: '#14b8a6', label: 'فيروزي' },
-                    { key: '#f97316', label: 'برتقالي' },
-                    { key: '#ffffff', label: 'أبيض' },
-                    { key: '#000000', label: 'أسود' }
-                ]
-            },
-            nameGlow: {
-                label: 'تأثير الاسم',
-                cost: 80,
-                type: 'select',
-                options: [
-                    { key: 'none', label: 'بدون' },
-                    { key: 'soft', label: 'ناعم' },
-                    { key: 'strong', label: 'قوي' },
-                    { key: 'rainbow', label: 'قوس قزح' }
-                ]
-            }
-        }
-    },
-    texts: {
-        label: 'النصوص',
-        icon: 'fa-font',
-        options: {
-            textColor: {
-                label: 'لون النصوص الثانوية',
-                cost: 30,
-                type: 'color',
-                options: [
-                    { key: 'default', label: 'افتراضي' },
+                    // الألوان الأصلية
                     { key: '#2563eb', label: 'أزرق' },
                     { key: '#ef4444', label: 'أحمر' },
                     { key: '#22c55e', label: 'أخضر' },
@@ -8452,7 +8747,74 @@ var CUSTOMIZATION_OPTIONS = {
                     { key: '#f97316', label: 'برتقالي' },
                     { key: '#ffffff', label: 'أبيض' },
                     { key: '#000000', label: 'أسود' },
-                    { key: '#94a3b8', label: 'رمادي' }
+                    // ألوان جديدة
+                    { key: '#ff6b6b', label: 'مرجاني' },
+                    { key: '#ffd93d', label: 'ليموني' },
+                    { key: '#6bcb77', label: 'نعناعي' },
+                    { key: '#4d96ff', label: 'أزرق فاتح' },
+                    { key: '#9b59b6', label: 'بنفسجي غامق' },
+                    { key: '#e67e22', label: 'برتقالي غامق' },
+                    { key: '#1abc9c', label: 'فيروزي غامق' },
+                    { key: '#e74c3c', label: 'أحمر غامق' },
+                    { key: '#2d3436', label: 'رمادي داكن' },
+                    { key: '#dfe6e9', label: 'رمادي فاتح' },
+                    { key: '#fd79a8', label: 'وردي فاتح' },
+                    { key: '#00b894', label: 'أخضر زمردي' },
+                    { key: '#0984e3', label: 'أزرق ملكي' },
+                    { key: '#6c5ce7', label: 'بنفسجي ملكي' }
+                ]
+            },
+            nameGlow: {
+                label: 'تأثير الاسم',
+                cost: 80,
+                type: 'select',
+                options: [
+                    { key: 'none', label: 'بدون' },
+                    { key: 'soft', label: 'ناعم' },
+                    { key: 'strong', label: 'قوي' },
+                    { key: 'rainbow', label: 'قوس قزح' },
+                    // تأثيرات جديدة
+                    { key: 'underline', label: 'تسطير' },
+                    { key: 'strikethrough', label: 'توسط' },
+                    { key: 'uppercase', label: 'حروف كبيرة' },
+                    { key: 'spacing', label: 'تباعد بين الحروف' },
+                    { key: 'flip', label: 'مقلوب' },
+                    { key: 'shadow-text', label: 'ظل نص' }
+                ]
+            }
+        }
+    },
+
+    // ===== النصوص =====
+    texts: {
+        label: 'النصوص',
+        icon: 'fa-font',
+        options: {
+            textColor: {
+                label: 'لون النصوص الثانوية',
+                cost: 30,
+                type: 'color',
+                options: [
+                    { key: 'default', label: 'افتراضي' },
+                    // جميع ألوان الاسم السابقة
+                    { key: '#2563eb', label: 'أزرق' },
+                    { key: '#ef4444', label: 'أحمر' },
+                    { key: '#22c55e', label: 'أخضر' },
+                    { key: '#f59e0b', label: 'ذهبي' },
+                    { key: '#8b5cf6', label: 'بنفسجي' },
+                    { key: '#ec4899', label: 'وردي' },
+                    { key: '#14b8a6', label: 'فيروزي' },
+                    { key: '#f97316', label: 'برتقالي' },
+                    { key: '#ffffff', label: 'أبيض' },
+                    { key: '#000000', label: 'أسود' },
+                    { key: '#ff6b6b', label: 'مرجاني' },
+                    { key: '#ffd93d', label: 'ليموني' },
+                    { key: '#6bcb77', label: 'نعناعي' },
+                    { key: '#4d96ff', label: 'أزرق فاتح' },
+                    { key: '#9b59b6', label: 'بنفسجي غامق' },
+                    { key: '#e67e22', label: 'برتقالي غامق' },
+                    { key: '#1abc9c', label: 'فيروزي غامق' },
+                    { key: '#e74c3c', label: 'أحمر غامق' }
                 ]
             },
             bioColor: {
@@ -8470,11 +8832,22 @@ var CUSTOMIZATION_OPTIONS = {
                     { key: '#14b8a6', label: 'فيروزي' },
                     { key: '#f97316', label: 'برتقالي' },
                     { key: '#ffffff', label: 'أبيض' },
-                    { key: '#94a3b8', label: 'رمادي' }
+                    { key: '#000000', label: 'أسود' },
+                    { key: '#ff6b6b', label: 'مرجاني' },
+                    { key: '#ffd93d', label: 'ليموني' },
+                    { key: '#6bcb77', label: 'نعناعي' },
+                    { key: '#4d96ff', label: 'أزرق فاتح' },
+                    { key: '#9b59b6', label: 'بنفسجي غامق' },
+                    { key: '#e67e22', label: 'برتقالي غامق' },
+                    { key: '#1abc9c', label: 'فيروزي غامق' },
+                    { key: '#e74c3c', label: 'أحمر غامق' },
+                    { key: '#636e72', label: 'رمادي متوسط' }
                 ]
             }
         }
     },
+
+    // ===== الأزرار =====
     buttons: {
         label: 'الأزرار',
         icon: 'fa-square',
@@ -8485,21 +8858,27 @@ var CUSTOMIZATION_OPTIONS = {
                 type: 'color',
                 options: [
                     { key: 'default', label: 'افتراضي' },
-                    { key: '#2563eb', label: '🔵 أزرق' },
-                    { key: '#ef4444', label: '🔴 أحمر' },
-                    { key: '#22c55e', label: '🟢 أخضر' },
-                    { key: '#f59e0b', label: '🟡 ذهبي' },
-                    { key: '#8b5cf6', label: '🟣 بنفسجي' },
-                    { key: '#ec4899', label: '🩷 وردي' },
-                    { key: '#14b8a6', label: '🩵 فيروزي' },
-                    { key: '#f97316', label: '🟠 برتقالي' },
-                    { key: '#ffffff', label: '⬜ أبيض' },
-                    { key: '#000000', label: '⬛ أسود' },
-                    { key: '#94a3b8', label: '⬜ رمادي' }
+                    { key: '#2563eb', label: 'أزرق' },
+                    { key: '#ef4444', label: 'أحمر' },
+                    { key: '#22c55e', label: 'أخضر' },
+                    { key: '#f59e0b', label: 'ذهبي' },
+                    { key: '#8b5cf6', label: 'بنفسجي' },
+                    { key: '#ec4899', label: 'وردي' },
+                    { key: '#14b8a6', label: 'فيروزي' },
+                    { key: '#f97316', label: 'برتقالي' },
+                    { key: '#ffffff', label: 'أبيض' },
+                    { key: '#000000', label: 'أسود' },
+                    { key: '#ff6b6b', label: 'مرجاني' },
+                    { key: '#ffd93d', label: 'ليموني' },
+                    { key: '#6bcb77', label: 'نعناعي' },
+                    { key: '#4d96ff', label: 'أزرق فاتح' },
+                    { key: '#9b59b6', label: 'بنفسجي غامق' }
                 ]
             }
         }
     },
+
+    // ===== الشارة =====
     badge: {
         label: 'الشارة',
         icon: 'fa-trophy',
@@ -8514,7 +8893,16 @@ var CUSTOMIZATION_OPTIONS = {
                     { key: 'rounded', label: 'مدور' },
                     { key: 'shadow', label: 'مظلل' },
                     { key: 'gradient', label: 'متدرج' },
-                    { key: 'neon', label: 'نيون' }
+                    { key: 'neon', label: 'نيون' },
+                    // أشكال جديدة
+                    { key: 'pill', label: 'حبة دواء' },
+                    { key: 'star-shape', label: 'نجمة' },
+                    { key: 'heart-shape', label: 'قلب' },
+                    { key: 'diamond-shape', label: 'ماسة' },
+                    { key: 'bordered', label: 'محدد' },
+                    { key: 'outline', label: 'مخطط' },
+                    { key: 'glass', label: 'زجاجي' },
+                    { key: 'embossed', label: 'منقوش' }
                 ]
             },
             featuredBadgeTextColor: {
@@ -8530,7 +8918,13 @@ var CUSTOMIZATION_OPTIONS = {
                     { key: '#22c55e', label: 'أخضر' },
                     { key: '#f59e0b', label: 'ذهبي' },
                     { key: '#8b5cf6', label: 'بنفسجي' },
-                    { key: '#ec4899', label: 'وردي' }
+                    { key: '#ec4899', label: 'وردي' },
+                    { key: '#ff6b6b', label: 'مرجاني' },
+                    { key: '#ffd93d', label: 'ليموني' },
+                    { key: '#6bcb77', label: 'نعناعي' },
+                    { key: '#4d96ff', label: 'أزرق فاتح' },
+                    { key: '#9b59b6', label: 'بنفسجي غامق' },
+                    { key: '#e67e22', label: 'برتقالي' }
                 ]
             },
             featuredBadgeBg: {
@@ -8543,7 +8937,17 @@ var CUSTOMIZATION_OPTIONS = {
                     { key: 'gradient2', label: 'وردي-أحمر' },
                     { key: 'gold', label: 'ذهبي' },
                     { key: 'neon', label: 'نيون' },
-                    { key: 'dark', label: 'داكن' }
+                    { key: 'dark', label: 'داكن' },
+                    // خلفيات جديدة
+                    { key: 'gradient3', label: 'فيروزي-أزرق' },
+                    { key: 'gradient4', label: 'أزرق-سماوي' },
+                    { key: 'ocean', label: 'محيط' },
+                    { key: 'sunset', label: 'غروب' },
+                    { key: 'forest', label: 'غابة' },
+                    { key: 'rainbow', label: 'قوس قزح' },
+                    { key: 'galaxy', label: 'مجرة' },
+                    { key: 'candy', label: 'حلوى' },
+                    { key: 'lavender', label: 'لافندر' }
                 ]
             },
             featuredBadgeSize: {
@@ -8564,7 +8968,13 @@ var CUSTOMIZATION_OPTIONS = {
                     { key: 'none', label: 'بدون' },
                     { key: 'glow', label: 'توهج' },
                     { key: 'pulse', label: 'نبض' },
-                    { key: 'shine', label: 'لمعان' }
+                    { key: 'shine', label: 'لمعان' },
+                    // تأثيرات جديدة (متناغمة مع الأشكال)
+                    { key: 'float', label: 'طفو' },
+                    { key: 'bounce', label: 'ارتداد' },
+                    { key: 'rotate-slow', label: 'دوران بطيء' },
+                    { key: 'scale-in', label: 'تكبير داخلي' },
+                    { key: 'glow-pulse', label: 'توهج نابض' }
                 ]
             },
             featuredBadgeBorder: {
@@ -8575,7 +8985,12 @@ var CUSTOMIZATION_OPTIONS = {
                     { key: 'none', label: 'بدون' },
                     { key: 'solid', label: 'مستمر' },
                     { key: 'dashed', label: 'متقطع' },
-                    { key: 'double', label: 'مزدوج' }
+                    { key: 'double', label: 'مزدوج' },
+                    { key: 'dotted', label: 'منقط' },
+                    { key: 'inset', label: 'داخلي' },
+                    { key: 'outset', label: 'خارجي' },
+                    { key: 'ridge', label: 'مرتفع' },
+                    { key: 'groove', label: 'منخفض' }
                 ]
             },
             featuredBadgeBorderColor: {
@@ -8589,19 +9004,48 @@ var CUSTOMIZATION_OPTIONS = {
                     { key: '#22c55e', label: 'أخضر' },
                     { key: '#f59e0b', label: 'ذهبي' },
                     { key: '#8b5cf6', label: 'بنفسجي' },
-                    { key: '#ec4899', label: 'وردي' }
+                    { key: '#ec4899', label: 'وردي' },
+                    { key: '#ff6b6b', label: 'مرجاني' },
+                    { key: '#ffd93d', label: 'ليموني' },
+                    { key: '#6bcb77', label: 'نعناعي' },
+                    { key: '#4d96ff', label: 'أزرق فاتح' },
+                    { key: '#9b59b6', label: 'بنفسجي غامق' },
+                    { key: '#e67e22', label: 'برتقالي' },
+                    { key: '#1abc9c', label: 'فيروزي غامق' },
+                    { key: '#e74c3c', label: 'أحمر غامق' }
                 ]
             },
             featuredBadgeBoxBg: {
-                label: 'لون خلفية صندوق الشارة',
+                label: 'خلفية صندوق الشارة',
                 cost: 25,
                 type: 'select',
                 options: [
-                    { key: 'default', label: 'افتراضي' },
+                    { key: 'default', label: 'شفاف' },
                     { key: 'gradient1', label: 'أرجواني-أزرق' },
                     { key: 'gradient2', label: 'وردي-أحمر' },
                     { key: 'gold', label: 'ذهبي' },
-                    { key: 'dark', label: 'داكن' }
+                    { key: 'dark', label: 'داكن' },
+                    // خلفيات جديدة + ألوان عادية
+                    { key: 'gradient3', label: 'فيروزي-أزرق' },
+                    { key: 'gradient4', label: 'أزرق-سماوي' },
+                    { key: 'ocean', label: 'محيط' },
+                    { key: 'sunset', label: 'غروب' },
+                    { key: 'forest', label: 'غابة' },
+                    { key: 'rainbow', label: 'قوس قزح' },
+                    { key: 'galaxy', label: 'مجرة' },
+                    { key: 'candy', label: 'حلوى' },
+                    { key: 'lavender', label: 'لافندر' },
+                    // ألوان عادية للصندوق
+                    { key: 'solid-blue', label: 'أزرق صلب' },
+                    { key: 'solid-red', label: 'أحمر صلب' },
+                    { key: 'solid-green', label: 'أخضر صلب' },
+                    { key: 'solid-gold', label: 'ذهبي صلب' },
+                    { key: 'solid-purple', label: 'بنفسجي صلب' },
+                    { key: 'solid-pink', label: 'وردي صلب' },
+                    { key: 'solid-teal', label: 'فيروزي صلب' },
+                    { key: 'solid-orange', label: 'برتقالي صلب' },
+                    { key: 'solid-white', label: 'أبيض صلب' },
+                    { key: 'solid-black', label: 'أسود صلب' }
                 ]
             },
             featuredBadgeBoxBorder: {
@@ -8611,7 +9055,13 @@ var CUSTOMIZATION_OPTIONS = {
                 options: [
                     { key: 'none', label: 'بدون' },
                     { key: 'solid', label: 'مستمر' },
-                    { key: 'dashed', label: 'متقطع' }
+                    { key: 'dashed', label: 'متقطع' },
+                    { key: 'dotted', label: 'منقط' },
+                    { key: 'double', label: 'مزدوج' },
+                    { key: 'inset', label: 'داخلي' },
+                    { key: 'outset', label: 'خارجي' },
+                    { key: 'ridge', label: 'مرتفع' },
+                    { key: 'groove', label: 'منخفض' }
                 ]
             },
             featuredBadgeBoxBorderColor: {
@@ -8624,11 +9074,24 @@ var CUSTOMIZATION_OPTIONS = {
                     { key: '#ef4444', label: 'أحمر' },
                     { key: '#22c55e', label: 'أخضر' },
                     { key: '#f59e0b', label: 'ذهبي' },
-                    { key: '#8b5cf6', label: 'بنفسجي' }
+                    { key: '#8b5cf6', label: 'بنفسجي' },
+                    { key: '#ec4899', label: 'وردي' },
+                    { key: '#ff6b6b', label: 'مرجاني' },
+                    { key: '#ffd93d', label: 'ليموني' },
+                    { key: '#6bcb77', label: 'نعناعي' },
+                    { key: '#4d96ff', label: 'أزرق فاتح' },
+                    { key: '#9b59b6', label: 'بنفسجي غامق' },
+                    { key: '#e67e22', label: 'برتقالي' },
+                    { key: '#1abc9c', label: 'فيروزي غامق' },
+                    { key: '#e74c3c', label: 'أحمر غامق' },
+                    { key: '#2d3436', label: 'رمادي داكن' },
+                    { key: '#dfe6e9', label: 'رمادي فاتح' }
                 ]
             }
         }
     },
+
+    // ===== خاص =====
     special: {
         label: 'خاص',
         icon: 'fa-star',
@@ -8638,6 +9101,7 @@ var CUSTOMIZATION_OPTIONS = {
                 cost: 100,
                 type: 'select',
                 options: [
+                    // الشارات الأصلية
                     { key: 'none', label: 'بدون' },
                     { key: 'fa-crown', label: '👑 تاج' },
                     { key: 'fa-star', label: '⭐ نجمة' },
@@ -8649,7 +9113,111 @@ var CUSTOMIZATION_OPTIONS = {
                     { key: 'fa-dragon', label: '🐉 تنين' },
                     { key: 'fa-feather', label: '🪶 ريشة' },
                     { key: 'fa-moon', label: '🌙 قمر' },
-                    { key: 'fa-sun', label: '☀️ شمس' }
+                    { key: 'fa-sun', label: '☀️ شمس' },
+                    // شارات جديدة
+                    { key: 'fa-ghost', label: '👻 شبح' },
+                    { key: 'fa-robot', label: '🤖 روبوت' },
+                    { key: 'fa-unicorn', label: '🦄 يونيكورن' },
+                    { key: 'fa-dragon', label: '🐉 تنين' },
+                    { key: 'fa-phoenix', label: '🔥 عنقاء' },
+                    { key: 'fa-wolf', label: '🐺 ذئب' },
+                    { key: 'fa-eagle', label: '🦅 نسر' },
+                    { key: 'fa-shark', label: '🦈 قرش' },
+                    { key: 'fa-butterfly', label: '🦋 فراشة' },
+                    { key: 'fa-spider', label: '🕷️ عنكبوت' },
+                    { key: 'fa-scroll', label: '📜 مخطوطة' },
+                    { key: 'fa-wand', label: '🪄 عصا سحرية' },
+                    { key: 'fa-crystal', label: '🔮 كريستال' },
+                    { key: 'fa-helmet', label: '⛑️ خوذة' },
+                    { key: 'fa-shield', label: '🛡️ درع' },
+                    { key: 'fa-sword', label: '⚔️ سيف' },
+                    { key: 'fa-crown', label: '👑 تاج' },
+                    { key: 'fa-ring', label: '💍 خاتم' },
+                    { key: 'fa-key', label: '🔑 مفتاح' },
+                    { key: 'fa-lock', label: '🔒 قفل' },
+                    { key: 'fa-unlock', label: '🔓 قفل مفتوح' },
+                    { key: 'fa-wrench', label: '🔧 مفتاح ربط' },
+                    { key: 'fa-hammer', label: '🔨 مطرقة' },
+                    { key: 'fa-anchor', label: '⚓ مرساة' },
+                    { key: 'fa-compass', label: '🧭 بوصلة' },
+                    { key: 'fa-map', label: '🗺️ خريطة' }
+                ]
+            }
+        }
+    },
+
+    // ============================================================
+    //  27. تخصيصات جديدة كلياً ومختلفة
+    // ============================================================
+    advanced: {
+        label: 'متقدم',
+        icon: 'fa-cogs',
+        options: {
+            cardSize: {
+                label: 'حجم البطاقة في القوائم',
+                cost: 30,
+                type: 'select',
+                options: [
+                    { key: 'default', label: 'افتراضي' },
+                    { key: 'compact', label: 'مدمج (أصغر)' },
+                    { key: 'spacious', label: 'واسع (أكبر)' }
+                ]
+            },
+            cursorStyle: {
+                label: 'شكل المؤشر عند التمرير',
+                cost: 20,
+                type: 'select',
+                options: [
+                    { key: 'default', label: 'افتراضي' },
+                    { key: 'pointer', label: 'يد' },
+                    { key: 'grab', label: 'إمساك' },
+                    { key: 'zoom-in', label: 'تكبير' }
+                ]
+            },
+            blurEffect: {
+                label: 'تأثير الضبابية (خلفية الملف)',
+                cost: 40,
+                type: 'select',
+                options: [
+                    { key: 'none', label: 'بدون' },
+                    { key: 'low', label: 'خفيف' },
+                    { key: 'medium', label: 'متوسط' },
+                    { key: 'high', label: 'قوي' }
+                ]
+            },
+            borderRadius: {
+                label: 'استدارة زوايا البطاقة',
+                cost: 25,
+                type: 'select',
+                options: [
+                    { key: 'default', label: 'افتراضي (12px)' },
+                    { key: 'none', label: 'بدون (0px)' },
+                    { key: 'small', label: 'صغير (6px)' },
+                    { key: 'large', label: 'كبير (20px)' },
+                    { key: 'circle', label: 'دائري (50px)' }
+                ]
+            },
+            hoverEffect: {
+                label: 'تأثير التمرير على البطاقة',
+                cost: 35,
+                type: 'select',
+                options: [
+                    { key: 'default', label: 'افتراضي (ارتفاع)' },
+                    { key: 'scale', label: 'تكبير' },
+                    { key: 'glow', label: 'توهج' },
+                    { key: 'shadow', label: 'ظل' },
+                    { key: 'none', label: 'بدون' }
+                ]
+            },
+            opacity: {
+                label: 'شفافية البطاقة',
+                cost: 30,
+                type: 'select',
+                options: [
+                    { key: '100', label: '100% (غير شفاف)' },
+                    { key: '90', label: '90%' },
+                    { key: '80', label: '80%' },
+                    { key: '70', label: '70%' }
                 ]
             }
         }
@@ -8699,20 +9267,26 @@ function applyButtonColorToMain(color) {
         btn.style.setProperty('color', color, 'important');
         btn.style.setProperty('border-color', color, 'important');
     });
+    // تطبيق على الأيقونات والنصوص
     document.querySelectorAll('.profile-action-btn i, .profile-action-btn span').forEach(function(el) {
         el.style.setProperty('color', color, 'important');
     });
 }
 
-// ===== تطبيق لون النصوص الثانوية =====
 function applyTextColorToMain(color) {
-    var elements = document.querySelectorAll('.profile-info p, .profile-stats span, .profile-detail, .user-detail');
+    // العناصر التي يجب أن تطبق عليها الألوان
+    var elements = document.querySelectorAll(
+        '.profile-info p, .profile-stats span, .profile-stats i, ' +
+        '.profile-detail, .user-detail, .stat-box span, .stat-box label, .stat-box i'
+    );
+    
     if (!color || color === 'default') {
         elements.forEach(function(el) {
             el.style.color = '';
         });
         return;
     }
+    
     elements.forEach(function(el) {
         el.style.setProperty('color', color, 'important');
     });
@@ -8919,10 +9493,6 @@ var BG_OPTIONS = [
 
 // ===== تطبيق التخصيصات على الملف الشخصي =====
 
-// ============================================================
-//  نظام تخصيص الملف الشخصي - النسخة النهائية الموحدة
-// ============================================================
-
 function applyAllCustomizations(userData) {
     if (!userData) return;
     var customization = userData.customization || {};
@@ -8955,22 +9525,215 @@ function applyAllCustomizations(userData) {
     // الشارة
     applyBadgeStyleToMain(customization.badgeStyle);
     applyFeaturedBadgeToMain(customization.featuredBadge);
-
-    // خاص
     applySpecialBadgeToMain(customization.specialBadge);
 
-    console.log('✅ تم تطبيق جميع التخصيصات على الملف الشخصي');
+    // ===== التخصيصات الجديدة =====
+    applyCardSizeToMain(customization.cardSize);
+    applyCursorStyleToMain(customization.cursorStyle);
+    applyBlurEffectToMain(customization.blurEffect);
+    applyBorderRadiusToMain(customization.borderRadius);
+    applyHoverEffectToMain(customization.hoverEffect);
+    applyOpacityToMain(customization.opacity);
+
+    console.log('✅ تم تطبيق جميع التخصيصات (بما فيها الجديدة)');
 }
 
-// ===== عرض وتطبيق الشارة المميزة في الملف الشخصي =====
-function applyFeaturedBadgeToMain(badgeName) {
-    var existing = document.getElementById('featuredBadgeDisplay');
-    if (existing) existing.remove();
-    if (!badgeName || badgeName === 'none' || !currentUserData) return;
+// ===== تطبيق حجم البطاقة =====
+function applyCardSizeToMain(size) {
+    var cards = document.querySelectorAll('.course-card, .user-card, .admin-card, .student-card');
+    cards.forEach(function(card) {
+        if (size === 'compact') {
+            card.style.padding = '0.5rem';
+            card.style.gap = '0.3rem';
+        } else if (size === 'spacious') {
+            card.style.padding = '2rem';
+            card.style.gap = '1rem';
+        } else {
+            card.style.padding = '';
+            card.style.gap = '';
+        }
+    });
+}
 
-    var badges = calculateBadges(currentUserData);
-    var badge = badges.find(function(b) { return b.name === badgeName; });
-    if (!badge) return;
+// ===== تطبيق شكل المؤشر =====
+function applyCursorStyleToMain(cursor) {
+    var clickable = document.querySelectorAll('.clickable, .course-card, .user-card, .admin-card, .student-card, .btn');
+    clickable.forEach(function(el) {
+        if (cursor && cursor !== 'default') {
+            el.style.cursor = cursor;
+        } else {
+            el.style.cursor = '';
+        }
+    });
+}
+
+// ===== تطبيق تأثير الضبابية =====
+function applyBlurEffectToMain(blur) {
+    var container = document.querySelector('.profile-container');
+    if (!container) return;
+    var blurMap = { 'low': 'blur(2px)', 'medium': 'blur(5px)', 'high': 'blur(10px)' };
+    if (blur && blur !== 'none' && blurMap[blur]) {
+        container.style.backdropFilter = blurMap[blur];
+    } else {
+        container.style.backdropFilter = '';
+    }
+}
+
+// ===== تطبيق استدارة الزوايا =====
+function applyBorderRadiusToMain(radius) {
+    var cards = document.querySelectorAll('.course-card, .user-card, .admin-card, .student-card, .profile-container');
+    var radiusMap = { 'none': '0px', 'small': '6px', 'large': '20px', 'circle': '50px' };
+    cards.forEach(function(card) {
+        if (radius && radius !== 'default' && radiusMap[radius]) {
+            card.style.borderRadius = radiusMap[radius];
+        } else {
+            card.style.borderRadius = '';
+        }
+    });
+}
+
+// ===== تطبيق تأثير التمرير =====
+function applyHoverEffectToMain(hover) {
+    var cards = document.querySelectorAll('.course-card, .user-card, .admin-card, .student-card');
+    cards.forEach(function(card) {
+        // إزالة التأثيرات القديمة
+        card.classList.remove('hover-scale', 'hover-glow', 'hover-shadow');
+        if (hover === 'scale') {
+            card.classList.add('hover-scale');
+        } else if (hover === 'glow') {
+            card.classList.add('hover-glow');
+        } else if (hover === 'shadow') {
+            card.classList.add('hover-shadow');
+        }
+    });
+}
+
+// ===== تطبيق الشفافية =====
+function applyOpacityToMain(opacity) {
+    var cards = document.querySelectorAll('.course-card, .user-card, .admin-card, .student-card');
+    cards.forEach(function(card) {
+        if (opacity && opacity !== '100') {
+            card.style.opacity = (parseInt(opacity) / 100);
+        } else {
+            card.style.opacity = '';
+        }
+    });
+}
+
+// ============================================================
+//  دوال التخصيصات الجديدة - تعمل على جميع العناصر
+// ============================================================
+
+// ===== 1. حجم البطاقة =====
+function applyCardSizeToAll(size) {
+    var cards = document.querySelectorAll('.course-card, .user-card, .user-card-simple, .admin-card, .admin-card-simple, .student-card, .college-card, .specialty-card');
+    cards.forEach(function(card) {
+        if (size === 'compact') {
+            card.style.padding = '0.4rem 0.6rem';
+            card.style.gap = '0.3rem';
+            card.style.fontSize = '0.85rem';
+        } else if (size === 'spacious') {
+            card.style.padding = '1.5rem 2rem';
+            card.style.gap = '1rem';
+            card.style.fontSize = '1rem';
+        } else {
+            card.style.padding = '';
+            card.style.gap = '';
+            card.style.fontSize = '';
+        }
+    });
+}
+
+// ===== 2. شكل المؤشر =====
+function applyCursorStyleToAll(cursor) {
+    var clickable = document.querySelectorAll('.clickable, .course-card, .user-card, .user-card-simple, .admin-card, .admin-card-simple, .student-card, .college-card, .specialty-card, .btn, .nav-link, .profile-action-btn, .stat-box, .admin-featured-badge-container, .user-featured-badge-container');
+    clickable.forEach(function(el) {
+        if (cursor && cursor !== 'default') {
+            el.style.cursor = cursor;
+        } else {
+            el.style.cursor = '';
+        }
+    });
+}
+
+// ===== 3. الضبابية =====
+function applyBlurEffectToMain(blur) {
+    var container = document.querySelector('.profile-container');
+    if (!container) return;
+    var blurMap = { 'low': 'blur(2px)', 'medium': 'blur(5px)', 'high': 'blur(10px)' };
+    if (blur && blur !== 'none' && blurMap[blur]) {
+        container.style.backdropFilter = blurMap[blur];
+        container.style.background = container.style.background + ' rgba(0,0,0,0.1)';
+    } else {
+        container.style.backdropFilter = '';
+    }
+}
+
+// ===== 4. استدارة الزوايا =====
+function applyBorderRadiusToAll(radius) {
+    var cards = document.querySelectorAll('.course-card, .user-card, .user-card-simple, .admin-card, .admin-card-simple, .student-card, .college-card, .specialty-card, .profile-container, .modal-content, .admin-card-simple-content, .user-card-simple-content');
+    var radiusMap = { 'none': '0px', 'small': '6px', 'large': '20px', 'circle': '50px' };
+    cards.forEach(function(card) {
+        if (radius && radius !== 'default' && radiusMap[radius]) {
+            card.style.borderRadius = radiusMap[radius];
+        } else {
+            card.style.borderRadius = '';
+        }
+    });
+}
+
+// ===== 5. تأثير التمرير =====
+function applyHoverEffectToAll(hover) {
+    var cards = document.querySelectorAll('.course-card, .user-card, .user-card-simple, .admin-card, .admin-card-simple, .student-card, .college-card, .specialty-card');
+    cards.forEach(function(card) {
+        // إزالة التأثيرات القديمة
+        card.classList.remove('hover-scale', 'hover-glow', 'hover-shadow');
+        if (hover === 'scale') {
+            card.classList.add('hover-scale');
+        } else if (hover === 'glow') {
+            card.classList.add('hover-glow');
+        } else if (hover === 'shadow') {
+            card.classList.add('hover-shadow');
+        }
+    });
+}
+
+// ===== 6. الشفافية =====
+function applyOpacityToAll(opacity) {
+    var cards = document.querySelectorAll('.course-card, .user-card, .user-card-simple, .admin-card, .admin-card-simple, .student-card, .college-card, .specialty-card');
+    cards.forEach(function(card) {
+        if (opacity && opacity !== '100') {
+            card.style.opacity = (parseInt(opacity) / 100);
+        } else {
+            card.style.opacity = '';
+        }
+    });
+}
+
+function applyFeaturedBadgeToMain(badgeName) {
+    // إزالة أي عنصر قديم (من الإصدارات السابقة)
+    var oldBadge = document.getElementById('featuredBadgeDisplay');
+    if (oldBadge) oldBadge.remove();
+
+    var container = document.getElementById('featuredBadgeContainer');
+    if (!container) {
+        console.warn('⚠️ featuredBadgeContainer غير موجودة');
+        return;
+    }
+
+    // مسح المحتوى السابق
+    container.innerHTML = '';
+
+    if (!badgeName || badgeName === 'none' || !currentUserData) {
+        container.style.display = 'none';
+        return;
+    }
+
+    // إظهار الحاوية ككتلة (سطر جديد)
+    container.style.display = 'block';
+    container.style.width = '100%';
+    container.style.marginTop = '0.3rem';
+    container.style.marginBottom = '0.3rem';
 
     var customization = currentUserData.customization || {};
     var textColor = customization.featuredBadgeTextColor || 'default';
@@ -8979,46 +9742,52 @@ function applyFeaturedBadgeToMain(badgeName) {
     var effect = customization.featuredBadgeEffect || 'none';
     var border = customization.featuredBadgeBorder || 'none';
     var borderColor = customization.featuredBadgeBorderColor || 'default';
+    var badgeStyle = customization.badgeStyle || 'default';
     var boxBg = customization.featuredBadgeBoxBg || 'default';
     var boxBorder = customization.featuredBadgeBoxBorder || 'none';
     var boxBorderColor = customization.featuredBadgeBoxBorderColor || 'default';
-    var badgeStyle = customization.badgeStyle || 'default';
+
+    var badgeIcon = getBadgeIcon(badgeName);
 
     // أنماط الشارة
     var badgeStyles = [];
-    if (textColor && textColor !== 'default') badgeStyles.push('color:' + textColor + ' !important');
-    
-    var bgMap = {
-        'gradient1': 'background:linear-gradient(135deg,#667eea,#764ba2)',
-        'gradient2': 'background:linear-gradient(135deg,#f093fb,#f5576c)',
-        'gold': 'background:linear-gradient(135deg,#ffd700,#f59e0b)',
-        'neon': 'background:linear-gradient(135deg,#00ffff,#ff00ff)',
-        'dark': 'background:#1e293b'
-    };
-    if (bg && bg !== 'default' && bgMap[bg]) {
-        badgeStyles.push(bgMap[bg]);
+    if (textColor && textColor !== 'default') {
+        badgeStyles.push('color:' + textColor + ' !important');
+    }
+    var bgValue = getBadgeBgStyle(bg);
+    badgeStyles.push('background:' + bgValue + ' !important');
+
+    if (size === 'small') {
+        badgeStyles.push('font-size:0.5rem;padding:0.05rem 0.3rem');
+    } else if (size === 'large') {
+        badgeStyles.push('font-size:0.7rem;padding:0.15rem 0.7rem');
     } else {
-        badgeStyles.push('background:var(--primary-light)');
+        badgeStyles.push('font-size:0.55rem;padding:0.08rem 0.4rem');
     }
 
-    if (size === 'small') badgeStyles.push('font-size:0.7rem;padding:0.1rem 0.5rem');
-    else if (size === 'large') badgeStyles.push('font-size:1rem;padding:0.4rem 1.2rem');
-    else badgeStyles.push('font-size:0.85rem;padding:0.2rem 1rem');
-
-    if (effect === 'glow') badgeStyles.push('animation:glowBadge 2s ease-in-out infinite');
-    else if (effect === 'pulse') badgeStyles.push('animation:pulse 1.5s ease-in-out infinite');
-    else if (effect === 'shine') badgeStyles.push('background:linear-gradient(135deg,#f093fb,#f5576c,#f093fb);background-size:200% 200%;animation:shine 3s ease infinite');
+    var effectMap = {
+        'glow': 'glowBadge 2s ease-in-out infinite',
+        'pulse': 'pulse 1.5s ease-in-out infinite',
+        'shine': 'shine 3s ease infinite',
+        'float': 'floatEffect 3s ease-in-out infinite',
+        'bounce': 'bounceEffect 2s ease infinite',
+        'rotate-slow': 'rotateEffect 8s linear infinite',
+        'scale-in': 'scaleInEffect 3s ease-in-out infinite',
+        'glow-pulse': 'glowPulseEffect 2s ease-in-out infinite'
+    };
+    if (effect && effect !== 'none' && effectMap[effect]) {
+        badgeStyles.push('animation:' + effectMap[effect]);
+    }
 
     if (border !== 'none') {
         var bColor = (borderColor && borderColor !== 'default') ? borderColor : 'var(--primary)';
         badgeStyles.push('border:' + border + ' 2px ' + bColor);
     }
 
-    // إضافة شكل الشارة (badgeStyle)
     if (badgeStyle && badgeStyle !== 'default') {
         var styleMap = {
-            'glow': 'animation:glowBadge 2s ease-in-out infinite;',
-            'rounded': 'border-radius:50px;padding:0.2rem 1rem;',
+            'glow': 'glowBadge 2s ease-in-out infinite;',
+            'rounded': 'border-radius:50px;padding:0.08rem 0.6rem;',
             'shadow': 'box-shadow:0 4px 15px rgba(0,0,0,0.15);',
             'gradient': 'background:linear-gradient(135deg,#f093fb,#f5576c);color:white;',
             'neon': 'box-shadow:0 0 20px rgba(37,99,235,0.5);border:1px solid rgba(37,99,235,0.3);'
@@ -9028,56 +9797,53 @@ function applyFeaturedBadgeToMain(badgeName) {
         }
     }
 
-    // أنماط الصندوق
+    // أنماط صندوق الشارة
     var boxStyles = [];
-    var boxBgMap = {
-        'gradient1': 'background:linear-gradient(135deg,#667eea,#764ba2)',
-        'gradient2': 'background:linear-gradient(135deg,#f093fb,#f5576c)',
-        'gold': 'background:linear-gradient(135deg,#ffd700,#f59e0b)',
-        'dark': 'background:#1e293b'
-    };
-    if (boxBg && boxBg !== 'default' && boxBgMap[boxBg]) {
-        boxStyles.push(boxBgMap[boxBg]);
-    } else {
-        boxStyles.push('background:var(--gray-50)');
-    }
+    var boxBgValue = getBoxBgStyle(boxBg);
+    boxStyles.push('background:' + boxBgValue + ' !important');
+
     if (boxBorder !== 'none') {
         var bBoxColor = (boxBorderColor && boxBorderColor !== 'default') ? boxBorderColor : 'var(--primary)';
-        boxStyles.push('border:' + boxBorder + ' 2px ' + bBoxColor);
+        boxStyles.push('border:' + boxBorder + ' 2px ' + bBoxColor + ' !important');
+    } else {
+        boxStyles.push('border:none !important');
     }
-    boxStyles.push('border-radius:12px;padding:0.3rem 0.8rem;display:flex;align-items:center;gap:0.5rem;margin:0.3rem 0');
+    boxStyles.push('border-radius:5px;padding:0.05rem 0.35rem;');
+    boxStyles.push('display:inline-flex;align-items:center;gap:0.2rem;');
+    boxStyles.push('margin-top:0.1rem;');
+    boxStyles.push('width:fit-content;');
 
-    var container = document.createElement('div');
-    container.id = 'featuredBadgeDisplay';
-    container.style.cssText = boxStyles.join(';');
     container.innerHTML = `
-        <span style="font-size:0.7rem;color:var(--gray-500);font-weight:600;">⭐ الشارة المميزة</span>
-        <span class="badge-item ${badge.class}" style="${badgeStyles.join(';')}">
-            <i class="fas ${badge.icon}"></i> ${badge.name}
-        </span>
-        <button onclick="openBadgesModal()" style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:0.7rem;margin-right:auto;">
-            <i class="fas fa-edit"></i> تغيير
-        </button>
+        <div style="${boxStyles.join(';')}">
+            <span style="font-size:0.4rem;color:var(--gray-400);font-weight:600;">⭐</span>
+            <span class="badge-item" style="${badgeStyles.join(';')}">
+                <i class="fas ${badgeIcon}"></i> ${badgeName}
+            </span>
+            <button onclick="openBadgesModal()" style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:0.6rem;margin-right:auto;">
+                <i class="fas fa-edit"></i>
+            </button>
+        </div>
     `;
+}
 
-    var profileInfo = document.querySelector('.profile-info');
-    if (profileInfo) {
-        var nameElement = document.getElementById('profileName');
-        if (nameElement && nameElement.parentNode) {
-            nameElement.parentNode.insertBefore(container, nameElement.nextSibling);
-        } else {
-            profileInfo.appendChild(container);
-        }
-    }
+// دالة مساعدة لاستخراج أيقونة الشارة من اسمها
+function getBadgeIcon(badgeName) {
+    var allBadges = getAllBadges();
+    var badge = allBadges.find(function(b) { return b.name === badgeName; });
+    return badge ? badge.icon : 'fa-trophy';
 }
 // ===== تطبيق جميع تخصيصات الشارة المميزة =====
-function applyFeaturedBadgeCustomizations(customization) {
-    var container = document.getElementById('featuredBadgeDisplay');
+function applyFeaturedBadgeCustomizations(container, customization) {
     if (!container) return;
     
     var badge = container.querySelector('.badge-item');
     var changeBtn = container.querySelector('button');
     var label = container.querySelector('span:first-child');
+    
+    // ===== خلفية الصندوق (استخدام الدالة الجديدة) =====
+    var boxBg = customization.featuredBadgeBoxBg || 'default';
+    var bgValue = getBoxBgStyle(boxBg);
+    container.style.setProperty('background', bgValue, 'important');
     
     // ===== خلفية الصندوق =====
     if (customization.featuredBadgeContainerBg && customization.featuredBadgeContainerBg !== 'default') {
@@ -9546,26 +10312,29 @@ function applyAvatarBorderToMain(color) {
         avatar.style.borderStyle = 'solid';
     }
 }
-// ===== تطبيق تأثير الصورة =====
 function applyAvatarEffectToMain(effect) {
     var container = document.getElementById('profileAvatarContainer');
     if (!container) return;
     container.className = 'profile-avatar';
-    if (effect && effect !== 'none' && effect !== 'default') {
+    if (effect && effect !== 'none') {
         container.classList.add('effect-' + effect);
+    }
+    // إضافة تأثير التوهج المتحرك
+    if (effect === 'glow-move') {
+        container.style.animation = 'glowMoveEffect 3s ease-in-out infinite';
     }
 }
 
-// ===== تطبيق شكل الصورة =====
 function applyProfileFrameToMain(frame) {
     var avatar = document.getElementById('profileAvatar');
     if (!avatar) return;
-    
+
+    // إعادة تعيين
     avatar.style.borderRadius = '50%';
     avatar.style.clipPath = 'none';
     avatar.style.width = '100px';
     avatar.style.height = '100px';
-    
+
     if (!frame || frame === 'default' || frame === 'circle') {
         avatar.style.borderRadius = '50%';
     } else if (frame === 'rounded') {
@@ -9575,12 +10344,34 @@ function applyProfileFrameToMain(frame) {
     } else if (frame === 'star') {
         avatar.style.clipPath = 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)';
         avatar.style.borderRadius = '0';
+    } else if (frame === 'star6') {
+        avatar.style.clipPath = 'polygon(50% 0%, 64% 25%, 91% 25%, 73% 50%, 82% 75%, 50% 60%, 18% 75%, 27% 50%, 9% 25%, 36% 25%)';
+        avatar.style.borderRadius = '0';
     } else if (frame === 'heart') {
+        // إصلاح شكل القلب - استخدام clip-path الصحيح
         avatar.style.clipPath = 'path("M50,90 C20,60 0,40 0,25 C0,10 15,0 30,0 C40,0 48,8 50,18 C52,8 60,0 70,0 C85,0 100,10 100,25 C100,40 80,60 50,90Z")';
         avatar.style.borderRadius = '0';
     } else if (frame === 'diamond') {
         avatar.style.clipPath = 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)';
         avatar.style.borderRadius = '0';
+    } else if (frame === 'oval') {
+        avatar.style.borderRadius = '50%';
+        avatar.style.width = '120px';
+        avatar.style.height = '80px';
+    } else if (frame === 'triangle') {
+        avatar.style.clipPath = 'polygon(50% 0%, 0% 100%, 100% 100%)';
+        avatar.style.borderRadius = '0';
+    } else if (frame === 'pentagon') {
+        avatar.style.clipPath = 'polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)';
+        avatar.style.borderRadius = '0';
+    } else if (frame === 'hexagon') {
+        avatar.style.clipPath = 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)';
+        avatar.style.borderRadius = '0';
+    } else if (frame === 'flower') {
+        avatar.style.clipPath = 'path("M50,10 Q60,30 80,20 Q70,40 90,50 Q70,60 80,80 Q60,70 50,90 Q40,70 20,80 Q30,60 10,50 Q30,40 20,20 Q40,30 50,10Z")';
+        avatar.style.borderRadius = '0';
+    } else if (frame === 'blob') {
+        avatar.style.borderRadius = '60% 40% 30% 70% / 50% 60% 40% 50%';
     }
 }
 
@@ -9589,10 +10380,15 @@ function applyAvatarShadowToMain(shadow) {
     if (!avatar) return;
     var shadowColor = currentUserData?.customization?.avatarShadowColor || 'rgba(37,99,235,0.4)';
     var shadows = {
-        'small': '0 2px 8px rgba(0,0,0,0.15)',
-        'medium': '0 4px 15px rgba(0,0,0,0.2)',
-        'large': '0 8px 30px rgba(0,0,0,0.3)',
-        'colored': '0 0 25px ' + shadowColor
+        'small': '0 4px 15px rgba(0,0,0,0.2)',
+        'medium': '0 8px 30px rgba(0,0,0,0.3)',
+        'large': '0 12px 50px rgba(0,0,0,0.4)',
+        'colored': '0 0 40px ' + shadowColor,
+        'inset-shadow': 'inset 0 0 20px ' + shadowColor,
+        'neon-glow': '0 0 30px ' + shadowColor + ', 0 0 60px ' + shadowColor + ', 0 0 90px ' + shadowColor,
+        'soft-glow': '0 0 30px rgba(255,255,255,0.2), 0 0 60px rgba(255,255,255,0.1)',
+        'drop-shadow': 'drop-shadow(0 10px 20px ' + shadowColor + ')',
+        'blur-shadow': '0 20px 40px rgba(0,0,0,0.5), 0 0 20px rgba(0,0,0,0.2)'
     };
     if (shadow && shadows[shadow]) {
         avatar.style.boxShadow = shadows[shadow];
@@ -9668,12 +10464,31 @@ function applyNameGlowToMain(glow) {
     // إعادة تعيين
     name.style.textShadow = 'none';
     name.style.animation = 'none';
+    name.style.textDecoration = 'none';
+    name.style.textTransform = 'none';
+    name.style.letterSpacing = 'normal';
+    name.style.transform = 'none';
+
     if (glow === 'soft') {
         name.style.textShadow = '0 0 20px rgba(37, 99, 235, 0.3)';
     } else if (glow === 'strong') {
         name.style.textShadow = '0 0 30px rgba(37, 99, 235, 0.6), 0 0 60px rgba(37, 99, 235, 0.3)';
     } else if (glow === 'rainbow') {
         name.style.animation = 'rainbowGlow 3s ease infinite';
+    } else if (glow === 'underline') {
+        name.style.textDecoration = 'underline';
+        name.style.textDecorationColor = 'currentColor';
+        name.style.textDecorationThickness = '2px';
+    } else if (glow === 'strikethrough') {
+        name.style.textDecoration = 'line-through';
+    } else if (glow === 'uppercase') {
+        name.style.textTransform = 'uppercase';
+    } else if (glow === 'spacing') {
+        name.style.letterSpacing = '4px';
+    } else if (glow === 'flip') {
+        name.style.transform = 'scaleX(-1)';
+    } else if (glow === 'shadow-text') {
+        name.style.textShadow = '2px 2px 4px rgba(0,0,0,0.3)';
     }
 }
 
@@ -9712,25 +10527,57 @@ function applyCardStyleToMain(style) {
 // ===== نوع الخط =====
 function applyFontStyleToMain(style) {
     var body = document.body;
+    var profileContainer = document.querySelector('.profile-container');
+    
     var fonts = {
         'default': 'Segoe UI, Tahoma, system-ui, sans-serif',
-        'modern': 'Inter, "Segoe UI", sans-serif',
-        'elegant': 'Georgia, "Times New Roman", serif',
-        'bold': '"Arial Black", "Segoe UI", sans-serif',
-        'handwriting': '"Comic Sans MS", cursive',
-        'playful': '"Fredoka One", "Segoe UI", sans-serif'
+        'tajawal': 'Tajawal, sans-serif',
+        'cairo': 'Cairo, sans-serif',
+        'readex': 'Readex Pro, sans-serif',
+        'noto': 'Noto Sans Arabic, sans-serif',
+        'amiri': 'Amiri, serif',
+        'lateef': 'Lateef, serif',
+        'scheherazade': 'Scheherazade New, serif',
+        'modern': 'Inter, sans-serif',
+        'elegant': 'Georgia, serif',
+        'bold': 'Arial Black, sans-serif',
+        'handwriting': 'Comic Sans MS, cursive',
+        'playful': 'Fredoka One, sans-serif',
+        'mono': 'Courier New, monospace',
+        'serif': 'Times New Roman, serif',
+        'sans': 'Helvetica, sans-serif'
     };
-    if (fonts[style]) {
-        body.style.fontFamily = fonts[style];
+
+    var fontFamily = fonts[style] || fonts['default'];
+    
+    // تطبيق على الجسم بالكامل
+    body.style.fontFamily = fontFamily;
+    
+    // تطبيق على حاوية الملف الشخصي أيضاً
+    if (profileContainer) {
+        profileContainer.style.fontFamily = fontFamily;
     }
+    
+    // تطبيق على جميع البطاقات
+    document.querySelectorAll('.course-card, .user-card, .user-card-simple, .admin-card, .admin-card-simple, .student-card, .college-card, .specialty-card').forEach(function(card) {
+        card.style.fontFamily = fontFamily;
+    });
 }
 
-// ===== سرعة الحركة =====
 function applyAnimationSpeedToMain(speed) {
     var speeds = { 'slow': '0.8s', 'normal': '0.25s', 'fast': '0.1s', 'none': '0s' };
-    if (speeds[speed]) {
-        document.documentElement.style.setProperty('--transition-speed', speeds[speed]);
-    }
+    var duration = speeds[speed] || '0.25s';
+    
+    // تطبيق على جميع العناصر المتحركة
+    document.querySelectorAll('.course-card, .user-card, .admin-card, .student-card, .profile-avatar, .badge-item, .btn, .modal-content, .toast').forEach(function(el) {
+        el.style.transitionDuration = duration;
+        el.style.animationDuration = duration;
+    });
+    
+    // تطبيق على عناصر محددة بالكلاسات
+    document.querySelectorAll('.effect-glow, .effect-pulse, .effect-rotate, .effect-shake, .effect-bounce, .effect-float').forEach(function(el) {
+        el.style.animationDuration = duration;
+    });
 }
 
 // ===== الشارة الخاصة =====
@@ -9919,10 +10766,38 @@ function applyCustomizationsToModal(userData) {
     var uid = userData.uid;
     var containerId = 'userProfileViewContainer_' + uid;
     var container = document.getElementById(containerId);
-    if (!container) {
-        console.warn('⚠️ Container not found for uid:', uid);
+    
+    // إذا كان المودال المصغر، نطبق التخصيصات بشكل مختلف
+    var miniContainer = document.querySelector('.user-profile-mini-card');
+    if (miniContainer) {
+        // التخصيصات مطبقة بالفعل في buildUserProfileMiniHTML
+        // نضيف فقط تأثيرات إضافية
+        var customization = userData.customization || {};
+        
+        // تطبيق شكل البطاقة
+        if (customization.cardStyle && customization.cardStyle !== 'default') {
+            var cardStyles = {
+                'glass': 'backdrop-filter:blur(10px);background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);',
+                'bordered': 'border:2px solid var(--primary);',
+                'shadow': 'box-shadow:0 8px 30px rgba(0,0,0,0.2);',
+                'elevated': 'transform:translateY(-5px);box-shadow:0 12px 40px rgba(0,0,0,0.25);'
+            };
+            if (cardStyles[customization.cardStyle]) {
+                miniContainer.style.cssText += cardStyles[customization.cardStyle];
+            }
+        }
+        
+        // تطبيق سرعة الحركة
+        if (customization.animationSpeed && customization.animationSpeed !== 'none') {
+            var speeds = { 'slow': '0.8s', 'normal': '0.25s', 'fast': '0.1s' };
+            if (speeds[customization.animationSpeed]) {
+                miniContainer.style.transition = 'all ' + speeds[customization.animationSpeed] + ' cubic-bezier(0.4,0,0.2,1)';
+            }
+        }
+        
         return;
     }
+    if (!container) return;
 
     // إزالة أي style سابق
     var oldStyle = document.getElementById('modal-custom-style-' + uid);
@@ -10041,64 +10916,83 @@ function applyCustomizationsToModal(userData) {
         }
     }
 
-    // ===== 10. الشارة المميزة =====
+    // ===== الشارة المميزة =====
     if (customization.featuredBadge && customization.featuredBadge !== 'none') {
-        // أنماط الصندوق
+        // ✅ أنماط صندوق الشارة
         var boxBg = customization.featuredBadgeBoxBg || 'default';
         var boxBorder = customization.featuredBadgeBoxBorder || 'none';
         var boxBorderColor = customization.featuredBadgeBoxBorderColor || 'default';
+        
+        var boxBgValue = getBoxBgStyle(boxBg);
         var boxStyles = [];
-        var boxBgMap = {
-            'gradient1': 'background:linear-gradient(135deg,#667eea,#764ba2)',
-            'gradient2': 'background:linear-gradient(135deg,#f093fb,#f5576c)',
-            'gold': 'background:linear-gradient(135deg,#ffd700,#f59e0b)',
-            'dark': 'background:#1e293b'
-        };
-        if (boxBg && boxBg !== 'default' && boxBgMap[boxBg]) {
-            boxStyles.push('background:' + boxBgMap[boxBg]);
-        } else {
-            boxStyles.push('background:var(--card-bg)');
-        }
+        boxStyles.push('background:' + boxBgValue + ' !important');
         if (boxBorder !== 'none') {
             var bBoxColor = (boxBorderColor && boxBorderColor !== 'default') ? boxBorderColor : 'var(--primary)';
-            boxStyles.push('border:' + boxBorder + ' 2px ' + bBoxColor);
+            boxStyles.push('border:' + boxBorder + ' 2px ' + bBoxColor + ' !important');
+        } else {
+            boxStyles.push('border:none !important');
         }
         boxStyles.push('border-radius:12px;padding:0.3rem 0.8rem;display:flex;align-items:center;gap:0.5rem;margin:0.3rem 0');
         css += selector + ' .featured-badge-container { ' + boxStyles.join(';') + ' }';
 
-        // أنماط الشارة
-        var textColor = customization.featuredBadgeTextColor || 'default';
-        var bg = customization.featuredBadgeBg || 'default';
-        var size = customization.featuredBadgeSize || 'medium';
-        var effect = customization.featuredBadgeEffect || 'none';
-        var border = customization.featuredBadgeBorder || 'none';
-        var borderColor = customization.featuredBadgeBorderColor || 'default';
+   // ✅ أنماط الشارة (استخدام الدالة الجديدة)
+    var textColor = customization.featuredBadgeTextColor || 'default';
+    var bg = customization.featuredBadgeBg || 'default';
+    var size = customization.featuredBadgeSize || 'medium';
+    var effect = customization.featuredBadgeEffect || 'none';
+    var border = customization.featuredBadgeBorder || 'none';
+    var borderColor = customization.featuredBadgeBorderColor || 'default';
+    var badgeStyle = customization.badgeStyle || 'default';
 
-        var badgeStylesArr = [];
-        if (textColor && textColor !== 'default') badgeStylesArr.push('color:' + textColor + ' !important');
-        var bgMap = {
-            'gradient1': 'background:linear-gradient(135deg,#667eea,#764ba2)',
-            'gradient2': 'background:linear-gradient(135deg,#f093fb,#f5576c)',
-            'gold': 'background:linear-gradient(135deg,#ffd700,#f59e0b)',
-            'neon': 'background:linear-gradient(135deg,#00ffff,#ff00ff)',
-            'dark': 'background:#1e293b'
-        };
+    var badgeStyles = [];
+    if (textColor && textColor !== 'default') {
+        badgeStyles.push('color:' + textColor + ' !important');
+    }
+    
+    // ✅ استخدام الدالة المساعدة للحصول على خلفية الشارة
+    var bgValue = getBadgeBgStyle(bg);
+    badgeStyles.push('background:' + bgValue + ' !important');
+
+       var bgMap = {
+                'gradient1': 'linear-gradient(135deg,#667eea,#764ba2)',
+                'gradient2': 'linear-gradient(135deg,#f093fb,#f5576c)',
+                'gold': 'linear-gradient(135deg,#ffd700,#f59e0b)',
+                'neon': 'linear-gradient(135deg,#00ffff,#ff00ff)',
+                'dark': '#1e293b',
+                'gradient3': 'linear-gradient(135deg,#89f7fe,#66a6ff)',
+                'gradient4': 'linear-gradient(135deg,#4facfe,#00f2fe)',
+                'ocean': 'linear-gradient(135deg,#2b5876,#4e4376)',
+                'sunset': 'linear-gradient(135deg,#f12711,#f5af19)',
+                'forest': 'linear-gradient(135deg,#134e5e,#71b280)',
+                'rainbow': 'linear-gradient(135deg,#ff0000,#ff8800,#ffff00,#00ff00,#0088ff,#8800ff)',
+                'galaxy': 'linear-gradient(135deg,#0c0c1d,#1a1a3e,#2d1b69)',
+                'candy': 'linear-gradient(135deg,#ff6b6b,#ff9ff3,#feca57)',
+                'lavender': 'linear-gradient(135deg,#e8d5f5,#b8a9c9,#9b8bb5)'
+            };
         if (bg && bg !== 'default' && bgMap[bg]) {
-            badgeStylesArr.push(bgMap[bg]);
+            badgeStyles.push('background:' + bgMap[bg] + ' !important');
         } else {
-            badgeStylesArr.push('background:var(--primary-light)');
+            badgeStyles.push('background:var(--primary-light) !important');
         }
-        if (size === 'small') badgeStylesArr.push('font-size:0.7rem;padding:0.1rem 0.5rem');
-        else if (size === 'large') badgeStylesArr.push('font-size:1rem;padding:0.4rem 1.2rem');
-        else badgeStylesArr.push('font-size:0.85rem;padding:0.2rem 1rem');
-        if (effect === 'glow') badgeStylesArr.push('animation:glowBadge 2s ease-in-out infinite');
-        else if (effect === 'pulse') badgeStylesArr.push('animation:pulse 1.5s ease-in-out infinite');
-        else if (effect === 'shine') badgeStylesArr.push('background:linear-gradient(135deg,#f093fb,#f5576c,#f093fb);background-size:200% 200%;animation:shine 3s ease infinite');
+        if (size === 'small') {
+            badgeStyles.push('font-size:0.5rem;padding:0.05rem 0.3rem');
+        } else if (size === 'large') {
+            badgeStyles.push('font-size:0.7rem;padding:0.15rem 0.7rem');
+        } else {
+            badgeStyles.push('font-size:0.55rem;padding:0.08rem 0.4rem');
+        }
+        if (effect === 'glow') {
+            badgeStyles.push('animation:glowBadge 2s ease-in-out infinite');
+        } else if (effect === 'pulse') {
+            badgeStyles.push('animation:pulse 1.5s ease-in-out infinite');
+        } else if (effect === 'shine') {
+            badgeStyles.push('background:linear-gradient(135deg,#f093fb,#f5576c,#f093fb);background-size:200% 200%;animation:shine 3s ease infinite');
+        }
         if (border !== 'none') {
             var bColor = (borderColor && borderColor !== 'default') ? borderColor : 'var(--primary)';
-            badgeStylesArr.push('border:' + border + ' 2px ' + bColor);
+            badgeStyles.push('border:' + border + ' 2px ' + bColor);
         }
-        if (customization.badgeStyle && customization.badgeStyle !== 'default') {
+        if (badgeStyle && badgeStyle !== 'default') {
             var styleMap = {
                 'glow': 'animation:glowBadge 2s ease-in-out infinite;',
                 'rounded': 'border-radius:50px;padding:0.2rem 1rem;',
@@ -10106,11 +11000,11 @@ function applyCustomizationsToModal(userData) {
                 'gradient': 'background:linear-gradient(135deg,#f093fb,#f5576c);color:white;',
                 'neon': 'box-shadow:0 0 20px rgba(37,99,235,0.5);border:1px solid rgba(37,99,235,0.3);'
             };
-            if (styleMap[customization.badgeStyle]) {
-                badgeStylesArr.push(styleMap[customization.badgeStyle]);
+            if (styleMap[badgeStyle]) {
+                badgeStyles.push(styleMap[badgeStyle]);
             }
         }
-        css += selector + ' .featured-badge-container .badge-item { ' + badgeStylesArr.join(';') + ' }';
+        css += selector + ' .featured-badge-container .badge-item { ' + badgeStyles.join(';') + ' }';
     }
 
     // ===== 11. الشارة الخاصة =====
@@ -10118,12 +11012,56 @@ function applyCustomizationsToModal(userData) {
         css += selector + ' .special-badge-display { display: inline-block; }';
     }
 
-    // تطبيق CSS
+
+
+    // ===== التخصيصات المتقدمة =====
+    // استدارة الزوايا
+    var radiusMap = { 'none': '0px', 'small': '6px', 'large': '20px', 'circle': '50px' };
+    if (customization.borderRadius && customization.borderRadius !== 'default' && radiusMap[customization.borderRadius]) {
+        css += selector + ' { border-radius: ' + radiusMap[customization.borderRadius] + ' !important; }';
+    }
+
+    // الشفافية
+    if (customization.opacity && customization.opacity !== '100') {
+        css += selector + ' { opacity: ' + (parseInt(customization.opacity) / 100) + ' !important; }';
+    }
+
+    // الضبابية
+    var blurMap = { 'low': 'blur(2px)', 'medium': 'blur(5px)', 'high': 'blur(10px)' };
+    if (customization.blurEffect && customization.blurEffect !== 'none' && blurMap[customization.blurEffect]) {
+        css += selector + ' { backdrop-filter: ' + blurMap[customization.blurEffect] + ' !important; }';
+    }
+
+    // شكل المؤشر
+    if (customization.cursorStyle && customization.cursorStyle !== 'default') {
+        css += selector + ' { cursor: ' + customization.cursorStyle + ' !important; }';
+    }
+
+    // تأثير التمرير (نطبق كلاسات عبر JavaScript، لكننا نضيفها في HTML)
+    // سنقوم بإضافتها عبر JS في نهاية الدالة
+
     if (css) {
         style.textContent = css;
         document.head.appendChild(style);
-        console.log('✅ تم تطبيق تخصيصات المودال للمستخدم:', userData.displayName);
     }
+
+    // إضافة كلاسات تأثير التمرير
+    var hoverEffect = customization.hoverEffect;
+    if (hoverEffect && hoverEffect !== 'default') {
+        var containerElement = document.getElementById(containerId);
+        if (containerElement) {
+            containerElement.classList.remove('hover-scale', 'hover-glow', 'hover-shadow');
+            if (hoverEffect === 'scale') {
+                containerElement.classList.add('hover-scale');
+            } else if (hoverEffect === 'glow') {
+                containerElement.classList.add('hover-glow');
+            } else if (hoverEffect === 'shadow') {
+                containerElement.classList.add('hover-shadow');
+            }
+        }
+    }
+
+    console.log('✅ تم تطبيق تخصيصات المودال للمستخدم:', userData.displayName);
 }
 
 
@@ -10150,6 +11088,7 @@ function applyProfileBgToModal(bg) {
 // ============================================================
 
 var BG_STYLES = {
+    // ===== الخلفيات القديمة =====
     'gradient1': { bg: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', textColor: '#ffffff', isDark: true },
     'gradient2': { bg: 'linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)', textColor: '#1a1a2e', isDark: false },
     'gradient3': { bg: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', textColor: '#ffffff', isDark: true },
@@ -10164,7 +11103,24 @@ var BG_STYLES = {
     'sunrise': { bg: 'linear-gradient(135deg, #ff6b6b, #feca57, #ff9ff3)', textColor: '#2d3436', isDark: false },
     'lavender': { bg: 'linear-gradient(135deg, #e8d5f5, #b8a9c9, #9b8bb5)', textColor: '#2d3436', isDark: false },
     'candy': { bg: 'linear-gradient(135deg, #ff6b6b, #ff9ff3, #feca57)', textColor: '#2d3436', isDark: false },
-    'gold': { bg: 'linear-gradient(135deg, #bf953f, #fcf6ba, #b38728)', textColor: '#2d3436', isDark: false }
+    'gold': { bg: 'linear-gradient(135deg, #bf953f, #fcf6ba, #b38728)', textColor: '#2d3436', isDark: false },
+
+    // ===== الخلفيات الجديدة =====
+    'cherry': { bg: 'linear-gradient(135deg, #800000 0%, #dc143c 100%)', textColor: '#ffffff', isDark: true },
+    'mint': { bg: 'linear-gradient(135deg, #00b894 0%, #00cec9 100%)', textColor: '#ffffff', isDark: true },
+    'peach': { bg: 'linear-gradient(135deg, #fd79a8 0%, #fdcb6e 100%)', textColor: '#2d3436', isDark: false },
+    'grape': { bg: 'linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%)', textColor: '#ffffff', isDark: true },
+    'coffee': { bg: 'linear-gradient(135deg, #6f4e37 0%, #d4a574 100%)', textColor: '#ffffff', isDark: true },
+    'ice': { bg: 'linear-gradient(135deg, #dfe6e9 0%, #b2bec3 100%)', textColor: '#2d3436', isDark: false },
+    'fire': { bg: 'linear-gradient(135deg, #e17055 0%, #d63031 100%)', textColor: '#ffffff', isDark: true },
+    'space': { bg: 'linear-gradient(135deg, #0c0c1d 0%, #1a1a3e 30%, #2d1b69 60%, #1a1a3e 100%)', textColor: '#c8b6ff', isDark: true },
+    'retro': { bg: 'linear-gradient(135deg, #2d3436 0%, #fd79a8 50%, #fdcb6e 100%)', textColor: '#ffffff', isDark: true },
+    'vintage': { bg: 'linear-gradient(135deg, #d4a574 0%, #b8956a 50%, #8b6b4a 100%)', textColor: '#2d3436', isDark: false },
+    'modern': { bg: 'linear-gradient(135deg, #2d3436 0%, #dfe6e9 100%)', textColor: '#2d3436', isDark: false },
+    'pastel': { bg: 'linear-gradient(135deg, #fd79a8 0%, #a29bfe 50%, #74b9ff 100%)', textColor: '#2d3436', isDark: false },
+    'vibrant': { bg: 'linear-gradient(135deg, #ff6b6b 0%, #feca57 50%, #48dbfb 100%)', textColor: '#2d3436', isDark: false },
+    'monochrome': { bg: 'linear-gradient(135deg, #ffffff 0%, #dfe6e9 50%, #2d3436 100%)', textColor: '#2d3436', isDark: false },
+    'sepia': { bg: 'linear-gradient(135deg, #d4a574 0%, #bf953f 50%, #8b6b4a 100%)', textColor: '#2d3436', isDark: false }
 };
 
 console.log('✅ تم تنظيف نظام التخصيصات بنجاح!');
@@ -10193,21 +11149,29 @@ function openCustomizationModal() {
 
     var html = '';
 
-    // ===== قسم المعاينة =====
+    // ===== قسم المعاينة مع زر تبديل العرض =====
     html += '<div class="preview-section">';
     html += '<div class="preview-header">';
     html += '<h4><i class="fas fa-eye"></i> معاينة التخصيصات</h4>';
     html += '<div class="preview-actions">';
-    html += '<button class="btn-preview-toggle" onclick="togglePreviewMode()"><i class="fas fa-exchange-alt"></i> تبديل العرض</button>';
-    html += '<button class="btn-preview-reset" onclick="resetPreviewChanges()"><i class="fas fa-undo"></i> إعادة</button>';
+    html += '<button class="btn-preview-toggle" onclick="togglePreviewMode()" title="تبديل وضع المعاينة">';
+    html += '<i class="fas fa-exchange-alt"></i> تبديل العرض';
+    html += '</button>';
+    html += '<button class="btn-preview-reset" onclick="resetPreviewChanges()" title="إعادة تعيين المعاينة">';
+    html += '<i class="fas fa-undo"></i> إعادة';
+    html += '</button>';
     html += '</div>';
     html += '</div>';
+    
+    // حاوية المعاينة
     html += '<div id="previewContainer" class="preview-container">';
     html += '<div class="preview-placeholder">';
     html += '<i class="fas fa-hand-pointer"></i>';
     html += '<p>اختر تخصيصاً من القائمة أدناه لمعاينته فوراً</p>';
     html += '</div>';
     html += '</div>';
+    
+    // مؤشر وضع المعاينة
     html += '<div id="previewModeIndicator" class="preview-mode-indicator">';
     html += '📌 عرض: <span id="currentPreviewModeText">كلا الشكلين</span>';
     html += '</div>';
@@ -10228,13 +11192,14 @@ function openCustomizationModal() {
     // ===== الأزرار الرئيسية (التبويبات) =====
     html += '<div class="customization-main-tabs">';
     var categories = [
-        { key: 'appearance', label: 'المظهر', icon: 'fa-palette', color: '#8b5cf6' },
-        { key: 'avatar', label: 'الصورة', icon: 'fa-user-circle', color: '#3b82f6' },
-        { key: 'name', label: 'الاسم', icon: 'fa-signature', color: '#22c55e' },
-        { key: 'texts', label: 'النصوص', icon: 'fa-font', color: '#f59e0b' },
-        { key: 'buttons', label: 'الأزرار', icon: 'fa-square', color: '#ec4899' },
-        { key: 'badge', label: 'الشارة', icon: 'fa-trophy', color: '#ef4444' },
-        { key: 'special', label: 'خاص', icon: 'fa-star', color: '#8b5cf6' }
+        { key: 'appearance', label: 'المظهر', icon: 'fa-palette' },
+        { key: 'avatar', label: 'الصورة', icon: 'fa-user-circle' },
+        { key: 'name', label: 'الاسم', icon: 'fa-signature' },
+        { key: 'texts', label: 'النصوص', icon: 'fa-font' },
+        { key: 'buttons', label: 'الأزرار', icon: 'fa-square' },
+        { key: 'badge', label: 'الشارة', icon: 'fa-trophy' },
+        { key: 'special', label: 'خاص', icon: 'fa-star' },
+        { key: 'advanced', label: 'متقدم', icon: 'fa-cogs' }
     ];
     categories.forEach(function(cat) {
         var active = cat.key === 'appearance' ? 'active' : '';
@@ -10256,13 +11221,10 @@ function openCustomizationModal() {
         if (subKeys.length === 0) {
             html += '<div class="empty-options">لا توجد خيارات</div>';
         } else {
-            // ===== الأزرار الثانوية - شبكة من المربعات الصغيرة =====
             html += '<div class="sub-options-grid-small">';
             subKeys.forEach(function(subKey) {
                 var opt = cat.options[subKey];
                 var isActive = customization[subKey] && customization[subKey] !== 'default' && customization[subKey] !== 'none';
-                var currentValue = customization[subKey] || 'default';
-                var valueLabel = getOptionLabel(subKey, currentValue);
                 
                 html += '<div class="sub-option-box" data-option="' + subKey + '" onclick="showOptionDetails(\'' + subKey + '\')">';
                 html += '<div class="sub-option-box-content">';
@@ -10277,7 +11239,6 @@ function openCustomizationModal() {
                 html += '</div>';
             });
             html += '</div>';
-            // حاوية لعرض خيارات التخصيص المحددة
             html += '<div id="optionDetailsContainer_' + catKey + '" class="option-details-container" style="display:none;"></div>';
         }
         html += '</div>';
@@ -10297,10 +11258,48 @@ function openCustomizationModal() {
 
     content.innerHTML = html;
 
+    // ===== عرض المعاينة الحالية فوراً =====
     previewState.previewMode = 'both';
+    previewState.active = true;
+    previewState.type = null;
+    previewState.value = null;
     updatePreviewModeText();
+    
+    // تطبيق المعاينة الحالية (بدون تخصيصات جديدة)
+    applyCurrentPreview();
 
     openModal('customizationModal');
+}
+
+function applyCurrentPreview() {
+    var previewContainer = document.getElementById('previewContainer');
+    if (!previewContainer) return;
+    
+    // استخدام التخصيصات الحالية للمستخدم
+    var tempUserData = JSON.parse(JSON.stringify(currentUserData));
+    
+    var mode = previewState.previewMode || 'both';
+    var html = '';
+
+    if (mode === 'both' || mode === 'main') {
+        html += '<div style="margin-bottom:0.3rem;">';
+        html += '<div style="font-size:0.6rem;color:var(--gray-400);margin-bottom:0.2rem;">📱 صفحتي</div>';
+        html += '<div style="background:var(--card-bg);border-radius:8px;padding:0.3rem;border:1px solid var(--border-color);">';
+        html += buildMainProfilePreview(tempUserData);
+        html += '</div>';
+        html += '</div>';
+    }
+
+    if (mode === 'both' || mode === 'modal') {
+        html += '<div style="margin-bottom:0.3rem;">';
+        html += '<div style="font-size:0.6rem;color:var(--gray-400);margin-bottom:0.2rem;">👥 مودال الآخرين</div>';
+        html += '<div style="background:var(--card-bg);border-radius:8px;padding:0.3rem;border:1px solid var(--border-color);">';
+        html += buildModalProfilePreview(tempUserData);
+        html += '</div>';
+        html += '</div>';
+    }
+
+    previewContainer.innerHTML = html;
 }
 
 function getOptionIcon(optionKey) {
@@ -10348,8 +11347,10 @@ function getOptionIcon(optionKey) {
     return icons[optionKey] || 'fa-cog';
 }
 // ===== بناء خيار تخصيص واحد =====
-function buildCustomizationOptionsHTML(optionKey, optionDef, currentValue, isSuperAdmin) {
-    var html = '<div class="option-detail-header">';
+function buildCustomizationOptionHTML(type, currentValue, isSuperAdmin) {
+    var option = CUSTOMIZATION_OPTIONS[type];
+    if (!option) return '';
+        var html = '<div class="option-detail-header">';
     html += '<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">';
     html += '<span style="font-weight:700;font-size:0.95rem;color:var(--text-color);">' + optionDef.label + '</span>';
     if (!isSuperAdmin) {
@@ -10421,8 +11422,6 @@ function buildCustomizationOptionsHTML(optionKey, optionDef, currentValue, isSup
 
 
 
-// ===== 4. تطبيق المعاينة الفورية =====
-
 function applyInstantPreview(type, value) {
     var previewContainer = document.getElementById('previewContainer');
     if (!previewContainer) return;
@@ -10433,6 +11432,11 @@ function applyInstantPreview(type, value) {
         return;
     }
     
+    // تخزين حالة المعاينة
+    previewState.active = true;
+    previewState.type = type;
+    previewState.value = value;
+    
     // إنشاء نسخة مؤقتة من تخصيصات المستخدم مع التغيير
     var tempCustomization = JSON.parse(JSON.stringify(currentUserData.customization || {}));
     tempCustomization[type] = value;
@@ -10442,8 +11446,7 @@ function applyInstantPreview(type, value) {
     
     var mode = previewState.previewMode || 'both';
     var html = '';
-    
-    // عرض المعاينة حسب الوضع
+
     if (mode === 'both' || mode === 'main') {
         html += '<div style="margin-bottom:0.3rem;">';
         html += '<div style="font-size:0.6rem;color:var(--gray-400);margin-bottom:0.2rem;">📱 صفحتي</div>';
@@ -10452,7 +11455,7 @@ function applyInstantPreview(type, value) {
         html += '</div>';
         html += '</div>';
     }
-    
+
     if (mode === 'both' || mode === 'modal') {
         html += '<div style="margin-bottom:0.3rem;">';
         html += '<div style="font-size:0.6rem;color:var(--gray-400);margin-bottom:0.2rem;">👥 مودال الآخرين</div>';
@@ -10461,11 +11464,18 @@ function applyInstantPreview(type, value) {
         html += '</div>';
         html += '</div>';
     }
-    
+
     previewContainer.innerHTML = html;
 }
 
+// ============================================================
+//  بناء معاينة الملف الشخصي الرئيسي (صفحتي)
+//  تطبق جميع التخصيصات: الخلفية، الصورة، الاسم، النصوص،
+//  الأزرار، الشارات، والتخصيصات المتقدمة
+// ============================================================
 function buildMainProfilePreview(userData) {
+    if (!userData) return '<div style="color:var(--gray-400);text-align:center;padding:1rem;">لا توجد بيانات</div>';
+
     var customization = userData.customization || {};
     var name = userData.displayName || 'مستخدم';
     var email = userData.email || 'user@example.com';
@@ -10473,122 +11483,156 @@ function buildMainProfilePreview(userData) {
     var isAdmin = role === 'admin';
     var isSuperAdmin = userData.isSuperAdmin || false;
     var result = calculateUserPoints(userData);
+    var currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
 
-    // ===== تجميع الأنماط =====
-    var bgStyle = '', textColor = '', nameColor = '', nameGlow = '';
-    var avatarBorder = '', avatarEffect = '', profileFrame = '';
-    var textColorStyle = '', bioColor = '', buttonColor = '';
-    var avatarShadow = '', avatarBorderWidth = '', avatarBorderStyle = '';
-    var badgeExtraStyle = '';
-
-    // 1. خلفية الملف
+    // ============================================================
+    //  1. خلفية الملف الشخصي
+    // ============================================================
+    var bgStyle = '';
+    var textColor = '';
+    var isDarkBg = false;
     if (customization.profileBg && customization.profileBg !== 'default') {
         var bgInfo = BG_STYLES[customization.profileBg];
         if (bgInfo) {
-            bgStyle = 'background:' + bgInfo.bg + ';color:' + bgInfo.textColor + ';';
+            bgStyle = 'background:' + bgInfo.bg + ';';
             textColor = bgInfo.textColor;
+            isDarkBg = bgInfo.isDark || false;
         }
     }
-
-    // 2. لون الاسم
-    if (customization.nameColor && customization.nameColor !== 'default') {
-        nameColor = 'color:' + customization.nameColor + ';';
+    // إذا لم تكن هناك خلفية مخصصة، نستخدم ألوان الثيم
+    if (!bgStyle) {
+        var defaultBg = currentTheme === 'dark' ? '#1e293b' : '#ffffff';
+        var defaultText = currentTheme === 'dark' ? '#f1f5f9' : '#1e293b';
+        bgStyle = 'background:' + defaultBg + ';';
+        textColor = defaultText;
+        isDarkBg = currentTheme === 'dark';
     }
 
-    // 3. تأثير الاسم (جميع الخيارات)
-    if (customization.nameGlow) {
-        if (customization.nameGlow === 'soft') {
-            nameGlow = 'text-shadow:0 0 20px rgba(37,99,235,0.3);';
-        } else if (customization.nameGlow === 'strong') {
-            nameGlow = 'text-shadow:0 0 30px rgba(37,99,235,0.6),0 0 60px rgba(37,99,235,0.3);';
-        } else if (customization.nameGlow === 'rainbow') {
-            nameGlow = 'animation:rainbowGlow 3s ease infinite;';
-        }
+// ===== الخطوط =====
+var fontFamily = '';
+var fonts = {
+    'tajawal': 'Tajawal, sans-serif',
+    'cairo': 'Cairo, sans-serif',
+    'readex': 'Readex Pro, sans-serif',
+    'noto': 'Noto Sans Arabic, sans-serif',
+    'amiri': 'Amiri, serif',
+    'lateef': 'Lateef, serif',
+    'scheherazade': 'Scheherazade New, serif',
+    'modern': 'Inter, sans-serif',
+    'elegant': 'Georgia, serif',
+    'bold': 'Arial Black, sans-serif',
+    'handwriting': 'Comic Sans MS, cursive',
+    'playful': 'Fredoka One, sans-serif',
+    'mono': 'Courier New, monospace',
+    'serif': 'Times New Roman, serif',
+    'sans': 'Helvetica, sans-serif'
+};
+if (customization.fontStyle && customization.fontStyle !== 'default' && fonts[customization.fontStyle]) {
+    fontFamily = 'font-family:' + fonts[customization.fontStyle] + ';';
+}
+
+    // ============================================================
+    //  2. تخصيصات الصورة الشخصية
+    // ============================================================
+    var avatarBorderColor = customization.avatarBorder || '#2563eb';
+    var avatarBorderWidth = customization.avatarBorderWidth || '3';
+    var avatarBorderStyle = customization.avatarBorderStyle || 'solid';
+    var avatarEffect = customization.avatarEffect || 'none';
+    var avatarShadow = customization.avatarShadow || 'none';
+    var avatarShadowColor = customization.avatarShadowColor || 'rgba(37,99,235,0.4)';
+    var profileFrame = customization.profileFrame || 'default';
+
+    var borderWidthFinal = (avatarBorderWidth === 'none' || !avatarBorderWidth) ? '0px' : avatarBorderWidth + 'px';
+    var borderStyleFinal = (avatarBorderWidth === 'none' || !avatarBorderWidth) ? 'none' : avatarBorderStyle;
+
+    var avatarStyles = '';
+    avatarStyles += 'border-color:' + avatarBorderColor + ';';
+    avatarStyles += 'border-width:' + borderWidthFinal + ';';
+    avatarStyles += 'border-style:' + borderStyleFinal + ';';
+
+    // ظل الصورة
+    var shadowMap = {
+        'small': '0 4px 15px rgba(0,0,0,0.2)',
+        'medium': '0 8px 30px rgba(0,0,0,0.3)',
+        'large': '0 12px 50px rgba(0,0,0,0.4)',
+        'colored': '0 0 40px ' + avatarShadowColor,
+        'inset-shadow': 'inset 0 0 20px ' + avatarShadowColor,
+        'neon-glow': '0 0 30px ' + avatarShadowColor + ', 0 0 60px ' + avatarShadowColor + ', 0 0 90px ' + avatarShadowColor,
+        'soft-glow': '0 0 30px rgba(255,255,255,0.2), 0 0 60px rgba(255,255,255,0.1)',
+        'drop-shadow': 'drop-shadow(0 10px 20px ' + avatarShadowColor + ')',
+        'blur-shadow': '0 20px 40px rgba(0,0,0,0.5), 0 0 20px rgba(0,0,0,0.2)'
+    };
+    if (avatarShadow && avatarShadow !== 'none' && shadowMap[avatarShadow]) {
+        avatarStyles += 'box-shadow:' + shadowMap[avatarShadow] + ';';
     }
 
-    // 4. لون النصوص الفرعية
-    if (customization.textColor && customization.textColor !== 'default') {
-        textColorStyle = 'color:' + customization.textColor + ';';
+    // شكل الصورة
+    var frameStyles = {
+        'rounded': 'border-radius:20%;',
+        'square': 'border-radius:0;',
+        'star': 'clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);border-radius:0;',
+        'star6': 'clip-path:polygon(50% 0%,64% 25%,91% 25%,73% 50%,82% 75%,50% 60%,18% 75%,27% 50%,9% 25%,36% 25%);border-radius:0;',
+        'heart': 'clip-path:path("M50,90 C20,60 0,40 0,25 C0,10 15,0 30,0 C40,0 48,8 50,18 C52,8 60,0 70,0 C85,0 100,10 100,25 C100,40 80,60 50,90Z");border-radius:0;',
+        'diamond': 'clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);border-radius:0;',
+        'oval': 'border-radius:50%;width:120px;height:80px;',
+        'triangle': 'clip-path:polygon(50% 0%,0% 100%,100% 100%);border-radius:0;',
+        'pentagon': 'clip-path:polygon(50% 0%,100% 38%,82% 100%,18% 100%,0% 38%);border-radius:0;',
+        'hexagon': 'clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);border-radius:0;',
+        'flower': 'clip-path:path("M50,10 Q60,30 80,20 Q70,40 90,50 Q70,60 80,80 Q60,70 50,90 Q40,70 20,80 Q30,60 10,50 Q30,40 20,20 Q40,30 50,10Z");border-radius:0;',
+        'blob': 'border-radius:60% 40% 30% 70% / 50% 60% 40% 50%;'
+    };
+    if (profileFrame && profileFrame !== 'default' && frameStyles[profileFrame]) {
+        avatarStyles += frameStyles[profileFrame];
     }
 
-    // 5. لون النبذة
-    if (customization.bioColor && customization.bioColor !== 'default') {
-        bioColor = 'color:' + customization.bioColor + ';';
+    // تأثير الصورة
+    var effectClass = (avatarEffect && avatarEffect !== 'none') ? 'effect-' + avatarEffect : '';
+    // تأثير التوهج المتحرك
+    if (avatarEffect === 'glow-move') {
+        avatarStyles += 'animation:glowMoveEffect 3s ease-in-out infinite;';
     }
 
-    // 6. لون الأزرار
-    if (customization.buttonColor && customization.buttonColor !== 'default') {
-        buttonColor = 'color:' + customization.buttonColor + ';border-color:' + customization.buttonColor + ';';
+    // ============================================================
+    //  3. الاسم
+    // ============================================================
+    var defaultNameColor = currentTheme === 'dark' ? '#ffffff' : '#000000';
+    var nameColor = (customization.nameColor && customization.nameColor !== 'default')
+        ? customization.nameColor
+        : defaultNameColor;
+
+    var nameGlowStyles = '';
+    var nameGlow = customization.nameGlow || 'none';
+    var glowEffects = {
+        'soft': 'text-shadow:0 0 20px rgba(37,99,235,0.3);',
+        'strong': 'text-shadow:0 0 30px rgba(37,99,235,0.6),0 0 60px rgba(37,99,235,0.3);',
+        'rainbow': 'animation:rainbowGlow 3s ease infinite;',
+        'underline': 'text-decoration:underline;text-decoration-color:currentColor;text-decoration-thickness:2px;',
+        'strikethrough': 'text-decoration:line-through;',
+        'uppercase': 'text-transform:uppercase;',
+        'spacing': 'letter-spacing:4px;',
+        'flip': 'transform:scaleX(-1);display:inline-block;',
+        'shadow-text': 'text-shadow:2px 2px 4px rgba(0,0,0,0.3);'
+    };
+    if (nameGlow !== 'none' && glowEffects[nameGlow]) {
+        nameGlowStyles = glowEffects[nameGlow];
     }
 
-    // 7. إطار الصورة - لون
-    if (customization.avatarBorder && customization.avatarBorder !== 'default') {
-        avatarBorder = 'border-color:' + customization.avatarBorder + ';';
+    // ============================================================
+    //  4. الشارة الخاصة
+    // ============================================================
+    var specialBadgeHTML = '';
+    if (customization.specialBadge && customization.specialBadge !== 'none') {
+        specialBadgeHTML = '<span style="font-size:0.8rem;margin-right:0.3rem;color:' + nameColor + ';' + nameGlowStyles + '"><i class="fas ' + customization.specialBadge + '"></i></span>';
     }
 
-    // 8. إطار الصورة - سمك (مع التعامل مع none)
-    if (customization.avatarBorderWidth && customization.avatarBorderWidth !== 'none') {
-        avatarBorderWidth = 'border-width:' + customization.avatarBorderWidth + 'px;';
-    } else {
-        avatarBorderWidth = 'border-width:0px;';
-    }
-
-    // 9. إطار الصورة - نمط
-    if (customization.avatarBorderStyle) {
-        avatarBorderStyle = 'border-style:' + customization.avatarBorderStyle + ';';
-    }
-
-    // 10. ظل الصورة (مع اللون)
-    if (customization.avatarShadow) {
-        var shadowMap = {
-            'small': '0 2px 8px rgba(0,0,0,0.15)',
-            'medium': '0 4px 15px rgba(0,0,0,0.2)',
-            'large': '0 8px 30px rgba(0,0,0,0.3)',
-            'colored': '0 0 25px ' + (customization.avatarShadowColor || 'rgba(37,99,235,0.4)')
-        };
-        if (shadowMap[customization.avatarShadow]) {
-            avatarShadow = 'box-shadow:' + shadowMap[customization.avatarShadow] + ';';
-        }
-    }
-
-    // 11. تأثير الصورة
-    if (customization.avatarEffect && customization.avatarEffect !== 'none') {
-        avatarEffect = 'effect-' + customization.avatarEffect;
-    }
-
-    // 12. شكل الصورة
-    if (customization.profileFrame) {
-        var frameStyles = {
-            'rounded': 'border-radius:20%;',
-            'square': 'border-radius:0;',
-            'star': 'clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);border-radius:0;',
-            'heart': 'clip-path:path("M50,90 C20,60 0,40 0,25 C0,10 15,0 30,0 C40,0 48,8 50,18 C52,8 60,0 70,0 C85,0 100,10 100,25 C100,40 80,60 50,90Z");border-radius:0;',
-            'diamond': 'clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);border-radius:0;'
-        };
-        if (frameStyles[customization.profileFrame]) {
-            profileFrame = frameStyles[customization.profileFrame];
-        }
-    }
-
-    // 13. شكل الشارة (badgeStyle) - يطبق على جميع الشارات
-    if (customization.badgeStyle && customization.badgeStyle !== 'default') {
-        var badgeStyles = {
-            'glow': 'animation:glowBadge 2s ease-in-out infinite;',
-            'rounded': 'border-radius:50px;padding:0.2rem 1rem;',
-            'shadow': 'box-shadow:0 4px 15px rgba(0,0,0,0.15);',
-            'gradient': 'background:linear-gradient(135deg,#f093fb,#f5576c);color:white;',
-            'neon': 'box-shadow:0 0 20px rgba(37,99,235,0.5);border:1px solid rgba(37,99,235,0.3);'
-        };
-        if (badgeStyles[customization.badgeStyle]) {
-            badgeExtraStyle = badgeStyles[customization.badgeStyle];
-        }
-    }
-
-    // ===== الشارة المميزة (جميع الخيارات) =====
+    // ============================================================
+    //  5. الشارة المميزة (مع صندوقها)
+    // ============================================================
     var featuredBadgeHTML = '';
-    if (customization.featuredBadge && customization.featuredBadge !== 'none') {
+    var featuredBadgeName = customization.featuredBadge || 'none';
+    if (featuredBadgeName && featuredBadgeName !== 'none') {
         var allBadges = getAllBadges();
-        var badge = allBadges.find(function(b) { return b.name === customization.featuredBadge; });
+        var badge = allBadges.find(function(b) { return b.name === featuredBadgeName; });
         if (badge) {
             // خيارات الشارة
             var fTextColor = customization.featuredBadgeTextColor || 'default';
@@ -10597,114 +11641,301 @@ function buildMainProfilePreview(userData) {
             var fEffect = customization.featuredBadgeEffect || 'none';
             var fBorder = customization.featuredBadgeBorder || 'none';
             var fBorderColor = customization.featuredBadgeBorderColor || 'default';
+            var fBadgeStyle = customization.badgeStyle || 'default';
 
-            // خيارات الصندوق
+            // خيارات صندوق الشارة
             var boxBg = customization.featuredBadgeBoxBg || 'default';
             var boxBorder = customization.featuredBadgeBoxBorder || 'none';
             var boxBorderColor = customization.featuredBadgeBoxBorderColor || 'default';
 
-            // بناء أنماط الشارة
-            var fStyles = [];
-            if (fTextColor && fTextColor !== 'default') fStyles.push('color:' + fTextColor);
-            
-            var fBgMap = {
-                'gradient1': 'background:linear-gradient(135deg,#667eea,#764ba2)',
-                'gradient2': 'background:linear-gradient(135deg,#f093fb,#f5576c)',
-                'gold': 'background:linear-gradient(135deg,#ffd700,#f59e0b)',
-                'neon': 'background:linear-gradient(135deg,#00ffff,#ff00ff)',
-                'dark': 'background:#1e293b'
+            // أنماط الشارة
+            var badgeStyles = [];
+            if (fTextColor && fTextColor !== 'default') {
+                badgeStyles.push('color:' + fTextColor);
+            }
+            var bgMap = {
+                'gradient1': 'linear-gradient(135deg,#667eea,#764ba2)',
+                'gradient2': 'linear-gradient(135deg,#f093fb,#f5576c)',
+                'gold': 'linear-gradient(135deg,#ffd700,#f59e0b)',
+                'neon': 'linear-gradient(135deg,#00ffff,#ff00ff)',
+                'dark': '#1e293b',
+                'gradient3': 'linear-gradient(135deg,#89f7fe,#66a6ff)',
+                'gradient4': 'linear-gradient(135deg,#4facfe,#00f2fe)',
+                'ocean': 'linear-gradient(135deg,#2b5876,#4e4376)',
+                'sunset': 'linear-gradient(135deg,#f12711,#f5af19)',
+                'forest': 'linear-gradient(135deg,#134e5e,#71b280)',
+                'rainbow': 'linear-gradient(135deg,#ff0000,#ff8800,#ffff00,#00ff00,#0088ff,#8800ff)',
+                'galaxy': 'linear-gradient(135deg,#0c0c1d,#1a1a3e,#2d1b69)',
+                'candy': 'linear-gradient(135deg,#ff6b6b,#ff9ff3,#feca57)',
+                'lavender': 'linear-gradient(135deg,#e8d5f5,#b8a9c9,#9b8bb5)'
             };
-            if (fBg && fBg !== 'default' && fBgMap[fBg]) {
-                fStyles.push(fBgMap[fBg]);
+            if (fBg && fBg !== 'default' && bgMap[fBg]) {
+                badgeStyles.push('background:' + bgMap[fBg]);
             } else {
-                fStyles.push('background:var(--primary-light)');
+                badgeStyles.push('background:var(--primary-light)');
             }
 
-            if (fSize === 'small') fStyles.push('font-size:0.6rem;padding:0.1rem 0.5rem');
-            else if (fSize === 'large') fStyles.push('font-size:0.9rem;padding:0.3rem 1.2rem');
-            else fStyles.push('font-size:0.75rem;padding:0.2rem 0.8rem');
+            if (fSize === 'small') {
+                badgeStyles.push('font-size:0.5rem;padding:0.05rem 0.3rem');
+            } else if (fSize === 'large') {
+                badgeStyles.push('font-size:0.7rem;padding:0.15rem 0.7rem');
+            } else {
+                badgeStyles.push('font-size:0.55rem;padding:0.08rem 0.4rem');
+            }
 
-            if (fEffect === 'glow') fStyles.push('animation:glowBadge 2s ease-in-out infinite');
-            else if (fEffect === 'pulse') fStyles.push('animation:pulse 1.5s ease-in-out infinite');
-            else if (fEffect === 'shine') fStyles.push('background:linear-gradient(135deg,#f093fb,#f5576c,#f093fb);background-size:200% 200%;animation:shine 3s ease infinite');
+            var effectMap = {
+                'glow': 'glowBadge 2s ease-in-out infinite',
+                'pulse': 'pulse 1.5s ease-in-out infinite',
+                'shine': 'shine 3s ease infinite',
+                'float': 'floatEffect 3s ease-in-out infinite',
+                'bounce': 'bounceEffect 2s ease infinite',
+                'rotate-slow': 'rotateEffect 8s linear infinite',
+                'scale-in': 'scaleInEffect 3s ease-in-out infinite',
+                'glow-pulse': 'glowPulseEffect 2s ease-in-out infinite'
+            };
+            if (fEffect && fEffect !== 'none' && effectMap[fEffect]) {
+                badgeStyles.push('animation:' + effectMap[fEffect]);
+            }
 
             if (fBorder !== 'none') {
-                var fBColor = (fBorderColor && fBorderColor !== 'default') ? fBorderColor : '#2563eb';
-                fStyles.push('border:' + fBorder + ' 2px ' + fBColor);
+                var bColor = (fBorderColor && fBorderColor !== 'default') ? fBorderColor : 'var(--primary)';
+                badgeStyles.push('border:' + fBorder + ' 2px ' + bColor);
             }
 
-            // إضافة badgeExtraStyle (شكل الشارة)
-            if (badgeExtraStyle) fStyles.push(badgeExtraStyle);
+            // شكل الشارة (badgeStyle)
+            var badgeClass = '';
+            if (fBadgeStyle && fBadgeStyle !== 'default') {
+                badgeClass = 'style-' + fBadgeStyle;
+            }
 
-            // بناء أنماط الصندوق
+            // أنماط صندوق الشارة
             var boxStyles = [];
             var boxBgMap = {
-                'gradient1': 'background:linear-gradient(135deg,#667eea,#764ba2)',
-                'gradient2': 'background:linear-gradient(135deg,#f093fb,#f5576c)',
-                'gold': 'background:linear-gradient(135deg,#ffd700,#f59e0b)',
-                'dark': 'background:#1e293b'
+                'gradient1': 'linear-gradient(135deg,#667eea,#764ba2)',
+                'gradient2': 'linear-gradient(135deg,#f093fb,#f5576c)',
+                'gold': 'linear-gradient(135deg,#ffd700,#f59e0b)',
+                'dark': '#1e293b',
+                'gradient3': 'linear-gradient(135deg,#89f7fe,#66a6ff)',
+                'gradient4': 'linear-gradient(135deg,#4facfe,#00f2fe)',
+                'ocean': 'linear-gradient(135deg,#2b5876,#4e4376)',
+                'sunset': 'linear-gradient(135deg,#f12711,#f5af19)',
+                'forest': 'linear-gradient(135deg,#134e5e,#71b280)',
+                'rainbow': 'linear-gradient(135deg,#ff0000,#ff8800,#ffff00,#00ff00,#0088ff,#8800ff)',
+                'galaxy': 'linear-gradient(135deg,#0c0c1d,#1a1a3e,#2d1b69)',
+                'candy': 'linear-gradient(135deg,#ff6b6b,#ff9ff3,#feca57)',
+                'lavender': 'linear-gradient(135deg,#e8d5f5,#b8a9c9,#9b8bb5)',
+                'solid-blue': '#2563eb',
+                'solid-red': '#ef4444',
+                'solid-green': '#22c55e',
+                'solid-gold': '#f59e0b',
+                'solid-purple': '#8b5cf6',
+                'solid-pink': '#ec4899',
+                'solid-teal': '#14b8a6',
+                'solid-orange': '#f97316',
+                'solid-white': '#ffffff',
+                'solid-black': '#000000'
             };
-            if (boxBg && boxBg !== 'default' && boxBgMap[boxBg]) {
-                boxStyles.push(boxBgMap[boxBg]);
-            } else {
-                boxStyles.push('background:var(--gray-50)');
-            }
+            var boxBgValue = (boxBg && boxBg !== 'default' && boxBgMap[boxBg])
+                ? boxBgMap[boxBg]
+                : 'transparent';
+            boxStyles.push('background:' + boxBgValue);
+
             if (boxBorder !== 'none') {
                 var bBoxColor = (boxBorderColor && boxBorderColor !== 'default') ? boxBorderColor : 'var(--primary)';
                 boxStyles.push('border:' + boxBorder + ' 2px ' + bBoxColor);
+            } else {
+                boxStyles.push('border:none');
             }
-            boxStyles.push('border-radius:12px;padding:0.3rem 0.8rem;display:flex;align-items:center;gap:0.5rem;margin:0.3rem 0');
+            boxStyles.push('border-radius:5px;padding:0.05rem 0.35rem;');
+            boxStyles.push('display:inline-flex;align-items:center;gap:0.2rem;');
+            boxStyles.push('margin-top:0.1rem;');
+            boxStyles.push('width:fit-content;');
 
-            featuredBadgeHTML = '<div class="featured-badge-container" style="' + boxStyles.join(';') + '">' +
-                '<span style="font-size:0.65rem;color:var(--gray-500);font-weight:600;">⭐</span>' +
-                '<span class="badge-item" style="' + fStyles.join(';') + '"><i class="fas ' + badge.icon + '"></i> ' + badge.name + '</span>' +
-                '<span style="font-size:0.55rem;color:var(--gray-400);">شارة مميزة</span>' +
-                '</div>';
+            featuredBadgeHTML = `
+                <div class="featured-badge-container" style="${boxStyles.join(';')}">
+                    <span style="font-size:0.4rem;color:var(--gray-400);font-weight:600;">⭐</span>
+                    <span class="badge-item ${badgeClass}" style="${badgeStyles.join(';')}">
+                        <i class="fas ${badge.icon}"></i> ${badge.name}
+                    </span>
+                </div>
+            `;
         }
     }
 
-    // ===== الشارة الخاصة =====
-    var specialBadgeHTML = '';
-    if (customization.specialBadge && customization.specialBadge !== 'none') {
-        specialBadgeHTML = '<span style="font-size:0.8rem;margin-right:0.3rem;"><i class="fas ' + customization.specialBadge + '"></i></span>';
+    // ============================================================
+    //  6. النصوص الثانوية والنبذة
+    // ============================================================
+    // ===== لون النصوص الثانوية =====
+    var textColorStyle = '';
+    var iconColorStyle = '';
+    if (customization.textColor && customization.textColor !== 'default') {
+        textColorStyle = 'color:' + customization.textColor + ' !important;';
+        iconColorStyle = 'color:' + customization.textColor + ' !important;';
+    }
+    var bioColorStyle = '';
+    if (customization.bioColor && customization.bioColor !== 'default') {
+        bioColorStyle = 'color:' + customization.bioColor + ';';
     }
 
-    // ===== شارة الدور =====
+    // ============================================================
+    //  7. لون الأزرار (في المعاينة)
+    // ============================================================
+    var buttonColorStyle = '';
+    if (customization.buttonColor && customization.buttonColor !== 'default') {
+        buttonColorStyle = 'color:' + customization.buttonColor + ';border-color:' + customization.buttonColor + ';';
+    }
+
+    // ============================================================
+    //  8. التخصيصات المتقدمة (المعاينة)
+    // ============================================================
+    var cardSizeStyle = '';
+    if (customization.cardSize === 'compact') {
+        cardSizeStyle = 'padding:0.3rem;font-size:0.8rem;';
+    } else if (customization.cardSize === 'spacious') {
+        cardSizeStyle = 'padding:1rem;font-size:1rem;';
+    }
+
+    var borderRadiusStyle = '';
+    var radiusMap = { 'none': '0px', 'small': '6px', 'large': '20px', 'circle': '50px' };
+    if (customization.borderRadius && customization.borderRadius !== 'default' && radiusMap[customization.borderRadius]) {
+        borderRadiusStyle = 'border-radius:' + radiusMap[customization.borderRadius] + ';';
+    }
+
+    var opacityStyle = '';
+    if (customization.opacity && customization.opacity !== '100') {
+        opacityStyle = 'opacity:' + (parseInt(customization.opacity) / 100) + ';';
+    }
+
+    var blurStyle = '';
+    var blurMap = { 'low': 'backdrop-filter:blur(2px);', 'medium': 'backdrop-filter:blur(5px);', 'high': 'backdrop-filter:blur(10px);' };
+    if (customization.blurEffect && customization.blurEffect !== 'none' && blurMap[customization.blurEffect]) {
+        blurStyle = blurMap[customization.blurEffect];
+    }
+
+    var cursorStyle = '';
+    if (customization.cursorStyle && customization.cursorStyle !== 'default') {
+        cursorStyle = 'cursor:' + customization.cursorStyle + ';';
+    }
+
+    var hoverEffectClass = '';
+    if (customization.hoverEffect === 'scale') {
+        hoverEffectClass = 'hover-scale';
+    } else if (customization.hoverEffect === 'glow') {
+        hoverEffectClass = 'hover-glow';
+    } else if (customization.hoverEffect === 'shadow') {
+        hoverEffectClass = 'hover-shadow';
+    }
+
+    // ============================================================
+    //  9. شارة الدور
+    // ============================================================
     var roleBadge = '';
     if (isSuperAdmin) {
-        roleBadge = '<span style="background:linear-gradient(135deg,#ffd700,#f59e0b);color:#78350f;padding:0.1rem 0.5rem;border-radius:10px;font-weight:700;font-size:0.6rem;"><i class="fas fa-crown"></i> المشرف الرئيسي</span>';
+        roleBadge = '<span style="background:linear-gradient(135deg,#ffd700,#f59e0b);color:#78350f;padding:0.05rem 0.5rem;border-radius:8px;font-weight:700;font-size:0.55rem;"><i class="fas fa-crown"></i> المشرف الرئيسي</span>';
     } else if (isAdmin) {
-        roleBadge = '<span style="background:var(--primary-light);color:var(--primary-dark);padding:0.1rem 0.5rem;border-radius:10px;font-weight:600;font-size:0.6rem;"><i class="fas fa-shield-alt"></i> مشرف</span>';
+        roleBadge = '<span style="background:var(--primary-light);color:var(--primary-dark);padding:0.05rem 0.5rem;border-radius:8px;font-weight:600;font-size:0.55rem;"><i class="fas fa-shield-alt"></i> مشرف</span>';
     }
+// إحصائيات الملف الشخصي
+var favCount = (userData.favorites || []).length;
+var compCount = (userData.completed || []).length;
+var voteCount = userData.votes || 0;
+var trustCount = (userData.trustedBy || []).length;
+var badgesCount = calculateBadges(userData).length;
+var points = result.earnedPoints || 0;
+// ===== لون الأزرار (يأخذ من التخصيصات) =====
+var buttonColor = customization.buttonColor || 'default';
+var buttonStyle = '';
+if (buttonColor && buttonColor !== 'default') {
+    buttonStyle = 'color:' + buttonColor + ' !important;border-color:' + buttonColor + ' !important;';
+} else {
+    var defaultTextColor = isDarkBg ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.8)';
+    buttonStyle = 'color:' + defaultTextColor + ';border-color:' + (isDarkBg ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)') + ';';
+}
 
-    // ===== بناء HTML =====
-    var html = '<div style="padding:0.3rem;' + bgStyle + 'border-radius:6px;">';
-    html += '<div style="display:flex;align-items:center;gap:0.5rem;">';
-    
-    // الصورة الشخصية
-    html += '<div class="profile-avatar ' + avatarEffect + '" style="display:inline-block;">';
-    html += '<img src="' + (userData.avatar || '') + '" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:3px solid ' + (customization.avatarBorder || '#2563eb') + ';' + profileFrame + avatarShadow + avatarBorderWidth + avatarBorderStyle + '" onerror="this.src=\'\'" />';
-    html += '</div>';
+// خلفية الأزرار (أفتح من الخلفية الرئيسية)
+var btnBgColor = isDarkBg ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)';
+var btnHoverBg = isDarkBg ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)';
 
-    // المعلومات
-    html += '<div style="flex:1;min-width:0;">';
-    html += '<div style="font-weight:700;font-size:0.85rem;' + nameColor + nameGlow + '">' + escapeHtml(name) + ' ' + specialBadgeHTML + ' <span style="font-size:0.55rem;background:rgba(255,255,255,0.2);padding:0.05rem 0.3rem;border-radius:8px;">' + result.tier.name + '</span></div>';
-    html += '<div style="display:flex;gap:0.2rem;flex-wrap:wrap;margin:0.05rem 0;">' + roleBadge + '</div>';
-    html += '<div style="font-size:0.6rem;opacity:0.7;' + textColorStyle + '"><i class="fas fa-envelope"></i> ' + escapeHtml(email) + '</div>';
-    html += '<div style="font-size:0.6rem;opacity:0.7;' + textColorStyle + '"><i class="fas fa-university"></i> كلية نموذجية</div>';
-    if (userData.bio) {
-        html += '<div style="font-size:0.6rem;opacity:0.7;margin-top:0.1rem;padding:0.1rem 0.3rem;background:rgba(255,255,255,0.1);border-radius:4px;' + bioColor + '"><i class="fas fa-quote-right"></i> ' + escapeHtml(userData.bio.substring(0, 25)) + '...</div>';
-    }
-    html += '</div></div>';
-    
-    // الشارة المميزة
-    html += featuredBadgeHTML;
-    html += '</div>';
+    // ============================================================
+    //  10. بناء HTML النهائي للمعاينة
+    // ============================================================
+       var html = `
+        <div class="main-preview-card" style="${bgStyle} ${textColor ? 'color:' + textColor + ';' : ''} padding:0.5rem;border-radius:8px;transition:all 0.3s ease;">
+            <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+                <!-- الصورة -->
+                <div class="profile-avatar ${effectClass}" style="display:inline-block;">
+                    <img src="${userData.avatar || ''}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;${avatarStyles}" onerror="this.src=''" />
+                </div>
+                <!-- المعلومات -->
+                <div style="flex:1;min-width:0;">
+                    <div style="font-weight:700;font-size:0.85rem;${nameColor ? 'color:' + nameColor + ';' : ''} ${nameGlowStyles}">
+                        ${escapeHtml(name)} ${specialBadgeHTML}
+                    </div>
+                    <!-- اسم المستخدم -->
+                    <div style="font-size:0.65rem;color:var(--gray-400);direction:rtl;display:flex;align-items:center;gap:0.2rem;margin-top:0.05rem;">
+                        <i class="fas fa-at" style="font-size:0.5rem;"></i>
+                        <span>${userData.username || 'غير محدد'}</span>
+                    </div>
+                    <!-- الشارة المميزة -->
+                    ${featuredBadgeHTML}
+                    <!-- النبذة -->
+                    ${userData.bio ? `<div style="font-size:0.6rem;opacity:0.7;margin-top:0.1rem;padding:0.1rem 0.3rem;background:rgba(255,255,255,0.1);border-radius:4px;"><i class="fas fa-quote-right"></i> ${escapeHtml(userData.bio.substring(0, 40))}${userData.bio.length > 40 ? '...' : ''}</div>` : ''}
+            <!-- 6. الإحصائيات (خط أصغر) -->
+            <div class="profile-stats preview-stats" style="display:flex;gap:0.2rem;flex-wrap:wrap;margin:0.2rem 0;padding:0.15rem 0.2rem;background:rgba(255,255,255,0.03);border-radius:4px;border:1px solid rgba(255,255,255,0.03);justify-content:center;">
+                <span style="font-size:0.55rem;${textColorStyle}">
+                    <i class="fas fa-star" style="color:#f59e0b;font-size:0.5rem;${iconColorStyle}"></i> ${favCount} مفضلة
+                </span>
+                <span style="font-size:0.55rem;${textColorStyle}">
+                    <i class="fas fa-check-circle" style="color:#22c55e;font-size:0.5rem;${iconColorStyle}"></i> ${compCount} مجتازة
+                </span>
+                <span style="font-size:0.55rem;${textColorStyle}">
+                    <i class="fas fa-vote-yea" style="color:#3b82f6;font-size:0.5rem;${iconColorStyle}"></i> ${voteCount} تصويت
+                </span>
+                <span style="font-size:0.55rem;${textColorStyle}">
+                    <i class="fas fa-trophy" style="color:#8b5cf6;font-size:0.5rem;${iconColorStyle}"></i> ${badgesCount} شارة
+                </span>
+                <span style="font-size:0.55rem;${textColorStyle}">
+                    <i class="fas fa-handshake" style="color:#10b981;font-size:0.5rem;${iconColorStyle}"></i> ${trustCount} ثقة
+                </span>
+                <span style="font-size:0.55rem;${textColorStyle}">
+                    <i class="fas fa-gem" style="color:#f59e0b;font-size:0.5rem;${iconColorStyle}"></i> ${points} نقطة
+                </span>
+            </div>
+                </div>
+            </div>
+    `;
+html += `<div class="profile-actions-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.2rem;margin-top:0.3rem;">
+    <button class="profile-action-btn" style="${buttonStyle} background:${btnBgColor} !important;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;border-width:1.5px;padding:0.15rem;font-size:0.5rem;transition:all 0.2s ease;cursor:default;">
+    <i class="fas fa-palette" style="font-size:0.7rem;color:inherit !important;"></i>
+        <span style="font-size:0.45rem;margin-top:0.1rem;">تخصيص الملف</span>
+    </button>
+    <button class="profile-action-btn" style="${buttonStyle} background:${btnBgColor} !important;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;border-width:1.5px;padding:0.15rem;font-size:0.5rem;transition:all 0.2s ease;cursor:default;">
+    <i class="fas fa-trophy" style="font-size:0.7rem;color:inherit !important;"></i>
+        <span style="font-size:0.45rem;margin-top:0.1rem;">الإنجازات</span>
+    </button>
+        <button class="profile-action-btn" style="${buttonStyle} background:${btnBgColor} !important;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;border-width:1.5px;padding:0.15rem;font-size:0.5rem;transition:all 0.2s ease;cursor:default;">
+    <i class="fas fa-gem" style="font-size:0.7rem;color:inherit !important;"></i>
+        <span style="font-size:0.45rem;margin-top:0.1rem;">الشارات</span>
+    </button>
+        <button class="profile-action-btn" style="${buttonStyle} background:${btnBgColor} !important;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;border-width:1.5px;padding:0.15rem;font-size:0.5rem;transition:all 0.2s ease;cursor:default;">
+    <i class="fas fa-edit" style="font-size:0.7rem;color:inherit !important;"></i>
+        <span style="font-size:0.45rem;margin-top:0.1rem;">تعديل الملف</span>
+    </button>
+            </div>
+        </div>
+    `;
 
     return html;
 }
 
+// ============================================================
+//  بناء معاينة مودال الآخرين
+//  تطبق جميع التخصيصات بنفس طريقة buildMainProfilePreview
+//  ولكن مع تنسيق يناسب المودال
+// ============================================================
 function buildModalProfilePreview(userData) {
+    if (!userData) return '<div style="color:var(--gray-400);text-align:center;padding:1rem;">لا توجد بيانات</div>';
+
     var customization = userData.customization || {};
     var name = userData.displayName || 'مستخدم';
     var email = userData.email || 'user@example.com';
@@ -10712,108 +11943,151 @@ function buildModalProfilePreview(userData) {
     var isAdmin = role === 'admin';
     var isSuperAdmin = userData.isSuperAdmin || false;
     var result = calculateUserPoints(userData);
+    var currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
 
-    // ===== تجميع الأنماط (نفس المنطق مع تعديل الأحجام) =====
-    var bgStyle = '', textColor = '', nameColor = '', nameGlow = '';
-    var avatarBorder = '', avatarEffect = '', profileFrame = '';
-    var textColorStyle = '', bioColor = '', buttonColor = '';
-    var avatarShadow = '', avatarBorderWidth = '', avatarBorderStyle = '';
-    var badgeExtraStyle = '';
-
-    // (نفس الكود السابق لتجميع الأنماط، ولكن قد نعدل الأحجام قليلاً)
-    // لتوفير المساحة، سأكرر نفس الكود هنا مع تغيير حجم الصورة إلى 45px بدلاً من 40px
-
+    // ============================================================
+    //  1. خلفية المودال
+    // ============================================================
+    var bgStyle = '';
+    var textColor = '';
+    var isDarkBg = false;
     if (customization.profileBg && customization.profileBg !== 'default') {
         var bgInfo = BG_STYLES[customization.profileBg];
         if (bgInfo) {
-            bgStyle = 'background:' + bgInfo.bg + ';color:' + bgInfo.textColor + ';padding:0.5rem;border-radius:8px;';
+            bgStyle = 'background:' + bgInfo.bg + ';';
             textColor = bgInfo.textColor;
+            isDarkBg = bgInfo.isDark || false;
         }
     }
-
-    if (customization.nameColor && customization.nameColor !== 'default') {
-        nameColor = 'color:' + customization.nameColor + ';';
+    if (!bgStyle) {
+        var defaultBg = currentTheme === 'dark' ? '#1e293b' : '#ffffff';
+        var defaultText = currentTheme === 'dark' ? '#f1f5f9' : '#1e293b';
+        bgStyle = 'background:' + defaultBg + ';';
+        textColor = defaultText;
+        isDarkBg = currentTheme === 'dark';
     }
 
-    if (customization.nameGlow) {
-        if (customization.nameGlow === 'soft') {
-            nameGlow = 'text-shadow:0 0 20px rgba(37,99,235,0.3);';
-        } else if (customization.nameGlow === 'strong') {
-            nameGlow = 'text-shadow:0 0 30px rgba(37,99,235,0.6),0 0 60px rgba(37,99,235,0.3);';
-        } else if (customization.nameGlow === 'rainbow') {
-            nameGlow = 'animation:rainbowGlow 3s ease infinite;';
-        }
+// ===== الخطوط =====
+var fontFamily = '';
+var fonts = {
+    'tajawal': 'Tajawal, sans-serif',
+    'cairo': 'Cairo, sans-serif',
+    'readex': 'Readex Pro, sans-serif',
+    'noto': 'Noto Sans Arabic, sans-serif',
+    'amiri': 'Amiri, serif',
+    'lateef': 'Lateef, serif',
+    'scheherazade': 'Scheherazade New, serif',
+    'modern': 'Inter, sans-serif',
+    'elegant': 'Georgia, serif',
+    'bold': 'Arial Black, sans-serif',
+    'handwriting': 'Comic Sans MS, cursive',
+    'playful': 'Fredoka One, sans-serif',
+    'mono': 'Courier New, monospace',
+    'serif': 'Times New Roman, serif',
+    'sans': 'Helvetica, sans-serif'
+};
+if (customization.fontStyle && customization.fontStyle !== 'default' && fonts[customization.fontStyle]) {
+    fontFamily = 'font-family:' + fonts[customization.fontStyle] + ';';
+}
+
+    // ============================================================
+    //  2. تخصيصات الصورة الشخصية (نفس المنطق)
+    // ============================================================
+    var avatarBorderColor = customization.avatarBorder || '#2563eb';
+    var avatarBorderWidth = customization.avatarBorderWidth || '3';
+    var avatarBorderStyle = customization.avatarBorderStyle || 'solid';
+    var avatarEffect = customization.avatarEffect || 'none';
+    var avatarShadow = customization.avatarShadow || 'none';
+    var avatarShadowColor = customization.avatarShadowColor || 'rgba(37,99,235,0.4)';
+    var profileFrame = customization.profileFrame || 'default';
+
+    var borderWidthFinal = (avatarBorderWidth === 'none' || !avatarBorderWidth) ? '0px' : avatarBorderWidth + 'px';
+    var borderStyleFinal = (avatarBorderWidth === 'none' || !avatarBorderWidth) ? 'none' : avatarBorderStyle;
+
+    var avatarStyles = '';
+    avatarStyles += 'border-color:' + avatarBorderColor + ';';
+    avatarStyles += 'border-width:' + borderWidthFinal + ';';
+    avatarStyles += 'border-style:' + borderStyleFinal + ';';
+
+    var shadowMap = {
+        'small': '0 4px 15px rgba(0,0,0,0.2)',
+        'medium': '0 8px 30px rgba(0,0,0,0.3)',
+        'large': '0 12px 50px rgba(0,0,0,0.4)',
+        'colored': '0 0 40px ' + avatarShadowColor,
+        'inset-shadow': 'inset 0 0 20px ' + avatarShadowColor,
+        'neon-glow': '0 0 30px ' + avatarShadowColor + ', 0 0 60px ' + avatarShadowColor + ', 0 0 90px ' + avatarShadowColor,
+        'soft-glow': '0 0 30px rgba(255,255,255,0.2), 0 0 60px rgba(255,255,255,0.1)',
+        'drop-shadow': 'drop-shadow(0 10px 20px ' + avatarShadowColor + ')',
+        'blur-shadow': '0 20px 40px rgba(0,0,0,0.5), 0 0 20px rgba(0,0,0,0.2)'
+    };
+    if (avatarShadow && avatarShadow !== 'none' && shadowMap[avatarShadow]) {
+        avatarStyles += 'box-shadow:' + shadowMap[avatarShadow] + ';';
     }
 
-    if (customization.textColor && customization.textColor !== 'default') {
-        textColorStyle = 'color:' + customization.textColor + ';';
-    }
-    if (customization.bioColor && customization.bioColor !== 'default') {
-        bioColor = 'color:' + customization.bioColor + ';';
-    }
-    if (customization.buttonColor && customization.buttonColor !== 'default') {
-        buttonColor = 'color:' + customization.buttonColor + ';border-color:' + customization.buttonColor + ';';
-    }
-
-    if (customization.avatarBorder && customization.avatarBorder !== 'default') {
-        avatarBorder = 'border-color:' + customization.avatarBorder + ';';
-    }
-    if (customization.avatarBorderWidth && customization.avatarBorderWidth !== 'none') {
-        avatarBorderWidth = 'border-width:' + customization.avatarBorderWidth + 'px;';
-    } else {
-        avatarBorderWidth = 'border-width:0px;';
-    }
-    if (customization.avatarBorderStyle) {
-        avatarBorderStyle = 'border-style:' + customization.avatarBorderStyle + ';';
+    var frameStyles = {
+        'rounded': 'border-radius:20%;',
+        'square': 'border-radius:0;',
+        'star': 'clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);border-radius:0;',
+        'star6': 'clip-path:polygon(50% 0%,64% 25%,91% 25%,73% 50%,82% 75%,50% 60%,18% 75%,27% 50%,9% 25%,36% 25%);border-radius:0;',
+        'heart': 'clip-path:path("M50,90 C20,60 0,40 0,25 C0,10 15,0 30,0 C40,0 48,8 50,18 C52,8 60,0 70,0 C85,0 100,10 100,25 C100,40 80,60 50,90Z");border-radius:0;',
+        'diamond': 'clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);border-radius:0;',
+        'oval': 'border-radius:50%;width:120px;height:80px;',
+        'triangle': 'clip-path:polygon(50% 0%,0% 100%,100% 100%);border-radius:0;',
+        'pentagon': 'clip-path:polygon(50% 0%,100% 38%,82% 100%,18% 100%,0% 38%);border-radius:0;',
+        'hexagon': 'clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);border-radius:0;',
+        'flower': 'clip-path:path("M50,10 Q60,30 80,20 Q70,40 90,50 Q70,60 80,80 Q60,70 50,90 Q40,70 20,80 Q30,60 10,50 Q30,40 20,20 Q40,30 50,10Z");border-radius:0;',
+        'blob': 'border-radius:60% 40% 30% 70% / 50% 60% 40% 50%;'
+    };
+    if (profileFrame && profileFrame !== 'default' && frameStyles[profileFrame]) {
+        avatarStyles += frameStyles[profileFrame];
     }
 
-    if (customization.avatarShadow) {
-        var shadowMap = {
-            'small': '0 2px 8px rgba(0,0,0,0.15)',
-            'medium': '0 4px 15px rgba(0,0,0,0.2)',
-            'large': '0 8px 30px rgba(0,0,0,0.3)',
-            'colored': '0 0 25px ' + (customization.avatarShadowColor || 'rgba(37,99,235,0.4)')
-        };
-        if (shadowMap[customization.avatarShadow]) {
-            avatarShadow = 'box-shadow:' + shadowMap[customization.avatarShadow] + ';';
-        }
+    var effectClass = (avatarEffect && avatarEffect !== 'none') ? 'effect-' + avatarEffect : '';
+    if (avatarEffect === 'glow-move') {
+        avatarStyles += 'animation:glowMoveEffect 3s ease-in-out infinite;';
     }
 
-    if (customization.avatarEffect && customization.avatarEffect !== 'none') {
-        avatarEffect = 'effect-' + customization.avatarEffect;
+    // ============================================================
+    //  3. الاسم
+    // ============================================================
+    var defaultNameColor = currentTheme === 'dark' ? '#ffffff' : '#000000';
+    var nameColor = (customization.nameColor && customization.nameColor !== 'default')
+        ? customization.nameColor
+        : defaultNameColor;
+
+    var nameGlowStyles = '';
+    var nameGlow = customization.nameGlow || 'none';
+    var glowEffects = {
+        'soft': 'text-shadow:0 0 20px rgba(37,99,235,0.3);',
+        'strong': 'text-shadow:0 0 30px rgba(37,99,235,0.6),0 0 60px rgba(37,99,235,0.3);',
+        'rainbow': 'animation:rainbowGlow 3s ease infinite;',
+        'underline': 'text-decoration:underline;text-decoration-color:currentColor;text-decoration-thickness:2px;',
+        'strikethrough': 'text-decoration:line-through;',
+        'uppercase': 'text-transform:uppercase;',
+        'spacing': 'letter-spacing:4px;',
+        'flip': 'transform:scaleX(-1);display:inline-block;',
+        'shadow-text': 'text-shadow:2px 2px 4px rgba(0,0,0,0.3);'
+    };
+    if (nameGlow !== 'none' && glowEffects[nameGlow]) {
+        nameGlowStyles = glowEffects[nameGlow];
     }
 
-    if (customization.profileFrame) {
-        var frameStyles = {
-            'rounded': 'border-radius:20%;',
-            'square': 'border-radius:0;',
-            'star': 'clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);border-radius:0;',
-            'heart': 'clip-path:path("M50,90 C20,60 0,40 0,25 C0,10 15,0 30,0 C40,0 48,8 50,18 C52,8 60,0 70,0 C85,0 100,10 100,25 C100,40 80,60 50,90Z");border-radius:0;',
-            'diamond': 'clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);border-radius:0;'
-        };
-        if (frameStyles[customization.profileFrame]) {
-            profileFrame = frameStyles[customization.profileFrame];
-        }
+    // ============================================================
+    //  4. الشارة الخاصة
+    // ============================================================
+    var specialBadgeHTML = '';
+    if (customization.specialBadge && customization.specialBadge !== 'none') {
+        specialBadgeHTML = '<span style="font-size:0.8rem;margin-right:0.3rem;color:' + nameColor + ';' + nameGlowStyles + '"><i class="fas ' + customization.specialBadge + '"></i></span>';
     }
 
-    if (customization.badgeStyle && customization.badgeStyle !== 'default') {
-        var badgeStyles = {
-            'glow': 'animation:glowBadge 2s ease-in-out infinite;',
-            'rounded': 'border-radius:50px;padding:0.2rem 1rem;',
-            'shadow': 'box-shadow:0 4px 15px rgba(0,0,0,0.15);',
-            'gradient': 'background:linear-gradient(135deg,#f093fb,#f5576c);color:white;',
-            'neon': 'box-shadow:0 0 20px rgba(37,99,235,0.5);border:1px solid rgba(37,99,235,0.3);'
-        };
-        if (badgeStyles[customization.badgeStyle]) {
-            badgeExtraStyle = badgeStyles[customization.badgeStyle];
-        }
-    }
-
-    // ===== الشارة المميزة (نفس المنطق) =====
+    // ============================================================
+    //  5. الشارة المميزة (مع صندوقها) - نفس المنطق
+    // ============================================================
     var featuredBadgeHTML = '';
-    if (customization.featuredBadge && customization.featuredBadge !== 'none') {
+    var featuredBadgeName = customization.featuredBadge || 'none';
+    if (featuredBadgeName && featuredBadgeName !== 'none') {
         var allBadges = getAllBadges();
-        var badge = allBadges.find(function(b) { return b.name === customization.featuredBadge; });
+        var badge = allBadges.find(function(b) { return b.name === featuredBadgeName; });
         if (badge) {
             var fTextColor = customization.featuredBadgeTextColor || 'default';
             var fBg = customization.featuredBadgeBg || 'default';
@@ -10821,118 +12095,316 @@ function buildModalProfilePreview(userData) {
             var fEffect = customization.featuredBadgeEffect || 'none';
             var fBorder = customization.featuredBadgeBorder || 'none';
             var fBorderColor = customization.featuredBadgeBorderColor || 'default';
+            var fBadgeStyle = customization.badgeStyle || 'default';
 
             var boxBg = customization.featuredBadgeBoxBg || 'default';
             var boxBorder = customization.featuredBadgeBoxBorder || 'none';
             var boxBorderColor = customization.featuredBadgeBoxBorderColor || 'default';
 
-            var fStyles = [];
-            if (fTextColor && fTextColor !== 'default') fStyles.push('color:' + fTextColor);
-            var fBgMap = {
-                'gradient1': 'background:linear-gradient(135deg,#667eea,#764ba2)',
-                'gradient2': 'background:linear-gradient(135deg,#f093fb,#f5576c)',
-                'gold': 'background:linear-gradient(135deg,#ffd700,#f59e0b)',
-                'neon': 'background:linear-gradient(135deg,#00ffff,#ff00ff)',
-                'dark': 'background:#1e293b'
+            var badgeStyles = [];
+            if (fTextColor && fTextColor !== 'default') {
+                badgeStyles.push('color:' + fTextColor);
+            }
+            var bgMap = {
+                'gradient1': 'linear-gradient(135deg,#667eea,#764ba2)',
+                'gradient2': 'linear-gradient(135deg,#f093fb,#f5576c)',
+                'gold': 'linear-gradient(135deg,#ffd700,#f59e0b)',
+                'neon': 'linear-gradient(135deg,#00ffff,#ff00ff)',
+                'dark': '#1e293b',
+                'gradient3': 'linear-gradient(135deg,#89f7fe,#66a6ff)',
+                'gradient4': 'linear-gradient(135deg,#4facfe,#00f2fe)',
+                'ocean': 'linear-gradient(135deg,#2b5876,#4e4376)',
+                'sunset': 'linear-gradient(135deg,#f12711,#f5af19)',
+                'forest': 'linear-gradient(135deg,#134e5e,#71b280)',
+                'rainbow': 'linear-gradient(135deg,#ff0000,#ff8800,#ffff00,#00ff00,#0088ff,#8800ff)',
+                'galaxy': 'linear-gradient(135deg,#0c0c1d,#1a1a3e,#2d1b69)',
+                'candy': 'linear-gradient(135deg,#ff6b6b,#ff9ff3,#feca57)',
+                'lavender': 'linear-gradient(135deg,#e8d5f5,#b8a9c9,#9b8bb5)'
             };
-            if (fBg && fBg !== 'default' && fBgMap[fBg]) {
-                fStyles.push(fBgMap[fBg]);
+            if (fBg && fBg !== 'default' && bgMap[fBg]) {
+                badgeStyles.push('background:' + bgMap[fBg]);
             } else {
-                fStyles.push('background:var(--primary-light)');
+                badgeStyles.push('background:var(--primary-light)');
             }
-            if (fSize === 'small') fStyles.push('font-size:0.6rem;padding:0.1rem 0.5rem');
-            else if (fSize === 'large') fStyles.push('font-size:0.9rem;padding:0.3rem 1.2rem');
-            else fStyles.push('font-size:0.75rem;padding:0.2rem 0.8rem');
-            if (fEffect === 'glow') fStyles.push('animation:glowBadge 2s ease-in-out infinite');
-            else if (fEffect === 'pulse') fStyles.push('animation:pulse 1.5s ease-in-out infinite');
-            else if (fEffect === 'shine') fStyles.push('background:linear-gradient(135deg,#f093fb,#f5576c,#f093fb);background-size:200% 200%;animation:shine 3s ease infinite');
+
+            if (fSize === 'small') {
+                badgeStyles.push('font-size:0.5rem;padding:0.05rem 0.3rem');
+            } else if (fSize === 'large') {
+                badgeStyles.push('font-size:0.7rem;padding:0.15rem 0.7rem');
+            } else {
+                badgeStyles.push('font-size:0.55rem;padding:0.08rem 0.4rem');
+            }
+
+            var effectMap = {
+                'glow': 'glowBadge 2s ease-in-out infinite',
+                'pulse': 'pulse 1.5s ease-in-out infinite',
+                'shine': 'shine 3s ease infinite',
+                'float': 'floatEffect 3s ease-in-out infinite',
+                'bounce': 'bounceEffect 2s ease infinite',
+                'rotate-slow': 'rotateEffect 8s linear infinite',
+                'scale-in': 'scaleInEffect 3s ease-in-out infinite',
+                'glow-pulse': 'glowPulseEffect 2s ease-in-out infinite'
+            };
+            if (fEffect && fEffect !== 'none' && effectMap[fEffect]) {
+                badgeStyles.push('animation:' + effectMap[fEffect]);
+            }
+
             if (fBorder !== 'none') {
-                var fBColor = (fBorderColor && fBorderColor !== 'default') ? fBorderColor : '#2563eb';
-                fStyles.push('border:' + fBorder + ' 2px ' + fBColor);
+                var bColor = (fBorderColor && fBorderColor !== 'default') ? fBorderColor : 'var(--primary)';
+                badgeStyles.push('border:' + fBorder + ' 2px ' + bColor);
             }
-            if (badgeExtraStyle) fStyles.push(badgeExtraStyle);
+
+            var badgeClass = '';
+            if (fBadgeStyle && fBadgeStyle !== 'default') {
+                badgeClass = 'style-' + fBadgeStyle;
+            }
 
             var boxStyles = [];
             var boxBgMap = {
-                'gradient1': 'background:linear-gradient(135deg,#667eea,#764ba2)',
-                'gradient2': 'background:linear-gradient(135deg,#f093fb,#f5576c)',
-                'gold': 'background:linear-gradient(135deg,#ffd700,#f59e0b)',
-                'dark': 'background:#1e293b'
+                'gradient1': 'linear-gradient(135deg,#667eea,#764ba2)',
+                'gradient2': 'linear-gradient(135deg,#f093fb,#f5576c)',
+                'gold': 'linear-gradient(135deg,#ffd700,#f59e0b)',
+                'dark': '#1e293b',
+                'gradient3': 'linear-gradient(135deg,#89f7fe,#66a6ff)',
+                'gradient4': 'linear-gradient(135deg,#4facfe,#00f2fe)',
+                'ocean': 'linear-gradient(135deg,#2b5876,#4e4376)',
+                'sunset': 'linear-gradient(135deg,#f12711,#f5af19)',
+                'forest': 'linear-gradient(135deg,#134e5e,#71b280)',
+                'rainbow': 'linear-gradient(135deg,#ff0000,#ff8800,#ffff00,#00ff00,#0088ff,#8800ff)',
+                'galaxy': 'linear-gradient(135deg,#0c0c1d,#1a1a3e,#2d1b69)',
+                'candy': 'linear-gradient(135deg,#ff6b6b,#ff9ff3,#feca57)',
+                'lavender': 'linear-gradient(135deg,#e8d5f5,#b8a9c9,#9b8bb5)',
+                'solid-blue': '#2563eb',
+                'solid-red': '#ef4444',
+                'solid-green': '#22c55e',
+                'solid-gold': '#f59e0b',
+                'solid-purple': '#8b5cf6',
+                'solid-pink': '#ec4899',
+                'solid-teal': '#14b8a6',
+                'solid-orange': '#f97316',
+                'solid-white': '#ffffff',
+                'solid-black': '#000000'
             };
-            if (boxBg && boxBg !== 'default' && boxBgMap[boxBg]) {
-                boxStyles.push(boxBgMap[boxBg]);
-            } else {
-                boxStyles.push('background:var(--gray-50)');
-            }
+            var boxBgValue = (boxBg && boxBg !== 'default' && boxBgMap[boxBg])
+                ? boxBgMap[boxBg]
+                : 'transparent';
+            boxStyles.push('background:' + boxBgValue);
+
             if (boxBorder !== 'none') {
                 var bBoxColor = (boxBorderColor && boxBorderColor !== 'default') ? boxBorderColor : 'var(--primary)';
                 boxStyles.push('border:' + boxBorder + ' 2px ' + bBoxColor);
+            } else {
+                boxStyles.push('border:none');
             }
-            boxStyles.push('border-radius:12px;padding:0.3rem 0.8rem;display:flex;align-items:center;gap:0.5rem;margin:0.3rem 0');
+            boxStyles.push('border-radius:5px;padding:0.05rem 0.35rem;');
+            boxStyles.push('display:inline-flex;align-items:center;gap:0.2rem;');
+            boxStyles.push('margin-top:0.1rem;');
+            boxStyles.push('width:fit-content;');
 
-            featuredBadgeHTML = '<div class="featured-badge-container" style="' + boxStyles.join(';') + '">' +
-                '<span style="font-size:0.65rem;color:var(--gray-500);font-weight:600;">⭐</span>' +
-                '<span class="badge-item" style="' + fStyles.join(';') + '"><i class="fas ' + badge.icon + '"></i> ' + badge.name + '</span>' +
-                '<span style="font-size:0.55rem;color:var(--gray-400);">شارة مميزة</span>' +
-                '</div>';
+            featuredBadgeHTML = `
+                <div class="featured-badge-container" style="${boxStyles.join(';')}">
+                    <span style="font-size:0.4rem;color:var(--gray-400);font-weight:600;">⭐</span>
+                    <span class="badge-item ${badgeClass}" style="${badgeStyles.join(';')}">
+                        <i class="fas ${badge.icon}"></i> ${badge.name}
+                    </span>
+                </div>
+            `;
         }
     }
 
-    // ===== الشارة الخاصة =====
-    var specialBadgeHTML = '';
-    if (customization.specialBadge && customization.specialBadge !== 'none') {
-        specialBadgeHTML = '<span style="font-size:0.8rem;margin-right:0.3rem;"><i class="fas ' + customization.specialBadge + '"></i></span>';
+    // ============================================================
+    //  6. النصوص الثانوية والنبذة
+    // ============================================================
+    var textColorStyle = '';
+    if (customization.textColor && customization.textColor !== 'default') {
+        textColorStyle = 'color:' + customization.textColor + ';';
+    }
+    var bioColorStyle = '';
+    if (customization.bioColor && customization.bioColor !== 'default') {
+        bioColorStyle = 'color:' + customization.bioColor + ';';
     }
 
-    // ===== شارة الدور =====
+    // ===== الإحصائيات (نفس المودال الحقيقي) =====
+    var favCount = (userData.favorites || []).length;
+    var compCount = (userData.completed || []).length;
+    var voteCount = userData.votes || 0;
+    var trustCount = (userData.trustedBy || []).length;
+    var badgesCount = calculateBadges(userData).length;
+    var friendsCount = (userData.friends || []).length;
+    var reportCount = (userData.reports || []).length;
+    var collectiblesCount = 0;
+    var customization = userData.customization || {};
+    for (var key in customization) {
+        if (customization.hasOwnProperty(key) && customization[key] && customization[key] !== 'default' && customization[key] !== 'none') {
+            collectiblesCount++;
+        }
+    }
+    var giftsCount = (userData.receivedGifts || []).length;
+
+    // ===== لون الأزرار =====
+    var buttonColor = customization.buttonColor || 'default';
+    var buttonStyle = '';
+    var iconStyle = '';
+    if (buttonColor && buttonColor !== 'default') {
+        buttonStyle = 'color:' + buttonColor + ' !important;border-color:' + buttonColor + ' !important;';
+        // الأيقونات ترث اللون من الزر مع !important
+        iconStyle = 'color:' + buttonColor + ' !important;';
+    } else {
+        var defaultTextColor = isDarkBg ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.8)';
+        buttonStyle = 'color:' + defaultTextColor + ';border-color:' + (isDarkBg ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)') + ';';
+        iconStyle = '';
+    }
+
+    // خلفية الأزرار (أفتح من الخلفية الرئيسية)
+    var btnBgColor = isDarkBg ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)';
+
+    // خلفية الأزرار (أفتح من الخلفية الرئيسية)
+    var btnBgColor = isDarkBg ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)';
+
+    // خلفية الأزرار (أفتح من الخلفية الرئيسية)
+    var btnBgColor = isDarkBg ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)';
+    var btnHoverBg = isDarkBg ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)';
+
+    // ============================================================
+    //  8. التخصيصات المتقدمة
+    // ============================================================
+    var cardSizeStyle = '';
+    if (customization.cardSize === 'compact') {
+        cardSizeStyle = 'padding:0.3rem;font-size:0.8rem;';
+    } else if (customization.cardSize === 'spacious') {
+        cardSizeStyle = 'padding:1rem;font-size:1rem;';
+    }
+
+    var borderRadiusStyle = '';
+    var radiusMap = { 'none': '0px', 'small': '6px', 'large': '20px', 'circle': '50px' };
+    if (customization.borderRadius && customization.borderRadius !== 'default' && radiusMap[customization.borderRadius]) {
+        borderRadiusStyle = 'border-radius:' + radiusMap[customization.borderRadius] + ';';
+    }
+
+    var opacityStyle = '';
+    if (customization.opacity && customization.opacity !== '100') {
+        opacityStyle = 'opacity:' + (parseInt(customization.opacity) / 100) + ';';
+    }
+
+    var blurStyle = '';
+    var blurMap = { 'low': 'backdrop-filter:blur(2px);', 'medium': 'backdrop-filter:blur(5px);', 'high': 'backdrop-filter:blur(10px);' };
+    if (customization.blurEffect && customization.blurEffect !== 'none' && blurMap[customization.blurEffect]) {
+        blurStyle = blurMap[customization.blurEffect];
+    }
+
+    var cursorStyle = '';
+    if (customization.cursorStyle && customization.cursorStyle !== 'default') {
+        cursorStyle = 'cursor:' + customization.cursorStyle + ';';
+    }
+
+    var hoverEffectClass = '';
+    if (customization.hoverEffect === 'scale') {
+        hoverEffectClass = 'hover-scale';
+    } else if (customization.hoverEffect === 'glow') {
+        hoverEffectClass = 'hover-glow';
+    } else if (customization.hoverEffect === 'shadow') {
+        hoverEffectClass = 'hover-shadow';
+    }
+
+    // ============================================================
+    //  9. شارة الدور
+    // ============================================================
     var roleBadge = '';
     if (isSuperAdmin) {
-        roleBadge = '<span style="background:linear-gradient(135deg,#ffd700,#f59e0b);color:#78350f;padding:0.1rem 0.5rem;border-radius:10px;font-weight:700;font-size:0.6rem;"><i class="fas fa-crown"></i> المشرف الرئيسي</span>';
+        roleBadge = '<span style="background:linear-gradient(135deg,#ffd700,#f59e0b);color:#78350f;padding:0.05rem 0.5rem;border-radius:8px;font-weight:700;font-size:0.55rem;"><i class="fas fa-crown"></i> المشرف الرئيسي</span>';
     } else if (isAdmin) {
-        roleBadge = '<span style="background:var(--primary-light);color:var(--primary-dark);padding:0.1rem 0.5rem;border-radius:10px;font-weight:600;font-size:0.6rem;"><i class="fas fa-shield-alt"></i> مشرف</span>';
+        roleBadge = '<span style="background:var(--primary-light);color:var(--primary-dark);padding:0.05rem 0.5rem;border-radius:8px;font-weight:600;font-size:0.55rem;"><i class="fas fa-shield-alt"></i> مشرف</span>';
     }
 
-    // ===== بناء HTML =====
-    var html = '<div style="' + bgStyle + '">';
-    html += '<div style="display:flex;align-items:center;gap:0.5rem;padding-bottom:0.3rem;border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:0.3rem;">';
-    
-    // الصورة الشخصية (حجم أكبر قليلاً للمودال)
-    html += '<div class="profile-avatar ' + avatarEffect + '" style="display:inline-block;">';
-    html += '<img src="' + (userData.avatar || '') + '" style="width:45px;height:45px;border-radius:50%;object-fit:cover;border:3px solid ' + (customization.avatarBorder || '#2563eb') + ';' + profileFrame + avatarShadow + avatarBorderWidth + avatarBorderStyle + '" onerror="this.src=\'\'" />';
-    html += '</div>';
+    // ===== HTML للمعاينة =====
+    var html = `
+        <div class="modal-preview-card preview-mode" style="${bgStyle} ${textColor ? 'color:' + textColor + ';' : ''} ${borderRadiusStyle} ${cardSizeStyle} ${opacityStyle} ${blurStyle} ${cursorStyle} padding:0.5rem;border-radius:8px;transition:all 0.3s ease;">
+            
+            <!-- رأس الملف الشخصي -->
+            <div class="view-header" style="display:flex;align-items:center;gap:1rem;padding-bottom:0.75rem;border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:0.75rem;">
+                <div class="profile-avatar ${effectClass}" style="display:inline-block;">
+                    <img src="${userData.avatar || ''}" style="width:45px;height:45px;border-radius:50%;object-fit:cover;${avatarStyles}" onerror="this.src=''" />
+                </div>
+                <div class="view-info" style="flex:1;">
+                    <h3 style="margin:0;font-size:1rem;${nameColor ? 'color:' + nameColor + ';' : ''} ${nameGlowStyles}">
+                        ${escapeHtml(name)}
+                        ${specialBadgeHTML}
+                    </h3>
+                    ${userData.username ? `<div class="view-username" style="font-size:0.6rem;color:var(--gray-400);"><i class="fas fa-at"></i> ${userData.username}</div>` : ''}
+                    ${featuredBadgeHTML}
+                    ${userData.bio ? `<div style="font-size:0.6rem;margin-top:0.1rem;padding:0.1rem 0.3rem;background:${btnBgColor};border-radius:4px;${bioColorStyle}">${escapeHtml(userData.bio)}</div>` : ''}
+                </div>
+            </div>
 
-    // المعلومات
-    html += '<div style="flex:1;min-width:0;">';
-    html += '<div style="font-weight:700;font-size:0.85rem;' + nameColor + nameGlow + '">' + escapeHtml(name) + ' ' + specialBadgeHTML + ' <span style="font-size:0.55rem;background:rgba(255,255,255,0.2);padding:0.05rem 0.3rem;border-radius:8px;">' + result.tier.name + '</span></div>';
-    html += '<div style="display:flex;gap:0.2rem;flex-wrap:wrap;margin:0.05rem 0;">' + roleBadge + '</div>';
-    html += '<div style="font-size:0.6rem;opacity:0.7;' + textColorStyle + '"><i class="fas fa-envelope"></i> ' + escapeHtml(email) + '</div>';
-    html += '<div style="font-size:0.6rem;opacity:0.7;' + textColorStyle + '"><i class="fas fa-university"></i> كلية نموذجية</div>';
-    html += '<div style="font-size:0.6rem;opacity:0.7;' + textColorStyle + '"><i class="fas fa-city"></i> مدينة نموذجية</div>';
-    if (userData.bio) {
-        html += '<div style="font-size:0.6rem;margin-top:0.1rem;padding:0.1rem 0.3rem;background:rgba(255,255,255,0.1);border-radius:4px;' + bioColor + '"><i class="fas fa-quote-right"></i> ' + escapeHtml(userData.bio.substring(0, 25)) + '...</div>';
-    }
-    html += '</div></div>';
+            <!-- الأزرار التسعة (خلفية واحدة موحدة) -->
+            <div class="view-stats-row" style="display:flex;flex-wrap:wrap;gap:0.2rem;margin:0.3rem 0;padding:0.15rem 0.2rem;background:${btnBgColor};border-radius:6px;border:1px solid ${isDarkBg ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'};justify-content:center;">
+                
+                <!-- 1. مجتازة -->
+                <div class="stat-box" style="text-align:center;padding:0.1rem 0.2rem;cursor:default;border-radius:4px;transition:all 0.3s ease;flex:1 0 auto;min-width:40px;max-width:60px;background:transparent !important;">
+                    <i class="fas fa-check-circle" style="font-size:0.6rem;display:block;margin-bottom:0.05rem;${iconStyle}"></i>
+                    <span style="font-size:0.6rem;font-weight:700;display:block;${buttonStyle}">${compCount}</span>
+                    <label style="font-size:0.35rem;opacity:0.7;${buttonStyle}">مجتازة</label>
+                </div>
+                
+                <!-- 2. شارة -->
+                <div class="stat-box" style="text-align:center;padding:0.1rem 0.2rem;cursor:default;border-radius:4px;transition:all 0.3s ease;flex:1 0 auto;min-width:40px;max-width:60px;background:transparent !important;">
+                    <i class="fas fa-trophy" style="font-size:0.6rem;display:block;margin-bottom:0.05rem;${iconStyle}"></i>
+                    <span style="font-size:0.6rem;font-weight:700;display:block;${buttonStyle}">${badgesCount}</span>
+                    <label style="font-size:0.35rem;opacity:0.7;${buttonStyle}">شارة</label>
+                </div>
+                
+                <!-- 3. مفضلة -->
+                <div class="stat-box" style="text-align:center;padding:0.1rem 0.2rem;cursor:default;border-radius:4px;transition:all 0.3s ease;flex:1 0 auto;min-width:40px;max-width:60px;background:transparent !important;">
+                    <i class="fas fa-star" style="font-size:0.6rem;display:block;margin-bottom:0.05rem;${iconStyle}"></i>
+                    <span style="font-size:0.6rem;font-weight:700;display:block;${buttonStyle}">${favCount}</span>
+                    <label style="font-size:0.35rem;opacity:0.7;${buttonStyle}">مفضلة</label>
+                </div>
+                
+                <!-- 4. تصويت -->
+                <div class="stat-box" style="text-align:center;padding:0.1rem 0.2rem;cursor:default;border-radius:4px;transition:all 0.3s ease;flex:1 0 auto;min-width:40px;max-width:60px;background:transparent !important;">
+                    <i class="fas fa-vote-yea" style="font-size:0.6rem;display:block;margin-bottom:0.05rem;${iconStyle}"></i>
+                    <span style="font-size:0.6rem;font-weight:700;display:block;${buttonStyle}">${voteCount}</span>
+                    <label style="font-size:0.35rem;opacity:0.7;${buttonStyle}">تصويت</label>
+                </div>
+                
+                <!-- 5. أصدقاء -->
+                <div class="stat-box" style="text-align:center;padding:0.1rem 0.2rem;cursor:default;border-radius:4px;transition:all 0.3s ease;flex:1 0 auto;min-width:40px;max-width:60px;background:transparent !important;">
+                    <i class="fas fa-users" style="font-size:0.6rem;display:block;margin-bottom:0.05rem;${iconStyle}"></i>
+                    <span style="font-size:0.6rem;font-weight:700;display:block;${buttonStyle}">${friendsCount}</span>
+                    <label style="font-size:0.35rem;opacity:0.7;${buttonStyle}">أصدقاء</label>
+                </div>
+                
+                <!-- 6. ثقة -->
+                <div class="stat-box" style="text-align:center;padding:0.1rem 0.2rem;cursor:default;border-radius:4px;transition:all 0.3s ease;flex:1 0 auto;min-width:40px;max-width:60px;background:transparent !important;">
+                    <i class="fas fa-handshake" style="font-size:0.6rem;display:block;margin-bottom:0.05rem;${iconStyle}"></i>
+                    <span style="font-size:0.6rem;font-weight:700;display:block;${buttonStyle}">${trustCount}</span>
+                    <label style="font-size:0.35rem;opacity:0.7;${buttonStyle}">ثقة</label>
+                </div>
+                
+                <!-- 7. إبلاغ -->
+                <div class="stat-box" style="text-align:center;padding:0.1rem 0.2rem;cursor:default;border-radius:4px;transition:all 0.3s ease;flex:1 0 auto;min-width:40px;max-width:60px;background:transparent !important;">
+                    <i class="fas fa-flag" style="font-size:0.6rem;display:block;margin-bottom:0.05rem;${iconStyle}"></i>
+                    <span style="font-size:0.6rem;font-weight:700;display:block;${buttonStyle}">${reportCount}</span>
+                    <label style="font-size:0.35rem;opacity:0.7;${buttonStyle}">إبلاغ</label>
+                </div>
+                
+                <!-- 8. مقتنيات -->
+                <div class="stat-box" style="text-align:center;padding:0.1rem 0.2rem;cursor:default;border-radius:4px;transition:all 0.3s ease;flex:1 0 auto;min-width:40px;max-width:60px;background:transparent !important;">
+                    <i class="fas fa-palette" style="font-size:0.6rem;display:block;margin-bottom:0.05rem;${iconStyle}"></i>
+                    <span style="font-size:0.6rem;font-weight:700;display:block;${buttonStyle}">${collectiblesCount}</span>
+                    <label style="font-size:0.35rem;opacity:0.7;${buttonStyle}">مقتنيات</label>
+                </div>
+                
+                <!-- 9. هدايا -->
+                <div class="stat-box" style="text-align:center;padding:0.1rem 0.2rem;cursor:default;border-radius:4px;transition:all 0.3s ease;flex:1 0 auto;min-width:40px;max-width:60px;background:transparent !important;">
+                    <i class="fas fa-gift" style="font-size:0.6rem;display:block;margin-bottom:0.05rem;${iconStyle}"></i>
+                    <span style="font-size:0.6rem;font-weight:700;display:block;${buttonStyle}">${giftsCount}</span>
+                    <label style="font-size:0.35rem;opacity:0.7;${buttonStyle}">هدايا</label>
+                </div>
+            </div>
 
-    // الشارة المميزة
-    html += featuredBadgeHTML;
-
-    // ===== أزرار الإحصائيات (مع لون الأزرار) =====
-    html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.2rem;margin-top:0.3rem;">';
-    var stats = [
-        { icon: 'fa-check-circle', label: 'مجتازة', value: (userData.completed || []).length },
-        { icon: 'fa-trophy', label: 'شارة', value: calculateBadges(userData).length },
-        { icon: 'fa-star', label: 'مفضلة', value: (userData.favorites || []).length },
-        { icon: 'fa-vote-yea', label: 'تصويت', value: userData.votes || 0 }
-    ];
-    stats.forEach(function(stat) {
-        html += '<div style="text-align:center;padding:0.15rem;border-radius:4px;background:rgba(255,255,255,0.05);' + (buttonColor || textColorStyle) + '">';
-        html += '<i class="fas ' + stat.icon + '" style="font-size:0.6rem;display:block;"></i>';
-        html += '<span style="font-size:0.7rem;font-weight:700;">' + stat.value + '</span>';
-        html += '<div style="font-size:0.45rem;opacity:0.6;">' + stat.label + '</div>';
-        html += '</div>';
-    });
-    html += '</div>';
-    html += '</div>';
+        </div>
+    `;
 
     return html;
 }
@@ -10976,9 +12448,17 @@ function togglePreviewMode() {
     var nextIndex = (currentIndex + 1) % modes.length;
     previewState.previewMode = modes[nextIndex];
     updatePreviewModeText();
-    if (previewState.active && previewState.type) {
+    
+    // ===== تطبيق المعاينة فوراً =====
+    // التحقق من وجود تخصيصات معلقة
+    if (Object.keys(pendingCustomizations).length > 0) {
+        // تطبيق المعاينة مع التخصيصات المعلقة
         applyInstantPreviewWithPending();
+    } else {
+        // عرض المعاينة الحالية (التخصيصات المطبقة فعلياً)
+        applyCurrentPreview();
     }
+    
     showToast('🔍 وضع المعاينة: ' + getPreviewModeLabel(previewState.previewMode), 'info');
 }
 
@@ -11006,13 +12486,9 @@ function resetPreviewChanges() {
     previewState.type = null;
     previewState.value = null;
     pendingCustomizations = {};
-    var previewContainer = document.getElementById('previewContainer');
-    if (previewContainer) {
-        previewContainer.innerHTML = '<div style="text-align:center;color:var(--gray-400);padding:0.5rem;font-size:0.8rem;">' +
-            '<i class="fas fa-hand-pointer" style="font-size:1.2rem;display:block;margin-bottom:0.2rem;"></i>' +
-            'اختر تخصيصاً من القائمة أدناه لمعاينته فوراً' +
-            '</div>';
-    }
+    
+    // عرض المعاينة الحالية بعد إعادة التعيين
+    applyCurrentPreview();
     updateTotalCostDisplay();
     showToast('🔄 تم إعادة تعيين المعاينة', 'info');
 }
@@ -11214,8 +12690,25 @@ function getOptionLabel(type, value) {
     var optionDef = findOptionDefinition(type);
     if (!optionDef) return value;
     var options = optionDef.options;
+    // إذا كانت options دالة، نستدعيها
+    if (typeof options === 'function') {
+        options = options();
+    }
     var found = options.find(function(opt) { return opt.key === value; });
     return found ? found.label : value;
+}
+
+function updatePointsAfterPurchase() {
+    if (!currentUserData) return;
+    var result = calculateUserPoints(currentUserData);
+    var pointsDisplay = document.getElementById('profilePointsDisplay');
+    if (pointsDisplay) {
+        if (result.isSuperAdmin) {
+            pointsDisplay.textContent = '∞';
+        } else {
+            pointsDisplay.textContent = result.points;
+        }
+    }
 }
 // ===== 9. إضافة أنماط CSS للمعاينة =====
 
@@ -11598,23 +13091,6 @@ async function loadNotifications() {
         html += `<div class="noti-content">`;
         html += `<div class="noti-message">${escapeHtml(noti.message)}</div>`;
 
-        // إذا كانت إشعار طلب صداقة
-        if (noti.type === 'friend' && noti.link === '/users') {
-            const senderUid = noti.data?.senderUid || extractUidFromNotification(noti.message);
-            if (senderUid && currentUser) {
-                // تحقق من أن الطلب لا يزال معلقاً
-                const pending = currentUserData?.pendingRequests || [];
-                if (pending.includes(senderUid)) {
-                    html += `<div style="display:flex;gap:0.3rem;margin-top:0.3rem;">`;
-                    html += `<button class="btn btn-success btn-sm" onclick="acceptFriendRequest('${senderUid}'); this.closest('.notification-item').remove();">✅ قبول</button>`;
-                    html += `<button class="btn btn-danger btn-sm" onclick="rejectFriendRequest('${senderUid}'); this.closest('.notification-item').remove();">❌ رفض</button>`;
-                    html += `</div>`;
-                } else {
-                    // الطلب لم يعد معلقاً
-                    html += `<div style="font-size:0.7rem;color:var(--gray-400);">تم الرد على هذا الطلب</div>`;
-                }
-            }
-        }
 
         html += `<div class="noti-time">${time}</div>`;
         html += `</div></div>`;
@@ -11905,7 +13381,6 @@ var previousModalId = null;
 var isNavigatingBack = false; // لمنع التكرار
 var isModalAnimating = false;
 
-// ===== فتح مودال =====
 function openModal(modalId, options) {
     options = options || {};
     var layer = options.layer || 1;
@@ -11924,7 +13399,7 @@ function openModal(modalId, options) {
         return;
     }
     
-    // إذا كان المودال مفتوحاً بالفعل
+    // إذا كان المودال مفتوحاً بالفعل، نجلبه للأعلى
     if (modal.classList.contains('active')) {
         bringModalToTop(modalId);
         return;
@@ -11967,7 +13442,7 @@ function openModal(modalId, options) {
         isModalAnimating = false;
     }, 400);
     
-    console.log('✅ فتح مودال:', modalId, 'الطبقة:', finalLayer);
+    console.log('✅ فتح مودال:', modalId, 'الطبقة:', finalLayer, 'المكدس:', modalStack);
     return modal;
 }
 
@@ -12624,12 +14099,42 @@ function openEditProfileModal() {
         showToast('يرجى تسجيل الدخول', 'error');
         return;
     }
-    var collegeSelect = document.getElementById('editProfileCollege');
+
+    console.log('📂 فتح مودال تعديل الملف الشخصي المتطور');
+
+    // ===== 1. تعبئة الحقول الأساسية =====
+    // الصورة الشخصية
+    const avatarImg = document.getElementById('editAvatarImg');
+    if (avatarImg && currentUserData.avatar) {
+        avatarImg.src = currentUserData.avatar;
+    }
+
+    // الاسم المعروض
+    const displayName = document.getElementById('editDisplayName');
+    if (displayName) {
+        displayName.value = currentUserData.displayName || '';
+    }
+
+    // اسم المستخدم
+    const usernameInput = document.getElementById('editUsername');
+    if (usernameInput) {
+        usernameInput.value = currentUserData.username || '';
+    }
+
+    // البريد الإلكتروني (للقراءة فقط)
+    const emailInput = document.getElementById('editEmail');
+    if (emailInput) {
+        emailInput.value = currentUser.email || '';
+    }
+
+    // ===== 2. تعبئة التفاصيل =====
+    // الكلية
+    const collegeSelect = document.getElementById('editProfileCollege');
     if (collegeSelect) {
-        var currentVal = currentUserData.college || '';
+        const currentVal = currentUserData.college || '';
         collegeSelect.innerHTML = '<option value="">اختر الكلية</option>';
-        var uniqueColleges = [];
-        var collegeIds = new Set();
+        const uniqueColleges = [];
+        const collegeIds = new Set();
         colleges.forEach(function(col) {
             if (!collegeIds.has(col.id)) {
                 collegeIds.add(col.id);
@@ -12637,7 +14142,7 @@ function openEditProfileModal() {
             }
         });
         uniqueColleges.forEach(function(col) {
-            var opt = document.createElement('option');
+            const opt = document.createElement('option');
             opt.value = col.id;
             opt.textContent = col.name;
             collegeSelect.appendChild(opt);
@@ -12646,21 +14151,211 @@ function openEditProfileModal() {
             collegeSelect.value = currentVal;
         }
     }
-    document.getElementById('editProfileYear').value = currentUserData.year || '1';
-    document.getElementById('editProfileBio').value = currentUserData.bio || '';
-    document.getElementById('editProfileBranch').value = currentUserData.branch || '';
+
+    // التخصص
     populateEditSpecialties(currentUserData.college || '');
+
+    // السنة
+    const yearSelect = document.getElementById('editProfileYear');
+    if (yearSelect) {
+        yearSelect.value = currentUserData.year || '1';
+    }
+
+    // الفرع
+    const branchSelect = document.getElementById('editProfileBranch');
+    if (branchSelect) {
+        branchSelect.value = currentUserData.branch || '';
+    }
+
+    // النبذة
+    const bioTextarea = document.getElementById('editProfileBio');
+    if (bioTextarea) {
+        bioTextarea.value = currentUserData.bio || '';
+        updateBioCharCount();
+    }
+
+    // ===== 3. تعبئة الاهتمامات والمهارات =====
+    editInterests = currentUserData.interests || [];
+    editSkills = currentUserData.skills || [];
+    renderEditInterests();
+    renderEditSkills();
+
+    // ===== 4. تعبئة روابط التواصل =====
+    const social = currentUserData.social || {};
+    document.getElementById('editGithub').value = social.github || '';
+    document.getElementById('editLinkedin').value = social.linkedin || '';
+    document.getElementById('editTwitter').value = social.twitter || '';
+    document.getElementById('editWebsite').value = social.website || '';
+    document.getElementById('editInstagram').value = social.instagram || '';
+    document.getElementById('editYoutube').value = social.youtube || '';
+
+    // ===== 5. تعبئة المواد =====
     renderEditFavoriteCourses();
     renderEditCompletedCourses();
+
+    // ===== 6. تفعيل التبويب الأول =====
+    switchEditTab('basic');
+
+    // ===== 7. فتح المودال =====
     openModal('editProfileModal');
 }
 
+function switchEditTab(tabName) {
+    // تحديث الأزرار
+    document.querySelectorAll('.edit-tab').forEach(function(tab) {
+        tab.classList.remove('active');
+        if (tab.dataset.tab === tabName) {
+            tab.classList.add('active');
+        }
+    });
+
+    // تحديث المحتوى
+    document.querySelectorAll('.edit-tab-panel').forEach(function(panel) {
+        panel.classList.remove('active');
+        if (panel.dataset.tab === tabName) {
+            panel.classList.add('active');
+        }
+    });
+}
+
+// ===== الاهتمامات =====
+function renderEditInterests() {
+    const container = document.getElementById('editInterestsContainer');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    editInterests.forEach(function(interest, index) {
+        const tag = document.createElement('span');
+        tag.className = 'tag-item';
+        tag.innerHTML = `
+            ${escapeHtml(interest)}
+            <span class="remove-tag" onclick="removeEditInterest(${index})">×</span>
+        `;
+        container.appendChild(tag);
+    });
+}
+
+function addInterestTag() {
+    const input = document.getElementById('editInterestInput');
+    if (!input) return;
+    const value = input.value.trim();
+    if (!value) return;
+    if (editInterests.includes(value)) {
+        showToast('هذا الاهتمام موجود بالفعل', 'warning');
+        return;
+    }
+    if (editInterests.length >= 20) {
+        showToast('لا يمكن إضافة أكثر من 20 اهتمام', 'warning');
+        return;
+    }
+    editInterests.push(value);
+    input.value = '';
+    renderEditInterests();
+    input.focus();
+}
+
+function removeEditInterest(index) {
+    editInterests.splice(index, 1);
+    renderEditInterests();
+}
+
+// ===== المهارات =====
+function renderEditSkills() {
+    const container = document.getElementById('editSkillsContainer');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    editSkills.forEach(function(skill, index) {
+        const tag = document.createElement('span');
+        tag.className = 'tag-item';
+        tag.innerHTML = `
+            ${escapeHtml(skill)}
+            <span class="remove-tag" onclick="removeEditSkill(${index})">×</span>
+        `;
+        container.appendChild(tag);
+    });
+}
+
+function addSkillTag() {
+    const input = document.getElementById('editSkillInput');
+    if (!input) return;
+    const value = input.value.trim();
+    if (!value) return;
+    if (editSkills.includes(value)) {
+        showToast('هذه المهارة موجودة بالفعل', 'warning');
+        return;
+    }
+    if (editSkills.length >= 20) {
+        showToast('لا يمكن إضافة أكثر من 20 مهارة', 'warning');
+        return;
+    }
+    editSkills.push(value);
+    input.value = '';
+    renderEditSkills();
+    input.focus();
+}
+
+function removeEditSkill(index) {
+    editSkills.splice(index, 1);
+    renderEditSkills();
+}
+
+// ===== أحداث إدخال الـ Tags =====
+document.addEventListener('DOMContentLoaded', function() {
+    const interestInput = document.getElementById('editInterestInput');
+    if (interestInput) {
+        interestInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addInterestTag();
+            }
+        });
+    }
+    
+    const skillInput = document.getElementById('editSkillInput');
+    if (skillInput) {
+        skillInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addSkillTag();
+            }
+        });
+    }
+});
+
+function updateBioCharCount() {
+    const textarea = document.getElementById('editProfileBio');
+    const counter = document.getElementById('bioCharCount');
+    if (!textarea || !counter) return;
+    
+    const count = textarea.value.length;
+    const max = 500;
+    counter.textContent = count;
+    
+    if (count > max) {
+        counter.className = 'danger';
+    } else if (count > max * 0.8) {
+        counter.className = 'warning';
+    } else {
+        counter.className = '';
+    }
+}
+
+// ربط الحدث
+document.addEventListener('DOMContentLoaded', function() {
+    const bioTextarea = document.getElementById('editProfileBio');
+    if (bioTextarea) {
+        bioTextarea.addEventListener('input', updateBioCharCount);
+    }
+});
+
 function populateEditSpecialties(collegeId) {
-    var select = document.getElementById('editProfileSpecialty');
+    const select = document.getElementById('editProfileSpecialty');
     if (!select) return;
+    
     select.innerHTML = '<option value="">اختر التخصص</option>';
     allSpecialties.filter(function(s) { return s.collegeId === collegeId; }).forEach(function(spec) {
-        var opt = document.createElement('option');
+        const opt = document.createElement('option');
         opt.value = spec.id;
         opt.textContent = spec.name + (spec.hours ? ' (' + spec.hours + ' س)' : '');
         if (spec.id === currentUserData.specialty) opt.selected = true;
@@ -12668,102 +14363,272 @@ function populateEditSpecialties(collegeId) {
     });
 }
 
-document.addEventListener('change', function(e) {
-    if (e.target.id === 'editProfileCollege') {
-        populateEditSpecialties(e.target.value);
+// ربط تغيير الكلية بتحديث التخصصات
+document.addEventListener('DOMContentLoaded', function() {
+    const collegeSelect = document.getElementById('editProfileCollege');
+    if (collegeSelect) {
+        collegeSelect.addEventListener('change', function() {
+            populateEditSpecialties(this.value);
+        });
     }
 });
 
 function renderEditFavoriteCourses() {
-    var container = document.getElementById('editFavoriteCourses');
+    const container = document.getElementById('editFavoriteCourses');
     if (!container) return;
-    var favs = currentUserData?.favorites || [];
+    
+    const favs = currentUserData?.favorites || [];
     if (favs.length === 0) {
         container.innerHTML = '<span style="color:var(--gray-400);font-size:0.9rem;">لا توجد مواد مفضلة</span>';
         return;
     }
+    
     container.innerHTML = favs.map(function(id) {
-        var c = courses.find(function(crs) { return crs.id === id; });
-        return c ? '<span class="course-tag" style="color:var(--text-color);">' + escapeHtml(c.name) + ' <span class="remove" style="color:var(--danger);">×</span></span>' : '';
+        const c = courses.find(function(crs) { return crs.id === id; });
+        return c ? '<span class="course-tag" style="color:var(--text-color);">' + escapeHtml(c.name) + ' <span class="remove" onclick="removeFavoriteFromEdit(\'' + id + '\')" style="color:var(--danger);">×</span></span>' : '';
     }).join('');
 }
 
 function renderEditCompletedCourses() {
-    var container = document.getElementById('editCompletedCourses');
+    const container = document.getElementById('editCompletedCourses');
     if (!container) return;
-    var comps = currentUserData?.completed || [];
+    
+    const comps = currentUserData?.completed || [];
     if (comps.length === 0) {
         container.innerHTML = '<span style="color:var(--gray-400);font-size:0.9rem;">لا توجد مواد مجتازة</span>';
         return;
     }
+    
     container.innerHTML = comps.map(function(id) {
-        var c = courses.find(function(crs) { return crs.id === id; });
-        return c ? '<span class="course-tag" style="color:var(--text-color);border-color:var(--success);">' + escapeHtml(c.name) + ' <span class="remove" style="color:var(--danger);">×</span></span>' : '';
+        const c = courses.find(function(crs) { return crs.id === id; });
+        return c ? '<span class="course-tag" style="color:var(--text-color);border-color:var(--success);">' + escapeHtml(c.name) + ' <span class="remove" onclick="removeCompletedFromEdit(\'' + id + '\')" style="color:var(--danger);">×</span></span>' : '';
     }).join('');
 }
 
+// دوال إزالة المواد من التعديل
 window.removeFavoriteFromEdit = async function(id) {
     if (!currentUser) return;
     try {
-        var favs = currentUserData.favorites || [];
-        var idx = favs.indexOf(id);
+        const favs = currentUserData.favorites || [];
+        const idx = favs.indexOf(id);
         if (idx > -1) favs.splice(idx, 1);
         await db.collection('users').doc(currentUser.uid).update({ favorites: favs });
         currentUserData.favorites = favs;
         renderEditFavoriteCourses();
         renderFavoriteCourses();
-        updateProfileUI();
+        await updateProfileUI();
         await loadAllData();
     } catch (error) {
         console.error('Error removing favorite:', error);
+        showToast('حدث خطأ', 'error');
     }
 };
 
 window.removeCompletedFromEdit = async function(id) {
     if (!currentUser) return;
     try {
-        var comps = currentUserData.completed || [];
-        var idx = comps.indexOf(id);
+        const comps = currentUserData.completed || [];
+        const idx = comps.indexOf(id);
         if (idx > -1) comps.splice(idx, 1);
         await db.collection('users').doc(currentUser.uid).update({ completed: comps });
         currentUserData.completed = comps;
         renderEditCompletedCourses();
         renderCompletedCourses();
-        updateProfileUI();
+        await updateProfileUI();
         await loadAllData();
     } catch (error) {
         console.error('Error removing completed:', error);
+        showToast('حدث خطأ', 'error');
     }
 };
 
+// ===== عرض الاهتمامات في الملف الشخصي =====
+function renderProfileInterests() {
+    const container = document.getElementById('profileInterests');
+    if (!container) return;
+    
+    const interests = currentUserData?.interests || [];
+    if (interests.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    container.innerHTML = interests.map(function(interest) {
+        return `<span class="interest-tag">${escapeHtml(interest)}</span>`;
+    }).join('');
+}
+
+// ===== عرض المهارات في الملف الشخصي =====
+function renderProfileSkills() {
+    const container = document.getElementById('profileSkills');
+    if (!container) return;
+    
+    const skills = currentUserData?.skills || [];
+    if (skills.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    container.innerHTML = skills.map(function(skill) {
+        return `<span class="skill-tag">${escapeHtml(skill)}</span>`;
+    }).join('');
+}
+
+// ===== عرض روابط التواصل =====
+function renderProfileSocial() {
+    const container = document.getElementById('profileSocialLinks');
+    if (!container) return;
+    
+    const social = currentUserData?.social || {};
+    const platforms = [
+        { key: 'github', icon: 'fab fa-github', label: 'GitHub' },
+        { key: 'linkedin', icon: 'fab fa-linkedin', label: 'LinkedIn' },
+        { key: 'twitter', icon: 'fab fa-twitter', label: 'Twitter' },
+        { key: 'instagram', icon: 'fab fa-instagram', label: 'Instagram' },
+        { key: 'youtube', icon: 'fab fa-youtube', label: 'YouTube' },
+        { key: 'website', icon: 'fas fa-globe', label: 'الموقع' }
+    ];
+    
+    const activeLinks = platforms.filter(function(p) { return social[p.key]; });
+    if (activeLinks.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    container.innerHTML = activeLinks.map(function(p) {
+        return `<a href="${social[p.key]}" target="_blank" class="social-link" title="${p.label}">
+            <i class="${p.icon}"></i>
+        </a>`;
+    }).join('');
+}
+
+// ===== حفظ نموذج التعديل المتطور =====
 if (document.getElementById('editProfileForm')) {
     document.getElementById('editProfileForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         if (!currentUser) return;
+        
+        // تعطيل الزر أثناء الحفظ
+        const submitBtn = this.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+        }
+
         try {
-            var updates = {};
-            var college = document.getElementById('editProfileCollege').value;
-            var specialty = document.getElementById('editProfileSpecialty').value;
-            var year = document.getElementById('editProfileYear').value;
-            var bio = document.getElementById('editProfileBio').value;
-            var branch = document.getElementById('editProfileBranch').value;
-            if (college) updates.college = college;
-            if (specialty) updates.specialty = specialty;
-            if (year) updates.year = year;
-            if (bio) updates.bio = bio;
-            if (branch) updates.branch = branch;
+            // ===== 1. جمع البيانات =====
+            const updates = {};
+            
+            // الأساسي
+            const displayName = document.getElementById('editDisplayName');
+            if (displayName && displayName.value.trim()) {
+                updates.displayName = displayName.value.trim();
+            }
+            
+            // اسم المستخدم (مع التحقق)
+            const usernameInput = document.getElementById('editUsername');
+            if (usernameInput && usernameInput.value.trim()) {
+                const newUsername = usernameInput.value.trim().toLowerCase();
+                const currentUsername = currentUserData.username || '';
+                
+                if (newUsername !== currentUsername) {
+                    if (!isValidUsername(newUsername)) {
+                        showToast('اسم المستخدم غير صالح (3-20 حرف، أحرف/أرقام/_)', 'error');
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = '<i class="fas fa-save"></i> حفظ التغييرات';
+                        }
+                        return;
+                    }
+                    const available = await isUsernameAvailable(newUsername);
+                    if (!available) {
+                        showToast('اسم المستخدم مستخدم بالفعل', 'error');
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = '<i class="fas fa-save"></i> حفظ التغييرات';
+                        }
+                        return;
+                    }
+                    updates.username = newUsername;
+                }
+            }
+            
+            // التفاصيل
+            const college = document.getElementById('editProfileCollege');
+            if (college) updates.college = college.value;
+            
+            const specialty = document.getElementById('editProfileSpecialty');
+            if (specialty) updates.specialty = specialty.value;
+            
+            const year = document.getElementById('editProfileYear');
+            if (year) updates.year = year.value;
+            
+            const branch = document.getElementById('editProfileBranch');
+            if (branch) updates.branch = branch.value;
+            
+            const bio = document.getElementById('editProfileBio');
+            if (bio) updates.bio = bio.value.trim();
+            
+            // الاهتمامات والمهارات
+            updates.interests = editInterests;
+            updates.skills = editSkills;
+            
+            // روابط التواصل
+            const social = {};
+            const socialFields = {
+                github: 'editGithub',
+                linkedin: 'editLinkedin',
+                twitter: 'editTwitter',
+                website: 'editWebsite',
+                instagram: 'editInstagram',
+                youtube: 'editYoutube'
+            };
+            Object.keys(socialFields).forEach(function(key) {
+                const el = document.getElementById(socialFields[key]);
+                if (el && el.value.trim()) {
+                    social[key] = el.value.trim();
+                }
+            });
+            updates.social = social;
+            
+            // ===== 2. رفع الصورة إذا تم تغييرها =====
+            if (tempAvatarFile) {
+                try {
+                    showToast('جاري رفع الصورة...', 'warning');
+                    const base64 = await resizeImage(tempAvatarFile, 200, 200);
+                    updates.avatar = base64;
+                    tempAvatarFile = null;
+                } catch (error) {
+                    console.error('Error uploading avatar:', error);
+                    showToast('حدث خطأ في رفع الصورة: ' + error.message, 'error');
+                }
+            }
+            
+            // ===== 3. حفظ في Firestore =====
             await db.collection('users').doc(currentUser.uid).update(updates);
+            
+            // ===== 4. تحديث البيانات المحلية =====
             Object.assign(currentUserData, updates);
+            
+            // ===== 5. تحديث الواجهة =====
             updateUserInList(currentUserData);
             updateBadges();
             updateAdvancedBadges();
-            updateProfileUI();
-            showToast('تم حفظ الملف الشخصي بنجاح! ✅');
-            closeModal('editProfileModal');
+            await updateProfileUI();
             await loadAllData();
+            
+            showToast('✅ تم حفظ الملف الشخصي بنجاح!', 'success');
+            closeModal('editProfileModal');
+            
         } catch (error) {
             console.error('Error saving profile:', error);
             showToast('حدث خطأ: ' + error.message, 'error');
+        } finally {
+            // إعادة تفعيل الزر
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-save"></i> حفظ التغييرات';
+            }
         }
     });
 }
@@ -12835,14 +14700,14 @@ function calculateUserPoints(userData) {
     };
 }
 
-async function purchaseCustomization(type, value, cost) {
+async function purchaseCustomization(type, value, cost, skipConfirm) {
     if (!currentUser) {
         showToast('يرجى تسجيل الدخول', 'error');
         return false;
     }
-    
+
     var result = calculateUserPoints(currentUserData);
-    
+
     // المشرف لديه نقاط لا نهائية
     if (result.isSuperAdmin) {
         try {
@@ -12851,12 +14716,12 @@ async function purchaseCustomization(type, value, cost) {
             await db.collection('users').doc(currentUser.uid).update({ customization: customization });
             currentUserData.customization = customization;
             
-            // تطبيق التخصيصات على الملف الشخصي الرئيسي
+            // تطبيق التخصيصات فوراً
             applyAllCustomizations(currentUserData);
             updateProfileUI();
             updatePointsDisplay();
             
-            showToast('✅ تم تخصيص الملف الشخصي بنجاح! (مجاناً للمشرف)', 'success');
+            showToast('✅ تم التخصيص بنجاح (مجاناً للمشرف)', 'success');
             return true;
         } catch (error) {
             console.error('Error customizing profile:', error);
@@ -12864,47 +14729,53 @@ async function purchaseCustomization(type, value, cost) {
             return false;
         }
     }
-    
+
     var customization = currentUserData.customization || {};
     
-    // التحقق من امتلاك العنصر بالفعل
+    // إذا كان نفس القيمة، لا نفعل شيئاً
     if (customization[type] === value) {
         showToast('هذا العنصر مملوك بالفعل!', 'warning');
         return false;
     }
-    
+
+    // تحقق من النقاط
     if (result.points < cost) {
         showToast('نقاطك لا تكفي! تحتاج ' + cost + ' نقطة', 'error');
         return false;
     }
-    
-    if (!confirm('هل أنت متأكد من استخدام ' + cost + ' نقطة لتخصيص هذا العنصر؟')) {
-        return false;
+
+    // تأكيد الشراء (إذا لم يتم تخطي التأكيد)
+    if (!skipConfirm) {
+        if (!confirm('هل أنت متأكد من استخدام ' + cost + ' نقطة لتخصيص "' + getOptionLabel(type, value) + '"؟')) {
+            return false;
+        }
     }
-    
+
     try {
+        // خصم النقاط
         var newSpentPoints = (currentUserData.spentPoints || 0) + cost;
-        var newCustomization = currentUserData.customization || {};
-        newCustomization[type] = value;
-        
+        customization[type] = value;
+
         await db.collection('users').doc(currentUser.uid).update({
-            customization: newCustomization,
+            customization: customization,
             spentPoints: newSpentPoints
         });
-        
-        currentUserData.customization = newCustomization;
+
+        // تحديث البيانات المحلية
+        currentUserData.customization = customization;
         currentUserData.spentPoints = newSpentPoints;
-        
-        // تطبيق التخصيصات على الملف الشخصي الرئيسي
+
+        // تطبيق التخصيصات فوراً
         applyAllCustomizations(currentUserData);
         updateProfileUI();
         updatePointsDisplay();
-        
-        showToast('✅ تم تخصيص الملف الشخصي بنجاح!', 'success');
+        applyFeaturedBadgeToMain(value);
+
+        showToast('✅ تم تخصيص "' + getOptionLabel(type, value) + '" بنجاح!', 'success');
         return true;
     } catch (error) {
-        console.error('Error customizing profile:', error);
-        showToast('حدث خطأ: ' + error.message, 'error');
+        console.error('Error purchasing customization:', error);
+        showToast('حدث خطأ أثناء الشراء: ' + error.message, 'error');
         return false;
     }
 }
@@ -12973,39 +14844,6 @@ function updatePointsDisplay() {
             userPointsEl.textContent = result.earnedPoints + ' نقطة (إجمالي)';
         }
     }
-}
-
-// ============================================================
-//  إصلاح 1: عرض حالة الصداقة في مودال الملف الشخصي
-// ============================================================
-
-// تحديث دالة buildUserProfileHTML لإضافة حالة الصداقة
-// نضيف هذه الدالة الجديدة بعد buildUserProfileHTML
-
-function getFriendshipStatus(userUid) {
-    if (!currentUserData || currentUserData.uid === userUid) return 'self';
-    
-    var friends = currentUserData.friends || [];
-    if (friends.indexOf(userUid) !== -1) return 'friend';
-    
-    var sentRequests = currentUserData.sentRequests || [];
-    if (sentRequests.indexOf(userUid) !== -1) return 'pending_from_me';
-    
-    var pendingRequests = currentUserData.pendingRequests || [];
-    if (pendingRequests.indexOf(userUid) !== -1) return 'pending_from_them';
-    
-    return 'none';
-}
-
-function getFriendshipBadge(status) {
-    var badges = {
-        'self': '<span class="friendship-badge self"><i class="fas fa-user"></i> أنت</span>',
-        'friend': '<span class="friendship-badge friend"><i class="fas fa-user-check" style="color:var(--success);"></i> صديق</span>',
-        'pending_from_me': '<span class="friendship-badge pending"><i class="fas fa-clock" style="color:var(--warning);"></i> في الانتظار</span>',
-        'pending_from_them': '<span class="friendship-badge request"><i class="fas fa-user-plus" style="color:var(--primary);"></i> طلب صداقة</span>',
-        'none': '<span class="friendship-badge none"><i class="fas fa-user-plus" style="color:var(--gray-400);"></i> غير صديق</span>'
-    };
-    return badges[status] || badges['none'];
 }
 
 // ============================================================
@@ -13258,7 +15096,7 @@ function createUserTabModal() {
                 <h3 id="userTabModalTitle"><i class="fas fa-info-circle"></i> التفاصيل</h3>
                 <button class="btn-close" onclick="closeModal('userTabModal')"><i class="fas fa-times"></i></button>
             </div>
-            <div id="userTabModalContent" style="max-height:400px;overflow-y:auto;"></div>
+            <div id="userTabModalContent" style="max-height:450px;overflow-y:auto;padding:0.5rem;"></div>
         </div>
     `;
     document.body.appendChild(modal);
@@ -13673,301 +15511,354 @@ function buildCollectiblesContent(items, type) {
 //  buildFriendsList - تصميم متطور للأصدقاء
 // ============================================================
 
+// ===== buildFriendsList - استخدام البطاقات الجديدة =====
 function buildFriendsList(user) {
     var viewerUid = currentUser ? currentUser.uid : null;
     if (!canViewUserData(user, 'friendsList', viewerUid)) {
         return '<div class="empty-state-modern"><i class="fas fa-lock"></i><h4>هذه القائمة مخفية</h4><p>المستخدم قام بإخفاء قائمة أصدقائه</p></div>';
-    }    var friends = user.friends || [];
-    if (user.privacy && user.privacy.hideFriends) {
-        return '<div class="empty-state-modern"><i class="fas fa-lock"></i><h4>هذه القائمة مخفية</h4><p>المستخدم قام بإخفاء قائمة أصدقائه</p></div>';
     }
+    
+    var friends = user.friends || [];
     if (friends.length === 0) {
         return '<div class="empty-state-modern"><i class="fas fa-user-friends"></i><h4>لا يوجد أصدقاء</h4><p>لم يضف هذا المستخدم أي أصدقاء بعد</p></div>';
     }
-    
-    var html = '<div class="users-grid-modern">';
+
+    var html = '<div class="users-cards-grid" style="max-height:400px;overflow-y:auto;">';
     friends.forEach(function(uid) {
         var friend = users.find(function(u) { return u.uid === uid; });
         if (friend) {
-            var result = calculateUserPoints(friend);
-            var badges = calculateBadges(friend);
-            var isOnline = Math.random() > 0.3; // محاكاة الحالة (يمكن ربطها بنظام حقيقي)
-            
-            html += `
-                <div class="user-card-modern" onclick="closeModal('userTabModal');viewUserProfile('${uid}')">
-                    <div class="user-card-avatar">
-                        <img src="${friend.avatar || ''}" onerror="this.src=''" alt="${escapeHtml(friend.displayName || 'مستخدم')}" />
-                        <span class="status-indicator ${isOnline ? 'online' : 'offline'}"></span>
-                    </div>
-                    <div class="user-card-info">
-                        <div class="user-card-name">
-                            ${escapeHtml(friend.displayName || 'مستخدم')}
-                            <span class="user-tier-badge" style="color:${result.tier.color}">
-                                <i class="fas ${result.tier.icon}"></i> ${result.tier.name}
-                            </span>
-                        </div>
-                        <div class="user-card-details">
-                            <span><i class="fas fa-university"></i> ${friend.college ? getCollegeName(friend.college) : 'غير محدد'}</span>
-                            <span><i class="fas fa-calendar-alt"></i> سنة ${friend.year || '?'}</span>
-                        </div>
-                        <div class="user-card-stats">
-                            <span><i class="fas fa-star"></i> ${(friend.favorites || []).length}</span>
-                            <span><i class="fas fa-check-circle"></i> ${(friend.completed || []).length}</span>
-                            <span><i class="fas fa-trophy"></i> ${badges.length}</span>
-                            <span><i class="fas fa-handshake"></i> ${(friend.trustedBy || []).length}</span>
-                        </div>
-                        ${badges.length > 0 ? `
-                        <div class="user-card-badges">
-                            ${badges.slice(0, 3).map(function(b) {
-                                return `<span class="badge-item ${b.class}" style="font-size:0.6rem;padding:0.1rem 0.4rem;"><i class="fas ${b.icon}"></i></span>`;
-                            }).join('')}
-                            ${badges.length > 3 ? `<span class="badge-more">+${badges.length - 3}</span>` : ''}
-                        </div>` : ''}
-                    </div>
-                    <div class="user-card-actions">
-                        <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();viewUserProfile('${uid}')">
-                            <i class="fas fa-user"></i> عرض
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();unfriend('${uid}')">
-                            <i class="fas fa-user-minus"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
+            html += buildUserCardSimple(friend, true);
         }
     });
     html += '</div>';
-    
-    // إضافة إحصائيات
-    html += `<div class="list-stats">
-        <span><i class="fas fa-users"></i> إجمالي الأصدقاء: <strong>${friends.length}</strong></span>
-    </div>`;
-    
     return html;
 }
 
-// ============================================================
-//  buildTrustedList - تصميم متطور للثقات
-// ============================================================
-
+// ===== buildTrustedList - استخدام البطاقات الجديدة =====
 function buildTrustedList(user) {
-    var trusted = user.trustedBy || [];
-    if (user.privacy && user.privacy.hideTrusted) {
+    var viewerUid = currentUser ? currentUser.uid : null;
+    if (!canViewUserData(user, 'trustedBy', viewerUid)) {
         return '<div class="empty-state-modern"><i class="fas fa-lock"></i><h4>هذه القائمة مخفية</h4><p>المستخدم قام بإخفاء قائمة الثقات</p></div>';
     }
+
+    var trusted = user.trustedBy || [];
     if (trusted.length === 0) {
         return '<div class="empty-state-modern"><i class="fas fa-handshake"></i><h4>لا يوجد ثقات</h4><p>لم يحصل هذا المستخدم على أي ثقة بعد</p></div>';
     }
-    
-    var html = '<div class="users-grid-modern">';
+
+    var html = '<div class="users-cards-grid" style="max-height:400px;overflow-y:auto;">';
     trusted.forEach(function(uid) {
         var truster = users.find(function(u) { return u.uid === uid; });
         if (truster) {
-            var result = calculateUserPoints(truster);
-            var badges = calculateBadges(truster);
-            var isVerified = (truster.trustedBy || []).length >= 10;
-            
-            html += `
-                <div class="user-card-modern trusted-card" onclick="closeModal('userTabModal');viewUserProfile('${uid}')">
-                    <div class="user-card-avatar">
-                        <img src="${truster.avatar || ''}" onerror="this.src=''" alt="${escapeHtml(truster.displayName || 'مستخدم')}" />
-                        ${isVerified ? '<span class="verified-badge"><i class="fas fa-check-circle"></i></span>' : ''}
-                    </div>
-                    <div class="user-card-info">
-                        <div class="user-card-name">
-                            ${escapeHtml(truster.displayName || 'مستخدم')}
-                            <span class="user-tier-badge" style="color:${result.tier.color}">
-                                <i class="fas ${result.tier.icon}"></i> ${result.tier.name}
-                            </span>
-                        </div>
-                        <div class="user-card-details">
-                            <span><i class="fas fa-university"></i> ${truster.college ? getCollegeName(truster.college) : 'غير محدد'}</span>
-                            <span><i class="fas fa-handshake"></i> ${(truster.trustedBy || []).length} ثقة</span>
-                        </div>
-                        <div class="user-card-stats">
-                            <span><i class="fas fa-star"></i> ${(truster.favorites || []).length}</span>
-                            <span><i class="fas fa-check-circle"></i> ${(truster.completed || []).length}</span>
-                            <span><i class="fas fa-trophy"></i> ${badges.length}</span>
-                            <span><i class="fas fa-users"></i> ${(truster.friends || []).length}</span>
-                        </div>
-                        <div class="trust-score">
-                            <div class="trust-bar">
-                                <div class="trust-fill" style="width:${Math.min((truster.trustedBy || []).length * 5, 100)}%"></div>
-                            </div>
-                            <span class="trust-label">${(truster.trustedBy || []).length} ثقة</span>
-                        </div>
-                    </div>
-                    <div class="user-card-actions">
-                        <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();viewUserProfile('${uid}')">
-                            <i class="fas fa-user"></i> عرض
-                        </button>
-                        ${currentUser && currentUser.uid !== uid ? `
-                        <button class="btn btn-sm ${(currentUserData && truster.trustedBy && truster.trustedBy.indexOf(currentUser.uid) !== -1) ? 'btn-success' : 'btn-outline'}" onclick="event.stopPropagation();trustUser('${uid}')">
-                            <i class="fas fa-handshake"></i>
-                        </button>` : ''}
-                    </div>
-                </div>
-            `;
+            html += buildUserCardSimple(truster, true);
         }
     });
     html += '</div>';
-    
-    // إضافة إحصائيات
-    var totalTrust = trusted.length;
-    html += `<div class="list-stats">
-        <span><i class="fas fa-handshake"></i> إجمالي الثقات: <strong>${totalTrust}</strong></span>
-        <span><i class="fas fa-star"></i> مستوى الثقة: <strong>${totalTrust >= 20 ? '🌟 ممتاز' : totalTrust >= 10 ? '⭐ جيد' : totalTrust >= 5 ? '👍 متوسط' : '👤 مبتدئ'}</strong></span>
-    </div>`;
-    
     return html;
 }
 
-// ============================================================
-//  buildReportsList - تصميم متطور للبلاغات
-// ============================================================
-
+// ===== buildReportsList - استخدام البطاقات الجديدة =====
 function buildReportsList(user) {
-    var reports = user.reports || [];
-    if (user.privacy && user.privacy.hideReports) {
+    var viewerUid = currentUser ? currentUser.uid : null;
+    if (!canViewUserData(user, 'reports', viewerUid)) {
         return '<div class="empty-state-modern"><i class="fas fa-lock"></i><h4>هذه القائمة مخفية</h4><p>المستخدم قام بإخفاء قائمة البلاغات</p></div>';
     }
+
+    var reports = user.reports || [];
     if (reports.length === 0) {
         return '<div class="empty-state-modern"><i class="fas fa-flag"></i><h4>لا يوجد بلاغات</h4><p>لم يتم الإبلاغ عن هذا المستخدم</p></div>';
     }
-    
-    var html = '<div class="users-grid-modern reports-grid">';
+
+    var html = '<div class="users-cards-grid" style="max-height:400px;overflow-y:auto;">';
     reports.forEach(function(uid) {
         var reporter = users.find(function(u) { return u.uid === uid; });
         if (reporter) {
-            var result = calculateUserPoints(reporter);
-            
-            html += `
-                <div class="user-card-modern report-card" onclick="closeModal('userTabModal');viewUserProfile('${uid}')">
-                    <div class="user-card-avatar">
-                        <img src="${reporter.avatar || ''}" onerror="this.src=''" alt="${escapeHtml(reporter.displayName || 'مستخدم')}" />
-                        <span class="report-badge"><i class="fas fa-flag"></i></span>
-                    </div>
-                    <div class="user-card-info">
-                        <div class="user-card-name">
-                            ${escapeHtml(reporter.displayName || 'مستخدم')}
-                            <span class="user-tier-badge" style="color:${result.tier.color}">
-                                <i class="fas ${result.tier.icon}"></i> ${result.tier.name}
-                            </span>
-                        </div>
-                        <div class="user-card-details">
-                            <span><i class="fas fa-university"></i> ${reporter.college ? getCollegeName(reporter.college) : 'غير محدد'}</span>
-                            <span><i class="fas fa-calendar-alt"></i> سنة ${reporter.year || '?'}</span>
-                        </div>
-                        <div class="user-card-stats">
-                            <span><i class="fas fa-vote-yea"></i> ${reporter.votes || 0}</span>
-                            <span><i class="fas fa-handshake"></i> ${(reporter.trustedBy || []).length}</span>
-                            <span><i class="fas fa-users"></i> ${(reporter.friends || []).length}</span>
-                        </div>
-                    </div>
-                    <div class="user-card-actions">
-                        <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();viewUserProfile('${uid}')">
-                            <i class="fas fa-user"></i> عرض
-                        </button>
-                        ${isAdmin ? `<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();removeReport('${uid}', '${user.uid}')">
-                            <i class="fas fa-times"></i> إلغاء
-                        </button>` : ''}
-                    </div>
-                </div>
-            `;
+            html += buildUserCardSimple(reporter, true);
         }
     });
     html += '</div>';
-    
-    // إضافة إحصائيات
-    html += `<div class="list-stats warning">
-        <span><i class="fas fa-flag"></i> عدد البلاغات: <strong>${reports.length}</strong></span>
-        ${isAdmin ? `<button class="btn btn-sm btn-danger" onclick="clearAllReports('${user.uid}')">
-            <i class="fas fa-trash"></i> مسح كل البلاغات
-        </button>` : ''}
-    </div>`;
-    
     return html;
 }
 
-// ============================================================
-//  buildGiftReceivedContent - تصميم متطور للهدايا
-// ============================================================
-
+// ===== buildGiftReceivedContent - استخدام البطاقات الجديدة =====
 function buildGiftReceivedContent(uid) {
     var user = users.find(function(u) { return u.uid === uid; });
     if (!user) return '<div class="empty-state-modern"><i class="fas fa-exclamation-circle"></i><h4>المستخدم غير موجود</h4></div>';
-    
+
     var gifts = user.receivedGifts || [];
     if (gifts.length === 0) {
         return '<div class="empty-state-modern"><i class="fas fa-gift"></i><h4>لا توجد هدايا</h4><p>لم يستلم هذا المستخدم أي هدايا بعد</p></div>';
     }
-    
-    // حساب إجمالي النقاط
-    var totalPoints = gifts.reduce(function(sum, g) { return sum + (g.amount || 0); }, 0);
-    
-    var html = '<div class="gifts-container">';
-    
-    // بطاقة إحصائيات الهدايا
-    html += `
-        <div class="gifts-stats-card">
-            <div class="gifts-stat">
-                <i class="fas fa-gift"></i>
-                <span class="gifts-stat-number">${gifts.length}</span>
-                <label>عدد الهدايا</label>
-            </div>
-            <div class="gifts-stat">
-                <i class="fas fa-coins"></i>
-                <span class="gifts-stat-number">${totalPoints}</span>
-                <label>إجمالي النقاط</label>
-            </div>
-            <div class="gifts-stat">
-                <i class="fas fa-users"></i>
-                <span class="gifts-stat-number">${new Set(gifts.map(function(g) { return g.from; })).size}</span>
-                <label>عدد المرسلين</label>
-            </div>
-        </div>
-    `;
-    
-    // قائمة الهدايا
-    html += '<div class="gifts-list">';
-    var sortedGifts = gifts.slice().reverse();
-    sortedGifts.forEach(function(gift, index) {
-        var sender = users.find(function(u) { return u.uid === gift.from; });
-        var senderName = sender ? (sender.displayName || 'مستخدم') : 'مستخدم غير معروف';
-        var senderAvatar = sender ? (sender.avatar || '') : '';
-        var date = gift.timestamp ? new Date(gift.timestamp).toLocaleDateString('ar') : 'تاريخ غير معروف';
-        var time = gift.timestamp ? new Date(gift.timestamp).toLocaleTimeString('ar', {hour: '2-digit', minute: '2-digit'}) : '';
-        var amount = gift.amount || 0;
-        var reason = gift.reason || 'هدية';
-        var isFirst = index === 0;
-        
-        html += `
-            <div class="gift-item-modern ${isFirst ? 'highlight' : ''}" onclick="${sender ? `closeModal('giftModal');viewUserProfile('${gift.from}')` : ''}" style="${sender ? 'cursor:pointer;' : ''}">
-                <div class="gift-sender-avatar">
-                    <img src="${senderAvatar}" onerror="this.src=''" alt="${escapeHtml(senderName)}" />
-                    ${isFirst ? '<span class="gift-new-badge">جديد</span>' : ''}
-                </div>
-                <div class="gift-info">
-                    <div class="gift-sender-name">${escapeHtml(senderName)}</div>
-                    <div class="gift-message">
-                        <i class="fas fa-gift"></i> ${escapeHtml(reason)}
-                    </div>
-                    <div class="gift-meta">
-                        <span><i class="far fa-calendar-alt"></i> ${date}</span>
-                        <span><i class="far fa-clock"></i> ${time}</span>
-                    </div>
-                </div>
-                <div class="gift-amount ${amount >= 20 ? 'high' : amount >= 10 ? 'medium' : 'low'}">
-                    <span>${amount}</span>
-                    <label>نقطة</label>
+
+    // تجميع الهدايا حسب المرسل
+    var senderMap = {};
+    gifts.forEach(function(gift) {
+        if (!senderMap[gift.from]) {
+            senderMap[gift.from] = { total: 0, count: 0, lastGift: gift };
+        }
+        senderMap[gift.from].total += gift.amount || 0;
+        senderMap[gift.from].count++;
+        if (!senderMap[gift.from].lastGift || new Date(gift.timestamp) > new Date(senderMap[gift.from].lastGift.timestamp)) {
+            senderMap[gift.from].lastGift = gift;
+        }
+    });
+
+    var senders = Object.keys(senderMap);
+    var senderUsers = users.filter(function(u) {
+        return senders.indexOf(u.uid) !== -1;
+    });
+
+    if (senderUsers.length === 0) {
+        return '<div class="empty-state-modern"><i class="fas fa-gift"></i><h4>لا يوجد مرسلين</h4><p>لم يتم العثور على معلومات المرسلين</p></div>';
+    }
+
+    var html = '<div class="users-cards-grid" style="max-height:400px;overflow-y:auto;">';
+    senderUsers.forEach(function(sender) {
+        var data = senderMap[sender.uid] || { total: 0, count: 0 };
+        var cardHtml = buildUserCardSimple(sender, true);
+        var modifiedCard = cardHtml.replace(
+            '</div>',
+            `
+                <div class="gift-info" style="display:flex;gap:0.5rem;font-size:0.55rem;color:var(--gray-400);padding-right:0.5rem;margin-top:0.1rem;border-top:1px solid var(--border-color);padding-top:0.15rem;">
+                    <span><i class="fas fa-gift" style="color:#f59e0b;"></i> ${data.count} هدية</span>
+                    <span><i class="fas fa-coins" style="color:#f59e0b;"></i> ${data.total} نقطة</span>
+                    ${data.lastGift?.reason ? `<span><i class="fas fa-quote-right"></i> ${escapeHtml(data.lastGift.reason.substring(0, 15))}${data.lastGift.reason.length > 15 ? '...' : ''}</span>` : ''}
                 </div>
             </div>
-        `;
+        `);
+        html += modifiedCard;
     });
     html += '</div>';
-    html += '</div>';
-    
     return html;
+}
+
+function applyCustomizationsToUserCards() {
+    var cards = document.querySelectorAll('.user-card-simple');
+    var currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+
+    cards.forEach(function(card) {
+        var uid = card.dataset.uid;
+        var user = users.find(function(u) { return u.uid === uid; });
+        if (!user) return;
+
+        var customization = user.customization || {};
+
+        // ---- خلفية البطاقة ----
+        if (customization.profileBg && customization.profileBg !== 'default') {
+            var bgInfo = BG_STYLES[customization.profileBg];
+            if (bgInfo) {
+                card.style.background = bgInfo.bg;
+                card.style.color = bgInfo.textColor;
+            }
+        }
+
+        // ---- شكل البطاقة ----
+        if (customization.cardStyle && customization.cardStyle !== 'default') {
+            var cardStyles = {
+                'glass': 'backdrop-filter:blur(10px);background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);',
+                'bordered': 'border:2px solid var(--primary);',
+                'shadow': 'box-shadow:0 8px 30px rgba(0,0,0,0.2);',
+                'elevated': 'transform:translateY(-5px);box-shadow:0 12px 40px rgba(0,0,0,0.25);'
+            };
+            if (cardStyles[customization.cardStyle]) {
+                var existingStyle = card.style.cssText || '';
+                card.style.cssText = existingStyle + cardStyles[customization.cardStyle];
+            }
+        }
+
+        // ---- سرعة الحركة ----
+        var speeds = { 'slow': '0.8s', 'normal': '0.25s', 'fast': '0.1s', 'none': '0s' };
+        if (customization.animationSpeed && customization.animationSpeed !== 'none') {
+            var duration = speeds[customization.animationSpeed] || '0.25s';
+            card.style.transition = 'all ' + duration + ' cubic-bezier(0.4,0,0.2,1)';
+        } else {
+            card.style.transition = '';
+        }
+
+        // ---- نوع الخط ----
+        if (customization.fontStyle && customization.fontStyle !== 'default') {
+            var fonts = {
+                'tajawal': 'Tajawal, sans-serif',
+                'cairo': 'Cairo, sans-serif',
+                'readex': 'Readex Pro, sans-serif',
+                'noto': 'Noto Sans Arabic, sans-serif',
+                'amiri': 'Amiri, serif',
+                'lateef': 'Lateef, serif',
+                'scheherazade': 'Scheherazade New, serif',
+                'modern': 'Inter, sans-serif',
+                'elegant': 'Georgia, serif',
+                'bold': 'Arial Black, sans-serif',
+                'handwriting': 'Comic Sans MS, cursive',
+                'playful': 'Fredoka One, sans-serif',
+                'mono': 'Courier New, monospace',
+                'serif': 'Times New Roman, serif',
+                'sans': 'Helvetica, sans-serif'
+            };
+            if (fonts[customization.fontStyle]) {
+                card.style.fontFamily = fonts[customization.fontStyle];
+            }
+        }
+
+        // ---- لون الاسم ----
+        var nameElement = card.querySelector('.user-card-simple-name');
+        if (nameElement) {
+            var defaultNameColor = currentTheme === 'dark' ? '#ffffff' : '#000000';
+            var nameColor = (customization.nameColor && customization.nameColor !== 'default') 
+                ? customization.nameColor 
+                : defaultNameColor;
+            nameElement.style.setProperty('color', nameColor, 'important');
+        }
+
+        // ---- تأثير الاسم ----
+        if (nameElement && customization.nameGlow && customization.nameGlow !== 'none') {
+            var glowEffects = {
+                'soft': 'text-shadow:0 0 20px rgba(37,99,235,0.3);',
+                'strong': 'text-shadow:0 0 30px rgba(37,99,235,0.6),0 0 60px rgba(37,99,235,0.3);',
+                'rainbow': 'animation:rainbowGlow 3s ease infinite;',
+                'underline': 'text-decoration:underline;text-decoration-color:currentColor;text-decoration-thickness:2px;',
+                'strikethrough': 'text-decoration:line-through;',
+                'uppercase': 'text-transform:uppercase;',
+                'spacing': 'letter-spacing:4px;',
+                'flip': 'transform:scaleX(-1);display:inline-block;',
+                'shadow-text': 'text-shadow:2px 2px 4px rgba(0,0,0,0.3);'
+            };
+            if (glowEffects[customization.nameGlow]) {
+                nameElement.style.cssText += glowEffects[customization.nameGlow];
+            }
+        }
+
+        // ---- الشارة الخاصة ----
+        var specialElement = card.querySelector('.user-special-badge');
+        if (specialElement) {
+            var defaultNameColor = currentTheme === 'dark' ? '#ffffff' : '#000000';
+            var nameColor = (customization.nameColor && customization.nameColor !== 'default') 
+                ? customization.nameColor 
+                : defaultNameColor;
+            specialElement.style.setProperty('color', nameColor, 'important');
+        }
+
+        // ---- صندوق الشارة المميزة (خلفية الصندوق) ----
+        var featuredBadge = customization.featuredBadge;
+        if (featuredBadge && featuredBadge !== 'none') {
+            var container = card.querySelector('.user-featured-badge-container');
+            var badgeElement = card.querySelector('.user-featured-badge');
+
+            if (container) {
+                var boxBg = customization.featuredBadgeBoxBg || 'default';
+                var boxBorder = customization.featuredBadgeBoxBorder || 'none';
+                var boxBorderColor = customization.featuredBadgeBoxBorderColor || 'default';
+
+                // ✅ استخدام الدالة المساعدة الموحدة لخلفية الصندوق
+                var bgValue = getBoxBgStyle(boxBg);
+                container.style.setProperty('background', bgValue, 'important');
+
+                if (boxBorder !== 'none') {
+                    var bBoxColor = (boxBorderColor && boxBorderColor !== 'default') ? boxBorderColor : 'var(--primary)';
+                    container.style.setProperty('border', boxBorder + ' 2px ' + bBoxColor, 'important');
+                } else {
+                    container.style.setProperty('border', 'none', 'important');
+                }
+
+                container.style.borderRadius = '5px';
+                container.style.padding = '0.05rem 0.35rem';
+                container.style.display = 'inline-flex';
+                container.style.alignItems = 'center';
+                container.style.gap = '0.2rem';
+                container.style.marginTop = '0.1rem';
+                container.style.width = 'fit-content';
+            }
+
+            if (badgeElement) {
+                // ✅ خلفية الشارة نفسها (استخدام الدالة المساعدة الموحدة)
+                var textColor = customization.featuredBadgeTextColor || 'default';
+                var bg = customization.featuredBadgeBg || 'default';
+                var size = customization.featuredBadgeSize || 'medium';
+                var effect = customization.featuredBadgeEffect || 'none';
+                var border = customization.featuredBadgeBorder || 'none';
+                var borderColor = customization.featuredBadgeBorderColor || 'default';
+                var badgeStyle = customization.badgeStyle || 'default';
+
+                var badgeStyles = {};
+                
+                // لون النص
+                if (textColor && textColor !== 'default') {
+                    badgeStyles.color = textColor + ' !important';
+                }
+                
+                // ✅ خلفية الشارة (استخدام الدالة المساعدة)
+                var bgValue = getBadgeBgStyle(bg);
+                badgeStyles.background = bgValue + ' !important';
+
+                // الحجم
+                if (size === 'small') {
+                    badgeStyles.fontSize = '0.5rem';
+                    badgeStyles.padding = '0.05rem 0.3rem';
+                } else if (size === 'large') {
+                    badgeStyles.fontSize = '0.7rem';
+                    badgeStyles.padding = '0.15rem 0.7rem';
+                } else {
+                    badgeStyles.fontSize = '0.55rem';
+                    badgeStyles.padding = '0.08rem 0.4rem';
+                }
+
+                // التأثير
+                var effectMap = {
+                    'glow': 'glowBadge 2s ease-in-out infinite',
+                    'pulse': 'pulse 1.5s ease-in-out infinite',
+                    'shine': 'shine 3s ease infinite',
+                    'float': 'floatEffect 3s ease-in-out infinite',
+                    'bounce': 'bounceEffect 2s ease infinite',
+                    'rotate-slow': 'rotateEffect 8s linear infinite',
+                    'scale-in': 'scaleInEffect 3s ease-in-out infinite',
+                    'glow-pulse': 'glowPulseEffect 2s ease-in-out infinite'
+                };
+                if (effect && effect !== 'none' && effectMap[effect]) {
+                    badgeStyles.animation = effectMap[effect] + ' !important';
+                }
+
+                // الإطار
+                if (border !== 'none') {
+                    var bColor = (borderColor && borderColor !== 'default') ? borderColor : 'var(--primary)';
+                    badgeStyles.border = border + ' 2px ' + bColor;
+                }
+
+                // شكل الشارة
+                if (badgeStyle && badgeStyle !== 'default') {
+                    badgeElement.className = 'user-featured-badge';
+                    badgeElement.classList.add('style-' + badgeStyle);
+                }
+
+                // تطبيق الأنماط
+                Object.keys(badgeStyles).forEach(function(prop) {
+                    badgeElement.style.setProperty(prop, badgeStyles[prop], 'important');
+                });
+            }
+        }
+
+        // ---- لون النصوص الثانوية ----
+        if (customization.textColor && customization.textColor !== 'default') {
+            var infoElement = card.querySelector('.user-card-simple-info');
+            if (infoElement) {
+                infoElement.style.setProperty('color', customization.textColor, 'important');
+            }
+        }
+
+        // ---- التخصيصات المتقدمة ----
+        if (customization.cardSize) {
+            applyCardSizeToAll(customization.cardSize);
+        }
+        if (customization.borderRadius) {
+            applyBorderRadiusToAll(customization.borderRadius);
+        }
+        if (customization.hoverEffect) {
+            applyHoverEffectToAll(customization.hoverEffect);
+        }
+        if (customization.opacity) {
+            applyOpacityToAll(customization.opacity);
+        }
+    });
+
+    console.log('✅ تم تحديث تخصيصات بطاقات المستخدمين');
 }
 
 // ============================================================
@@ -14302,14 +16193,19 @@ var pendingCustomizations = {};
 
 function previewAndSelect(type, value, cost) {
     console.log('🔍 معاينة:', type, value);
+    
+    // تخزين التخصيص المحدد في pendingCustomizations
     pendingCustomizations[type] = value;
+    
+    // تحديث حالة المعاينة
     previewState.active = true;
     previewState.type = type;
     previewState.value = value;
     previewState.cost = cost || 0;
 
-    updateTotalCostDisplay();
+    // تطبيق المعاينة فوراً مع الوضع الحالي
     applyInstantPreviewWithPending();
+    updateTotalCostDisplay();
 
     var optionDef = findOptionDefinition(type);
     if (optionDef) {
@@ -14342,10 +16238,19 @@ function applyInstantPreviewWithPending() {
     var previewContainer = document.getElementById('previewContainer');
     if (!previewContainer) return;
 
+    // نسخ التخصيصات الفعلية
     var tempCustomization = JSON.parse(JSON.stringify(currentUserData.customization || {}));
+    
+    // دمج التخصيصات المعلقة (إن وجدت)
+    var hasPending = false;
     for (var type in pendingCustomizations) {
         if (pendingCustomizations.hasOwnProperty(type)) {
             tempCustomization[type] = pendingCustomizations[type];
+            hasPending = true;
+            // تحديث حالة المعاينة
+            previewState.active = true;
+            previewState.type = type;
+            previewState.value = pendingCustomizations[type];
         }
     }
 
@@ -14374,58 +16279,94 @@ function applyInstantPreviewWithPending() {
     }
 
     previewContainer.innerHTML = html;
+    
+    // تحديث التكلفة الإجمالية
+    updateTotalCostDisplay();
 }
 
-function applySelectedCustomization() {
-    var totalCost = 0;
+async function applySelectedCustomization() {
     var types = Object.keys(pendingCustomizations);
+    
     if (types.length === 0) {
         showToast('الرجاء اختيار تخصيص أولاً', 'warning');
         return;
     }
+
+    // حساب التكلفة الإجمالية
+    var totalCost = 0;
+    var optionDefs = {};
     for (var i = 0; i < types.length; i++) {
         var type = types[i];
         var optionDef = findOptionDefinition(type);
-        if (optionDef) totalCost += optionDef.cost;
+        if (optionDef) {
+            optionDefs[type] = optionDef;
+            totalCost += optionDef.cost;
+        } else {
+            showToast('تعذر العثور على تعريف للتخصيص: ' + type, 'error');
+            return;
+        }
     }
+
     var result = calculateUserPoints(currentUserData);
+
+    // تحقق من النقاط (للمستخدمين العاديين)
     if (!result.isSuperAdmin && result.points < totalCost) {
         showToast('❌ نقاطك لا تكفي! تحتاج ' + totalCost + ' نقطة', 'error');
         return;
     }
+
+    // تأكيد الشراء (للمستخدمين العاديين)
     if (!result.isSuperAdmin) {
-        if (!confirm('هل أنت متأكد من شراء ' + types.length + ' تخصيص مقابل ' + totalCost + ' نقطة؟')) {
+        var confirmMsg = 'هل أنت متأكد من شراء ' + types.length + ' تخصيص مقابل ' + totalCost + ' نقطة؟';
+        if (!confirm(confirmMsg)) {
             return;
         }
     }
-    var promises = [];
-    for (var j = 0; j < types.length; j++) {
-        var type2 = types[j];
-        var value = pendingCustomizations[type2];
-        var optionDef2 = findOptionDefinition(type2);
-        if (optionDef2) {
-            promises.push(purchaseCustomization(type2, value, optionDef2.cost, true));
-        }
-    }
-    Promise.all(promises).then(function(results) {
-        var allSuccess = results.every(function(r) { return r; });
-        if (allSuccess) {
-            pendingCustomizations = {};
-            previewState.active = false;
-            previewState.type = null;
-            previewState.value = null;
-            refreshCustomizationModal();
-            showToast('✅ تم تطبيق جميع التخصيصات بنجاح!', 'success');
-            if (isModalOpen('userProfileModal') && currentViewedUserUid) {
-                refreshUserProfileModal();
-            }
-            applyAllCustomizations(currentUserData);
-            updateProfileUI();
-            updatePointsDisplay();
-        } else {
-            showToast('❌ حدث خطأ في تطبيق بعض التخصيصات', 'error');
-        }
+
+    // تنفيذ عمليات الشراء بالتسلسل
+    var purchasePromises = types.map(function(type) {
+        var value = pendingCustomizations[type];
+        var cost = optionDefs[type].cost;
+        return purchaseCustomization(type, value, cost, true);
     });
+
+    Promise.all(purchasePromises)
+        .then(function(results) {
+            var allSuccess = results.every(function(r) { return r === true; });
+            if (allSuccess) {
+                // مسح التخصيصات المعلقة
+                pendingCustomizations = {};
+                previewState.active = false;
+                previewState.type = null;
+                previewState.value = null;
+// تحديث المعاينة لتعكس التخصيصات الجديدة
+applyInstantPreviewWithPending();
+updateTotalCostDisplay();
+
+// تحديث المودال (اختياري)
+refreshCustomizationModal();
+                // تحديث مودال التخصيصات
+                refreshCustomizationModal();
+                applyAllCustomizationsToAllCards();
+                showToast('✅ تم تطبيق جميع التخصيصات بنجاح!', 'success');
+
+                // تحديث مودال المستخدم إذا كان مفتوحاً
+                if (isModalOpen('userProfileModal') && currentViewedUserUid) {
+                    refreshUserProfileModal();
+                }
+
+                // تحديث جميع البطاقات
+                applyAllCustomizationsToAllCards();
+                updateProfileUI();
+                updatePointsDisplay();
+            } else {
+                showToast('❌ حدث خطأ في تطبيق بعض التخصيصات', 'error');
+            }
+        })
+        .catch(function(error) {
+            console.error('Error applying customizations:', error);
+            showToast('حدث خطأ: ' + error.message, 'error');
+        });
 }
 
 async function executePurchase(type, value, cost) {
@@ -14484,8 +16425,8 @@ async function executePurchase(type, value, cost) {
 function refreshCustomizationModal() {
     var modal = document.getElementById('customizationModal');
     if (!modal || !modal.classList.contains('active')) return;
-    // إعادة فتح المودال لتحديث المحتوى
-    var wasOpen = true;
+        var content = document.getElementById('customizationContent');
+    if (content) {
     // حفظ حالة المعاينة مؤقتاً
     var tempPreviewState = {
         active: previewState.active,
@@ -14494,7 +16435,10 @@ function refreshCustomizationModal() {
         cost: previewState.cost,
         pendingCustomizations: JSON.parse(JSON.stringify(pendingCustomizations))
     };
+    
+    // إعادة فتح المودال (سيحدث تحديث للمحتوى)
     openCustomizationModal();
+    }
     // استعادة حالة المعاينة
     if (tempPreviewState.active && tempPreviewState.type) {
         previewState.active = tempPreviewState.active;
@@ -16387,7 +18331,7 @@ function closeCourseActionsModal() {
     } else {
         console.log('ℹ️ لا يوجد مودال سابق للعودة إليه');
         // إذا لم يكن هناك مودال سابق، نعود إلى الصفحة الرئيسية
-        showPage('home');
+        showPage('posts');
         isNavigatingBack = false;
     }
 }
@@ -16410,6 +18354,10 @@ function refreshBlockedList() {
     updateStudentsStats();
 }
 
+// ============================================================
+//  VIEW USER PROFILE - مودال مصغر في أسفل الشاشة
+// ============================================================
+
 function viewUserProfile(uid) {
     if (isUserBlocked(uid) || isUserBlockedBy(uid)) {
         showToast('لا يمكنك عرض ملف هذا المستخدم', 'error');
@@ -16430,6 +18378,20 @@ function viewUserProfile(uid) {
 
     currentViewedUserUid = uid;
 
+    // ===== إغلاق أي مودال مفتوح قبل فتح المودال المصغر =====
+    // إذا كان مودال التفاعل مفتوحاً، نغلقه
+    if (isModalOpen('likesModal')) {
+        closeModal('likesModal');
+    }
+    
+    // إذا كان أي مودال آخر مفتوحاً (ماعدا المودال المصغر نفسه)
+    var modalsToClose = modalStack.filter(function(id) {
+        return id !== 'userProfileModal' && id !== 'courseActionsModal';
+    });
+    modalsToClose.forEach(function(id) {
+        closeModal(id);
+    });
+
     // تحديد إذا كان المستخدم الحالي يعرض ملفه الشخصي
     var isViewingOwnProfile = currentUser && currentUser.uid === uid;
 
@@ -16441,7 +18403,7 @@ function viewUserProfile(uid) {
     }
 
     if (userProfileContent) {
-        userProfileContent.innerHTML = buildUserProfileHTML(user);
+        userProfileContent.innerHTML = buildUserProfileMiniHTML(user);
         setTimeout(function() {
             applyCustomizationsToModal(user);
         }, 50);
@@ -16460,12 +18422,276 @@ function viewUserProfile(uid) {
     }
 
     setTimeout(function() {
+        // فتح المودال المصغر كطبقة أعلى
         openModal('userProfileModal', { layer: 1 });
         isUserProfileModalOpening = false;
         setTimeout(function() {
             applyCustomizationsToModal(user);
         }, 100);
     }, 100);
+}
+
+function buildUserProfileMiniHTML(user) {
+    var uid = user.uid;
+    var viewerUid = currentUser ? currentUser.uid : null;
+    var isCurrentUser = viewerUid === uid;
+
+    function canView(field) {
+        return canViewUserData(user, field, viewerUid);
+    }
+
+    var result = calculateUserPoints(user);
+    var isBlocked = isUserBlocked(uid);
+    var isBlockedBy = isUserBlockedBy(uid);
+
+    var followStatus = getFollowStatus(uid);
+    var isFollowing = followStatus === 'following';
+
+    var customization = user.customization || {};
+    var avatarBorderColor = customization.avatarBorder || '#2563eb';
+    var avatarBorderWidth = customization.avatarBorderWidth || '3';
+    var avatarBorderStyle = customization.avatarBorderStyle || 'solid';
+    var avatarEffect = customization.avatarEffect || 'none';
+    var profileBg = customization.profileBg || 'default';
+    var nameColor = customization.nameColor || '';
+    var nameGlow = customization.nameGlow || 'none';
+    var profileFrame = customization.profileFrame || 'default';
+    var specialBadge = customization.specialBadge || 'none';
+    var textColor = customization.textColor || '';
+    var bioColor = customization.bioColor || '';
+    var buttonColor = customization.buttonColor || '';
+    var badgeStyle = customization.badgeStyle || 'default';
+    var avatarShadow = customization.avatarShadow || 'none';
+    var avatarShadowColor = customization.avatarShadowColor || 'rgba(37,99,235,0.4)';
+    
+    var borderRadius = customization.borderRadius || 'default';
+    var opacity = customization.opacity || '100';
+    var blurEffect = customization.blurEffect || 'none';
+
+    var followingCount = (user.following || []).length;
+    var followersCount = (user.followers || []).length;
+    var badges = calculateBadges(user);
+    var isBanned = user.banned || false;
+    var reportCount = (user.reports || []).length;
+    var trustCount = (user.trustedBy || []).length;
+
+    // ===== تطبيق تأثيرات الصورة =====
+    var borderWidthAttr = (avatarBorderWidth === 'none' || !avatarBorderWidth) ? '0px' : avatarBorderWidth + 'px';
+    var borderStyleAttr = (avatarBorderWidth === 'none' || !avatarBorderWidth) ? 'none' : (avatarBorderStyle || 'solid');
+
+    var imgStyle = '';
+    imgStyle += 'border-color:' + avatarBorderColor + ';';
+    imgStyle += 'border-width:' + borderWidthAttr + ';';
+    imgStyle += 'border-style:' + borderStyleAttr + ';';
+
+    if (avatarShadow && avatarShadow !== 'none') {
+        var shadowMap = {
+            'small': '0 4px 15px rgba(0,0,0,0.2)',
+            'medium': '0 8px 30px rgba(0,0,0,0.3)',
+            'large': '0 12px 50px rgba(0,0,0,0.4)',
+            'colored': '0 0 40px ' + avatarShadowColor,
+            'inset-shadow': 'inset 0 0 20px ' + avatarShadowColor,
+            'neon-glow': '0 0 30px ' + avatarShadowColor + ', 0 0 60px ' + avatarShadowColor,
+            'soft-glow': '0 0 30px rgba(255,255,255,0.2), 0 0 60px rgba(255,255,255,0.1)',
+            'drop-shadow': 'drop-shadow(0 10px 20px ' + avatarShadowColor + ')',
+            'blur-shadow': '0 20px 40px rgba(0,0,0,0.5), 0 0 20px rgba(0,0,0,0.2)'
+        };
+        if (shadowMap[avatarShadow]) {
+            imgStyle += 'box-shadow:' + shadowMap[avatarShadow] + ';';
+        }
+    }
+
+    var effectClass = '';
+    if (avatarEffect === 'glow') effectClass = 'effect-glow';
+    else if (avatarEffect === 'pulse') effectClass = 'effect-pulse';
+    else if (avatarEffect === 'rotate') effectClass = 'effect-rotate';
+    else if (avatarEffect === 'shake') effectClass = 'effect-shake';
+    else if (avatarEffect === 'bounce') effectClass = 'effect-bounce';
+    else if (avatarEffect === 'float') effectClass = 'effect-float';
+    else if (avatarEffect === 'glow-move') effectClass = 'effect-glow-move';
+
+    var frameStyle = '';
+    if (profileFrame === 'rounded') frameStyle = 'border-radius:20%;';
+    else if (profileFrame === 'square') frameStyle = 'border-radius:0;';
+    else if (profileFrame === 'star') frameStyle = 'clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);border-radius:0;';
+    else if (profileFrame === 'star6') frameStyle = 'clip-path:polygon(50% 0%,64% 25%,91% 25%,73% 50%,82% 75%,50% 60%,18% 75%,27% 50%,9% 25%,36% 25%);border-radius:0;';
+    else if (profileFrame === 'heart') frameStyle = 'clip-path:path("M50,90 C20,60 0,40 0,25 C0,10 15,0 30,0 C40,0 48,8 50,18 C52,8 60,0 70,0 C85,0 100,10 100,25 C100,40 80,60 50,90Z");border-radius:0;';
+    else if (profileFrame === 'diamond') frameStyle = 'clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);border-radius:0;';
+    else if (profileFrame === 'oval') frameStyle = 'border-radius:50%;width:80px;height:56px;';
+    else if (profileFrame === 'triangle') frameStyle = 'clip-path:polygon(50% 0%,0% 100%,100% 100%);border-radius:0;';
+    else if (profileFrame === 'pentagon') frameStyle = 'clip-path:polygon(50% 0%,100% 38%,82% 100%,18% 100%,0% 38%);border-radius:0;';
+    else if (profileFrame === 'hexagon') frameStyle = 'clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);border-radius:0;';
+    else if (profileFrame === 'flower') frameStyle = 'clip-path:path("M50,10 Q60,30 80,20 Q70,40 90,50 Q70,60 80,80 Q60,70 50,90 Q40,70 20,80 Q30,60 10,50 Q30,40 20,20 Q40,30 50,10Z");border-radius:0;';
+    else if (profileFrame === 'blob') frameStyle = 'border-radius:60% 40% 30% 70% / 50% 60% 40% 50%;';
+
+    // ===== خلفية المودال =====
+    var bgStyle = '';
+    var bgClass = '';
+    var textColorStyle = '';
+    var iconColorStyle = '';
+    
+    if (profileBg && profileBg !== 'default') {
+        var bgInfo = BG_STYLES[profileBg];
+        if (bgInfo) {
+            bgStyle = 'background:' + bgInfo.bg + ';color:' + bgInfo.textColor + ';';
+            bgClass = 'has-bg';
+            textColorStyle = 'color:' + bgInfo.textColor + ' !important;';
+            iconColorStyle = 'color:' + bgInfo.textColor + ' !important;';
+        }
+    }
+
+    // ===== تطبيق التخصيصات المتقدمة =====
+    var cardStyle = '';
+    if (borderRadius && borderRadius !== 'default') {
+        var radiusMap = { 'none': '0px', 'small': '6px', 'large': '20px', 'circle': '50px' };
+        if (radiusMap[borderRadius]) {
+            cardStyle += 'border-radius:' + radiusMap[borderRadius] + ';';
+        }
+    }
+    
+    if (opacity && opacity !== '100') {
+        cardStyle += 'opacity:' + (parseInt(opacity) / 100) + ';';
+    }
+    
+    if (blurEffect && blurEffect !== 'none') {
+        var blurMap = { 'low': 'blur(2px)', 'medium': 'blur(5px)', 'high': 'blur(10px)' };
+        if (blurMap[blurEffect]) {
+            cardStyle += 'backdrop-filter:' + blurMap[blurEffect] + ';';
+        }
+    }
+
+    if (textColor && textColor !== 'default') {
+        textColorStyle = 'color:' + textColor + ' !important;';
+        iconColorStyle = 'color:' + textColor + ' !important;';
+    }
+
+    // ===== اسم المستخدم =====
+    var usernameDisplay = user.username ? 
+        `<div class="user-profile-mini-username" style="${textColorStyle};font-size:0.65rem;color:var(--gray-400);"><i class="fas fa-at" style="${iconColorStyle};font-size:0.5rem;"></i> ${user.username}</div>` : '';
+
+    // ===== الشارة الخاصة =====
+    var specialBadgeHTML = '';
+    if (specialBadge && specialBadge !== 'none') {
+        specialBadgeHTML = `<span class="user-profile-mini-special-badge" style="${nameColor ? 'color:' + nameColor + ';' : ''}"><i class="fas ${specialBadge}"></i></span>`;
+    }
+
+    // ===== تأثير الاسم =====
+    var nameStyle = nameColor ? 'color:' + nameColor + ';' : '';
+    if (nameGlow === 'soft') nameStyle += 'text-shadow:0 0 20px rgba(37,99,235,0.3);';
+    else if (nameGlow === 'strong') nameStyle += 'text-shadow:0 0 30px rgba(37,99,235,0.6),0 0 60px rgba(37,99,235,0.3);';
+    else if (nameGlow === 'rainbow') nameStyle += 'animation:rainbowGlow 3s ease infinite;';
+
+    // ===== لون الأزرار =====
+    var buttonStyle = '';
+    if (buttonColor && buttonColor !== 'default') {
+        buttonStyle = 'color:' + buttonColor + ' !important;border-color:' + buttonColor + ' !important;';
+    }
+
+    // ===== النبذة (أسفل الاسم مباشرة) =====
+    var bioHTML = '';
+    if (canView('bio') && user.bio) {
+        var bioStyle = bioColor && bioColor !== 'default' ? 'color:' + bioColor + ';' : '';
+        bioHTML = `
+            <div class="user-profile-mini-bio" style="font-size:0.7rem;opacity:0.85;padding:0.2rem 0.4rem;background:rgba(255,255,255,0.05);border-radius:6px;margin-top:0.2rem;${bioStyle}">
+                <i class="fas fa-quote-right" style="font-size:0.5rem;opacity:0.5;margin-left:0.2rem;"></i>
+                ${escapeHtml(user.bio.length > 100 ? user.bio.substring(0, 100) + '...' : user.bio)}
+            </div>
+        `;
+    }
+
+    // ===== بناء HTML النهائي =====
+    var html = `
+        <div class="user-profile-mini-card ${bgClass}" style="${bgStyle} ${cardStyle}">
+            <!-- الصف الأول: الصورة + الاسم + الشارة + أزرار الإجراءات في الجهة المقابلة -->
+            <div style="display:flex;align-items:flex-start;gap:0.75rem;width:100%;">
+                <!-- الصورة -->
+                <div class="user-profile-mini-avatar-wrapper" style="flex-shrink:0;">
+                    <img class="user-profile-mini-avatar ${effectClass}" src="${user.avatar || ''}" onerror="this.src=''" style="${imgStyle} ${frameStyle}" />
+                    <span class="user-status-dot ${Math.random() > 0.5 ? 'online' : 'offline'}"></span>
+                </div>
+                
+                <!-- العمود الأوسط: الاسم + الشارة + النبذة -->
+                <div style="flex:1;min-width:0;">
+                    <!-- صف الاسم + الشارة الخاصة + أزرار المتابعة والزيارة (بجانب الاسم) -->
+                    <div style="display:flex;align-items:center;gap:0.3rem;flex-wrap:wrap;">
+                        <span class="user-profile-mini-name" style="${nameStyle};font-size:1rem;font-weight:700;">
+                            ${escapeHtml(user.displayName || 'مستخدم')}
+                        </span>
+                        ${specialBadgeHTML}
+                        ${isBanned ? '<span style="font-size:0.5rem;background:#dc2626;color:white;padding:0.05rem 0.4rem;border-radius:20px;">🚫</span>' : ''}
+                        
+                        <!-- أزرار المتابعة وزيارة الملف (بجانب الاسم مباشرة) -->
+                        ${!isCurrentUser ? `
+                            <span style="display:inline-flex;gap:0.15rem;align-items:center;margin-right:0.2rem;">
+                                ${isFollowing ? 
+                                    `<button class="btn btn-danger btn-xs" onclick="event.stopPropagation();unfollowUser('${uid}')" style="${buttonStyle};font-size:0.5rem;padding:0.05rem 0.3rem;border-radius:12px;" title="إلغاء المتابعة"><i class="fas fa-user-minus"></i></button>` :
+                                    `<button class="btn btn-primary btn-xs" onclick="event.stopPropagation();followUser('${uid}')" style="${buttonStyle};font-size:0.5rem;padding:0.05rem 0.3rem;border-radius:12px;" title="متابعة"><i class="fas fa-user-plus"></i></button>`
+                                }
+                                <button class="btn btn-outline btn-xs" onclick="event.stopPropagation();closeUserProfileModal();viewUserProfile('${uid}')" style="font-size:0.5rem;padding:0.05rem 0.3rem;border-radius:12px;" title="زيارة الملف">
+                                    <i class="fas fa-external-link-alt"></i>
+                                </button>
+                            </span>
+                        ` : `
+                        `}
+                    </div>
+                    
+                    ${usernameDisplay}
+                    ${bioHTML}
+                </div>
+                
+                <!-- العمود الأيمن: أزرار الإجراءات (في الجهة المقابلة من الاسم) -->
+                ${!isCurrentUser ? `
+                    <div style="display:flex;flex-direction:column;gap:0.15rem;flex-shrink:0;align-items:flex-end;padding-top:0.1rem;">
+                        <!-- أزرار الإجراءات مصغرة في عمود واحد -->
+                        <button class="btn btn-outline btn-xs" onclick="event.stopPropagation();closeUserProfileModal();sendPrivateMessage('${uid}')" style="font-size:0.45rem;padding:0.04rem 0.25rem;border-radius:10px;width:32px;text-align:center;" title="مراسلة">
+                            <i class="fas fa-envelope"></i>
+                        </button>
+                        <button class="btn btn-outline btn-xs" onclick="event.stopPropagation();closeUserProfileModal();showSendGiftModal('${uid}')" style="font-size:0.45rem;padding:0.04rem 0.25rem;border-radius:10px;width:32px;text-align:center;" title="إهداء نقاط">
+                            <i class="fas fa-gift"></i>
+                        </button>
+                        <button class="btn btn-outline btn-xs" onclick="event.stopPropagation();closeUserProfileModal();trustUser('${uid}')" style="font-size:0.45rem;padding:0.04rem 0.25rem;border-radius:10px;width:32px;text-align:center;" title="${user.trustedBy && user.trustedBy.indexOf(currentUser?.uid) !== -1 ? 'إلغاء الثقة' : 'ثقة'}">
+                            <i class="fas fa-handshake"></i>
+                        </button>
+                        <button class="btn btn-outline btn-xs" onclick="event.stopPropagation();closeUserProfileModal();reportUser('${uid}')" style="font-size:0.45rem;padding:0.04rem 0.25rem;border-radius:10px;width:32px;text-align:center;" title="${user.reports && user.reports.indexOf(currentUser?.uid) !== -1 ? 'إلغاء الإبلاغ' : 'إبلاغ'}">
+                            <i class="fas fa-flag"></i>
+                        </button>
+                        <button class="btn btn-outline btn-xs" onclick="event.stopPropagation();closeUserProfileModal();${isBlocked ? `unblockUser('${uid}')` : `blockUser('${uid}')`}" style="font-size:0.45rem;padding:0.04rem 0.25rem;border-radius:10px;width:32px;text-align:center;${isBlocked ? 'color:#22c55e;' : 'color:#dc2626;'}" title="${isBlocked ? 'إلغاء الحظر' : 'حظر'}">
+                            <i class="fas ${isBlocked ? 'fa-undo' : 'fa-ban'}"></i>
+                        </button>
+                    </div>
+                ` : `
+                    <div style="flex-shrink:0;font-size:0.6rem;color:var(--gray-400);padding-top:0.2rem;">
+                        👤 أنت
+                    </div>
+                `}
+            </div>
+        </div>
+                    <!-- الصف الثاني: أزرار الإحصائيات الأربعة في الأسفل (صف واحد) -->
+            <div class="user-profile-mini-stats" style="${textColorStyle};margin-top:0.4rem;display:flex;gap:0.3rem;flex-wrap:wrap;justify-content:flex-start;align-items:center;padding-top:0.3rem;border-top:1px solid rgba(255,255,255,0.06);">
+                <span class="stat-item" onclick="openUserProfileTab('following', '${uid}')" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.15rem;font-size:0.55rem;padding:0.08rem 0.4rem;background:rgba(255,255,255,0.04);border-radius:12px;transition:all 0.2s ease;">
+                    <i class="fas fa-user-plus" style="${iconColorStyle};font-size:0.5rem;"></i> 
+                    <span style="font-weight:600;">${followingCount}</span> 
+                    <label style="font-size:0.4rem;opacity:0.6;font-weight:400;">متابع</label>
+                </span>
+                <span class="stat-item" onclick="openUserProfileTab('followers', '${uid}')" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.15rem;font-size:0.55rem;padding:0.08rem 0.4rem;background:rgba(255,255,255,0.04);border-radius:12px;transition:all 0.2s ease;">
+                    <i class="fas fa-user-friends" style="${iconColorStyle};font-size:0.5rem;"></i> 
+                    <span style="font-weight:600;">${followersCount}</span> 
+                    <label style="font-size:0.4rem;opacity:0.6;font-weight:400;">متابعين</label>
+                </span>
+                <span class="stat-item" onclick="openUserProfileTab('trusted', '${uid}')" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.15rem;font-size:0.55rem;padding:0.08rem 0.4rem;background:rgba(255,255,255,0.04);border-radius:12px;transition:all 0.2s ease;">
+                    <i class="fas fa-handshake" style="${iconColorStyle};font-size:0.5rem;"></i> 
+                    <span style="font-weight:600;">${trustCount}</span> 
+                    <label style="font-size:0.4rem;opacity:0.6;font-weight:400;">ثقة</label>
+                </span>
+                <span class="stat-item" onclick="openUserProfileTab('reports', '${uid}')" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.15rem;font-size:0.55rem;padding:0.08rem 0.4rem;background:rgba(255,255,255,0.04);border-radius:12px;transition:all 0.2s ease;">
+                    <i class="fas fa-flag" style="${iconColorStyle};font-size:0.5rem;"></i> 
+                    <span style="font-weight:600;">${reportCount}</span> 
+                    <label style="font-size:0.4rem;opacity:0.6;font-weight:400;">بلاغات</label>
+                </span>
+            </div>
+    `;
+
+    return html;
 }
 
 // ============================================================
@@ -16554,7 +18780,7 @@ function restorePreviousModal() {
         }
     } else {
         console.log('ℹ️ لا يوجد مودال سابق');
-        showPage('home');
+        showPage('posts');
     }
 }
 
@@ -17181,28 +19407,1607 @@ var previousModalId = null; // لتخزين المودال الذي كان مف�
 //  إصلاح وتحديث loadAdminUsers - النسخة النهائية
 // ============================================================
 
-// استبدال دالة loadAdminUsers بالكامل
+// ============================================================
+//  ADMIN: تحميل وعرض المستخدمين كبطاقات
+// ============================================================
 function loadAdminUsers() {
     var container = document.getElementById('adminUsersList');
     if (!container) return;
-    
-    // عرض مؤقت للتحميل
+
     container.innerHTML = `
-        <div class="admin-loading">
-            <i class="fas fa-spinner fa-spin"></i>
-            <span>جاري تحميل المستخدمين...</span>
+        <div class="admin-users-controls">
+            <div class="admin-search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="adminUserSearch" placeholder="ابحث عن مستخدم..." oninput="filterAdminUsersCards()" />
+            </div>
+            <div class="admin-filter-box">
+                <select id="adminUserRoleFilter" onchange="filterAdminUsersCards()">
+                    <option value="all">كل الأدوار</option>
+                    <option value="user">مستخدم</option>
+                    <option value="moderator">مدير</option>
+                    <option value="admin">مشرف</option>
+                </select>
+                <select id="adminUserStatusFilter" onchange="filterAdminUsersCards()">
+                    <option value="all">كل الحالات</option>
+                    <option value="active">نشط</option>
+                    <option value="banned">محظور</option>
+                    <option value="frozen">مجمد</option>
+                </select>
+                <select id="adminUserSort" onchange="filterAdminUsersCards()">
+                    <option value="newest">الأحدث</option>
+                    <option value="oldest">الأقدم</option>
+                    <option value="most_points">الأكثر نقاطاً</option>
+                    <option value="most_votes">الأكثر تصويتاً</option>
+                    <option value="most_reports">الأكثر بلاغات</option>
+                </select>
+            </div>
+            <div class="admin-bulk-actions">
+                <button class="btn btn-primary btn-sm" onclick="selectAllAdminUsers()">
+                    <i class="fas fa-check-double"></i> تحديد الكل
+                </button>
+                <button class="btn btn-outline btn-sm" onclick="deselectAllAdminUsers()">
+                    <i class="fas fa-times"></i> إلغاء الكل
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="bulkBanUsers()">
+                    <i class="fas fa-ban"></i> حظر
+                </button>
+                <button class="btn btn-warning btn-sm" onclick="bulkFreezeUsers()">
+                    <i class="fas fa-snowflake"></i> تجميد
+                </button>
+                <button class="btn btn-info btn-sm" onclick="bulkWarnUsers()">
+                    <i class="fas fa-exclamation-triangle"></i> تحذير
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="bulkRestrictUsers()">
+                    <i class="fas fa-lock"></i> تقييد
+                </button>
+            </div>
         </div>
+        <div id="adminUsersCardsGrid" class="admin-users-cards-grid"></div>
+        <div id="adminUsersPagination" class="admin-users-pagination"></div>
     `;
-    
-    // استخدام setTimeout لتجنب تجميد الواجهة
-    setTimeout(function() {
-        renderAdminUsersTableFull();
-    }, 150);
+
+    renderAdminUsersCardsData();
 }
 
 // ============================================================
+//  دوال الإجراءات الجماعية
+// ============================================================
+
+// ===== تحديد الكل =====
+function selectAllAdminUsers() {
+    var checkboxes = document.querySelectorAll('.admin-user-checkbox:not([disabled])');
+    checkboxes.forEach(function(cb) {
+        cb.checked = true;
+    });
+}
+
+function deselectAllAdminUsers() {
+    var checkboxes = document.querySelectorAll('.admin-user-checkbox');
+    checkboxes.forEach(function(cb) {
+        cb.checked = false;
+    });
+}
+
+// ===== الحصول على UIDs المحددة =====
+function getSelectedAdminUserUids() {
+    var checkboxes = document.querySelectorAll('.admin-user-checkbox:checked');
+    var uids = [];
+    checkboxes.forEach(function(cb) {
+        uids.push(cb.dataset.uid);
+    });
+    return uids;
+}
+
+// ===== حظر جماعي =====
+async function bulkBanUsers() {
+    var uids = getSelectedAdminUserUids();
+    if (uids.length === 0) {
+        showToast('⚠️ يرجى اختيار مستخدمين أولاً', 'warning');
+        return;
+    }
+    if (!confirm('⚠️ هل أنت متأكد من حظر ' + uids.length + ' مستخدم؟')) return;
+
+    showToast('⏳ جاري حظر ' + uids.length + ' مستخدم...', 'warning');
+    try {
+        var promises = uids.map(function(uid) {
+            return db.collection('users').doc(uid).update({
+                banned: true,
+                bannedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        });
+        await Promise.all(promises);
+        showToast('✅ تم حظر ' + uids.length + ' مستخدم', 'success');
+        deselectAllAdminUsers();
+        await loadAllData();
+        renderAdminUsersCardsData();
+        loadAdminUsers();
+    } catch (error) {
+        console.error('Error bulk banning:', error);
+        showToast('حدث خطأ: ' + error.message, 'error');
+    }
+}
+
+// ===== تجميد جماعي =====
+async function bulkFreezeUsers() {
+    var uids = getSelectedAdminUserUids();
+    if (uids.length === 0) {
+        showToast('⚠️ يرجى اختيار مستخدمين أولاً', 'warning');
+        return;
+    }
+    if (!confirm('⚠️ هل أنت متأكد من تجميد ' + uids.length + ' مستخدم؟')) return;
+
+    showToast('⏳ جاري تجميد ' + uids.length + ' مستخدم...', 'warning');
+    try {
+        var promises = uids.map(function(uid) {
+            return db.collection('users').doc(uid).update({
+                frozen: true
+            });
+        });
+        await Promise.all(promises);
+        showToast('❄️ تم تجميد ' + uids.length + ' مستخدم', 'success');
+        deselectAllAdminUsers();
+        await loadAllData();
+        renderAdminUsersCardsData();
+        loadAdminUsers();
+    } catch (error) {
+        console.error('Error bulk freezing:', error);
+        showToast('حدث خطأ: ' + error.message, 'error');
+    }
+}
+
+// ===== تحذير جماعي =====
+async function bulkWarnUsers() {
+    var uids = getSelectedAdminUserUids();
+    if (uids.length === 0) {
+        showToast('⚠️ يرجى اختيار مستخدمين أولاً', 'warning');
+        return;
+    }
+    var reason = prompt('سبب التحذير (سيُرسل لجميع المختارين):', '');
+    if (reason === null) return;
+    if (!confirm('⚠️ هل أنت متأكد من إرسال تحذير لـ ' + uids.length + ' مستخدم؟')) return;
+
+    showToast('⏳ جاري إرسال التحذيرات...', 'warning');
+    try {
+        var promises = uids.map(function(uid) {
+            var user = users.find(function(u) { return u.uid === uid; });
+            var warnings = (user?.warnings || 0) + 1;
+            return db.collection('users').doc(uid).update({
+                warnings: warnings,
+                lastWarning: firebase.firestore.FieldValue.serverTimestamp(),
+                lastWarningReason: reason
+            }).then(function() {
+                // إرسال إشعار للمستخدم
+                return sendNotification(uid, {
+                    message: '⚠️ تم إرسال تحذير إليك من المشرف. السبب: ' + reason,
+                    type: 'warning',
+                    link: '/profile'
+                });
+            });
+        });
+        await Promise.all(promises);
+        showToast('⚠️ تم إرسال تحذير لـ ' + uids.length + ' مستخدم', 'warning');
+        deselectAllAdminUsers();
+        await loadAllData();
+        renderAdminUsersCardsData();
+        loadAdminUsers();
+    } catch (error) {
+        console.error('Error bulk warning:', error);
+        showToast('حدث خطأ: ' + error.message, 'error');
+    }
+}
+
+// ===== تقييد جماعي (فتح مودال لتحديد القيود) =====
+async function bulkRestrictUsers() {
+    var uids = getSelectedAdminUserUids();
+    if (uids.length === 0) {
+        showToast('⚠️ يرجى اختيار مستخدمين أولاً', 'warning');
+        return;
+    }
+
+    // عرض قائمة القيود للمشرف
+    var restrictionOptions = [
+        { key: 'vote', label: 'تصويت' },
+        { key: 'complete', label: 'اجتياز' },
+        { key: 'favorite', label: 'تفضيل' },
+        { key: 'sendMessages', label: 'إرسال رسائل' },
+        { key: 'comments', label: 'تعليقات' },
+        { key: 'customizeProfile', label: 'تخصيص الملف' },
+        { key: 'receiveGifts', label: 'استلام هدايا' },
+        { key: 'sendGifts', label: 'إرسال هدايا' },
+        { key: 'sendTrust', label: 'إرسال ثقة' },
+        { key: 'receiveTrust', label: 'استلام ثقة' },
+        { key: 'sendReport', label: 'إرسال بلاغ' },
+        { key: 'receiveReport', label: 'استلام بلاغ' },
+        { key: 'blockUsers', label: 'حظر المستخدمين' },
+        { key: 'editProfile', label: 'تعديل الملف' }
+    ];
+
+    var optionsHtml = restrictionOptions.map(function(opt) {
+        return `<label style="display:inline-flex;align-items:center;gap:0.3rem;margin:0.2rem 0.5rem;font-size:0.75rem;">
+            <input type="checkbox" class="bulk-restriction-checkbox" data-key="${opt.key}" /> ${opt.label}
+        </label>`;
+    }).join('');
+
+    var modalHtml = `
+        <div style="padding:0.5rem;">
+            <p style="margin-bottom:0.5rem;font-weight:600;">اختر القيود لتطبيقها على ${uids.length} مستخدم:</p>
+            <div style="display:flex;flex-wrap:wrap;gap:0.2rem;padding:0.5rem;background:var(--gray-50);border-radius:8px;border:1px solid var(--border-color);">
+                ${optionsHtml}
+            </div>
+            <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+                <button class="btn btn-success" onclick="applyBulkRestrictions('${uids.join(',')}')">
+                    <i class="fas fa-check"></i> تطبيق القيود
+                </button>
+                <button class="btn btn-outline" onclick="closeModal('bulkRestrictionsModal')">إلغاء</button>
+            </div>
+        </div>
+    `;
+
+    // إنشاء مودال مؤقت
+    var modal = document.createElement('div');
+    modal.id = 'bulkRestrictionsModal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width:500px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-lock"></i> تقييد المستخدمين</h3>
+                <button class="btn-close" onclick="closeModal('bulkRestrictionsModal')"><i class="fas fa-times"></i></button>
+            </div>
+            ${modalHtml}
+        </div>
+    `;
+    document.body.appendChild(modal);
+    openModal('bulkRestrictionsModal');
+}
+
+// ===== تطبيق القيود الجماعية =====
+async function applyBulkRestrictions(uidsString) {
+    var uids = uidsString.split(',');
+    var checkedKeys = [];
+    document.querySelectorAll('.bulk-restriction-checkbox:checked').forEach(function(cb) {
+        checkedKeys.push(cb.dataset.key);
+    });
+
+    if (checkedKeys.length === 0) {
+        showToast('⚠️ يرجى اختيار قيد واحد على الأقل', 'warning');
+        return;
+    }
+
+    if (!confirm('⚠️ هل أنت متأكد من تطبيق ' + checkedKeys.length + ' قيد على ' + uids.length + ' مستخدم؟')) return;
+
+    showToast('⏳ جاري تطبيق القيود...', 'warning');
+    try {
+        var promises = uids.map(function(uid) {
+            return db.collection('users').doc(uid).get().then(function(doc) {
+                if (doc.exists) {
+                    var restrictions = doc.data().restrictions || {};
+                    checkedKeys.forEach(function(key) {
+                        restrictions[key] = true;
+                    });
+                    return db.collection('users').doc(uid).update({ restrictions: restrictions });
+                }
+            });
+        });
+        await Promise.all(promises);
+        showToast('✅ تم تطبيق القيود على ' + uids.length + ' مستخدم', 'success');
+        closeModal('bulkRestrictionsModal');
+        deselectAllAdminUsers();
+        await loadAllData();
+        renderAdminUsersCardsData();
+        loadAdminUsers();
+    } catch (error) {
+        console.error('Error bulk restricting:', error);
+        showToast('حدث خطأ: ' + error.message, 'error');
+    }
+}
+// ============================================================
 //  renderAdminUsersTableFull - عرض جدول المستخدمين الكامل
 // ============================================================
+
+// ============================================================
+//  عرض المستخدمين كبطاقات في لوحة الإشراف
+// ============================================================
+function renderAdminUsersCards() {
+    var container = document.getElementById('adminUsersList');
+    if (!container) return;
+
+    if (!users || users.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state-modern">
+                <i class="fas fa-users"></i>
+                <h4>لا يوجد مستخدمين</h4>
+                <p>لم يتم تسجيل أي مستخدم في المنصة بعد</p>
+            </div>
+        `;
+        return;
+    }
+
+    // إحصائيات سريعة
+    var totalUsers = users.length;
+    var activeUsers = users.filter(function(u) { return u.role !== 'admin' && !u.banned && !u.frozen; }).length;
+    var bannedUsers = users.filter(function(u) { return u.banned === true; }).length;
+    var frozenUsers = users.filter(function(u) { return u.frozen === true; }).length;
+    var admins = users.filter(function(u) { return u.role === 'admin'; }).length;
+
+    var html = `
+        <!-- إحصائيات -->
+        <div class="admin-users-stats">
+            <div class="admin-stat-card">
+                <i class="fas fa-users" style="color:#3b82f6;"></i>
+                <div>
+                    <span class="admin-stat-number">${totalUsers}</span>
+                    <label>إجمالي المستخدمين</label>
+                </div>
+            </div>
+            <div class="admin-stat-card">
+                <i class="fas fa-user-check" style="color:#22c55e;"></i>
+                <div>
+                    <span class="admin-stat-number">${activeUsers}</span>
+                    <label>مستخدمين نشطين</label>
+                </div>
+            </div>
+            <div class="admin-stat-card">
+                <i class="fas fa-user-slash" style="color:#ef4444;"></i>
+                <div>
+                    <span class="admin-stat-number">${bannedUsers}</span>
+                    <label>محظورين</label>
+                </div>
+            </div>
+            <div class="admin-stat-card">
+                <i class="fas fa-snowflake" style="color:#60a5fa;"></i>
+                <div>
+                    <span class="admin-stat-number">${frozenUsers}</span>
+                    <label>مجمدين</label>
+                </div>
+            </div>
+            <div class="admin-stat-card">
+                <i class="fas fa-user-shield" style="color:#f59e0b;"></i>
+                <div>
+                    <span class="admin-stat-number">${admins}</span>
+                    <label>المشرفين</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- أدوات التحكم -->
+        <div class="admin-users-controls">
+            <div class="admin-search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="adminUserSearch" placeholder="ابحث عن مستخدم..." oninput="filterAdminUsersCards()" />
+            </div>
+            <div class="admin-filter-box">
+                <select id="adminUserRoleFilter" onchange="filterAdminUsersCards()">
+                    <option value="all">كل الأدوار</option>
+                    <option value="user">مستخدم</option>
+                    <option value="moderator">مدير</option>
+                    <option value="admin">مشرف</option>
+                </select>
+                <select id="adminUserStatusFilter" onchange="filterAdminUsersCards()">
+                    <option value="all">كل الحالات</option>
+                    <option value="active">نشط</option>
+                    <option value="banned">محظور</option>
+                    <option value="frozen">مجمد</option>
+                </select>
+                <select id="adminUserSort" onchange="filterAdminUsersCards()">
+                    <option value="newest">الأحدث</option>
+                    <option value="oldest">الأقدم</option>
+                    <option value="most_points">الأكثر نقاطاً</option>
+                    <option value="most_votes">الأكثر تصويتاً</option>
+                    <option value="most_reports">الأكثر بلاغات</option>
+                </select>
+            </div>
+            <div class="admin-bulk-actions">
+                <button class="btn btn-danger btn-sm" onclick="bulkBanUsers()">
+                    <i class="fas fa-ban"></i> حظر مختارين
+                </button>
+                <button class="btn btn-success btn-sm" onclick="bulkUnbanUsers()">
+                    <i class="fas fa-user-check"></i> إلغاء حظر
+                </button>
+            </div>
+        </div>
+
+        <!-- شبكة البطاقات -->
+        <div id="adminUsersCardsGrid" class="admin-users-cards-grid"></div>
+
+        <!-- ترقيم الصفحات -->
+        <div id="adminUsersPagination" class="admin-users-pagination"></div>
+    `;
+
+    container.innerHTML = html;
+
+    // عرض البطاقات
+    renderAdminUsersCardsData();
+}
+
+// ============================================================
+//  عرض بطاقات المستخدمين مع الفلاتر والترتيب
+// ============================================================
+var adminUsersPage = 1;
+var adminUsersPerPage = 12;
+var adminUsersFilteredData = [];
+
+function renderAdminUsersCardsData() {
+    var grid = document.getElementById('adminUsersCardsGrid');
+    if (!grid) return;
+
+    var searchInput = document.getElementById('adminUserSearch');
+    var roleFilter = document.getElementById('adminUserRoleFilter');
+    var statusFilter = document.getElementById('adminUserStatusFilter');
+    var sortSelect = document.getElementById('adminUserSort');
+
+    var search = searchInput ? searchInput.value.trim().toLowerCase() : '';
+    var roleFilterValue = roleFilter ? roleFilter.value : 'all';
+    var statusFilterValue = statusFilter ? statusFilter.value : 'all';
+    var sortBy = sortSelect ? sortSelect.value : 'newest';
+
+    // تصفية المستخدمين
+    var filtered = users.filter(function(user) {
+        if (search) {
+            var nameMatch = user.displayName && user.displayName.toLowerCase().includes(search);
+            var emailMatch = user.email && user.email.toLowerCase().includes(search);
+            if (!nameMatch && !emailMatch) return false;
+        }
+        if (roleFilterValue !== 'all' && user.role !== roleFilterValue) return false;
+        if (statusFilterValue === 'banned' && user.banned !== true) return false;
+        if (statusFilterValue === 'frozen' && user.frozen !== true) return false;
+        if (statusFilterValue === 'active' && (user.banned === true || user.frozen === true)) return false;
+        return true;
+    });
+
+    // ترتيب
+    filtered.sort(function(a, b) {
+        switch(sortBy) {
+            case 'newest': return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
+            case 'oldest': return (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0);
+            case 'most_points': return (calculateUserPoints(b).earnedPoints || 0) - (calculateUserPoints(a).earnedPoints || 0);
+            case 'most_votes': return (b.votes || 0) - (a.votes || 0);
+            case 'most_reports': return (b.reports || []).length - (a.reports || []).length;
+            default: return 0;
+        }
+    });
+
+    adminUsersFilteredData = filtered;
+    adminUsersPage = 1;
+
+    var totalPages = Math.ceil(filtered.length / adminUsersPerPage);
+    var start = (adminUsersPage - 1) * adminUsersPerPage;
+    var end = Math.min(start + adminUsersPerPage, filtered.length);
+    var pageUsers = filtered.slice(start, end);
+
+    if (pageUsers.length === 0) {
+        grid.innerHTML = `
+            <div class="empty-state-modern">
+                <i class="fas fa-search"></i>
+                <h4>لا توجد نتائج</h4>
+                <p>حاول تعديل معايير البحث</p>
+            </div>
+        `;
+    } else {
+        var html = '';
+        pageUsers.forEach(function(user) {
+            html += buildAdminUserCard(user);
+        });
+        grid.innerHTML = html;
+    }
+
+    renderAdminUsersPagination();
+}
+
+// ============================================================
+//  ترقيم الصفحات للمستخدمين في لوحة الإشراف
+// ============================================================
+function renderAdminUsersPagination() {
+    var container = document.getElementById('adminUsersPagination');
+    if (!container) return;
+
+    var totalPages = Math.ceil(adminUsersFilteredData.length / adminUsersPerPage);
+    if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    var html = '<div class="pagination-controls">';
+    html += `<button class="page-btn ${adminUsersPage === 1 ? 'disabled' : ''}" onclick="changeAdminUsersPage(${adminUsersPage - 1})" ${adminUsersPage === 1 ? 'disabled' : ''}>
+        <i class="fas fa-chevron-right"></i>
+    </button>`;
+    
+    var startPage = Math.max(1, adminUsersPage - 2);
+    var endPage = Math.min(totalPages, adminUsersPage + 2);
+    
+    if (startPage > 1) {
+        html += `<button class="page-btn" onclick="changeAdminUsersPage(1)">1</button>`;
+        if (startPage > 2) html += '<span class="page-dots">...</span>';
+    }
+    
+    for (var i = startPage; i <= endPage; i++) {
+        html += `<button class="page-btn ${i === adminUsersPage ? 'active' : ''}" onclick="changeAdminUsersPage(${i})">${i}</button>`;
+    }
+    
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) html += '<span class="page-dots">...</span>';
+        html += `<button class="page-btn" onclick="changeAdminUsersPage(${totalPages})">${totalPages}</button>`;
+    }
+    
+    html += `<button class="page-btn ${adminUsersPage === totalPages ? 'disabled' : ''}" onclick="changeAdminUsersPage(${adminUsersPage + 1})" ${adminUsersPage === totalPages ? 'disabled' : ''}>
+        <i class="fas fa-chevron-left"></i>
+    </button>`;
+    
+    var start = (adminUsersPage - 1) * adminUsersPerPage + 1;
+    var end = Math.min(adminUsersPage * adminUsersPerPage, adminUsersFilteredData.length);
+    html += `<span class="page-info">${start} - ${end} من ${adminUsersFilteredData.length}</span>`;
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function changeAdminUsersPage(page) {
+    var totalPages = Math.ceil(adminUsersFilteredData.length / adminUsersPerPage);
+    if (page < 1 || page > totalPages) return;
+    adminUsersPage = page;
+    renderAdminUsersCardsData();
+    var grid = document.getElementById('adminUsersCardsGrid');
+    if (grid) {
+        grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+// ============================================================
+//  تصفية بطاقات المستخدمين في لوحة الإشراف
+// ============================================================
+function filterAdminUsersCards() {
+    // إعادة تعيين الصفحة إلى الأولى عند التصفية
+    adminUsersPage = 1;
+    renderAdminUsersCardsData();
+}
+
+function buildAdminUserCard(user) {
+    if (!user) return '';
+
+    var uid = user.uid;
+    var isCurrentUser = currentUser && currentUser.uid === uid;
+    var isSuperAdmin = user.isSuperAdmin || false;
+    var isAdmin = user.role === 'admin';
+    var isBanned = user.banned || false;
+    var isFrozen = user.frozen || false;
+    var isModerator = user.role === 'moderator';
+
+    var customization = user.customization || {};
+    var currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+
+    // تطبيق خلفية المستخدم
+    var bgStyle = '';
+    var textColor = '';
+    if (customization.profileBg && customization.profileBg !== 'default') {
+        var bgInfo = BG_STYLES[customization.profileBg];
+        if (bgInfo) {
+            bgStyle = 'background:' + bgInfo.bg + ';';
+            textColor = 'color:' + bgInfo.textColor + ';';
+        }
+    }
+
+    // لون الاسم (مع تخصيصه إن وجد)
+    var nameColor = '';
+    if (customization.nameColor && customization.nameColor !== 'default') {
+        nameColor = 'color:' + customization.nameColor + ';';
+    } else {
+        nameColor = 'color:' + (currentTheme === 'dark' ? '#ffffff' : '#000000') + ';';
+    }
+
+    // تخصيصات الصورة
+    var avatarBorderColor = customization.avatarBorder || '#2563eb';
+    var avatarBorderWidth = customization.avatarBorderWidth || '3';
+    var avatarEffect = customization.avatarEffect || 'none';
+    var effectClass = (avatarEffect && avatarEffect !== 'none') ? 'effect-' + avatarEffect : '';
+
+    var borderWidthFinal = (avatarBorderWidth === 'none' || !avatarBorderWidth) ? '0px' : avatarBorderWidth + 'px';
+
+    var avatarStyles = '';
+    avatarStyles += 'border-color:' + avatarBorderColor + ';';
+    avatarStyles += 'border-width:' + borderWidthFinal + ';';
+    avatarStyles += 'border-style:solid;';
+
+    // حالة المستخدم
+    var statusBadge = '';
+    var statusClass = '';
+    if (isBanned) {
+        statusBadge = '<span class="admin-card-status banned"><i class="fas fa-ban"></i> محظور</span>';
+        statusClass = 'banned';
+    } else if (isFrozen) {
+        statusBadge = '<span class="admin-card-status frozen"><i class="fas fa-snowflake"></i> مجمد</span>';
+        statusClass = 'frozen';
+    } else if (isCurrentUser) {
+        statusBadge = '<span class="admin-card-status current"><i class="fas fa-user"></i> أنت</span>';
+        statusClass = 'current';
+    } else {
+        statusBadge = '<span class="admin-card-status active"><i class="fas fa-check-circle"></i> نشط</span>';
+        statusClass = 'active';
+    }
+
+    // دور المستخدم (مختصر)
+    var roleLabel = isSuperAdmin ? 'المشرف الرئيسي' : isAdmin ? 'مشرف' : isModerator ? 'مدير' : 'مستخدم';
+    var roleColor = isSuperAdmin ? '#ffd700' : isAdmin ? '#f59e0b' : isModerator ? '#3b82f6' : '#6b7280';
+
+    // منع تحديد المشرف الرئيسي أو النفس
+    var disableCheckbox = isCurrentUser || isSuperAdmin;
+
+    // ===== بناء البطاقة المبسطة =====
+    var html = `
+        <div class="admin-user-card-simple ${statusClass}" style="${bgStyle} ${textColor}" data-uid="${uid}">
+            <!-- Checkbox التحديد -->
+            <div class="admin-user-card-checkbox">
+                <input type="checkbox" class="admin-user-checkbox" data-uid="${uid}" ${disableCheckbox ? 'disabled' : ''} />
+            </div>
+
+            <!-- الصورة الشخصية -->
+            <div class="admin-user-card-avatar ${effectClass}">
+                <img src="${user.avatar || ''}" onerror="this.src=''" alt="${escapeHtml(user.displayName || 'مستخدم')}" style="${avatarStyles}" />
+                <span class="admin-user-card-status-dot ${isBanned ? 'banned' : isFrozen ? 'frozen' : 'active'}"></span>
+            </div>
+
+            <!-- الاسم والحالة -->
+            <div class="admin-user-card-info">
+                <div class="admin-user-card-name" style="${nameColor}">
+                    ${escapeHtml(user.displayName || 'مستخدم')}
+                    <div class="user-username" style="font-size:0.65rem;color:var(--gray-400);direction:rtl;display:flex;align-items:center;gap:0.2rem;margin-top:0.05rem;">
+    <i class="fas fa-at" style="font-size:0.5rem;"></i>
+    <span>${user.username || 'غير محدد'}</span>
+</div>
+                    <span class="admin-user-card-role" style="background:${roleColor}20;color:${roleColor};">
+                        ${roleLabel}
+                    </span>
+                </div>
+                <div class="admin-user-card-status-badge">
+                    ${statusBadge}
+                </div>
+            </div>
+
+            <!-- أزرار الإجراءات (عمود واحد على اليسار) -->
+            <div class="admin-user-card-actions">
+                <button class="admin-action-btn info" onclick="openAdminUserInfo('${uid}')" title="معلومات">
+                    <i class="fas fa-info-circle"></i>
+                    <span>معلومات</span>
+                </button>
+                <button class="admin-action-btn actions" onclick="openAdminUserActions('${uid}')" title="إجراءات">
+                    <i class="fas fa-tools"></i>
+                    <span>إجراءات</span>
+                </button>
+                <button class="admin-action-btn view" onclick="viewUserProfile('${uid}')" title="عرض الملف">
+                    <i class="fas fa-user"></i>
+                    <span>عرض</span>
+                </button>
+            </div>
+        </div>
+    `;
+
+    return html;
+}
+
+
+
+function buildRestrictionToggleNew(uid, key, label, isActive) {
+    var icon = isActive ? 'fa-lock' : 'fa-unlock';
+    var bgColor = isActive ? '#fee2e2' : 'var(--card-bg)';
+    var textColor = isActive ? '#dc2626' : 'var(--text-color)';
+    var borderColor = isActive ? '#fca5a5' : 'var(--border-color)';
+    
+    return `
+        <button class="action-toggle" 
+            onclick="toggleRestriction('${uid}', '${key}')" 
+            style="padding:0.15rem 0.3rem;border-radius:14px;border:1px solid ${borderColor};background:${bgColor};color:${textColor};font-size:0.55rem;cursor:pointer;transition:all 0.3s ease;display:flex;align-items:center;gap:0.1rem;justify-content:center;font-weight:500;width:100%;">
+            <i class="fas ${icon}"></i>
+            ${label}
+            ${isActive ? '🔒' : ''}
+        </button>
+    `;
+}
+
+function buildRestrictionToggle(uid, key, label, isActive) {
+    var icon = isActive ? 'fa-lock' : 'fa-unlock';
+    var btnClass = isActive ? 'danger' : 'outline';
+    var statusText = isActive ? '🔒' : '🔓';
+    return `
+        <button class="action-btn ${btnClass}" onclick="toggleRestriction('${uid}', '${key}')">
+            <i class="fas ${icon}"></i> ${statusText} ${label}
+        </button>
+    `;
+}
+
+// ===== دالة للحصول على تسمية القيد =====
+function getRestrictionLabel(key) {
+    var labels = {
+        'vote': 'تصويت',
+        'complete': 'اجتياز',
+        'favorite': 'تفضيل',
+        'sendMessages': 'رسائل',
+        'comments': 'تعليقات',
+        'customizeProfile': 'تخصيص الملف',
+        'receiveGifts': 'استلام هدايا',
+        'sendGifts': 'إرسال هدايا',
+        'sendTrust': 'إرسال ثقة',
+        'receiveTrust': 'استلام ثقة',
+        'sendReport': 'إرسال بلاغ',
+        'receiveReport': 'استلام بلاغ',
+        'blockUsers': 'حظر المستخدمين',
+        'editProfile': 'تعديل الملف'
+    };
+    return labels[key] || key;
+}
+
+function openAdminUserInfo(uid) {
+    var user = users.find(function(u) { return u.uid === uid; });
+    if (!user) {
+        showToast('المستخدم غير موجود', 'error');
+        return;
+    }
+
+    var modal = document.getElementById('adminInfoModal');
+    var content = document.getElementById('adminInfoTabContent');
+    if (!modal || !content) {
+        createAdminInfoModal();
+        modal = document.getElementById('adminInfoModal');
+        content = document.getElementById('adminInfoTabContent');
+        if (!modal || !content) {
+            showToast('حدث خطأ في فتح المعلومات', 'error');
+            return;
+        }
+    }
+
+    // تحديث العنوان
+    var title = document.getElementById('adminInfoTitle');
+    if (title) {
+        title.innerHTML = '<i class="fas fa-id-card" style="color:var(--primary);"></i> معلومات - ' + escapeHtml(user.displayName || 'مستخدم');
+    }
+
+    // تخزين UID في المحتوى
+    content.dataset.uid = uid;
+
+    // عرض التبويب الأول افتراضياً
+    document.querySelectorAll('.admin-info-tab').forEach(function(tab) {
+        tab.classList.remove('active');
+        if (tab.dataset.tab === 'personal') {
+            tab.classList.add('active');
+        }
+    });
+
+    content.innerHTML = buildAdminInfoTabContent('personal', user);
+    openModal('adminInfoModal');
+}
+
+// ============================================================
+//  دوال تنفيذ الإجراءات
+// ============================================================
+
+// ===== تبديل حالة القيد =====
+async function toggleRestriction(uid, key) {
+    if (!isAdmin) {
+        showToast('هذه العملية للمشرف فقط', 'error');
+        return;
+    }
+
+    var user = users.find(function(u) { return u.uid === uid; });
+    if (!user) return;
+
+    var restrictions = user.restrictions || {};
+    restrictions[key] = !restrictions[key];
+
+    try {
+        await db.collection('users').doc(uid).update({ restrictions: restrictions });
+        user.restrictions = restrictions;
+        showToast(`✅ تم ${restrictions[key] ? 'تفعيل' : 'إلغاء'} قيد "${getRestrictionLabel(key)}"`, 'success');
+        renderAdminUsersCardsData();
+        loadAdminUsers();
+    } catch (error) {
+        console.error('Error toggling restriction:', error);
+        showToast('حدث خطأ: ' + error.message, 'error');
+    }
+}
+
+// ===== تنفيذ إجراء عام =====
+async function executeAdminAction(uid, action) {
+    if (!isAdmin) {
+        showToast('هذه العملية للمشرف فقط', 'error');
+        return;
+    }
+
+    var user = users.find(function(u) { return u.uid === uid; });
+    if (!user) {
+        showToast('المستخدم غير موجود', 'error');
+        return;
+    }
+
+    if (action === 'toggleBan') {
+        if (user.banned) {
+            await unbanUser(uid);
+        } else {
+            var reason = prompt('سبب الحظر (اختياري):', '');
+            if (reason === null) return;
+            await banUser(uid, reason);
+        }
+        closeModal('adminActionsModal');
+        renderAdminUsersCardsData();
+        loadAdminUsers();
+        return;
+    }
+
+    if (action === 'toggleFreeze') {
+        var newState = !user.frozen;
+        if (!confirm(`هل أنت متأكد من ${newState ? 'تجميد' : 'إلغاء تجميد'} حساب هذا المستخدم؟`)) return;
+        try {
+            await db.collection('users').doc(uid).update({ frozen: newState });
+            user.frozen = newState;
+            showToast(`✅ تم ${newState ? 'تجميد' : 'إلغاء تجميد'} الحساب`, 'success');
+            closeModal('adminActionsModal');
+            renderAdminUsersCardsData();
+            loadAdminUsers();
+        } catch (error) {
+            console.error('Error toggling freeze:', error);
+            showToast('حدث خطأ: ' + error.message, 'error');
+        }
+        return;
+    }
+
+    if (action === 'warn') {
+        var reason = prompt('سبب التحذير:', '');
+        if (reason === null) return;
+        try {
+            var warnings = (user.warnings || 0) + 1;
+            await db.collection('users').doc(uid).update({ 
+                warnings: warnings,
+                lastWarning: firebase.firestore.FieldValue.serverTimestamp(),
+                lastWarningReason: reason
+            });
+            user.warnings = warnings;
+            user.lastWarningReason = reason;
+            showToast(`⚠️ تم إرسال تحذير للمستخدم (السبب: ${reason})`, 'warning');
+            sendNotification(uid, {
+                message: `⚠️ تم إرسال تحذير إليك من المشرف. السبب: ${reason}`,
+                type: 'warning',
+                link: '/profile'
+            });
+            closeModal('adminActionsModal');
+            renderAdminUsersCardsData();
+        } catch (error) {
+            console.error('Error warning user:', error);
+            showToast('حدث خطأ: ' + error.message, 'error');
+        }
+        return;
+    }
+
+    if (action === 'changeRole') {
+        await toggleUserRole(uid);
+        closeModal('adminActionsModal');
+        renderAdminUsersCardsData();
+        loadAdminUsers();
+        return;
+    }
+
+    if (action === 'deleteAccount') {
+        if (!confirm('⚠️ هل أنت متأكد من حذف هذا الحساب نهائياً؟ لا يمكن التراجع!')) return;
+        await deleteUserCompletely(uid);
+        closeModal('adminActionsModal');
+        renderAdminUsersCardsData();
+        loadAdminUsers();
+        return;
+    }
+
+    if (action === 'clearVotes') {
+        if (!confirm('هل أنت متأكد من مسح جميع تصويتات هذا المستخدم؟')) return;
+        await clearUserVotes(uid);
+        closeModal('adminActionsModal');
+        renderAdminUsersCardsData();
+        return;
+    }
+
+    if (action === 'clearComments') {
+        if (!confirm('هل أنت متأكد من مسح جميع تعليقات هذا المستخدم؟')) return;
+        await clearUserComments(uid);
+        closeModal('adminActionsModal');
+        renderAdminUsersCardsData();
+        return;
+    }
+
+    if (action === 'resetPassword') {
+        try {
+            await auth.sendPasswordResetEmail(user.email);
+            showToast('✅ تم إرسال رابط إعادة تعيين كلمة المرور', 'success');
+            closeModal('adminActionsModal');
+        } catch (error) {
+            console.error('Error resetting password:', error);
+            showToast('حدث خطأ: ' + error.message, 'error');
+        }
+        return;
+    }
+
+    if (action === 'exportData') {
+        await exportUserData(uid);
+        closeModal('adminActionsModal');
+        return;
+    }
+
+    if (action === 'sendNotification') {
+        var message = prompt('أدخل نص الإشعار:', '');
+        if (!message) return;
+        await sendNotification(uid, {
+            message: '📢 ' + message,
+            type: 'info',
+            link: '/profile'
+        });
+        showToast('✅ تم إرسال الإشعار', 'success');
+        closeModal('adminActionsModal');
+        return;
+    }
+
+if (action === 'clearRestrictions') {
+    if (!confirm('⚠️ هل أنت متأكد من إزالة جميع القيود عن هذا المستخدم؟')) return;
+    try {
+        await db.collection('users').doc(uid).update({ restrictions: {} });
+        user.restrictions = {};
+        showToast('✅ تم إزالة جميع القيود', 'success');
+        closeModal('adminActionsModal');
+        renderAdminUsersCardsData();
+        loadAdminUsers();
+    } catch (error) {
+        console.error('Error clearing restrictions:', error);
+        showToast('حدث خطأ: ' + error.message, 'error');
+    }
+    return;
+}
+
+    if (action === 'clearReports') {
+        if (!confirm('هل أنت متأكد من مسح جميع البلاغات عن هذا المستخدم؟')) return;
+        try {
+            await db.collection('users').doc(uid).update({ reports: [] });
+            user.reports = [];
+            showToast('✅ تم مسح جميع البلاغات', 'success');
+            closeModal('adminActionsModal');
+            renderAdminUsersCardsData();
+        } catch (error) {
+            console.error('Error clearing reports:', error);
+            showToast('حدث خطأ: ' + error.message, 'error');
+        }
+        return;
+    }
+
+    showToast('إجراء غير معروف', 'error');
+}
+
+function getCollectiblesCount(user) {
+    var customization = user.customization || {};
+    var count = 0;
+    for (var key in customization) {
+        if (customization.hasOwnProperty(key) && customization[key] && customization[key] !== 'default' && customization[key] !== 'none') {
+            count++;
+        }
+    }
+    return count;
+}
+
+// ============================================================
+//  إنشاء مودال الإجراءات
+// ============================================================
+// ============================================================
+//  مودال الإجراءات - التصميم الجديد
+// ============================================================
+
+function createAdminActionsModal() {
+    var oldModal = document.getElementById('adminActionsModal');
+    if (oldModal) {
+        oldModal.remove();
+    }
+
+    var modal = document.createElement('div');
+    modal.id = 'adminActionsModal';
+    modal.className = 'modal';
+    modal.style.display = 'none';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width:650px;max-height:85vh;">
+            <div class="modal-header">
+                <h3 id="adminActionsTitle">
+                    <i class="fas fa-tools" style="color:var(--primary);"></i>
+                    إجراءات المستخدم
+                </h3>
+                <button class="btn-close" onclick="closeModal('adminActionsModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="adminActionsContent" style="padding:0.5rem;max-height:65vh;overflow-y:auto;"></div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    console.log('✅ تم إنشاء مودال الإجراءات الجديد');
+}
+
+function openAdminUserActions(uid) {
+    console.log('🔧 فتح مودال الإجراءات للمستخدم:', uid);
+
+    var user = users.find(function(u) { return u.uid === uid; });
+    if (!user) {
+        showToast('المستخدم غير موجود', 'error');
+        return;
+    }
+
+    // حذف المودال القديم وإنشاء جديد
+    var oldModal = document.getElementById('adminActionsModal');
+    if (oldModal) {
+        oldModal.remove();
+    }
+    createAdminActionsModal();
+
+    var modal = document.getElementById('adminActionsModal');
+    var content = document.getElementById('adminActionsContent');
+    if (!modal || !content) {
+        showToast('حدث خطأ في فتح الإجراءات', 'error');
+        return;
+    }
+
+    var title = document.getElementById('adminActionsTitle');
+    if (title) {
+        title.innerHTML = '<i class="fas fa-tools" style="color:var(--primary);"></i> إجراءات - ' + escapeHtml(user.displayName || 'مستخدم');
+    }
+
+    var isCurrentUser = currentUser && currentUser.uid === uid;
+    var isSuperAdmin = user.isSuperAdmin || false;
+    var isBanned = user.banned || false;
+    var isFrozen = user.frozen || false;
+    var restrictions = user.restrictions || {};
+    var activeRestrictionsCount = Object.keys(restrictions).filter(function(k) { return restrictions[k] === true; }).length;
+
+    // ===== بناء المحتوى الجديد =====
+    var html = `
+        <!-- بطاقة المستخدم -->
+        <div style="display:flex;align-items:center;gap:0.75rem;padding:0.5rem 1rem;background:var(--gray-50);border-radius:12px;border:1px solid var(--border-color);margin-bottom:1rem;">
+            <img src="${user.avatar || ''}" onerror="this.src=''" alt="${escapeHtml(user.displayName || 'مستخدم')}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid var(--primary-light);" />
+            <div style="flex:1;">
+                <div style="font-weight:700;font-size:0.95rem;color:var(--text-color);">${escapeHtml(user.displayName || 'مستخدم')}</div>
+                <div style="display:flex;gap:0.3rem;flex-wrap:wrap;margin-top:0.1rem;">
+                    ${isBanned ? '<span style="font-size:0.55rem;padding:0.05rem 0.5rem;border-radius:12px;font-weight:600;background:#fee2e2;color:#dc2626;"><i class="fas fa-ban"></i> محظور</span>' : ''}
+                    ${isFrozen ? '<span style="font-size:0.55rem;padding:0.05rem 0.5rem;border-radius:12px;font-weight:600;background:#dbeafe;color:#2563eb;"><i class="fas fa-snowflake"></i> مجمد</span>' : ''}
+                    ${!isBanned && !isFrozen ? '<span style="font-size:0.55rem;padding:0.05rem 0.5rem;border-radius:12px;font-weight:600;background:#d1fae5;color:#059669;"><i class="fas fa-check-circle"></i> نشط</span>' : ''}
+                    <span style="font-size:0.55rem;padding:0.05rem 0.5rem;border-radius:12px;font-weight:600;background:#fef3c7;color:#92400e;">${activeRestrictionsCount} قيد</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 1. إدارة الحساب -->
+        <div style="background:var(--gray-50);border-radius:12px;padding:0.5rem 0.75rem;border:1px solid var(--border-color);margin-bottom:0.5rem;">
+            <div style="display:flex;align-items:center;gap:0.4rem;font-size:0.75rem;font-weight:700;color:var(--text-color);margin-bottom:0.4rem;padding-bottom:0.2rem;border-bottom:1px solid var(--border-color);">
+                <i class="fas fa-user-cog" style="color:var(--primary);"></i>
+                <span>إدارة الحساب</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:0.3rem;">
+                ${!isCurrentUser ? `
+                    <button class="action-item ${isBanned ? 'success' : 'danger'}" onclick="executeAdminAction('${uid}', 'toggleBan')">${isBanned ? 'إلغاء الحظر' : 'حظر'}</button>
+                    <button class="action-item ${isFrozen ? 'warning' : 'info'}" onclick="executeAdminAction('${uid}', 'toggleFreeze')">${isFrozen ? 'إلغاء التجميد' : 'تجميد'}</button>
+                    <button class="action-item warning" onclick="executeAdminAction('${uid}', 'warn')">تحذير</button>
+                    <button class="action-item success" onclick="adminGivePointsFromModal('${uid}')">إعطاء نقاط</button>
+                    <button class="action-item primary" onclick="executeAdminAction('${uid}', 'changeRole')">تغيير الدور</button>
+                ` : `
+                    <div style="color:var(--gray-400);font-size:0.7rem;padding:0.2rem 0.5rem;grid-column:1/-1;">⛔ لا يمكن تغيير حسابك</div>
+                `}
+            </div>
+        </div>
+
+        <!-- 2. القيود -->
+        <div style="background:var(--gray-50);border-radius:12px;padding:0.5rem 0.75rem;border:1px solid var(--border-color);margin-bottom:0.5rem;">
+            <div style="display:flex;align-items:center;gap:0.4rem;font-size:0.75rem;font-weight:700;color:var(--text-color);margin-bottom:0.4rem;padding-bottom:0.2rem;border-bottom:1px solid var(--border-color);">
+                <i class="fas fa-sliders-h" style="color:var(--primary);"></i>
+                <span>القيود</span>
+                <span style="margin-right:auto;background:var(--primary-light);color:var(--primary-dark);font-size:0.55rem;padding:0.05rem 0.5rem;border-radius:12px;">${activeRestrictionsCount}</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.3rem;">
+                ${!isCurrentUser ? `
+                    <button class="action-toggle ${restrictions.vote ? 'active' : ''}" onclick="toggleRestriction('${uid}', 'vote')"><i class="fas ${restrictions.vote ? 'fa-lock' : 'fa-unlock'}"></i> تصويت ${restrictions.vote ? '🔒' : ''}</button>
+                    <button class="action-toggle ${restrictions.complete ? 'active' : ''}" onclick="toggleRestriction('${uid}', 'complete')"><i class="fas ${restrictions.complete ? 'fa-lock' : 'fa-unlock'}"></i> اجتياز ${restrictions.complete ? '🔒' : ''}</button>
+                    <button class="action-toggle ${restrictions.favorite ? 'active' : ''}" onclick="toggleRestriction('${uid}', 'favorite')"><i class="fas ${restrictions.favorite ? 'fa-lock' : 'fa-unlock'}"></i> تفضيل ${restrictions.favorite ? '🔒' : ''}</button>
+                    <button class="action-toggle ${restrictions.sendMessages ? 'active' : ''}" onclick="toggleRestriction('${uid}', 'sendMessages')"><i class="fas ${restrictions.sendMessages ? 'fa-lock' : 'fa-unlock'}"></i> رسائل ${restrictions.sendMessages ? '🔒' : ''}</button>
+                    <button class="action-toggle ${restrictions.sendGifts ? 'active' : ''}" onclick="toggleRestriction('${uid}', 'sendGifts')"><i class="fas ${restrictions.sendGifts ? 'fa-lock' : 'fa-unlock'}"></i> إرسال هدايا ${restrictions.sendGifts ? '🔒' : ''}</button>
+                    <button class="action-toggle ${restrictions.receiveGifts ? 'active' : ''}" onclick="toggleRestriction('${uid}', 'receiveGifts')"><i class="fas ${restrictions.receiveGifts ? 'fa-lock' : 'fa-unlock'}"></i> استلام هدايا ${restrictions.receiveGifts ? '🔒' : ''}</button>
+                    <button class="action-toggle ${restrictions.sendTrust ? 'active' : ''}" onclick="toggleRestriction('${uid}', 'sendTrust')"><i class="fas ${restrictions.sendTrust ? 'fa-lock' : 'fa-unlock'}"></i> إرسال ثقة ${restrictions.sendTrust ? '🔒' : ''}</button>
+                    <button class="action-toggle ${restrictions.receiveTrust ? 'active' : ''}" onclick="toggleRestriction('${uid}', 'receiveTrust')"><i class="fas ${restrictions.receiveTrust ? 'fa-lock' : 'fa-unlock'}"></i> استلام ثقة ${restrictions.receiveTrust ? '🔒' : ''}</button>
+                    <button class="action-toggle ${restrictions.sendReport ? 'active' : ''}" onclick="toggleRestriction('${uid}', 'sendReport')"><i class="fas ${restrictions.sendReport ? 'fa-lock' : 'fa-unlock'}"></i> إرسال بلاغ ${restrictions.sendReport ? '🔒' : ''}</button>
+                    <button class="action-toggle ${restrictions.receiveReport ? 'active' : ''}" onclick="toggleRestriction('${uid}', 'receiveReport')"><i class="fas ${restrictions.receiveReport ? 'fa-lock' : 'fa-unlock'}"></i> استلام بلاغ ${restrictions.receiveReport ? '🔒' : ''}</button>
+                    <button class="action-toggle ${restrictions.customizeProfile ? 'active' : ''}" onclick="toggleRestriction('${uid}', 'customizeProfile')"><i class="fas ${restrictions.customizeProfile ? 'fa-lock' : 'fa-unlock'}"></i> تخصيص الملف ${restrictions.customizeProfile ? '🔒' : ''}</button>
+                    <button class="action-toggle ${restrictions.blockUsers ? 'active' : ''}" onclick="toggleRestriction('${uid}', 'blockUsers')"><i class="fas ${restrictions.blockUsers ? 'fa-lock' : 'fa-unlock'}"></i> حظر المستخدمين ${restrictions.blockUsers ? '🔒' : ''}</button>
+                    <button class="action-toggle ${restrictions.editProfile ? 'active' : ''}" onclick="toggleRestriction('${uid}', 'editProfile')"><i class="fas ${restrictions.editProfile ? 'fa-lock' : 'fa-unlock'}"></i> تعديل الملف ${restrictions.editProfile ? '🔒' : ''}</button>
+                    <button class="action-toggle ${restrictions.comments ? 'active' : ''}" onclick="toggleRestriction('${uid}', 'comments')"><i class="fas ${restrictions.comments ? 'fa-lock' : 'fa-unlock'}"></i> تعليقات ${restrictions.comments ? '🔒' : ''}</button>
+                ` : `
+                    <div style="color:var(--gray-400);font-size:0.7rem;padding:0.2rem 0.5rem;grid-column:1/-1;">⛔ لا يمكن تغيير قيود حسابك</div>
+                `}
+            </div>
+            ${!isCurrentUser && activeRestrictionsCount > 0 ? `
+                <div style="margin-top:0.3rem;padding-top:0.3rem;border-top:1px solid var(--border-color);">
+                    <button class="btn btn-sm btn-danger" onclick="executeAdminAction('${uid}', 'clearRestrictions')"><i class="fas fa-eraser"></i> إزالة كل القيود</button>
+                </div>
+            ` : ''}
+        </div>
+
+        <!-- 3. إجراءات إضافية -->
+        <div style="background:var(--gray-50);border-radius:12px;padding:0.5rem 0.75rem;border:1px solid var(--border-color);margin-bottom:0.5rem;">
+            <div style="display:flex;align-items:center;gap:0.4rem;font-size:0.75rem;font-weight:700;color:var(--text-color);margin-bottom:0.4rem;padding-bottom:0.2rem;border-bottom:1px solid var(--border-color);">
+                <i class="fas fa-lightbulb" style="color:var(--primary);"></i>
+                <span>إجراءات إضافية</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:0.3rem;">
+                ${!isCurrentUser ? `
+                    <button class="action-item info" onclick="executeAdminAction('${uid}', 'resetPassword')">إعادة تعيين كلمة المرور</button>
+                    <button class="action-item primary" onclick="executeAdminAction('${uid}', 'sendNotification')">إرسال إشعار</button>
+                    <button class="action-item warning" onclick="executeAdminAction('${uid}', 'clearReports')">مسح البلاغات</button>
+                ` : `
+                    <div style="color:var(--gray-400);font-size:0.7rem;padding:0.2rem 0.5rem;grid-column:1/-1;">⛔ لا يمكن تغيير حسابك</div>
+                `}
+            </div>
+        </div>
+
+        <!-- 4. إجراءات خطيرة -->
+        <div style="background:#fef2f2;border-radius:12px;padding:0.5rem 0.75rem;border:1px solid #fca5a5;">
+            <div style="display:flex;align-items:center;gap:0.4rem;font-size:0.75rem;font-weight:700;color:var(--text-color);margin-bottom:0.4rem;padding-bottom:0.2rem;border-bottom:1px solid #fca5a5;">
+                <i class="fas fa-exclamation-circle" style="color:#dc2626;"></i>
+                <span>إجراءات خطيرة</span>
+                <span style="margin-right:auto;background:#fee2e2;color:#dc2626;font-size:0.55rem;padding:0.05rem 0.5rem;border-radius:12px;">⚠️ لا يمكن التراجع</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:0.3rem;">
+                ${!isCurrentUser && !isSuperAdmin ? `
+                    <button class="action-item danger" onclick="executeAdminAction('${uid}', 'deleteAccount')">حذف الحساب</button>
+                    <button class="action-item warning" onclick="executeAdminAction('${uid}', 'clearVotes')">مسح التصويتات</button>
+                    <button class="action-item warning" onclick="executeAdminAction('${uid}', 'clearComments')">مسح التعليقات</button>
+                ` : `
+                    <div style="color:var(--gray-400);font-size:0.7rem;padding:0.2rem 0.5rem;grid-column:1/-1;">⛔ هذا المستخدم محمي</div>
+                `}
+            </div>
+        </div>
+    `;
+
+    content.innerHTML = html;
+    openModal('adminActionsModal');
+    console.log('✅ تم فتح مودال الإجراءات الجديد');
+}
+
+// ============================================================
+//  إنشاء مودال المعلومات
+// ============================================================
+function createAdminInfoModal() {
+    if (document.getElementById('adminInfoModal')) return;
+
+    var modal = document.createElement('div');
+    modal.id = 'adminInfoModal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content admin-info-modal-content">
+            <div class="modal-header admin-modal-header">
+                <h3 id="adminInfoTitle">
+                    <i class="fas fa-id-card" style="color:var(--primary);"></i>
+                    معلومات المستخدم
+                </h3>
+                <button class="btn-close" onclick="closeModal('adminInfoModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="admin-modal-body">
+                <!-- تبويبات المعلومات -->
+                <div class="admin-info-tabs">
+                    <button class="admin-info-tab active" data-tab="personal" onclick="switchAdminInfoTab('personal')">
+                        <i class="fas fa-user"></i> شخصي
+                    </button>
+                    <button class="admin-info-tab" data-tab="stats" onclick="switchAdminInfoTab('stats')">
+                        <i class="fas fa-chart-bar"></i> إحصائيات
+                    </button>
+                    <button class="admin-info-tab" data-tab="lists" onclick="switchAdminInfoTab('lists')">
+                        <i class="fas fa-list-ul"></i> قوائم
+                    </button>
+                    <button class="admin-info-tab" data-tab="restrictions" onclick="switchAdminInfoTab('restrictions')">
+                        <i class="fas fa-shield-alt"></i> قيود
+                    </button>
+                    <button class="admin-info-tab" data-tab="activity" onclick="switchAdminInfoTab('activity')">
+                        <i class="fas fa-clock"></i> نشاط
+                    </button>
+                </div>
+                <!-- محتوى التبويبات -->
+                <div id="adminInfoTabContent" class="admin-info-tab-content"></div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+function switchAdminInfoTab(tabName) {
+    // تحديث الأزرار
+    document.querySelectorAll('.admin-info-tab').forEach(function(tab) {
+        tab.classList.remove('active');
+        if (tab.dataset.tab === tabName) {
+            tab.classList.add('active');
+        }
+    });
+
+    // عرض المحتوى المناسب
+    var content = document.getElementById('adminInfoTabContent');
+    if (!content) return;
+
+    var uid = content.dataset.uid;
+    var user = users.find(function(u) { return u.uid === uid; });
+    if (!user) return;
+
+    content.innerHTML = buildAdminInfoTabContent(tabName, user);
+}
+
+function buildAdminInfoTabContent(tabName, user) {
+    var result = calculateUserPoints(user);
+    var restrictions = user.restrictions || {};
+    var badges = calculateBadges(user);
+
+    switch(tabName) {
+        case 'personal':
+            return `
+<div class="info-card">
+    <div class="info-card-icon"><i class="fas fa-at" style="color:#8b5cf6;"></i></div>
+    <div class="info-card-content">
+        <span class="info-label">اسم المستخدم</span>
+        <span class="info-value">${user.username || 'غير محدد'}</span>
+    </div>
+</div>                    <div class="info-card">
+                        <div class="info-card-icon"><i class="fas fa-user-circle" style="color:#3b82f6;"></i></div>
+                        <div class="info-card-content">
+                            <span class="info-label">الاسم</span>
+                            <span class="info-value">${escapeHtml(user.displayName || 'غير محدد')}</span>
+                        </div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-card-icon"><i class="fas fa-envelope" style="color:#8b5cf6;"></i></div>
+                        <div class="info-card-content">
+                            <span class="info-label">البريد الإلكتروني</span>
+                            <span class="info-value">${escapeHtml(user.email || 'غير محدد')}</span>
+                        </div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-card-icon"><i class="fas fa-user-tag" style="color:#f59e0b;"></i></div>
+                        <div class="info-card-content">
+                            <span class="info-label">الدور</span>
+                            <span class="info-value">${user.role === 'admin' ? '🛡️ مشرف' : user.role === 'moderator' ? '🔧 مدير' : '👤 مستخدم'}</span>
+                        </div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-card-icon"><i class="fas fa-university" style="color:#10b981;"></i></div>
+                        <div class="info-card-content">
+                            <span class="info-label">الكلية</span>
+                            <span class="info-value">${user.college ? getCollegeName(user.college) : 'غير محدد'}</span>
+                        </div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-card-icon"><i class="fas fa-tag" style="color:#14b8a6;"></i></div>
+                        <div class="info-card-content">
+                            <span class="info-label">التخصص</span>
+                            <span class="info-value">${user.specialty || 'غير محدد'}</span>
+                        </div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-card-icon"><i class="fas fa-calendar-alt" style="color:#ec4899;"></i></div>
+                        <div class="info-card-content">
+                            <span class="info-label">السنة</span>
+                            <span class="info-value">${user.year || 'غير محدد'}</span>
+                        </div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-card-icon"><i class="fas fa-city" style="color:#f97316;"></i></div>
+                        <div class="info-card-content">
+                            <span class="info-label">الفرع</span>
+                            <span class="info-value">${user.branch || 'غير محدد'}</span>
+                        </div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-card-icon"><i class="fas fa-calendar-plus" style="color:#6366f1;"></i></div>
+                        <div class="info-card-content">
+                            <span class="info-label">تاريخ الانضمام</span>
+                            <span class="info-value">${user.createdAt?.seconds ? new Date(user.createdAt.seconds * 1000).toLocaleDateString('ar') : 'غير معروف'}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+        case 'stats':
+            return `
+                <div class="admin-stats-grid">
+                    <div class="stat-card-modern">
+                        <div class="stat-icon"><i class="fas fa-gem" style="color:#f59e0b;"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-number">${result.earnedPoints || 0}</span>
+                            <span class="stat-label">النقاط الإجمالية</span>
+                        </div>
+                    </div>
+                    <div class="stat-card-modern">
+                        <div class="stat-icon"><i class="fas fa-coins" style="color:#f59e0b;"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-number">${result.points || 0}</span>
+                            <span class="stat-label">النقاط المتاحة</span>
+                        </div>
+                    </div>
+                    <div class="stat-card-modern">
+                        <div class="stat-icon"><i class="fas fa-wallet" style="color:#ef4444;"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-number">${result.spentPoints || 0}</span>
+                            <span class="stat-label">المنفق</span>
+                        </div>
+                    </div>
+                    <div class="stat-card-modern">
+                        <div class="stat-icon"><i class="fas fa-trophy" style="color:#8b5cf6;"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-number">${badges.length}</span>
+                            <span class="stat-label">الشارات</span>
+                        </div>
+                    </div>
+                    <div class="stat-card-modern">
+                        <div class="stat-icon"><i class="fas fa-vote-yea" style="color:#3b82f6;"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-number">${user.votes || 0}</span>
+                            <span class="stat-label">التصويتات</span>
+                        </div>
+                    </div>
+                    <div class="stat-card-modern">
+                        <div class="stat-icon"><i class="fas fa-comment" style="color:#14b8a6;"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-number">${user.commentsCount || 0}</span>
+                            <span class="stat-label">التعليقات</span>
+                        </div>
+                    </div>
+                    <div class="stat-card-modern">
+                        <div class="stat-icon"><i class="fas fa-palette" style="color:#ec4899;"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-number">${calculateCollectiblesCount(user)}</span>
+                            <span class="stat-label">المقتنيات</span>
+                        </div>
+                    </div>
+                    <div class="stat-card-modern">
+                        <div class="stat-icon"><i class="fas fa-medal" style="color:#f59e0b;"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-number">${result.tier.name}</span>
+                            <span class="stat-label" style="color:${result.tier.color};">المستوى</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+        case 'lists':
+            return `
+                <div class="admin-lists-grid">
+                    <button class="list-btn" onclick="viewUserList('${user.uid}', 'friends')">
+                        <i class="fas fa-user-friends" style="color:#6366f1;"></i>
+                        <span>الأصدقاء</span>
+                        <span class="list-count">${(user.friends || []).length}</span>
+                    </button>
+                    <button class="list-btn" onclick="viewUserList('${user.uid}', 'trusted')">
+                        <i class="fas fa-handshake" style="color:#10b981;"></i>
+                        <span>الثقات</span>
+                        <span class="list-count">${(user.trustedBy || []).length}</span>
+                    </button>
+                    <button class="list-btn" onclick="viewUserList('${user.uid}', 'reports')">
+                        <i class="fas fa-flag" style="color:#ef4444;"></i>
+                        <span>البلاغات</span>
+                        <span class="list-count">${(user.reports || []).length}</span>
+                    </button>
+                    <button class="list-btn" onclick="viewUserList('${user.uid}', 'blocked')">
+                        <i class="fas fa-ban" style="color:#dc2626;"></i>
+                        <span>المحظورين</span>
+                        <span class="list-count">${(user.blockedUsers || []).length}</span>
+                    </button>
+                    <button class="list-btn" onclick="viewUserList('${user.uid}', 'gifts')">
+                        <i class="fas fa-gift" style="color:#f59e0b;"></i>
+                        <span>الهدايا المستلمة</span>
+                        <span class="list-count">${(user.receivedGifts || []).length}</span>
+                    </button>
+                    <button class="list-btn" onclick="viewUserList('${user.uid}', 'messages')">
+                        <i class="fas fa-envelope" style="color:#8b5cf6;"></i>
+                        <span>الرسائل</span>
+                        <span class="list-count">${(user.messages || []).length}</span>
+                    </button>
+                    <button class="list-btn" onclick="viewUserList('${user.uid}', 'completed')">
+                        <i class="fas fa-check-circle" style="color:#22c55e;"></i>
+                        <span>المواد المجتازة</span>
+                        <span class="list-count">${(user.completed || []).length}</span>
+                    </button>
+                    <button class="list-btn" onclick="viewUserList('${user.uid}', 'favorites')">
+                        <i class="fas fa-star" style="color:#f59e0b;"></i>
+                        <span>المواد المفضلة</span>
+                        <span class="list-count">${(user.favorites || []).length}</span>
+                    </button>
+                    <button class="list-btn" onclick="viewUserList('${user.uid}', 'voted')">
+                        <i class="fas fa-vote-yea" style="color:#3b82f6;"></i>
+                        <span>المواد المصوت عليها</span>
+                        <span class="list-count">${getUserVotedCount(user)}</span>
+                    </button>
+                    <button class="list-btn" onclick="viewUserList('${user.uid}', 'collectibles')">
+                        <i class="fas fa-palette" style="color:#ec4899;"></i>
+                        <span>المقتنيات</span>
+                        <span class="list-count">${calculateCollectiblesCount(user)}</span>
+                    </button>
+                </div>
+            `;
+
+        case 'restrictions':
+            var activeRestrictions = Object.keys(restrictions).filter(function(k) { return restrictions[k] === true; });
+            return `
+                <div class="admin-restrictions-container">
+                    <div class="restrictions-summary">
+                        <div class="restrictions-status ${activeRestrictions.length > 0 ? 'has-restrictions' : 'no-restrictions'}">
+                            <i class="fas ${activeRestrictions.length > 0 ? 'fa-lock' : 'fa-unlock'}"></i>
+                            <span>${activeRestrictions.length > 0 ? activeRestrictions.length + ' قيد نشط' : 'لا توجد قيود'}</span>
+                        </div>
+                    </div>
+                    ${activeRestrictions.length > 0 ? `
+                        <div class="restrictions-list">
+                            ${activeRestrictions.map(function(key) {
+                                return `<span class="restriction-badge">${getRestrictionLabel(key)}</span>`;
+                            }).join('')}
+                        </div>
+                    ` : ''}
+                    <div class="restrictions-actions">
+                        <button class="btn btn-sm btn-danger" onclick="executeAdminAction('${user.uid}', 'clearRestrictions')">
+                            <i class="fas fa-eraser"></i> إزالة كل القيود
+                        </button>
+                    </div>
+                </div>
+            `;
+
+        case 'activity':
+            return `
+                <div class="admin-activity-container">
+                    <div class="activity-item">
+                        <div class="activity-icon"><i class="fas fa-sign-in-alt" style="color:#3b82f6;"></i></div>
+                        <div class="activity-details">
+                            <span class="activity-label">آخر تسجيل دخول</span>
+                            <span class="activity-value">${user.lastLogin?.seconds ? new Date(user.lastLogin.seconds * 1000).toLocaleString('ar') : 'غير معروف'}</span>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-icon"><i class="fas fa-history" style="color:#8b5cf6;"></i></div>
+                        <div class="activity-details">
+                            <span class="activity-label">آخر نشاط</span>
+                            <span class="activity-value">${user.lastActive?.seconds ? new Date(user.lastActive.seconds * 1000).toLocaleString('ar') : 'غير معروف'}</span>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-icon"><i class="fas fa-clock" style="color:#f59e0b;"></i></div>
+                        <div class="activity-details">
+                            <span class="activity-label">عدد الجلسات</span>
+                            <span class="activity-value">${user.sessionCount || 0}</span>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-icon"><i class="fas fa-exclamation-triangle" style="color:#ef4444;"></i></div>
+                        <div class="activity-details">
+                            <span class="activity-label">عدد التحذيرات</span>
+                            <span class="activity-value">${user.warnings || 0}</span>
+                        </div>
+                    </div>
+                    ${user.lastWarningReason ? `
+                    <div class="activity-item">
+                        <div class="activity-icon"><i class="fas fa-comment-dots" style="color:#ec4899;"></i></div>
+                        <div class="activity-details">
+                            <span class="activity-label">سبب آخر تحذير</span>
+                            <span class="activity-value">${escapeHtml(user.lastWarningReason)}</span>
+                        </div>
+                    </div>` : ''}
+                    <div class="activity-item">
+                        <div class="activity-icon"><i class="fas fa-mobile-alt" style="color:#14b8a6;"></i></div>
+                        <div class="activity-details">
+                            <span class="activity-label">الجهاز المستخدم</span>
+                            <span class="activity-value">${user.device || 'غير معروف'}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+        default:
+            return '<div style="padding:1rem;color:var(--gray-400);text-align:center;">اختر تبويباً لعرض المعلومات</div>';
+    }
+}
+// ============================================================
+//  دوال مساعدة
+// ============================================================
+
+function getUserVotedCount(user) {
+    var count = 0;
+    courses.forEach(function(c) {
+        if (c.voters && c.voters[user.uid]) count++;
+    });
+    return count;
+}
+
+function calculateCollectiblesCount(user) {
+    var customization = user.customization || {};
+    var count = 0;
+    for (var key in customization) {
+        if (customization.hasOwnProperty(key) && customization[key] && customization[key] !== 'default' && customization[key] !== 'none') {
+            count++;
+        }
+    }
+    return count;
+}
+
+function viewUserList(uid, listType) {
+    // يمكن تنفيذ عرض القوائم في مودال منفصل
+    showToast('سيتم عرض قائمة ' + listType + ' قريباً', 'info');
+    // يمكنك ربطها بالدوال الموجودة مثل openUserProfileTab
+}
+
+async function clearUserVotes(uid) {
+    try {
+        var promises = [];
+        courses.forEach(function(course) {
+            if (course.voters && course.voters[uid]) {
+                delete course.voters[uid];
+                course.votes = (course.votes || 0) - 1;
+                course.totalRating = (course.totalRating || 0) - (course.voters[uid] || 0);
+                course.avgRating = course.votes > 0 ? course.totalRating / course.votes : 0;
+                promises.push(db.collection('courses').doc(course.id).update({
+                    voters: course.voters,
+                    votes: course.votes,
+                    totalRating: course.totalRating,
+                    avgRating: course.avgRating
+                }));
+            }
+        });
+        await Promise.all(promises);
+        await db.collection('users').doc(uid).update({ votes: 0 });
+        showToast('✅ تم مسح جميع التصويتات', 'success');
+        await loadAllData();
+    } catch (error) {
+        console.error('Error clearing votes:', error);
+        showToast('حدث خطأ: ' + error.message, 'error');
+    }
+}
+
+async function clearUserComments(uid) {
+    try {
+        var user = users.find(function(u) { return u.uid === uid; });
+        if (!user) return;
+        var userName = user.displayName || 'مستخدم';
+        var promises = [];
+        courses.forEach(function(course) {
+            if (course.comments) {
+                var newComments = course.comments.filter(function(c) {
+                    return !c.startsWith(userName + ':');
+                });
+                if (newComments.length !== course.comments.length) {
+                    promises.push(db.collection('courses').doc(course.id).update({
+                        comments: newComments
+                    }));
+                }
+            }
+        });
+        await Promise.all(promises);
+        showToast('✅ تم مسح جميع التعليقات', 'success');
+        await loadAllData();
+    } catch (error) {
+        console.error('Error clearing comments:', error);
+        showToast('حدث خطأ: ' + error.message, 'error');
+    }
+}
+
+async function exportUserData(uid) {
+    var user = users.find(function(u) { return u.uid === uid; });
+    if (!user) return;
+    // تنفيذ تصدير البيانات
+    showToast('جاري تجميع بيانات المستخدم...', 'warning');
+    try {
+        var data = {
+            user: user,
+            courses: courses.filter(function(c) {
+                return c.voters && c.voters[uid] || (c.comments && c.comments.some(function(cm) { return cm.includes(user.displayName); }));
+            })
+        };
+        var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = user.displayName + '_data.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('✅ تم تصدير البيانات', 'success');
+    } catch (error) {
+        console.error('Error exporting data:', error);
+        showToast('حدث خطأ: ' + error.message, 'error');
+    }
+}
 
 function renderAdminUsersTableFull() {
     var container = document.getElementById('adminUsersList');
@@ -17756,76 +21561,56 @@ document.addEventListener('change', function(e) {
 // ============================================================
 
 async function bulkBanUsers() {
-    if (selectedAdminUsers.length === 0) {
+    var checkboxes = document.querySelectorAll('.admin-user-checkbox:checked');
+    if (checkboxes.length === 0) {
         showToast('⚠️ يرجى اختيار مستخدمين أولاً', 'warning');
         return;
     }
-    
-    // التأكد من عدم وجود مشرفين رئيسيين
-    var superAdmins = selectedAdminUsers.filter(function(uid) {
-        var user = users.find(function(u) { return u.uid === uid; });
-        return user && user.isSuperAdmin;
-    });
-    
-    if (superAdmins.length > 0) {
-        showToast('❌ لا يمكن حظر المشرف الرئيسي', 'error');
-        return;
-    }
-    
-    if (!confirm(`⚠️ هل أنت متأكد من حظر ${selectedAdminUsers.length} مستخدم؟`)) {
-        return;
-    }
-    
-    showToast(`⏳ جاري حظر ${selectedAdminUsers.length} مستخدم...`, 'warning');
-    
+    var uids = Array.from(checkboxes).map(function(cb) { return cb.dataset.uid; });
+    if (!confirm('⚠️ هل أنت متأكد من حظر ' + uids.length + ' مستخدم؟')) return;
+    showToast('⏳ جاري حظر ' + uids.length + ' مستخدم...', 'warning');
     try {
-        var promises = selectedAdminUsers.map(function(uid) {
+        var promises = uids.map(function(uid) {
             return db.collection('users').doc(uid).update({ 
                 banned: true, 
                 bannedAt: firebase.firestore.FieldValue.serverTimestamp() 
             });
         });
-        
         await Promise.all(promises);
-        
-        showToast(`✅ تم حظر ${selectedAdminUsers.length} مستخدم بنجاح`, 'success');
-        selectedAdminUsers = [];
+        showToast('✅ تم حظر ' + uids.length + ' مستخدم', 'success');
         await loadAllData();
-        renderAdminUsersTableFull();
+        renderAdminUsersCardsData();
+        loadAdminUsers();
     } catch (error) {
-        console.error('Error bulk banning users:', error);
+        console.error('Error bulk banning:', error);
         showToast('حدث خطأ: ' + error.message, 'error');
     }
 }
 
 async function bulkUnbanUsers() {
-    if (selectedAdminUsers.length === 0) {
+    var checkboxes = document.querySelectorAll('.admin-user-checkbox:checked');
+    if (checkboxes.length === 0) {
         showToast('⚠️ يرجى اختيار مستخدمين أولاً', 'warning');
         return;
     }
-    
-    if (!confirm(`⚠️ هل أنت متأكد من إلغاء حظر ${selectedAdminUsers.length} مستخدم؟`)) {
-        return;
-    }
-    
-    showToast(`⏳ جاري إلغاء حظر ${selectedAdminUsers.length} مستخدم...`, 'warning');
-    
+    var uids = Array.from(checkboxes).map(function(cb) { return cb.dataset.uid; });
+    if (!confirm('⚠️ هل أنت متأكد من إلغاء حظر ' + uids.length + ' مستخدم؟')) return;
+    showToast('⏳ جاري إلغاء حظر ' + uids.length + ' مستخدم...', 'warning');
     try {
-        var promises = selectedAdminUsers.map(function(uid) {
+        var promises = uids.map(function(uid) {
             return db.collection('users').doc(uid).update({ 
                 banned: false,
-                bannedAt: null
+                bannedAt: null,
+                banReason: null
             });
         });
-        
         await Promise.all(promises);
-        
-        showToast(`✅ تم إلغاء حظر ${selectedAdminUsers.length} مستخدم بنجاح`, 'success');
-        selectedAdminUsers = [];
+        showToast('✅ تم إلغاء حظر ' + uids.length + ' مستخدم', 'success');
         await loadAllData();
-        renderAdminUsersTableFull();
+        renderAdminUsersCardsData();
+        loadAdminUsers();
     } catch (error) {
-        console.error('Error bulk unbanning users:', error);
+        console.error('Error bulk unbanning:', error);
         showToast('حدث خطأ: ' + error.message, 'error');
     }
 }
@@ -17976,6 +21761,4444 @@ loadAdminData = function() {
     loadAdminUsers();
 };
 
+// ============================================================
+//  بناء بطاقة مستخدم - نفس نمط بطاقة الإدارة
+//  الصورة يمين | الاسم بجانبها | معلومات إضافية أسفل الاسم
+// ============================================================
+function buildUserCardSimple(user, showExtraInfo) {
+    if (!user) return '';
+
+    var uid = user.uid;
+    var customization = user.customization || {};
+    var currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    var isCurrentUser = currentUser && currentUser.uid === uid;
+
+    // ===== الصورة الشخصية (نفس الكود) =====
+    var avatarBorderColor = customization.avatarBorder || '#2563eb';
+    var avatarBorderWidth = customization.avatarBorderWidth || '3';
+    var avatarBorderStyle = customization.avatarBorderStyle || 'solid';
+    var avatarEffect = customization.avatarEffect || 'none';
+    var avatarShadow = customization.avatarShadow || 'none';
+    var avatarShadowColor = customization.avatarShadowColor || 'rgba(37,99,235,0.4)';
+    var profileFrame = customization.profileFrame || 'default';
+
+    var borderWidthFinal = (avatarBorderWidth === 'none' || !avatarBorderWidth) ? '0px' : avatarBorderWidth + 'px';
+    var borderStyleFinal = (avatarBorderWidth === 'none' || !avatarBorderWidth) ? 'none' : avatarBorderStyle;
+
+    var avatarStyles = '';
+    avatarStyles += 'border-color:' + avatarBorderColor + ';';
+    avatarStyles += 'border-width:' + borderWidthFinal + ';';
+    avatarStyles += 'border-style:' + borderStyleFinal + ';';
+
+    if (avatarShadow && avatarShadow !== 'none') {
+        var shadowMap = {
+            'small': '0 2px 8px rgba(0,0,0,0.15)',
+            'medium': '0 4px 15px rgba(0,0,0,0.2)',
+            'large': '0 8px 30px rgba(0,0,0,0.3)',
+            'colored': '0 0 25px ' + avatarShadowColor
+        };
+        if (shadowMap[avatarShadow]) {
+            avatarStyles += 'box-shadow:' + shadowMap[avatarShadow] + ';';
+        }
+    }
+
+    if (profileFrame && profileFrame !== 'default') {
+        var frameStyles = {
+            'rounded': 'border-radius:20%;',
+            'square': 'border-radius:0;',
+            'star': 'clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);border-radius:0;',
+            'heart': 'clip-path:path("M50,90 C20,60 0,40 0,25 C0,10 15,0 30,0 C40,0 48,8 50,18 C52,8 60,0 70,0 C85,0 100,10 100,25 C100,40 80,60 50,90Z");border-radius:0;',
+            'diamond': 'clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);border-radius:0;'
+        };
+        if (frameStyles[profileFrame]) {
+            avatarStyles += frameStyles[profileFrame];
+        }
+    }
+
+    var effectClass = (avatarEffect && avatarEffect !== 'none') ? 'effect-' + avatarEffect : '';
+
+// ===== الاسم =====
+    var defaultNameColor = currentTheme === 'dark' ? '#ffffff' : '#000000';
+    var nameColor = customization.nameColor && customization.nameColor !== 'default' 
+        ? customization.nameColor 
+        : defaultNameColor;
+
+    var nameGlow = '';
+    if (customization.nameGlow) {
+        if (customization.nameGlow === 'soft') {
+            nameGlow = 'text-shadow:0 0 20px rgba(37,99,235,0.3);';
+        } else if (customization.nameGlow === 'strong') {
+            nameGlow = 'text-shadow:0 0 30px rgba(37,99,235,0.6),0 0 60px rgba(37,99,235,0.3);';
+        } else if (customization.nameGlow === 'rainbow') {
+            nameGlow = 'animation:rainbowGlow 3s ease infinite;';
+        }
+    }
+
+
+    // ===== الشارة الخاصة =====
+    var specialBadgeHTML = '';
+    if (customization.specialBadge && customization.specialBadge !== 'none') {
+        specialBadgeHTML = `
+            <span class="user-special-badge" style="color:${nameColor} !important;${nameGlow}">
+                <i class="fas ${customization.specialBadge}"></i>
+            </span>
+        `;
+    }
+
+    // ===== صندوق الشارة المميزة - مع تطبيق الخلفية المختارة =====
+    var featuredBadge = customization.featuredBadge || 'none';
+    var featuredBadgeHTML = '';
+
+    if (featuredBadge && featuredBadge !== 'none') {
+        var allBadges = getAllBadges();
+        var badge = allBadges.find(function(b) { return b.name === featuredBadge; });
+        if (badge) {
+            var textColor = customization.featuredBadgeTextColor || 'default';
+            var bg = customization.featuredBadgeBg || 'default';
+            var size = customization.featuredBadgeSize || 'medium';
+            var effect = customization.featuredBadgeEffect || 'none';
+            var border = customization.featuredBadgeBorder || 'none';
+            var borderColor = customization.featuredBadgeBorderColor || 'default';
+            var badgeStyle = customization.badgeStyle || 'default';
+
+            // خيارات صندوق الشارة - المهمة
+            var boxBg = customization.featuredBadgeBoxBg || 'default';
+            var boxBorder = customization.featuredBadgeBoxBorder || 'none';
+            var boxBorderColor = customization.featuredBadgeBoxBorderColor || 'default';
+
+var badgeStyles = [];
+if (textColor && textColor !== 'default') {
+    badgeStyles.push('color:' + textColor + ' !important');
+}
+
+// ✅ استخدام الدالة المساعدة للحصول على خلفية الشارة
+var bgValue = getBadgeBgStyle(bg);
+badgeStyles.push('background:' + bgValue + ' !important');
+
+       var bgMap = {
+                'gradient1': 'linear-gradient(135deg,#667eea,#764ba2)',
+                'gradient2': 'linear-gradient(135deg,#f093fb,#f5576c)',
+                'gold': 'linear-gradient(135deg,#ffd700,#f59e0b)',
+                'neon': 'linear-gradient(135deg,#00ffff,#ff00ff)',
+                'dark': '#1e293b',
+                'gradient3': 'linear-gradient(135deg,#89f7fe,#66a6ff)',
+                'gradient4': 'linear-gradient(135deg,#4facfe,#00f2fe)',
+                'ocean': 'linear-gradient(135deg,#2b5876,#4e4376)',
+                'sunset': 'linear-gradient(135deg,#f12711,#f5af19)',
+                'forest': 'linear-gradient(135deg,#134e5e,#71b280)',
+                'rainbow': 'linear-gradient(135deg,#ff0000,#ff8800,#ffff00,#00ff00,#0088ff,#8800ff)',
+                'galaxy': 'linear-gradient(135deg,#0c0c1d,#1a1a3e,#2d1b69)',
+                'candy': 'linear-gradient(135deg,#ff6b6b,#ff9ff3,#feca57)',
+                'lavender': 'linear-gradient(135deg,#e8d5f5,#b8a9c9,#9b8bb5)'
+            };
+            if (bg && bg !== 'default' && bgMap[bg]) {
+                badgeStyles.push(bgMap[bg] + ' !important');
+            } else {
+                badgeStyles.push('background:var(--primary-light) !important');
+            }
+
+            if (size === 'small') {
+                badgeStyles.push('font-size:0.5rem;padding:0.05rem 0.3rem');
+            } else if (size === 'large') {
+                badgeStyles.push('font-size:0.7rem;padding:0.15rem 0.7rem');
+            } else {
+                badgeStyles.push('font-size:0.55rem;padding:0.08rem 0.4rem');
+            }
+
+            if (effect === 'glow') {
+                badgeStyles.push('animation:glowBadge 2s ease-in-out infinite');
+            } else if (effect === 'pulse') {
+                badgeStyles.push('animation:pulse 1.5s ease-in-out infinite');
+            } else if (effect === 'shine') {
+                badgeStyles.push('background:linear-gradient(135deg,#f093fb,#f5576c,#f093fb);background-size:200% 200%;animation:shine 3s ease infinite');
+            }
+
+            if (border !== 'none') {
+                var bColor = (borderColor && borderColor !== 'default') ? borderColor : 'var(--primary)';
+                badgeStyles.push('border:' + border + ' 2px ' + bColor);
+            }
+
+            if (badgeStyle && badgeStyle !== 'default') {
+                var styleMap = {
+                    'glow': 'animation:glowBadge 2s ease-in-out infinite;',
+                    'rounded': 'border-radius:50px;padding:0.08rem 0.6rem;',
+                    'shadow': 'box-shadow:0 4px 15px rgba(0,0,0,0.15);',
+                    'gradient': 'background:linear-gradient(135deg,#f093fb,#f5576c);color:white;',
+                    'neon': 'box-shadow:0 0 20px rgba(37,99,235,0.5);border:1px solid rgba(37,99,235,0.3);'
+                };
+                if (styleMap[badgeStyle]) {
+                    badgeStyles.push(styleMap[badgeStyle]);
+                }
+            }
+
+
+
+            // ===== أنماط صندوق الشارة - نطبق الخلفية المختارة =====
+            var boxStyles = [];
+            var boxBgMap = {
+                'gradient1': 'background:linear-gradient(135deg,#667eea,#764ba2)',
+                'gradient2': 'background:linear-gradient(135deg,#f093fb,#f5576c)',
+                'gold': 'background:linear-gradient(135deg,#ffd700,#f59e0b)',
+                'dark': 'background:#1e293b'
+            };
+            
+            // تطبيق الخلفية المختارة مع !important، وإلا نستخدم transparent
+            if (boxBg && boxBg !== 'default' && boxBgMap[boxBg]) {
+                boxStyles.push('background:' + boxBgMap[boxBg] + ' !important');
+            } else {
+                // افتراضي: شفاف تماماً (لا يرث خلفية البطاقة)
+                boxStyles.push('background:transparent !important');
+            }
+
+            if (boxBorder !== 'none') {
+                var bBoxColor = (boxBorderColor && boxBorderColor !== 'default') ? boxBorderColor : 'var(--primary)';
+                boxStyles.push('border:' + boxBorder + ' 2px ' + bBoxColor + ' !important');
+            } else {
+                boxStyles.push('border:none !important');
+            }
+            boxStyles.push('border-radius:5px;padding:0.05rem 0.35rem;');
+            boxStyles.push('display:inline-flex;align-items:center;gap:0.2rem;');
+            boxStyles.push('margin-top:0.1rem;');
+            boxStyles.push('width:fit-content;');
+
+            featuredBadgeHTML = `
+    <div class="user-featured-badge-container" style="${boxStyles.join(';')}">
+        <span style="font-size:0.4rem;color:var(--gray-400);font-weight:600;">⭐</span>
+        <span class="user-featured-badge" style="${badgeStyles.join(';')}">
+            <i class="fas ${badge.icon}"></i> ${badge.name}
+        </span>
+    </div>
+`;
+        }
+    }
+
+    // ===== معلومات إضافية =====
+    var extraInfoHTML = '';
+    if (showExtraInfo) {
+        var collegeName = user.college ? getCollegeName(user.college) : 'غير محدد';
+        var year = user.year || '?';
+        var points = calculateUserPoints(user).points || 0;
+        
+    var usernameDisplay = user.username ? `<span><i class="fas fa-at"></i> ${user.username}</span>` : '';
+}
+
+    // ===== خلفية البطاقة =====
+    var bgStyle = '';
+    var textColorStyle = '';
+    if (customization.profileBg && customization.profileBg !== 'default') {
+        var bgInfo = BG_STYLES[customization.profileBg];
+        if (bgInfo) {
+            bgStyle = 'background:' + bgInfo.bg + ';';
+            textColorStyle = 'color:' + bgInfo.textColor + ';';
+        }
+    }
+
+    // ✅ بناء اسم المستخدم (مع اتجاه عربي)
+    var usernameDisplay = '';
+    if (user.username) {
+        usernameDisplay = `
+            <div class="user-username">
+                <span>${user.username}</span>
+                <i class="fas fa-at"></i>
+            </div>
+        `;
+    }
+
+
+    // ===== أزرار المتابعة =====
+    var followStatus = getFollowStatus(uid);
+    var followButton = '';
+    
+    if (followStatus === 'self') {
+        followButton = '<span class="self-label">👤 هذا أنت</span>';
+    } else if (followStatus === 'following') {
+        followButton = `
+            <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();unfollowUser('${uid}')" style="color:var(--danger);border-color:var(--danger);">
+                <i class="fas fa-user-minus"></i> إلغاء المتابعة
+            </button>
+        `;
+    } else {
+        followButton = `
+            <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();followUser('${uid}')">
+                <i class="fas fa-user-plus"></i> متابعة
+            </button>
+        `;
+    }
+    
+    // ===== بناء البطاقة =====
+    var html = `
+        <div class="user-card-simple" style="${bgStyle} ${textColorStyle}" data-uid="${uid}" onclick="viewUserProfile('${uid}')">
+            <div class="user-card-simple-content">
+                <!-- الصورة -->
+                <div class="user-card-simple-avatar ${effectClass}">
+                    <img src="${user.avatar || ''}" onerror="this.src=''" alt="${escapeHtml(user.displayName || 'مستخدم')}" style="${avatarStyles}" />
+                    ${isCurrentUser ? '<span class="user-self-badge">أنت</span>' : ''}
+                </div>
+                
+                <!-- المعلومات -->
+                <div class="user-card-simple-info">
+                    <div class="user-card-simple-name" style="color:${nameColor} !important;${nameGlow}">
+                        ${escapeHtml(user.displayName || 'مستخدم')}
+                        ${specialBadgeHTML}
+                    </div>
+                    
+                    ${usernameDisplay}
+                    ${featuredBadgeHTML}
+                    ${extraInfoHTML}
+                </div>
+                
+                <!-- أزرار المتابعة -->
+                <div class="user-card-actions" onclick="event.stopPropagation();">
+                    ${followButton}
+                    <button class="btn btn-outline btn-sm" onclick="viewUserProfile('${uid}')">
+                        <i class="fas fa-user"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    return html;
+}
+
+function applyAllCustomizationsToAllCards() {
+    var currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    console.log('🔄 تطبيق جميع التخصيصات على جميع العناصر (الثيم: ' + currentTheme + ')');
+
+    // 1. تطبيق على الملف الشخصي الرئيسي
+    if (currentUserData) {
+        applyAllCustomizations(currentUserData);
+    }
+
+    // 2. تطبيق على بطاقات المستخدمين
+    applyCustomizationsToUserCards();
+
+    // 3. تطبيق على بطاقات المشرفين
+    applyCustomizationsToAdminCards();
+
+    // 4. تطبيق على مودال الآخرين إذا كان مفتوحاً
+    if (isModalOpen('userProfileModal') && currentViewedUserUid) {
+        refreshUserProfileModal();
+    }
+
+    // 5. تطبيق على المعاينة في مودال التخصيصات إذا كانت مفتوحة
+    if (isModalOpen('customizationModal')) {
+        applyInstantPreviewWithPending();
+    }
+
+    // 6. تطبيق التخصيصات المتقدمة على جميع العناصر العامة
+    var customization = currentUserData ? currentUserData.customization || {} : {};
+    applyCardSizeToAll(customization.cardSize);
+    applyCursorStyleToAll(customization.cursorStyle);
+    applyBorderRadiusToAll(customization.borderRadius);
+    applyHoverEffectToAll(customization.hoverEffect);
+    applyOpacityToAll(customization.opacity);
+
+    console.log('✅ تم تطبيق جميع التخصيصات على جميع العناصر');
+}
+// ============================================================
+//  توليد صورة افتراضية تلقائياً
+// ============================================================
+function generateDefaultAvatar(name) {
+    if (!name) name = 'مستخدم';
+    var encodedName = encodeURIComponent(name);
+    var colors = ['2563eb', 'ef4444', '22c55e', 'f59e0b', '8b5cf6', 'ec4899', '14b8a6', 'f97316', '6366f1', '06b6d4'];
+    var color = colors[Math.floor(Math.random() * colors.length)];
+    return 'https://ui-avatars.com/api/?name=' + encodedName + '&size=200&background=' + color + '&color=ffffff&bold=true&rounded=true';
+}
+
+// تحديث banUser لقبول سبب
+async function banUser(uid, reason) {
+    if (!isAdmin) {
+        showToast('هذه العملية للمشرف فقط', 'error');
+        return;
+    }
+    if (uid === currentUser?.uid) {
+        showToast('لا يمكن حظر نفسك', 'error');
+        return;
+    }
+
+    var user = users.find(function(u) { return u.uid === uid; });
+    if (user && user.isSuperAdmin) {
+        showToast('❌ لا يمكن حظر المشرف الرئيسي', 'error');
+        return;
+    }
+
+    if (!confirm(`⚠️ هل أنت متأكد من حظر هذا المستخدم؟${reason ? '\nالسبب: ' + reason : ''}`)) {
+        return;
+    }
+
+    try {
+        var updateData = { 
+            banned: true, 
+            bannedAt: firebase.firestore.FieldValue.serverTimestamp() 
+        };
+        if (reason && reason.trim()) {
+            updateData.banReason = reason.trim();
+        }
+
+        await db.collection('users').doc(uid).update(updateData);
+        showToast(`🚫 تم حظر المستخدم بنجاح${reason ? ' (السبب: ' + reason + ')' : ''}`, 'warning');
+        await loadAllData();
+        renderAdminUsersCardsData();
+        loadAdminUsers();
+    } catch (error) {
+        console.error('Error banning user:', error);
+        showToast('حدث خطأ: ' + error.message, 'error');
+    }
+}
+
+// ============================================================
+//  USERNAME VALIDATION & AVAILABILITY
+// ============================================================
+
+// التحقق من صيغة اسم المستخدم (3-20 حرف، أحرف/أرقام/شرطة سفلية)
+function isValidUsername(username) {
+    return /^[a-zA-Z0-9_]{3,20}$/.test(username);
+}
+
+// التحقق من توفر اسم المستخدم في قاعدة البيانات
+async function isUsernameAvailable(username) {
+    const normalized = username.toLowerCase().trim();
+    const snapshot = await db.collection('users')
+        .where('username', '==', normalized)
+        .get();
+    return snapshot.empty;
+}
+
+// دالة موحدة للتحقق وعرض النتيجة في حقل الإدخال
+async function checkUsernameField(inputId, feedbackId) {
+    const input = document.getElementById(inputId);
+    const feedback = document.getElementById(feedbackId);
+    if (!input || !feedback) return;
+
+    const username = input.value.trim();
+    if (!username) {
+        feedback.textContent = '⚠️ مطلوب';
+        feedback.style.color = 'var(--warning)';
+        return false;
+    }
+    if (!isValidUsername(username)) {
+        feedback.textContent = '⚠️ 3-20 حرف، أحرف/أرقام/ _ فقط';
+        feedback.style.color = 'var(--danger)';
+        return false;
+    }
+    try {
+        const available = await isUsernameAvailable(username);
+        if (available) {
+            feedback.textContent = '✅ متاح';
+            feedback.style.color = 'var(--success)';
+            return true;
+        } else {
+            feedback.textContent = '❌ مستخدم بالفعل';
+            feedback.style.color = 'var(--danger)';
+            return false;
+        }
+    } catch (e) {
+        feedback.textContent = '⚠️ خطأ في التحقق';
+        feedback.style.color = 'var(--danger)';
+        return false;
+    }
+}
+
+
+// ============================================================
+//  دالة مساعدة للحصول على خلفية صندوق الشارة المميزة
+// ============================================================
+// ============================================================
+//  دالة موحدة للحصول على خلفية صندوق الشارة المميزة
+//  تحتوي على جميع الخيارات المتاحة في واجهة التخصيص
+// ============================================================
+function getBoxBgStyle(boxBg) {
+    // خريطة كاملة لجميع الخلفيات المتاحة
+    const boxBgMap = {
+        // ===== التدرجات الأساسية =====
+        'gradient1': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'gradient2': 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        'gradient3': 'linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)',
+        'gradient4': 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+        'gold': 'linear-gradient(135deg, #ffd700 0%, #f59e0b 100%)',
+        'neon': 'linear-gradient(135deg, #00ffff 0%, #ff00ff 100%)',
+        'dark': '#1e293b',
+        
+        // ===== التدرجات الطبيعية =====
+        'ocean': 'linear-gradient(135deg, #2b5876 0%, #4e4376 100%)',
+        'sunset': 'linear-gradient(135deg, #f12711 0%, #f5af19 100%)',
+        'forest': 'linear-gradient(135deg, #134e5e 0%, #71b280 100%)',
+        'rainbow': 'linear-gradient(135deg, #ff0000, #ff8800, #ffff00, #00ff00, #0088ff, #8800ff)',
+        'galaxy': 'linear-gradient(135deg, #0c0c1d 0%, #1a1a3e 50%, #2d1b69 100%)',
+        'candy': 'linear-gradient(135deg, #ff6b6b 0%, #ff9ff3 50%, #feca57 100%)',
+        'lavender': 'linear-gradient(135deg, #e8d5f5 0%, #b8a9c9 50%, #9b8bb5 100%)',
+        'sunrise': 'linear-gradient(135deg, #ff6b6b 0%, #feca57 50%, #ff9ff3 100%)',
+        'midnight': 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)',
+        
+        // ===== الألوان الصلبة =====
+        'solid-blue': '#2563eb',
+        'solid-red': '#ef4444',
+        'solid-green': '#22c55e',
+        'solid-gold': '#f59e0b',
+        'solid-purple': '#8b5cf6',
+        'solid-pink': '#ec4899',
+        'solid-teal': '#14b8a6',
+        'solid-orange': '#f97316',
+        'solid-white': '#ffffff',
+        'solid-black': '#000000',
+        'solid-gray': '#6b7280',
+        'solid-cyan': '#06b6d4',
+        'solid-lime': '#84cc16',
+        'solid-rose': '#f43f5e',
+        'solid-indigo': '#6366f1',
+        
+        // ===== خلفيات إضافية من BG_STYLES =====
+        'cherry': 'linear-gradient(135deg, #800000 0%, #dc143c 100%)',
+        'mint': 'linear-gradient(135deg, #00b894 0%, #00cec9 100%)',
+        'peach': 'linear-gradient(135deg, #fd79a8 0%, #fdcb6e 100%)',
+        'grape': 'linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%)',
+        'coffee': 'linear-gradient(135deg, #6f4e37 0%, #d4a574 100%)',
+        'ice': 'linear-gradient(135deg, #dfe6e9 0%, #b2bec3 100%)',
+        'fire': 'linear-gradient(135deg, #e17055 0%, #d63031 100%)',
+        'space': 'linear-gradient(135deg, #0c0c1d 0%, #1a1a3e 30%, #2d1b69 60%, #1a1a3e 100%)',
+        'retro': 'linear-gradient(135deg, #2d3436 0%, #fd79a8 50%, #fdcb6e 100%)',
+        'vintage': 'linear-gradient(135deg, #d4a574 0%, #b8956a 50%, #8b6b4a 100%)',
+        'modern': 'linear-gradient(135deg, #2d3436 0%, #dfe6e9 100%)',
+        'pastel': 'linear-gradient(135deg, #fd79a8 0%, #a29bfe 50%, #74b9ff 100%)',
+        'vibrant': 'linear-gradient(135deg, #ff6b6b 0%, #feca57 50%, #48dbfb 100%)',
+        'monochrome': 'linear-gradient(135deg, #ffffff 0%, #dfe6e9 50%, #2d3436 100%)',
+        'sepia': 'linear-gradient(135deg, #d4a574 0%, #bf953f 50%, #8b6b4a 100%)'
+    };
+
+    // إذا كان المفتاح موجوداً في الخريطة، نعيد النمط
+    if (boxBg && boxBg !== 'default' && boxBgMap[boxBg]) {
+        return boxBgMap[boxBg];
+    }
+    
+    // القيمة الافتراضية (شفاف)
+    return 'transparent';
+}
+
+// ============================================================
+//  POSTS SYSTEM (الصفحة الرئيسية الجديدة)
+// ============================================================
+
+// ============================================================
+//  POSTS VARIABLES
+// ============================================================
+var posts = [];
+var postsListener = null;
+var currentPostFilter = 'all';
+var postsPage = 1;
+var postsPerPage = 6;
+var postType = 'text';
+
+// تعيين نوع المنشور
+function setPostType(type) {
+    postType = type;
+    document.querySelectorAll('.type-btn').forEach(function(btn) {
+        btn.classList.toggle('active', btn.dataset.type === type);
+    });
+    document.getElementById('postImageInput').style.display = type === 'image' ? 'block' : 'none';
+    document.getElementById('pollInput').style.display = type === 'poll' ? 'block' : 'none';
+    document.getElementById('linkInput').style.display = type === 'link' ? 'block' : 'none';
+}
+
+// مسح نموذج المنشور
+function clearPostForm() {
+    document.getElementById('postContentInput').value = '';
+    document.getElementById('postImageFile').value = '';
+    document.getElementById('pollQuestion').value = '';
+    document.querySelectorAll('.poll-option-input').forEach(function(inp) { inp.value = ''; });
+    document.getElementById('postLinkUrl').value = '';
+    document.getElementById('postLinkTitle').value = '';
+    document.getElementById('postImageInput').style.display = 'none';
+    document.getElementById('pollInput').style.display = 'none';
+    document.getElementById('linkInput').style.display = 'none';
+    setPostType('text');
+}
+
+function loadPosts(filter, page) {
+    console.log('📥 loadPosts called with filter:', filter, 'page:', page);
+    
+    filter = filter || 'all';
+    page = page || 1;
+    
+    var container = document.getElementById('postsContainer');
+    if (!container) {
+        console.error('❌ postsContainer not found');
+        return;
+    }
+
+    // إظهار التحميل
+    var loading = document.getElementById('postsLoading');
+    if (loading) loading.style.display = 'block';
+    container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> جاري التحميل...</div>';
+
+    // ===== إلغاء الاستماع السابق بشكل صحيح =====
+    if (postsListener) {
+        console.log('🔄 Unsubscribing from previous listener');
+        try {
+            postsListener();
+        } catch (e) {
+            console.warn('Error unsubscribing:', e);
+        }
+        postsListener = null;
+    }
+
+    console.log('📊 Building query for filter:', filter);
+
+    // ===== بناء الاستعلام حسب الفلتر =====
+    var query = db.collection('posts');
+    
+    if (filter === 'following' && currentUser) {
+        var following = currentUserData ? currentUserData.following || [] : [];
+        console.log('👥 Following list:', following);
+        
+        if (following.length === 0) {
+            if (loading) loading.style.display = 'none';
+            container.innerHTML = '<div class="empty-state"><i class="fas fa-user-friends"></i><h4>لا تتابع أحداً</h4><p>تابع مستخدمين لترى منشوراتهم</p></div>';
+            return;
+        }
+        
+        // نأخذ أول 10 متابعين (قيود Firestore)
+        var limitedFollowing = following.slice(0, 10);
+        query = query.where('uid', 'in', limitedFollowing);
+    }
+    
+    // ترتيب حسب التاريخ
+    query = query.orderBy('createdAt', 'desc');
+
+    console.log('🔍 Executing query...');
+
+    // ===== تنفيذ الاستعلام =====
+    postsListener = query.onSnapshot(function(snapshot) {
+        var allPosts = [];
+        snapshot.forEach(function(doc) {
+            var data = doc.data();
+            data.id = doc.id;
+            
+            // ===== إزالة الصور المكررة =====
+            if (data.images && Array.isArray(data.images)) {
+                var uniqueImages = [];
+                var seen = {};
+                data.images.forEach(function(img) {
+                    if (img && typeof img === 'string' && img.startsWith('data:image') && !seen[img]) {
+                        seen[img] = true;
+                        uniqueImages.push(img);
+                    }
+                });
+                data.images = uniqueImages;
+            } else {
+                data.images = [];
+            }
+            
+            allPosts.push(data);
+        });
+
+        console.log('📊 Raw posts loaded:', allPosts.length);
+
+        // ===== معالجة التريند =====
+        if (filter === 'trending') {
+            console.log('🔥 Calculating trending scores...');
+            var now = Date.now();
+            
+            allPosts.forEach(function(post) {
+                var createdAt = post.createdAt?.seconds ? post.createdAt.seconds * 1000 : 0;
+                var age = now - createdAt;
+                var likes = (post.likes || []).length;
+                var comments = (post.comments || []).length;
+                var views = post.views || 0;
+                
+                var hours = Math.max(1, age / (60 * 60 * 1000));
+                // درجة التفاعل: (إعجابات + تعليقات*3) / (الساعات + 1)
+                var interactionScore = (likes + comments * 3) / (hours + 1);
+                post.trendingScore = interactionScore;
+                console.log('  Post:', post.id, 'score:', interactionScore.toFixed(2));
+            });
+
+            // ترتيب حسب درجة التفاعل تنازلياً
+            allPosts.sort(function(a, b) {
+                return (b.trendingScore || 0) - (a.trendingScore || 0);
+            });
+            
+            console.log('📊 Trending posts sorted, count:', allPosts.length);
+        }
+
+        // ===== تصفية منشورات أتابعه (بسبب قيود Firestore) =====
+        if (filter === 'following') {
+            var friends = currentUserData ? currentUserData.friends || [] : [];
+            allPosts = allPosts.filter(function(post) {
+                return friends.indexOf(post.uid) !== -1;
+            });
+            console.log('📊 Filtered following posts:', allPosts.length);
+        }
+
+        posts = allPosts;
+        
+        if (loading) loading.style.display = 'none';
+        renderPosts(page);
+        
+    }, function(error) {
+        console.error('❌ Error loading posts:', error);
+        if (loading) loading.style.display = 'none';
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><h4>حدث خطأ في تحميل المنشورات</h4><p>' + error.message + '</p></div>';
+        postsListener = null;
+    });
+}
+
+function renderPosts(page) {
+    page = page || 1;
+    var container = document.getElementById('postsContainer');
+    if (!container) return;
+
+    var total = posts.length;
+    var totalPages = Math.ceil(total / postsPerPage);
+    var start = (page - 1) * postsPerPage;
+    var end = Math.min(start + postsPerPage, total);
+    var pagePosts = posts.slice(start, end);
+
+    // إخفاء التحميل
+    var loading = document.getElementById('postsLoading');
+    if (loading) loading.style.display = 'none';
+
+    if (pagePosts.length === 0) {
+        var emptyMessages = {
+            'all': 'لا توجد منشورات حالياً',
+            'following': 'لا توجد منشورات من الأشخاص الذين تتابعهم',
+            'trending': 'لا توجد منشورات تريند حالياً'
+        };
+        var emptyMessage = emptyMessages[currentPostFilter] || 'لا توجد منشورات';
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-newspaper"></i><h4>' + emptyMessage + '</h4><p>كن أول من ينشر!</p></div>';
+        renderPagination(totalPages, page);
+        return;
+    }
+
+    var html = '';
+    pagePosts.forEach(function(post) {
+        if (!post.images) post.images = [];
+        html += buildPostHTML(post);
+    });
+    container.innerHTML = html;
+    
+    // ===== استعادة حالة التعليقات المفتوحة =====
+    if (window._openComments) {
+        Object.keys(window._openComments).forEach(function(postId) {
+            if (window._openComments[postId]) {
+                var commentsEl = document.getElementById('comments-' + postId);
+                if (commentsEl) {
+                    commentsEl.style.display = 'block';
+                }
+            }
+        });
+    }
+    
+    // زيادة المشاهدات
+    document.querySelectorAll('.post-card').forEach(function(card) {
+        var id = card.dataset.id;
+        if (id) incrementView(id);
+    });
+    
+    renderPagination(totalPages, page);
+}
+
+// ===== تبديل عرض التعليقات - فتح المودال =====
+function toggleComments(postId) {
+    // فتح مودال التعليقات بدلاً من التوسيع
+    openCommentsModal(postId);
+}
+
+// ============================================================
+//  عرض الصور في شبكة ذكية
+// ============================================================
+
+function renderPostImages(images) {
+    if (!images || images.length === 0) return '';
+    
+    var count = images.length;
+    var gridClass = 'post-image-grid';
+    
+    // تحديد الكلاس المناسب حسب عدد الصور
+    if (count === 1) gridClass += ' single';
+    else if (count === 2) gridClass += ' two';
+    else if (count === 3) gridClass += ' three';
+    else if (count === 4) gridClass += ' four';
+    else if (count === 5) gridClass += ' five';
+    else gridClass += ' six';
+    
+    // عرض الصور
+    var html = `<div class="${gridClass}">`;
+    images.forEach(function(img) {
+        html += `<img src="${img}" alt="صورة" loading="lazy" onerror="this.style.display='none'" />`;
+    });
+    html += `</div>`;
+    
+    return html;
+}
+
+async function createPost() {
+    if (!currentUser) {
+        showToast('يرجى تسجيل الدخول أولاً', 'error');
+        return;
+    }
+    
+    var text = document.getElementById('postContentInput').value;
+    var activeTypeBtn = document.querySelector('.type-btn.active');
+    var postType = activeTypeBtn ? activeTypeBtn.dataset.type : 'text';
+    
+    // التحقق من وجود محتوى (مع السماح بمسافات وأسطر)
+    if (!text || text.trim() === '') {
+        showToast('يرجى كتابة محتوى المنشور', 'warning');
+        return;
+    }
+
+    var postData = {
+        uid: currentUser.uid,
+        text: text, // حفظ النص مع الأسطر الجديدة
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        likes: [],
+        comments: [],
+        images: [],
+        views: 0,
+        link: null,
+        poll: null,
+        reactions: {}
+    };
+
+    // ===== معالجة الصور =====
+    if (postType === 'image') {
+        var imageInput = document.getElementById('postImageFile');
+        var imageFiles = imageInput ? imageInput.files : [];
+        
+        if (imageFiles.length === 0) {
+            showToast('يرجى اختيار صورة', 'warning');
+            return;
+        }
+        
+        var validFiles = [];
+        var seenFiles = {};
+        for (var i = 0; i < imageFiles.length; i++) {
+            var file = imageFiles[i];
+            // التحقق من عدم تكرار الملف (باستخدام الاسم والحجم)
+            var fileKey = file.name + '_' + file.size;
+            if (seenFiles[fileKey]) continue;
+            seenFiles[fileKey] = true;
+            
+            if (!file.type.startsWith('image/')) {
+                showToast('الملف المحدد ليس صورة', 'error');
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                showToast('حجم الصورة كبير جداً (الحد الأقصى 5MB)', 'error');
+                return;
+            }
+            validFiles.push(file);
+        }
+        
+        if (validFiles.length === 0) {
+            showToast('لا توجد صور صالحة', 'error');
+            return;
+        }
+        
+        // رفع الصور
+        var uploadedImages = [];
+        var seenImages = {};
+        for (var j = 0; j < validFiles.length; j++) {
+            try {
+                var base64 = await resizeImage(validFiles[j], 800, 800);
+                if (base64 && base64.startsWith('data:image') && !seenImages[base64]) {
+                    seenImages[base64] = true;
+                    uploadedImages.push(base64);
+                }
+            } catch (e) {
+                console.error('Error processing image:', e);
+                showToast('حدث خطأ في معالجة الصورة: ' + e.message, 'error');
+                return;
+            }
+        }
+        
+        if (uploadedImages.length === 0) {
+            showToast('فشل في معالجة الصور', 'error');
+            return;
+        }
+        
+        postData.images = uploadedImages;
+    }
+
+    // ===== معالجة الاستطلاع =====
+    if (postType === 'poll') {
+        var pollQuestion = document.getElementById('pollQuestion').value.trim();
+        if (!pollQuestion) {
+            showToast('يرجى إدخال سؤال الاستطلاع', 'warning');
+            return;
+        }
+        var optionInputs = document.querySelectorAll('.poll-option-input');
+        var options = [];
+        optionInputs.forEach(function(inp) {
+            if (inp.value.trim()) options.push(inp.value.trim());
+        });
+        if (options.length < 2) {
+            showToast('أدخل خيارين على الأقل', 'warning');
+            return;
+        }
+        postData.poll = {
+            question: pollQuestion,
+            options: options.map(function(opt) { return { text: opt, votes: 0, voters: [] }; })
+        };
+    }
+
+    // ===== معالجة الرابط =====
+    if (postType === 'link') {
+        var url = document.getElementById('postLinkUrl').value.trim();
+        if (!url) {
+            showToast('يرجى إدخال رابط', 'warning');
+            return;
+        }
+        var title = document.getElementById('postLinkTitle').value.trim();
+        postData.link = { url: url, title: title || url };
+    }
+
+    try {
+        var docRef = await db.collection('posts').add(postData);
+        console.log('✅ Post created with ID:', docRef.id);
+        
+        clearPostForm();
+        showToast('✅ تم نشر المنشور بنجاح!', 'success');
+        
+        // إعادة تحميل المنشورات
+        loadPosts(currentPostFilter, 1);
+        
+    } catch (error) {
+        console.error('Error creating post:', error);
+        showToast('حدث خطأ: ' + error.message, 'error');
+    }
+}
+
+// ===== تهيئة حقل إدخال المنشور =====
+document.addEventListener('DOMContentLoaded', function() {
+    var postInput = document.getElementById('postContentInput');
+    if (postInput) {
+        // السماح بـ Shift+Enter لإنزال سطر، و Enter للنشر
+        postInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                createPost();
+            }
+            // Shift+Enter ينزل سطر جديد (السلوك الافتراضي)
+        });
+        
+        // زيادة ارتفاع الحقل تلقائياً عند الكتابة
+        postInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        });
+    }
+});
+
+// ===== حفظ المنشور =====
+async function toggleSavePost(postId) {
+    if (!currentUser) {
+        showToast('يرجى تسجيل الدخول', 'error');
+        return;
+    }
+    var saved = currentUserData?.savedPosts || [];
+    var idx = saved.indexOf(postId);
+    var isSaved = idx === -1;
+    
+    if (isSaved) {
+        saved.push(postId);
+    } else {
+        saved.splice(idx, 1);
+    }
+    
+    try {
+        await db.collection('users').doc(currentUser.uid).update({ savedPosts: saved });
+        currentUserData.savedPosts = saved;
+        showToast(isSaved ? '✅ تم الحفظ' : '❌ تم إزالة من المحفوظات', 'success');
+    } catch (error) {
+        console.error('Error saving post:', error);
+        showToast('حدث خطأ', 'error');
+    }
+}
+
+// زيادة عدد المشاهدات عند عرض المنشور
+function incrementView(postId) {
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) return;
+    var views = post.views || 0;
+    // تحديث محلياً وفي Firestore (يمكن إضافة تأخير لتجنب التكرار)
+    db.collection('posts').doc(postId).update({ views: views + 1 }).catch(function(e) {});
+}
+
+// ============================================================
+//  نظام التعليقات والردود المتطور
+// ============================================================
+
+async function addComment(postId, btn) {
+    if (!currentUser) {
+        showToast('يرجى تسجيل الدخول', 'error');
+        return;
+    }
+    
+    var container = btn.closest('.post-comments');
+    if (!container) {
+        showToast('حدث خطأ في العثور على حاوية التعليقات', 'error');
+        return;
+    }
+    
+    var input = container.querySelector('.comment-input');
+    if (!input) {
+        showToast('حدث خطأ في العثور على حقل الإدخال', 'error');
+        return;
+    }
+    
+    var text = input.value.trim();
+    if (!text) {
+        showToast('يرجى كتابة تعليق', 'warning');
+        return;
+    }
+    
+    var replyTo = input.dataset.replyTo || null;
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) {
+        showToast('المنشور غير موجود', 'error');
+        return;
+    }
+    
+    var comments = post.comments || [];
+    var newComment = {
+        uid: currentUser.uid,
+        text: text,
+        timestamp: new Date().toISOString(),
+        replyTo: replyTo,
+        likes: []
+    };
+    
+    // ===== إدراج الرد تحت التعليق المخصص =====
+    var insertIndex = comments.length;
+    
+    if (replyTo) {
+        // البحث عن التعليق الأصلي
+        var parentIndex = -1;
+        for (var i = 0; i < comments.length; i++) {
+            if (comments[i].uid === replyTo && !comments[i].replyTo) {
+                parentIndex = i;
+                break;
+            }
+        }
+        
+        if (parentIndex !== -1) {
+            // البحث عن آخر رد تحت هذا التعليق
+            insertIndex = parentIndex + 1;
+            for (var j = insertIndex; j < comments.length; j++) {
+                if (comments[j].replyTo === replyTo) {
+                    insertIndex = j + 1;
+                } else if (!comments[j].replyTo) {
+                    break;
+                }
+            }
+        } else {
+            // إذا لم نجد التعليق الأصلي، نضعه في النهاية
+            insertIndex = comments.length;
+        }
+    }
+    
+    // إدراج التعليق في الموقع الصحيح
+    comments.splice(insertIndex, 0, newComment);
+    
+    try {
+        await db.collection('posts').doc(postId).update({ comments: comments });
+        post.comments = comments;
+        
+        // إعادة تعيين حقل الإدخال
+        input.value = '';
+        input.placeholder = 'اكتب تعليقاً...';
+        delete input.dataset.replyTo;
+        
+        // ===== إعادة عرض المنشورات للحفاظ على الترتيب =====
+        renderPosts(postsPage);
+        
+        // فتح التعليقات تلقائياً
+        var commentsContainer = document.getElementById('comments-' + postId);
+        if (commentsContainer) {
+            commentsContainer.style.display = 'block';
+            if (!window._openComments) window._openComments = {};
+            window._openComments[postId] = true;
+        }
+        
+        showToast('✅ تم إضافة التعليق', 'success');
+        
+    } catch (error) {
+        console.error('Error adding comment:', error);
+        showToast('حدث خطأ: ' + error.message, 'error');
+    }
+}
+
+// ===== الرد على تعليق (في صفحة المنشورات) =====
+function replyComment(postId, commenterUid) {
+    // فتح مودال التعليقات
+    openCommentsModal(postId);
+    
+    // بعد فتح المودال، نضع الرد
+    setTimeout(function() {
+        var input = document.getElementById('commentsModalInput');
+        if (input) {
+            var commenter = users.find(function(u) { return u.uid === commenterUid; });
+            var name = commenter ? commenter.displayName : 'المستخدم';
+            input.focus();
+            input.placeholder = 'رد على @' + name + '...';
+            input.dataset.replyTo = commenterUid;
+        }
+    }, 300);
+}
+
+// ===== تبديل إظهار/إخفاء الردود =====
+function toggleReplies(postId, commentIndex, btn) {
+    var container = document.getElementById('replies-' + postId + '-' + commentIndex);
+    if (!container) return;
+    
+    var isHidden = container.style.display === 'none' || container.style.display === '';
+    container.style.display = isHidden ? 'block' : 'none';
+    btn.textContent = isHidden ? 'إخفاء الردود' : 'عرض الردود (' + container.querySelectorAll('.comment-item').length + ')';
+}
+
+// البحث عن تعليق (بما في ذلك الردود)
+function findComment(comments, commentId) {
+    for (var i = 0; i < comments.length; i++) {
+        if (comments[i].id === commentId) {
+            return comments[i];
+        }
+        if (comments[i].replies) {
+            for (var j = 0; j < comments[i].replies.length; j++) {
+                if (comments[i].replies[j].id === commentId) {
+                    return comments[i].replies[j];
+                }
+            }
+        }
+    }
+    return null;
+}
+
+// عرض التعليقات بشكل متداخل مع الردود
+function renderComments(comments, postId) {
+    if (!comments || comments.length === 0) {
+        return '<div class="empty-state" style="padding:0.5rem;font-size:0.8rem;">لا توجد تعليقات</div>';
+    }
+    
+    var html = '';
+    comments.forEach(function(c) {
+        var commenter = users.find(function(u) { return u.uid === c.uid; });
+        var cName = commenter ? commenter.displayName : 'مستخدم';
+        var cAvatar = commenter && commenter.avatar ? commenter.avatar : generateDefaultAvatar(cName);
+        var cTime = c.timestamp ? new Date(c.timestamp).toLocaleString('ar') : '';
+        var isLiked = currentUser && c.likes && c.likes.indexOf(currentUser.uid) !== -1;
+        var canDelete = currentUser && (c.uid === currentUser.uid || isAdmin);
+        
+        html += `
+            <div class="comment-item" data-comment-id="${c.id}">
+                <img src="${cAvatar}" onerror="this.src='${generateDefaultAvatar(cName)}'" class="comment-avatar" />
+                <div class="comment-body">
+                    <div class="comment-author">
+                        ${escapeHtml(cName)}
+                        ${commenter && commenter.role === 'admin' ? '<span class="comment-role">مشرف</span>' : ''}
+                    </div>
+                    <div class="comment-text">${escapeHtml(c.text)}</div>
+                    <div class="comment-time">${cTime}</div>
+                    <div class="comment-actions">
+                        <button class="btn ${isLiked ? 'liked' : ''}" onclick="likeComment('${postId}', '${c.id}')">
+                            <i class="fas fa-heart"></i> ${(c.likes || []).length}
+                        </button>
+                        <button class="btn" onclick="replyComment('${postId}', '${c.id}')">
+                            <i class="fas fa-reply"></i> رد
+                        </button>
+                        ${canDelete ? `<button class="btn" onclick="deleteComment('${postId}', '${c.id}')"><i class="fas fa-trash-alt"></i></button>` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // عرض الردود
+        if (c.replies && c.replies.length > 0) {
+            html += `<div class="comment-reply">`;
+            html += renderComments(c.replies, postId);
+            html += `</div>`;
+        }
+    });
+    
+    return html;
+}
+
+function filterPosts(filter) {
+    console.log('🔍 filterPosts called with:', filter);
+    
+    // تحديث الأزرار
+    document.querySelectorAll('.posts-tab').forEach(function(tab) {
+        tab.classList.remove('active');
+        if (tab.dataset.filter === filter) {
+            tab.classList.add('active');
+        }
+    });
+    
+    // تحديث المتغيرات
+    currentPostFilter = filter;
+    postsPage = 1;
+    
+    // ===== إلغاء الاستماع القديم =====
+    if (postsListener) {
+        console.log('🔄 Unsubscribing from old listener (filterPosts)');
+        try {
+            postsListener();
+        } catch (e) {
+            console.warn('Error unsubscribing:', e);
+        }
+        postsListener = null;
+    }
+    
+    // ===== تحميل المنشورات الجديدة =====
+    loadPosts(filter, 1);
+}
+
+// ترقيم الصفحات
+function renderPagination(totalPages, currentPage) {
+    var container = document.getElementById('postsPagination');
+    if (!container) return;
+    if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+    var html = '';
+    for (var i = 1; i <= totalPages; i++) {
+        html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="changePostsPage(${i})">${i}</button>`;
+    }
+    container.innerHTML = html;
+}
+
+function changePostsPage(page) {
+    postsPage = page;
+    loadPosts(currentPostFilter, page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+
+// تحميل المنشورات من Firestore (مع تحديث فوري)
+function loadPosts() {
+    var container = document.getElementById('postsContainer');
+    if (!container) return;
+
+    // إلغاء الاستماع السابق
+    if (postsListener) {
+        postsListener();
+        postsListener = null;
+    }
+
+    postsListener = db.collection('posts')
+        .orderBy('createdAt', 'desc')
+        .onSnapshot(function(snapshot) {
+            posts = [];
+            snapshot.forEach(function(doc) {
+                var data = doc.data();
+                data.id = doc.id;
+                posts.push(data);
+            });
+            renderPosts();
+        }, function(error) {
+            console.error('Error loading posts:', error);
+            container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><h4>حدث خطأ في تحميل المنشورات</h4></div>';
+        });
+}
+
+// عرض المنشورات
+function renderPosts() {
+    var container = document.getElementById('postsContainer');
+    if (!container) return;
+    if (posts.length === 0) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-newspaper"></i><h4>لا توجد منشورات بعد</h4><p>كن أول من ينشر!</p></div>';
+        return;
+    }
+
+    var html = '';
+    posts.forEach(function(post) {
+        html += buildPostHTML(post);
+    });
+    container.innerHTML = html;
+}
+
+// تحديث صورة صندوق النشر
+function updatePostBoxAvatar() {
+    var avatar = document.getElementById('postUserAvatar');
+    if (!avatar) return;
+    if (currentUserData && currentUserData.avatar) {
+        avatar.src = currentUserData.avatar;
+    } else if (currentUser && currentUser.photoURL) {
+        avatar.src = currentUser.photoURL;
+    } else {
+        avatar.src = generateDefaultAvatar(currentUser?.displayName || 'مستخدم');
+    }
+    avatar.onerror = function() {
+        this.src = generateDefaultAvatar(currentUser?.displayName || 'مستخدم');
+    };
+}
+
+// ===== فتح مودال المتفاعلين =====
+function openReactionsModal(postId) {
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) return;
+    
+    var total = getTotalReactions(post);
+    if (total === 0) {
+        showToast('لا توجد تفاعلات على هذا المنشور', 'info');
+        return;
+    }
+    
+    // ===== إنشاء المودال إذا لم يكن موجوداً =====
+    var modal = document.getElementById('reactionsModal');
+    var content = document.getElementById('reactionsModalContent');
+    if (!modal || !content) {
+        createReactionsModal();
+        modal = document.getElementById('reactionsModal');
+        content = document.getElementById('reactionsModalContent');
+    }
+    
+    // ===== تخزين postId في المودال =====
+    modal.dataset.postId = postId;
+    
+    // ===== عرض المودال مع التبويب الافتراضي (الكل) =====
+    renderReactionsModalTabs(postId, 'all');
+    openModal('reactionsModal', { layer: 2 });
+}
+
+// ===== عرض تبويبات التفاعلات =====
+function renderReactionsModalTabs(postId, filterType) {
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) return;
+    
+    var content = document.getElementById('reactionsModalContent');
+    if (!content) return;
+    
+    var title = document.getElementById('reactionsModalTitle');
+    if (title) {
+        var total = getTotalReactions(post);
+        title.textContent = '🎭 التفاعلات (' + total + ')';
+    }
+    
+    // ===== تجميع جميع المتفاعلين =====
+    var allReactors = {};
+    var reactionCounts = {};
+    
+    for (var type in post.reactions) {
+        var reactors = post.reactions[type] || [];
+        reactionCounts[type] = reactors.length;
+        reactors.forEach(function(uid) {
+            if (!allReactors[uid]) {
+                allReactors[uid] = [];
+            }
+            allReactors[uid].push(type);
+        });
+    }
+    
+    var reactorUids = Object.keys(allReactors);
+    var reactorUsers = users.filter(function(u) {
+        return reactorUids.indexOf(u.uid) !== -1;
+    });
+    
+    // ===== تصفية حسب النوع =====
+    var filteredUsers = reactorUsers;
+    if (filterType !== 'all') {
+        filteredUsers = reactorUsers.filter(function(u) {
+            var types = allReactors[u.uid] || [];
+            return types.indexOf(filterType) !== -1;
+        });
+    }
+    
+    // ===== ترتيب حسب نوع التفاعل =====
+    var order = ['like', 'love', 'laugh', 'sad', 'angry', 'wow'];
+    filteredUsers.sort(function(a, b) {
+        var aTypes = allReactors[a.uid] || [];
+        var bTypes = allReactors[b.uid] || [];
+        var aOrder = order.indexOf(aTypes[0] || 'like');
+        var bOrder = order.indexOf(bTypes[0] || 'like');
+        return aOrder - bOrder;
+    });
+    
+    // ===== بناء HTML =====
+    var html = '';
+    
+    // ===== الأزرار العلوية =====
+    html += `
+        <div class="reactions-filter-tabs">
+            <button class="reaction-filter-tab ${filterType === 'all' ? 'active' : ''}" 
+                    onclick="renderReactionsModalTabs('${postId}', 'all')">
+                <span>الكل</span>
+                <span class="tab-count">${reactorUsers.length}</span>
+            </button>
+            ${Object.keys(REACTION_TYPES).map(function(type) {
+                var count = reactionCounts[type] || 0;
+                if (count === 0) return '';
+                return `
+                    <button class="reaction-filter-tab ${filterType === type ? 'active' : ''}" 
+                            onclick="renderReactionsModalTabs('${postId}', '${type}')">
+                        ${REACTION_TYPES[type].emoji}
+                        <span>${REACTION_TYPES[type].label}</span>
+                        <span class="tab-count">${count}</span>
+                    </button>
+                `;
+            }).filter(Boolean).join('')}
+        </div>
+    `;
+    
+    // ===== قائمة المتفاعلين =====
+    if (filteredUsers.length === 0) {
+        html += `
+            <div class="reactions-empty">
+                <i class="fas fa-heart"></i>
+                <p>لا توجد تفاعلات من هذا النوع</p>
+            </div>
+        `;
+    } else {
+        html += `<div class="reactions-list">`;
+        filteredUsers.forEach(function(user) {
+            var userReactions = allReactors[user.uid] || [];
+            var reactionEmojis = userReactions.map(function(type) {
+                return REACTION_TYPES[type]?.emoji || '👍';
+            }).join(' ');
+            
+            // ===== الحصول على حالة المتابعة =====
+            var followStatus = getFollowStatus(user.uid);
+            var followBadge = '';
+            if (followStatus === 'following') {
+                followBadge = '<span class="follow-badge following"><i class="fas fa-user-check"></i></span>';
+            } else if (followStatus === 'self') {
+                followBadge = '<span class="follow-badge self">👤</span>';
+            } else {
+                followBadge = `<button class="follow-btn" onclick="event.stopPropagation();followUser('${user.uid}')">متابعة</button>`;
+            }
+            
+            html += `
+                <div class="reaction-item" onclick="viewUserProfile('${user.uid}')">
+                    <div class="reaction-item-avatar">
+                        <img src="${user.avatar || ''}" onerror="this.src='${generateDefaultAvatar(user.displayName || 'مستخدم')}'" />
+                        <div class="reaction-item-emoji">${reactionEmojis}</div>
+                    </div>
+                    <div class="reaction-item-info">
+                        <div class="reaction-item-name">${escapeHtml(user.displayName || 'مستخدم')}</div>
+                        <div class="reaction-item-follow">${followBadge}</div>
+                    </div>
+                    <div class="reaction-item-reactions">${reactionEmojis}</div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+    }
+    
+    content.innerHTML = html;
+}
+
+function createReactionsModal() {
+    // حذف المودال القديم إن وجد
+    var oldModal = document.getElementById('reactionsModal');
+    if (oldModal) oldModal.remove();
+    
+    var modal = document.createElement('div');
+    modal.id = 'reactionsModal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width:600px;max-height:80vh;">
+            <div class="modal-header">
+                <h3 id="reactionsModalTitle"><i class="fas fa-heart"></i> التفاعلات</h3>
+                <button class="btn-close" onclick="closeModal('reactionsModal')"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="reactionsModalContent" style="max-height:60vh;overflow-y:auto;padding:0.3rem;"></div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+function buildPostHTML(post) {
+    if (!post) return '<div class="empty-state">منشور غير صحيح</div>';
+    
+    var isOwner = currentUser && post.uid === currentUser.uid;
+    var isAdminUser = currentUser && isAdmin;
+    var user = users.find(function(u) { return u.uid === post.uid; });
+    var userName = user ? user.displayName : 'مستخدم غير معروف';
+    var userAvatar = user && user.avatar ? user.avatar : generateDefaultAvatar(userName);
+    var userRole = user && user.role === 'admin' ? 'مشرف' : '';
+    
+    var time = post.createdAt?.seconds ? getTimeAgo(post.createdAt) : 'الآن';
+    var comments = post.comments || [];
+    var views = post.views || 0;
+    var shares = post.shares || 0;
+    var isSaved = currentUser && (currentUserData?.savedPosts || []).indexOf(post.id) !== -1;
+    var poll = post.poll || null;
+    var link = post.link || null;
+    
+    // ===== حساب التفاعلات =====
+    var totalReactions = getTotalReactions(post);
+    var userReaction = getUserReaction(post);
+    var topReaction = getTopReaction(post);
+    var reactionEmoji = topReaction ? REACTION_TYPES[topReaction]?.emoji || '👍' : '👍';
+    
+    // ===== معالجة النص =====
+    var postText = post.text && post.text.trim() ? linkifyText(escapeHtml(post.text)) : '';
+    
+    // ===== معالجة الصور =====
+    var images = post.images || [];
+    var imagesHTML = '';
+    
+    if (Array.isArray(images) && images.length > 0) {
+        var uniqueImages = [];
+        var seen = {};
+        images.forEach(function(img) {
+            if (img && typeof img === 'string' && img.startsWith('data:image') && !seen[img]) {
+                seen[img] = true;
+                uniqueImages.push(img);
+            }
+        });
+        
+        if (uniqueImages.length > 0) {
+            var gridClass = 'post-image-grid';
+            if (uniqueImages.length === 1) gridClass += ' single';
+            else if (uniqueImages.length === 2) gridClass += ' two';
+            else if (uniqueImages.length === 3) gridClass += ' three';
+            else if (uniqueImages.length === 4) gridClass += ' four';
+            else if (uniqueImages.length === 5) gridClass += ' five';
+            else gridClass += ' six';
+            
+            imagesHTML = `<div class="${gridClass}">${uniqueImages.map(function(img, index) {
+                return `<img src="${img}" alt="صورة ${index + 1}" loading="lazy" onclick="openImageViewer('${img}')" onerror="this.style.display='none'" />`;
+            }).join('')}</div>`;
+        }
+    }
+
+    // ===== قائمة منسدلة =====
+    var dropdownMenu = `
+        <div class="post-dropdown">
+            <button class="post-dropdown-btn" onclick="event.stopPropagation();togglePostDropdown('${post.id}')" aria-label="خيارات المنشور">
+                <i class="fas fa-ellipsis-v"></i>
+            </button>
+            <div class="post-dropdown-menu" id="postDropdown-${post.id}" style="display:none;">
+                ${isOwner ? `
+                    <button class="dropdown-item" onclick="editPost('${post.id}')"><i class="fas fa-edit"></i> تعديل المنشور</button>
+                ` : ''}
+                <button class="dropdown-item" onclick="sharePost('${post.id}')"><i class="fas fa-share-alt"></i> مشاركة</button>
+                <button class="dropdown-item" onclick="toggleSavePost('${post.id}')">
+                    <i class="fas fa-bookmark"></i> ${isSaved ? 'إزالة من المحفوظات' : 'حفظ المنشور'}
+                </button>
+                <button class="dropdown-item" onclick="reportPost('${post.id}')"><i class="fas fa-flag"></i> الإبلاغ عن المنشور</button>
+                ${(isOwner || isAdminUser) ? `
+                    <hr>
+                    <button class="dropdown-item danger" onclick="deletePost('${post.id}')"><i class="fas fa-trash-alt"></i> حذف المنشور</button>
+                ` : ''}
+            </div>
+        </div>
+    `;
+    
+    // ===== شريط التفاعلات =====
+    var reactionsBarHTML = '';
+    if (totalReactions > 0) {
+        reactionsBarHTML = buildReactionsBarHTML(post);
+    }
+    
+    // ===== معاينة التعليقات =====
+    var commentsPreview = '';
+    if (comments.length > 0) {
+        var previewComments = comments.slice(0, 3);
+        commentsPreview = `
+            <div class="comments-preview" onclick="openCommentsModal('${post.id}')">
+                ${previewComments.map(function(c) {
+                    var commenter = users.find(function(u) { return u.uid === c.uid; });
+                    var cName = commenter ? commenter.displayName : 'مستخدم';
+                    return `
+                        <div class="comment-preview-item">
+                            <span class="comment-preview-author">${escapeHtml(cName)}</span>
+                            <span class="comment-preview-text">${escapeHtml(c.text.length > 60 ? c.text.substring(0, 60) + '...' : c.text)}</span>
+                        </div>
+                    `;
+                }).join('')}
+                ${comments.length > 3 ? `<div class="comment-preview-more">عرض ${comments.length - 3} تعليقات أخرى...</div>` : ''}
+            </div>
+        `;
+    }
+    
+    // ===== بناء HTML النهائي =====
+    var html = `
+        <div class="post-card ${post.pinned ? 'pinned-post' : ''}" data-id="${post.id}">
+            ${post.pinned ? `<div class="pinned-badge"><i class="fas fa-thumbtack"></i> منشور مثبت</div>` : ''}
+            
+            <div class="post-header">
+                <div class="post-user-info" onclick="viewUserProfile('${post.uid}')" style="cursor:pointer;">
+                    <img src="${userAvatar}" onerror="this.src='${generateDefaultAvatar(userName)}'" class="post-avatar" />
+                    <div class="post-author-info">
+                        <div class="post-author">
+                            ${escapeHtml(userName)}
+                            ${userRole ? `<span class="post-author-role">${userRole}</span>` : ''}
+                            ${user && user.isSuperAdmin ? `<span class="post-author-role super-admin">👑</span>` : ''}
+                        </div>
+                        <div class="post-time">
+                            <i class="fas fa-clock"></i> ${time}
+                            ${post.edited ? `<span class="post-edited">· تم التعديل</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+                ${dropdownMenu}
+            </div>
+            
+            <!-- عرض النص -->
+            ${postText ? `<div class="post-content" style="white-space:pre-wrap;">${postText}</div>` : ''}
+            
+            <!-- عرض الصور -->
+            ${imagesHTML}
+            
+            <!-- عرض الرابط -->
+            ${link ? `
+                <div class="post-link-preview" onclick="window.open('${escapeHtml(link.url)}', '_blank')">
+                    <div class="link-icon"><i class="fas fa-link"></i></div>
+                    <div class="link-info">
+                        <div class="link-title">${escapeHtml(link.title || link.url)}</div>
+                        <div class="link-url">${escapeHtml(link.url)}</div>
+                    </div>
+                </div>
+            ` : ''}
+            
+            <!-- عرض الاستطلاع -->
+            ${poll ? buildPollHTML(post.id, poll) : ''}
+            
+            <!-- ===== شريط التفاعلات ===== -->
+            
+<!-- ===== أزرار التفاعل ===== -->
+<div class="post-actions-container">
+    <!-- أزرار التفاعل الرئيسية -->
+    <div class="post-actions-left">
+        <!-- زر عرض المتفاعلين (يفتح المودال) -->
+        <button class="reactions-show-btn" 
+                onclick="openReactionsModal('${post.id}')" 
+                title="عرض المتفاعلين">
+            <span class="reactions-display">
+                ${getReactionsPreview(post)}
+            </span>
+            <span class="reactions-count">${totalReactions}</span>
+        </button>
+        
+        <!-- زر اختيار التفاعل (يفتح القائمة المنسدلة) -->
+        <div class="reaction-picker-container">
+            <button class="reaction-picker-btn ${userReaction ? 'active' : ''}" 
+                    onclick="toggleReactionPicker('${post.id}')" 
+                    title="اختر تفاعلاً">
+                <i class="fas fa-plus-circle"></i>
+                <span class="picker-label">تفاعل</span>
+            </button>
+            
+            <!-- قائمة اختيار التفاعل -->
+            <div class="reaction-picker" id="reactionPicker-${post.id}" style="display:none;">
+                <div class="reaction-picker-inner">
+                    ${Object.keys(REACTION_TYPES).map(function(type) {
+                        var isActive = userReaction === type;
+                        var count = (post.reactions && post.reactions[type] ? post.reactions[type].length : 0);
+                        return `
+                            <button class="reaction-picker-option ${isActive ? 'active' : ''}" 
+                                    onclick="event.stopPropagation();addReaction('${post.id}', '${type}')" 
+                                    title="${REACTION_TYPES[type].label} (${count})">
+                                ${REACTION_TYPES[type].emoji}
+                                <span class="reaction-picker-label">${REACTION_TYPES[type].label}</span>
+                                ${count > 0 ? `<span class="reaction-picker-count">${count}</span>` : ''}
+                            </button>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- أزرار الإحصائيات -->
+    <div class="post-stats">
+        <span class="stat-item" onclick="openCommentsModal('${post.id}')" style="cursor:pointer;">
+            <i class="fas fa-comment"></i> 
+            <span class="comment-count">${comments.length}</span>
+        </span>
+        <span class="stat-item" onclick="sharePost('${post.id}')" style="cursor:pointer;">
+            <i class="fas fa-share-alt"></i> 
+            <span>${shares}</span>
+        </span>
+        <span class="stat-item" onclick="toggleSavePost('${post.id}')" style="cursor:pointer;">
+            <i class="fas fa-bookmark" style="color:${isSaved ? '#f59e0b' : 'var(--gray-400)'}"></i>
+        </span>
+    </div>
+</div>
+            
+            <!-- معاينة التعليقات -->
+            ${commentsPreview}
+        </div>
+    `;
+    return html;
+}
+
+// ===== عرض معاينة التفاعلات =====
+function getReactionsPreview(post) {
+    if (!post.reactions) return '👍';
+    
+    var total = getTotalReactions(post);
+    if (total === 0) return '👍';
+    
+    var preview = '';
+    var count = 0;
+    var types = ['like', 'love', 'laugh', 'sad', 'angry', 'wow'];
+    
+    for (var i = 0; i < types.length; i++) {
+        var type = types[i];
+        var reactors = post.reactions[type] || [];
+        if (reactors.length > 0 && count < 3) {
+            preview += REACTION_TYPES[type].emoji;
+            count++;
+        }
+    }
+    
+    return preview || '👍';
+}
+
+function linkifyText(text) {
+    if (!text) return '';
+    
+    // تحويل الروابط إلى عناصر HTML قابلة للنقر
+    var urlRegex = /(https?:\/\/[^\s]+)/g;
+    var emailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g;
+    var mentionRegex = /@([a-zA-Z0-9_]+)/g;
+    var hashtagRegex = /#([a-zA-Z0-9_\u0600-\u06FF]+)/g;
+    
+    var result = text;
+    
+    // روابط URLs
+    result = result.replace(urlRegex, function(url) {
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="post-link">${url}</a>`;
+    });
+    
+    // إيميلات
+    result = result.replace(emailRegex, function(email) {
+        return `<a href="mailto:${email}" class="post-link">${email}</a>`;
+    });
+    
+    // منشنات
+    result = result.replace(mentionRegex, function(match, username) {
+        var user = users.find(function(u) { return u.username === username; });
+        if (user) {
+            return `<span class="post-mention" onclick="viewUserProfile('${user.uid}')">@${username}</span>`;
+        }
+        return match;
+    });
+    
+    // هاشتاقات
+    result = result.replace(hashtagRegex, function(match, tag) {
+        return `<span class="post-hashtag" onclick="searchHashtag('${tag}')">#${tag}</span>`;
+    });
+    
+    return result;
+}
+
+// ===== إنشاء مودال المتفاعلين =====
+function createLikesModal() {
+    if (document.getElementById('likesModal')) return;
+    
+    var modal = document.createElement('div');
+    modal.id = 'likesModal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width:450px;">
+            <div class="modal-header">
+                <h3 id="likesModalTitle"><i class="fas fa-heart"></i> المتفاعلين</h3>
+                <button class="btn-close" onclick="closeModal('likesModal')"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="likesModalContent"></div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+// ===== الإبلاغ عن تعليق =====
+async function reportComment(postId, commentIndex) {
+    if (!currentUser) {
+        showToast('يرجى تسجيل الدخول أولاً', 'error');
+        return;
+    }
+    
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) return;
+    
+    var comments = post.comments || [];
+    if (!comments[commentIndex]) return;
+    
+    var comment = comments[commentIndex];
+    var commenter = users.find(function(u) { return u.uid === comment.uid; });
+    var commenterName = commenter ? commenter.displayName : 'مستخدم';
+    
+    var reason = prompt('أدخل سبب الإبلاغ عن هذا التعليق (من ' + commenterName + '):');
+    if (reason === null) return;
+    if (!reason.trim()) {
+        showToast('يرجى إدخال سبب', 'warning');
+        return;
+    }
+    
+    try {
+        await db.collection('reports').add({
+            postId: postId,
+            commentIndex: commentIndex,
+            commentText: comment.text,
+            commenterUid: comment.uid,
+            uid: currentUser.uid,
+            reason: reason.trim(),
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            resolved: false,
+            type: 'comment'
+        });
+        showToast('✅ تم الإبلاغ عن التعليق، سيتم مراجعته من قبل المشرف', 'success');
+    } catch (error) {
+        console.error('Error reporting comment:', error);
+        showToast('حدث خطأ أثناء الإبلاغ', 'error');
+    }
+}
+
+// ===== الإعجاب بالمنشور =====
+async function toggleLike(postId) {
+    if (!currentUser) {
+        showToast('يرجى تسجيل الدخول', 'error');
+        return;
+    }
+    
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) return;
+    
+    var likes = post.likes || [];
+    var idx = likes.indexOf(currentUser.uid);
+    var isLiking = idx === -1;
+    
+    if (isLiking) {
+        likes.push(currentUser.uid);
+    } else {
+        likes.splice(idx, 1);
+    }
+    
+    try {
+        await db.collection('posts').doc(postId).update({ likes: likes });
+        post.likes = likes;
+        
+        // ===== تحديث الواجهة =====
+        var likeCount = document.getElementById('likeCount-' + postId);
+        if (likeCount) {
+            likeCount.textContent = likes.length;
+        }
+        
+        // ===== تحديث زر الإعجاب السريع =====
+        var card = document.querySelector('.post-card[data-id="' + postId + '"]');
+        if (card) {
+            var quickBtn = card.querySelector('.quick-action-btn.liked, .quick-action-btn:first-child');
+            if (quickBtn) {
+                quickBtn.classList.toggle('liked', isLiking);
+                if (isLiking) {
+                    quickBtn.innerHTML = '<i class="fas fa-heart"></i>';
+                } else {
+                    quickBtn.innerHTML = '<i class="fas fa-heart"></i>';
+                }
+            }
+            
+            var statBtn = card.querySelector('.post-stats .stat-item:first-child');
+            if (statBtn) {
+                statBtn.querySelector('i').style.color = isLiking ? '#ef4444' : 'var(--gray-400)';
+            }
+        }
+        
+        // ===== إرسال إشعار =====
+        if (isLiking && post.uid !== currentUser.uid) {
+            await sendNotification(post.uid, {
+                message: `❤️ ${currentUserData.displayName || currentUser.email} أعجب بمنشورك`,
+                type: 'like',
+                link: '/posts'
+            });
+        }
+        
+    } catch (error) {
+        console.error('Error toggling like:', error);
+        showToast('حدث خطأ', 'error');
+    }
+}
+
+// ===== الإعجاب بالتعليق =====
+async function likeComment(postId, commentIndex, btn) {
+    if (!currentUser) {
+        showToast('يرجى تسجيل الدخول', 'error');
+        return;
+    }
+    
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) return;
+    
+    var comments = post.comments || [];
+    if (!comments[commentIndex]) return;
+    
+    var comment = comments[commentIndex];
+    if (!comment.likes) comment.likes = [];
+    
+    var idx = comment.likes.indexOf(currentUser.uid);
+    var isLiking = idx === -1;
+    
+    if (isLiking) {
+        comment.likes.push(currentUser.uid);
+    } else {
+        comment.likes.splice(idx, 1);
+    }
+    
+    try {
+        await db.collection('posts').doc(postId).update({ comments: comments });
+        post.comments = comments;
+        
+        // ===== تحديث الواجهة =====
+        if (btn) {
+            var likeCount = btn.querySelector('.comment-like-count');
+            if (likeCount) {
+                likeCount.textContent = comment.likes.length;
+            }
+            btn.classList.toggle('liked', isLiking);
+            btn.innerHTML = (isLiking ? '<i class="fas fa-heart"></i>' : '<i class="fas fa-heart"></i>') + 
+                ' <span class="comment-like-count">' + comment.likes.length + '</span>';
+        }
+        
+        // ===== تحديث المودال =====
+        if (document.getElementById('commentsModal').classList.contains('active')) {
+            var savedState = JSON.parse(JSON.stringify(repliesVisibilityState));
+            renderCommentsInModal(comments, postId);
+            repliesVisibilityState = savedState;
+            Object.keys(savedState).forEach(function(key) {
+                var container = document.getElementById(key);
+                if (container) {
+                    container.style.display = savedState[key] ? 'block' : 'none';
+                }
+            });
+        }
+        
+    } catch (error) {
+        console.error('Error liking comment:', error);
+        showToast('حدث خطأ', 'error');
+    }
+}
+
+// ===== مشاركة المنشور =====
+async function sharePost(postId) {
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) {
+        showToast('المنشور غير موجود', 'error');
+        return;
+    }
+    
+    var url = window.location.origin + '/?post=' + postId;
+    var title = post.text ? post.text.substring(0, 100) + (post.text.length > 100 ? '...' : '') : 'منشور على مقيّم';
+    
+    // ===== زيادة عدد المشاركات =====
+    try {
+        var shares = (post.shares || 0) + 1;
+        await db.collection('posts').doc(postId).update({ shares: shares });
+        post.shares = shares;
+    } catch (e) {
+        console.warn('Error updating shares:', e);
+    }
+    
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: 'منشور على مقيّم',
+                text: title,
+                url: url
+            });
+            showToast('✅ تمت المشاركة بنجاح', 'success');
+            return;
+        } catch (e) {
+            if (e.name !== 'AbortError') {
+                console.warn('Share cancelled or failed:', e);
+            }
+        }
+    }
+    
+    // ===== نسخ الرابط =====
+    try {
+        await navigator.clipboard.writeText(url);
+        showToast('📋 تم نسخ رابط المنشور', 'success');
+    } catch (e) {
+        showToast('رابط المنشور: ' + url, 'info');
+    }
+}
+
+// ===== عرض قائمة المتفاعلين =====
+function showLikesList(postId) {
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) return;
+    
+    var likes = post.likes || [];
+    if (likes.length === 0) {
+        showToast('لا يوجد تفاعلات على هذا المنشور', 'info');
+        return;
+    }
+    
+    var likers = users.filter(function(u) {
+        return likes.indexOf(u.uid) !== -1;
+    });
+    
+    if (likers.length === 0) {
+        showToast('لا يوجد تفاعلات', 'info');
+        return;
+    }
+    
+    showInteractionsList(likers, '❤️ المتفاعلين', 'like');
+}
+
+// ===== عرض قائمة المشاركين =====
+function showSharesList(postId) {
+    // يمكن جلب قائمة المشاركين من قاعدة البيانات
+    showToast('🚧 قائمة المشاركين قيد التطوير', 'info');
+}
+
+// ===== عرض معرض الصور =====
+function openImageViewer(imageUrl) {
+    var modal = document.createElement('div');
+    modal.className = 'modal image-viewer-modal';
+    modal.style.zIndex = '999999';
+    modal.innerHTML = `
+        <div class="modal-content image-viewer-content" style="max-width:90vw;max-height:90vh;background:transparent;box-shadow:none;border:none;">
+            <button class="btn-close-modal" onclick="this.closest('.modal').remove()" style="position:fixed;top:20px;right:20px;z-index:999999;background:rgba(0,0,0,0.5);color:white;border:none;border-radius:50%;width:40px;height:40px;font-size:1.2rem;cursor:pointer;">
+                <i class="fas fa-times"></i>
+            </button>
+            <img src="${imageUrl}" style="max-width:90vw;max-height:85vh;object-fit:contain;display:block;margin:auto;border-radius:12px;" />
+        </div>
+    `;
+    document.body.appendChild(modal);
+    
+    setTimeout(function() {
+        modal.classList.add('active');
+        modal.style.display = 'flex';
+    }, 50);
+    
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+    
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            if (modal.parentNode) {
+                modal.remove();
+            }
+        }
+    });
+}
+
+// ===== البحث عن هاشتاق =====
+function searchHashtag(tag) {
+    showToast('🔍 البحث عن #' + tag, 'info');
+    // يمكن توجيه المستخدم إلى صفحة البحث
+}
+
+// ===== تثبيت المنشور =====
+async function pinPost(postId) {
+    if (!isAdmin && !isOwner) {
+        showToast('ليس لديك صلاحية', 'error');
+        return;
+    }
+    
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) return;
+    
+    var newState = !post.pinned;
+    
+    try {
+        // إذا كان التثبيت، إلغاء تثبيت المنشورات الأخرى لنفس المستخدم
+        if (newState) {
+            var userPosts = posts.filter(function(p) { 
+                return p.uid === currentUser.uid && p.pinned === true && p.id !== postId; 
+            });
+            for (var i = 0; i < userPosts.length; i++) {
+                await db.collection('posts').doc(userPosts[i].id).update({ pinned: false });
+                userPosts[i].pinned = false;
+            }
+        }
+        
+        await db.collection('posts').doc(postId).update({ pinned: newState });
+        post.pinned = newState;
+        showToast(newState ? '📌 تم تثبيت المنشور' : '📌 تم إلغاء تثبيت المنشور', 'success');
+        renderPosts(postsPage);
+    } catch (error) {
+        console.error('Error pinning post:', error);
+        showToast('حدث خطأ', 'error');
+    }
+}
+
+// التصويت في الاستطلاع
+async function votePoll(postId, optionIndex) {
+    if (!currentUser) { showToast('يرجى تسجيل الدخول', 'error'); return; }
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post || !post.poll) return;
+    var poll = post.poll;
+    var option = poll.options[optionIndex];
+    if (option.voters && option.voters.indexOf(currentUser.uid) !== -1) {
+        showToast('لقد صوّت بالفعل', 'warning');
+        return;
+    }
+    // إلغاء تصويت سابق
+    poll.options.forEach(function(opt) {
+        if (opt.voters) {
+            var idx = opt.voters.indexOf(currentUser.uid);
+            if (idx !== -1) opt.voters.splice(idx, 1);
+        }
+    });
+    // إضافة التصويت الجديد
+    if (!option.voters) option.voters = [];
+    option.voters.push(currentUser.uid);
+    option.votes = (option.votes || 0) + 1;
+
+    try {
+        await db.collection('posts').doc(postId).update({ poll: poll });
+        // تحديث العرض
+        renderPosts();
+        showToast('✅ تم تسجيل صوتك', 'success');
+    } catch (error) {
+        console.error('Error voting poll:', error);
+        showToast('حدث خطأ', 'error');
+    }
+}
+
+// ===== مشاركة =====
+function sharePost(postId) {
+    var url = window.location.origin + '/?post=' + postId;
+    if (navigator.share) {
+        navigator.share({
+            title: 'منشور على مقيّم',
+            text: 'شاهد هذا المنشور على مقيّم',
+            url: url
+        }).catch(function() {});
+    } else {
+        navigator.clipboard.writeText(url).then(function() {
+            showToast('📋 تم نسخ رابط المنشور', 'success');
+        }).catch(function() {
+            showToast('رابط المنشور: ' + url, 'info');
+        });
+    }
+}
+
+async function deletePost(postId) {
+    if (!currentUser) {
+        showToast('يرجى تسجيل الدخول', 'error');
+        return;
+    }
+    
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) {
+        showToast('المنشور غير موجود', 'error');
+        return;
+    }
+    
+    // التحقق من الصلاحية (صاحب المنشور أو مشرف)
+    if (post.uid !== currentUser.uid && !isAdmin) {
+        showToast('ليس لديك صلاحية لحذف هذا المنشور', 'error');
+        return;
+    }
+    
+    if (!confirm('هل أنت متأكد من حذف هذا المنشور؟')) return;
+    
+    try {
+        await db.collection('posts').doc(postId).delete();
+        // إزالة المنشور من القائمة المحلية
+        posts = posts.filter(function(p) { return p.id !== postId; });
+        // إعادة عرض المنشورات
+        renderPosts(postsPage);
+        showToast('✅ تم حذف المنشور', 'success');
+    } catch (error) {
+        console.error('Error deleting post:', error);
+        showToast('حدث خطأ: ' + error.message, 'error');
+    }
+}
+
+// ===== تبديل قائمة المنشور المنسدلة =====
+function togglePostDropdown(postId) {
+    var menu = document.getElementById('postDropdown-' + postId);
+    if (!menu) return;
+    
+    // إغلاق جميع القوائم الأخرى
+    document.querySelectorAll('.post-dropdown-menu').forEach(function(m) {
+        if (m.id !== 'postDropdown-' + postId) {
+            m.style.display = 'none';
+        }
+    });
+    
+    menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+// إغلاق القوائم عند النقر خارجها
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.post-dropdown')) {
+        document.querySelectorAll('.post-dropdown-menu').forEach(function(menu) {
+            menu.style.display = 'none';
+        });
+    }
+    if (!e.target.closest('.comment-dropdown')) {
+        document.querySelectorAll('.comment-dropdown-menu').forEach(function(menu) {
+            menu.style.display = 'none';
+        });
+    }
+});
+
+function editPost(postId) {
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) return;
+    
+    // ===== البحث عن عنصر المنشور في DOM =====
+    var postCard = document.querySelector('.post-card[data-id="' + postId + '"]');
+    if (!postCard) return;
+    
+    var contentElement = postCard.querySelector('.post-content');
+    if (!contentElement) return;
+    
+    var currentText = contentElement.textContent;
+    
+    // ===== استبدال النص بصندوق كتابة =====
+    var editTextarea = document.createElement('textarea');
+    editTextarea.className = 'post-edit-textarea';
+    editTextarea.value = currentText;
+    editTextarea.style.cssText = 'width:100%;padding:0.5rem 0.8rem;border:2px solid var(--primary);border-radius:12px;background:var(--gray-50);font-size:0.95rem;color:var(--text-color);resize:vertical;min-height:80px;';
+    editTextarea.rows = 3;
+    
+    // استبدال النص بحقل التحرير
+    contentElement.replaceWith(editTextarea);
+    
+    // التركيز على الحقل
+    editTextarea.focus();
+    editTextarea.select();
+    
+    // ===== إضافة أزرار حفظ وإلغاء =====
+    var headerElement = postCard.querySelector('.post-header');
+    if (headerElement) {
+        // إزالة الأزرار القديمة
+        var oldBtns = headerElement.querySelectorAll('.post-edit-actions');
+        oldBtns.forEach(function(btn) { btn.remove(); });
+        
+        var editActions = document.createElement('div');
+        editActions.className = 'post-edit-actions';
+        editActions.style.cssText = 'display:flex;gap:0.3rem;margin-top:0.5rem;';
+        
+        var saveBtn = document.createElement('button');
+        saveBtn.className = 'btn btn-success btn-sm';
+        saveBtn.innerHTML = '<i class="fas fa-save"></i> حفظ التعديلات';
+        saveBtn.onclick = function() {
+            var newText = editTextarea.value.trim();
+            if (!newText) {
+                showToast('المنشور لا يمكن أن يكون فارغاً', 'warning');
+                return;
+            }
+            
+            db.collection('posts').doc(postId).update({
+                text: newText
+            }).then(function() {
+                post.text = newText;
+                renderPosts(postsPage);
+                showToast('✅ تم تعديل المنشور', 'success');
+            }).catch(function(error) {
+                console.error('Error editing post:', error);
+                showToast('حدث خطأ', 'error');
+            });
+        };
+        
+        var cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn btn-outline btn-sm';
+        cancelBtn.innerHTML = '<i class="fas fa-times"></i> إلغاء';
+        cancelBtn.onclick = function() {
+            renderPosts(postsPage);
+        };
+        
+        editActions.appendChild(saveBtn);
+        editActions.appendChild(cancelBtn);
+        headerElement.parentNode.insertBefore(editActions, headerElement.nextSibling);
+    }
+}
+
+function editComment(postId, commentIndex) {
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) return;
+    
+    var comments = post.comments || [];
+    if (!comments[commentIndex]) return;
+    
+    var comment = comments[commentIndex];
+    
+    // ===== البحث عن عنصر التعليق في DOM =====
+    var commentsContainer = document.getElementById('comments-' + postId);
+    if (!commentsContainer) return;
+    
+    var commentItems = commentsContainer.querySelectorAll('.comment-item');
+    var targetItem = commentItems[commentIndex];
+    if (!targetItem) return;
+    
+    var textElement = targetItem.querySelector('.comment-text');
+    if (!textElement) return;
+    
+    var currentText = textElement.textContent;
+    
+    // ===== استبدال النص بصندوق كتابة =====
+    var editInput = document.createElement('input');
+    editInput.type = 'text';
+    editInput.className = 'comment-edit-input';
+    editInput.value = currentText;
+    editInput.style.cssText = 'width:100%;padding:0.2rem 0.6rem;border:2px solid var(--primary);border-radius:12px;background:var(--gray-50);font-size:0.85rem;color:var(--text-color);';
+    
+    // استبدال النص بحقل الإدخال
+    textElement.replaceWith(editInput);
+    
+    // التركيز على الحقل
+    editInput.focus();
+    editInput.select();
+    
+    // ===== إضافة أزرار حفظ وإلغاء =====
+    var actionsElement = targetItem.querySelector('.comment-actions');
+    if (actionsElement) {
+        // إزالة الأزرار القديمة
+        var oldBtns = actionsElement.querySelectorAll('.edit-actions');
+        oldBtns.forEach(function(btn) { btn.remove(); });
+        
+        var editActions = document.createElement('span');
+        editActions.className = 'edit-actions';
+        editActions.style.cssText = 'display:flex;gap:0.3rem;';
+        
+        var saveBtn = document.createElement('button');
+        saveBtn.className = 'btn btn-success btn-sm';
+        saveBtn.innerHTML = '<i class="fas fa-save"></i> حفظ';
+        saveBtn.onclick = function() {
+            var newText = editInput.value.trim();
+            if (!newText) {
+                showToast('التعليق لا يمكن أن يكون فارغاً', 'warning');
+                return;
+            }
+            
+            comment.text = newText;
+            
+            db.collection('posts').doc(postId).update({ comments: comments }).then(function() {
+                renderPosts(postsPage);
+                showToast('✅ تم تعديل التعليق', 'success');
+            }).catch(function(error) {
+                console.error('Error editing comment:', error);
+                showToast('حدث خطأ', 'error');
+            });
+        };
+        
+        var cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn btn-outline btn-sm';
+        cancelBtn.innerHTML = '<i class="fas fa-times"></i> إلغاء';
+        cancelBtn.onclick = function() {
+            renderPosts(postsPage);
+        };
+        
+        editActions.appendChild(saveBtn);
+        editActions.appendChild(cancelBtn);
+        actionsElement.appendChild(editActions);
+    }
+}
+
+// ===== حذف تعليق =====
+async function deleteComment(postId, commentIndex) {
+    if (!currentUser) {
+        showToast('يرجى تسجيل الدخول', 'error');
+        return;
+    }
+    
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) return;
+    
+    var comments = post.comments || [];
+    if (!comments[commentIndex]) return;
+    
+    // التحقق من أن المستخدم هو صاحب التعليق
+    if (comments[commentIndex].uid !== currentUser.uid) {
+        showToast('لا يمكنك حذف تعليق ليس لك', 'error');
+        return;
+    }
+    
+    if (!confirm('هل أنت متأكد من حذف هذا التعليق؟')) return;
+    
+    try {
+        // حذف التعليق
+        comments.splice(commentIndex, 1);
+        
+        // حذف الردود المرتبطة بهذا التعليق
+        var replyUid = comments[commentIndex]?.uid;
+        if (replyUid) {
+            for (var i = comments.length - 1; i >= 0; i--) {
+                if (comments[i].replyTo === replyUid) {
+                    comments.splice(i, 1);
+                }
+            }
+        }
+        
+        await db.collection('posts').doc(postId).update({ comments: comments });
+        post.comments = comments;
+        
+        // تحديث العرض
+        if (document.getElementById('commentsModal').classList.contains('active')) {
+            renderCommentsInModal(comments, postId);
+            var count = document.getElementById('commentsModalCount');
+            if (count) {
+                count.textContent = comments.length + ' تعليق';
+            }
+        }
+        
+        // تحديث عدد التعليقات في المنشور
+        updatePostCommentCount(postId, comments.length);
+        
+        showToast('✅ تم حذف التعليق', 'success');
+        
+    } catch (error) {
+        console.error('Error deleting comment:', error);
+        showToast('حدث خطأ: ' + error.message, 'error');
+    }
+}
+
+// ===== إغلاق القوائم عند النقر خارجها =====
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.post-dropdown')) {
+        document.querySelectorAll('.post-dropdown-menu').forEach(function(menu) {
+            menu.style.display = 'none';
+        });
+    }
+    if (!e.target.closest('.comment-dropdown')) {
+        document.querySelectorAll('.comment-dropdown-menu').forEach(function(menu) {
+            menu.style.display = 'none';
+        });
+    }
+});
+
+// إظهار/إخفاء حقل الصورة والاستطلاع
+function togglePostImageInput() {
+    var el = document.getElementById('postImageInput');
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+function togglePollInput() {
+    var el = document.getElementById('pollInput');
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+function addPollOption() {
+    var container = document.getElementById('pollOptionsContainer');
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'poll-option-input';
+    input.placeholder = 'خيار ' + (container.children.length + 1);
+    container.appendChild(input);
+}
+
+// بناء HTML للاستطلاع
+function buildPollHTML(postId, poll) {
+    var totalVotes = 0;
+    poll.options.forEach(function(opt) { totalVotes += (opt.votes || 0); });
+    var html = `<div class="poll-container">
+        <div class="poll-question">${escapeHtml(poll.question)}</div>
+        <div class="poll-options">`;
+    poll.options.forEach(function(opt, index) {
+        var pct = totalVotes > 0 ? Math.round((opt.votes || 0) / totalVotes * 100) : 0;
+        var isVoted = opt.voters && currentUser && opt.voters.indexOf(currentUser.uid) !== -1;
+        html += `
+            <div class="poll-option" onclick="votePoll('${postId}', ${index})">
+                <div class="poll-option-text">${escapeHtml(opt.text)}</div>
+                <div class="poll-bar"><div class="poll-fill" style="width:${pct}%;"></div></div>
+                <div class="poll-stats">${opt.votes || 0} صوت (${pct}%)</div>
+                ${isVoted ? '<span class="poll-check">✓</span>' : ''}
+            </div>
+        `;
+    });
+    html += `</div><div class="poll-total">إجمالي الأصوات: ${totalVotes}</div></div>`;
+    return html;
+}
+
+async function reportPost(postId) {
+    if (!currentUser) {
+        showToast('يرجى تسجيل الدخول أولاً', 'error');
+        return;
+    }
+    var reason = prompt('أدخل سبب الإبلاغ عن هذا المنشور:');
+    if (reason === null) return;
+    if (!reason.trim()) {
+        showToast('يرجى إدخال سبب', 'warning');
+        return;
+    }
+    try {
+        await db.collection('reports').add({
+            postId: postId,
+            uid: currentUser.uid,
+            reason: reason.trim(),
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            resolved: false
+        });
+        showToast('✅ تم الإبلاغ عن المنشور، سيتم مراجعته من قبل المشرف', 'success');
+    } catch (error) {
+        console.error('Error reporting post:', error);
+        showToast('حدث خطأ أثناء الإبلاغ', 'error');
+    }
+}
+
+
+// ============================================================
+//  إدارة الصور المرفوعة
+// ============================================================
+
+var uploadedImages = [];
+
+// معاينة الصور مع إمكانية الحذف
+document.getElementById('postImageFile').addEventListener('change', function(e) {
+    var previewContainer = document.getElementById('postImagePreview');
+    if (!previewContainer) return;
+    
+    previewContainer.innerHTML = '';
+    uploadedImages = [];
+    
+    for (var i = 0; i < this.files.length; i++) {
+        var file = this.files[i];
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var dataUrl = e.target.result;
+            uploadedImages.push(dataUrl);
+            
+            var thumb = document.createElement('div');
+            thumb.className = 'preview-thumb';
+            thumb.innerHTML = `
+                <img src="${dataUrl}" alt="صورة" />
+                <button class="remove-image-btn" onclick="removeUploadedImage(${uploadedImages.length - 1})">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            previewContainer.appendChild(thumb);
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// حذف صورة مرفوعة
+function removeUploadedImage(index) {
+    if (index < 0 || index >= uploadedImages.length) return;
+    uploadedImages.splice(index, 1);
+    
+    // تحديث المعاينة
+    var previewContainer = document.getElementById('postImagePreview');
+    if (previewContainer) {
+        previewContainer.innerHTML = '';
+        uploadedImages.forEach(function(img, i) {
+            var thumb = document.createElement('div');
+            thumb.className = 'preview-thumb';
+            thumb.innerHTML = `
+                <img src="${img}" alt="صورة" />
+                <button class="remove-image-btn" onclick="removeUploadedImage(${i})">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            previewContainer.appendChild(thumb);
+        });
+    }
+    
+    // تحديث ملفات الإدخال
+    var input = document.getElementById('postImageFile');
+    if (input) {
+        // إعادة إنشاء FileList (لا يمكن تعديله مباشرة، نستخدم DataTransfer)
+        var dt = new DataTransfer();
+        // لا يمكن إضافة Base64 مباشرة، نتركه للمعاينة فقط
+        // سيتم إعادة رفع الصور عند النشر
+    }
+}
+
+
+function refreshPostsUI() {
+    loadPosts(currentPostFilter, postsPage);
+}
+
+function debugPages() {
+    console.log('📊 === PAGE STATUS ===');
+    Object.keys(pages).forEach(function(key) {
+        var el = pages[key];
+        console.log('  - ' + key + ':', el ? '✅ Found' : '❌ Missing', el ? 'display: ' + el.style.display : '');
+    });
+}
+
+// ============================================================
+//  قوائم التفاعلات والمحفوظات
+// ============================================================
+
+// عرض من أحب المنشور
+function showPostLikes(postId) {
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) {
+        showToast('المنشور غير موجود', 'error');
+        return;
+    }
+    
+    var likes = post.likes || [];
+    if (likes.length === 0) {
+        showToast('لا توجد إعجابات', 'info');
+        return;
+    }
+    
+    var usersList = likes.map(function(uid) {
+        return users.find(function(u) { return u.uid === uid; });
+    }).filter(function(u) { return u; });
+    
+    showInteractionsList(usersList, 'الإعجابات', 'like');
+}
+
+// عرض من حفظ المنشور
+function showPostSaves(postId) {
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) {
+        showToast('المنشور غير موجود', 'error');
+        return;
+    }
+    
+    // جلب المستخدمين الذين حفظوا المنشور
+    var savers = users.filter(function(u) {
+        return u.savedPosts && u.savedPosts.indexOf(postId) !== -1;
+    });
+    
+    if (savers.length === 0) {
+        showToast('لا توجد محفوظات', 'info');
+        return;
+    }
+    
+    showInteractionsList(savers, 'المحفوظات', 'save');
+}
+
+// عرض قائمة التفاعلات في مودال
+function showInteractionsList(usersList, title, type) {
+    // إنشاء مودال مؤقت
+    var modal = document.createElement('div');
+    modal.className = 'modal interactions-modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas ${type === 'like' ? 'fa-heart' : 'fa-bookmark'}"></i> ${title}</h3>
+                <button class="btn-close" onclick="this.closest('.modal').remove()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="interactions-list">
+                ${usersList.map(function(user) {
+                    return `
+                        <div class="interaction-item" onclick="viewUserProfile('${user.uid}')">
+                            <img src="${user.avatar || ''}" onerror="this.src='${generateDefaultAvatar(user.displayName || 'مستخدم')}'" />
+                            <div class="interaction-info">
+                                <div class="interaction-name">${escapeHtml(user.displayName || 'مستخدم')}</div>
+                                <div class="interaction-sub">${user.college ? getCollegeName(user.college) : ''}</div>
+                            </div>
+                            <span class="interaction-badge ${type}">${type === 'like' ? '❤️' : '📌'}</span>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    
+    // إظهار المودال
+    setTimeout(function() {
+        modal.classList.add('active');
+        modal.style.display = 'flex';
+    }, 50);
+    
+    // إغلاق عند النقر خارج المودال
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+}
+
+// عرض المحفوظات الخاصة بي
+function showMySavedPosts() {
+    if (!currentUser) {
+        showToast('يرجى تسجيل الدخول', 'error');
+        return;
+    }
+    
+    var savedPosts = currentUserData?.savedPosts || [];
+    if (savedPosts.length === 0) {
+        showToast('لا توجد منشورات محفوظة', 'info');
+        return;
+    }
+    
+    // تصفية المنشورات المحفوظة
+    var saved = posts.filter(function(p) {
+        return savedPosts.indexOf(p.id) !== -1;
+    });
+    
+    if (saved.length === 0) {
+        showToast('لا توجد منشورات محفوظة', 'info');
+        return;
+    }
+    
+    // عرض المنشورات في مودال
+    var modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width:700px;max-height:80vh;overflow-y:auto;">
+            <div class="modal-header">
+                <h3><i class="fas fa-bookmark"></i> المنشورات المحفوظة</h3>
+                <button class="btn-close" onclick="this.closest('.modal').remove()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="posts-feed">
+                ${saved.map(function(post) {
+                    return buildPostHTML(post);
+                }).join('')}
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    
+    setTimeout(function() {
+        modal.classList.add('active');
+        modal.style.display = 'flex';
+    }, 50);
+}
+
+// إضافة زر عرض المحفوظات في تبويب المنشورات
+function addSavedPostsTab() {
+    // تم إضافته في index.html كـ 'المحفوظة'
+}
+
+// ===== إضافة أحداث للتبويبات =====
+document.addEventListener('DOMContentLoaded', function() {
+    // إضافة أحداث لتبويبات المنشورات
+    document.querySelectorAll('.posts-tab').forEach(function(tab) {
+        tab.addEventListener('click', function(e) {
+            var filter = this.dataset.filter;
+            console.log('🔍 Tab clicked:', filter);
+            filterPosts(filter);
+        });
+    });
+});
+
+// دالة مساعدة لحساب درجة التريند
+function calculateTrendingScore(post) {
+    var now = Date.now();
+    var createdAt = post.createdAt?.seconds ? post.createdAt.seconds * 1000 : 0;
+    var age = now - createdAt; // العمر بالمللي ثانية
+    
+    // إذا كان المنشور جديداً (أقل من ساعة)، نعطيه أولوية
+    var hours = Math.max(0.1, age / (60 * 60 * 1000));
+    
+    var likes = (post.likes || []).length;
+    var comments = (post.comments || []).length;
+    var views = post.views || 0;
+    
+    // درجة التفاعل: (إعجابات + تعليقات * 3 + مشاهدات * 0.1) / (الساعات + 1)
+    // نضرب التعليقات بـ 3 لأنها تفاعل أقوى
+    var interactionScore = (likes + comments * 3 + views * 0.05) / (hours + 1);
+    
+    return interactionScore;
+}
+// ============================================================
+//  تهيئة أزرار التبويبات
+// ============================================================
+
+function initPostTabs() {
+    console.log('🔄 Initializing post tabs...');
+    
+    var tabs = document.querySelectorAll('.posts-tab');
+    console.log('📌 Found tabs:', tabs.length);
+    
+    tabs.forEach(function(tab) {
+        // إزالة أي أحداث سابقة
+        tab.removeEventListener('click', handleTabClick);
+        // إضافة الحدث الجديد
+        tab.addEventListener('click', handleTabClick);
+    });
+}
+
+function handleTabClick(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    var filter = this.dataset.filter;
+    console.log('🔍 Tab clicked with filter:', filter);
+    
+    if (!filter) {
+        console.warn('⚠️ No filter found on tab');
+        return;
+    }
+    
+    handleFilterClick(filter, this);
+}
+
+// استدعاء التهيئة عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(initPostTabs, 100);
+});
+
+// ============================================================
+//  دالة معالجة النقر على التبويبات (باستخدام onclick)
+// ============================================================
+
+function handleFilterClick(filter, element) {
+    console.log('🔍 Filter clicked:', filter);
+    
+    if (!filter) {
+        console.warn('⚠️ No filter provided');
+        return;
+    }
+    
+    // تحديث الأزرار
+    document.querySelectorAll('.posts-tab').forEach(function(tab) {
+        tab.classList.remove('active');
+    });
+    if (element) {
+        element.classList.add('active');
+    } else {
+        var tab = document.querySelector('.posts-tab[data-filter="' + filter + '"]');
+        if (tab) tab.classList.add('active');
+    }
+    
+    // تحديث المتغيرات
+    currentPostFilter = filter;
+    postsPage = 1;
+    
+    console.log('🔄 Reloading posts with filter:', filter);
+    
+    // ===== إلغاء الاستماع القديم =====
+    if (postsListener) {
+        console.log('🔄 Unsubscribing from old listener');
+        try {
+            postsListener();
+        } catch (e) {
+            console.warn('Error unsubscribing:', e);
+        }
+        postsListener = null;
+    }
+    
+    // ===== تحميل المنشورات الجديدة =====
+    loadPosts(filter, 1);
+}
+
+function debugFilterStatus() {
+    console.log('📊 === FILTER STATUS ===');
+    console.log('  currentPostFilter:', currentPostFilter);
+    console.log('  postsPage:', postsPage);
+    console.log('  posts.length:', posts.length);
+    console.log('  active tab:', document.querySelector('.posts-tab.active')?.dataset?.filter || 'none');
+}
+
+// ============================================================
+//  FOLLOW SYSTEM - نظام المتابعة المتطور
+// ============================================================
+
+// متابعة مستخدم
+async function followUser(uid) {
+    if (!currentUser) {
+        showToast('يرجى تسجيل الدخول', 'error');
+        return;
+    }
+    if (uid === currentUser.uid) {
+        showToast('لا يمكنك متابعة نفسك', 'warning');
+        return;
+    }
+    
+    if (isUserBlocked(uid) || isUserBlockedBy(uid)) {
+        showToast('لا يمكنك متابعة هذا المستخدم', 'error');
+        return;
+    }
+    
+    var user = users.find(function(u) { return u.uid === uid; });
+    if (!user) {
+        showToast('المستخدم غير موجود', 'error');
+        return;
+    }
+    
+    try {
+        // تحديث المستخدم الحالي (إضافة إلى قائمة المتابعين)
+        var following = currentUserData.following || [];
+        if (following.indexOf(uid) !== -1) {
+            showToast('أنت تتابع هذا المستخدم بالفعل', 'warning');
+            return;
+        }
+        following.push(uid);
+        await db.collection('users').doc(currentUser.uid).update({
+            following: following
+        });
+        currentUserData.following = following;
+        
+        // تحديث المستخدم الآخر (إضافة إلى قائمة المتابعين لديه)
+        var targetRef = db.collection('users').doc(uid);
+        var targetDoc = await targetRef.get();
+        if (targetDoc.exists) {
+            var targetData = targetDoc.data();
+            var followers = targetData.followers || [];
+            if (followers.indexOf(currentUser.uid) === -1) {
+                followers.push(currentUser.uid);
+                await targetRef.update({ followers: followers });
+            }
+            // تحديث البيانات المحلية للطرف الآخر
+            var targetUser = users.find(function(u) { return u.uid === uid; });
+            if (targetUser) {
+                targetUser.followers = followers;
+            }
+        }
+        
+        // إرسال إشعار
+        await sendNotification(uid, {
+            message: `👤 ${currentUserData.displayName || currentUser.email} بدأ متابعتك`,
+            type: 'follow',
+            link: '/users'
+        });
+        
+        showToast('✅ تم متابعة المستخدم بنجاح', 'success');
+        
+        // ===== تحديث جميع الواجهات =====
+        updateUserInList(currentUserData);
+        updateStudentsStats(); // تحديث الإحصائيات
+        refreshCurrentUserProfileModal(); // تحديث مودال المستخدم
+        renderUsers(); // تحديث قائمة المستخدمين
+        
+        // ===== تحديث القائمة الحالية =====
+        refreshCurrentStudentList();
+        
+    } catch (error) {
+        console.error('Error following user:', error);
+        showToast('حدث خطأ: ' + error.message, 'error');
+    }
+}
+
+// إلغاء متابعة مستخدم
+async function unfollowUser(uid) {
+    if (!currentUser) {
+        showToast('يرجى تسجيل الدخول', 'error');
+        return;
+    }
+    if (uid === currentUser.uid) {
+        showToast('لا يمكنك إلغاء متابعة نفسك', 'warning');
+        return;
+    }
+    
+    var user = users.find(function(u) { return u.uid === uid; });
+    if (!user) {
+        showToast('المستخدم غير موجود', 'error');
+        return;
+    }
+    
+    try {
+        // تحديث المستخدم الحالي (إزالة من قائمة المتابعين)
+        var following = currentUserData.following || [];
+        var idx = following.indexOf(uid);
+        if (idx === -1) {
+            showToast('أنت لا تتابع هذا المستخدم', 'warning');
+            return;
+        }
+        following.splice(idx, 1);
+        await db.collection('users').doc(currentUser.uid).update({
+            following: following
+        });
+        currentUserData.following = following;
+        
+        // تحديث المستخدم الآخر (إزالة من قائمة المتابعين لديه)
+        var targetRef = db.collection('users').doc(uid);
+        var targetDoc = await targetRef.get();
+        if (targetDoc.exists) {
+            var targetData = targetDoc.data();
+            var followers = targetData.followers || [];
+            var fIdx = followers.indexOf(currentUser.uid);
+            if (fIdx !== -1) {
+                followers.splice(fIdx, 1);
+                await targetRef.update({ followers: followers });
+            }
+            // تحديث البيانات المحلية للطرف الآخر
+            var targetUser = users.find(function(u) { return u.uid === uid; });
+            if (targetUser) {
+                targetUser.followers = followers;
+            }
+        }
+        
+        showToast('✅ تم إلغاء متابعة المستخدم', 'success');
+        
+        // ===== تحديث جميع الواجهات =====
+        updateUserInList(currentUserData);
+        updateStudentsStats(); // تحديث الإحصائيات
+        refreshCurrentUserProfileModal(); // تحديث مودال المستخدم
+        renderUsers(); // تحديث قائمة المستخدمين
+        
+        // ===== تحديث القائمة الحالية =====
+        refreshCurrentStudentList();
+        
+    } catch (error) {
+        console.error('Error unfollowing user:', error);
+        showToast('حدث خطأ: ' + error.message, 'error');
+    }
+}
+
+// تحديث القائمة الحالية
+function refreshCurrentStudentList() {
+    var container = document.getElementById('studentListContainer');
+    if (!container) return;
+    
+    // الحصول على نوع القائمة الحالية من التبويب النشط
+    var activeTab = document.querySelector('.view-tab.active, .students-tab.active');
+    var listType = activeTab ? activeTab.dataset.view : 'all';
+    
+    console.log('🔄 Refreshing list:', listType);
+    
+    // إعادة عرض القائمة حسب النوع
+    switch(listType) {
+        case 'all':
+            renderAllStudents(container);
+            break;
+        case 'following':
+            renderFollowingList(container);
+            break;
+        case 'followers':
+            renderFollowersList(container);
+            break;
+        case 'trusted':
+            renderTrustedList(container);
+            break;
+        case 'reports':
+            renderReportsList(container);
+            break;
+        case 'banned':
+            if (isAdmin) renderBannedList(container);
+            else renderAllStudents(container);
+            break;
+        case 'gifts':
+            renderGiftsList(container);
+            break;
+        case 'messages':
+            renderMessagesList(container);
+            break;
+        case 'blocked':
+            renderBlockedList(container);
+            break;
+        default:
+            renderAllStudents(container);
+    }
+}
+
+// التحقق من حالة المتابعة
+function isFollowing(uid) {
+    if (!currentUserData) return false;
+    var following = currentUserData.following || [];
+    return following.indexOf(uid) !== -1;
+}
+
+// الحصول على حالة المتابعة (للعرض)
+function getFollowStatus(uid) {
+    if (uid === currentUser?.uid) return 'self';
+    if (isFollowing(uid)) return 'following';
+    return 'none';
+}
+
+// الحصول على شارة المتابعة
+function getFollowBadge(status) {
+    var badges = {
+        'self': '<span class="follow-badge self"><i class="fas fa-user"></i> أنت</span>',
+        'following': '<span class="follow-badge following"><i class="fas fa-user-check" style="color:var(--success);"></i> تتابعه</span>',
+        'none': '<span class="follow-badge none"><i class="fas fa-user-plus" style="color:var(--gray-400);"></i> غير متابع</span>'
+    };
+    return badges[status] || badges['none'];
+}
+
+// عرض قائمة المتابعين (في صفحة الطلاب)
+function renderFollowingList(container) {
+    if (!container) return;
+    if (!currentUserData) {
+        container.innerHTML = '<div class="empty-state-modern"><i class="fas fa-user-plus"></i><h4>يرجى تسجيل الدخول</h4></div>';
+        return;
+    }
+
+    var followingUids = currentUserData.following || [];
+    console.log('📊 Following UIDs:', followingUids);
+    
+    if (followingUids.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state-modern">
+                <i class="fas fa-user-plus"></i>
+                <h4>لا تتابع أحداً</h4>
+                <p>قم بمتابعة المستخدمين لرؤية منشوراتهم</p>
+            </div>
+        `;
+        return;
+    }
+
+    var following = users.filter(function(u) {
+        return followingUids.indexOf(u.uid) !== -1 && u.role !== 'admin';
+    });
+
+    console.log('📊 Following users:', following.length);
+
+    if (following.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state-modern">
+                <i class="fas fa-user-plus"></i>
+                <h4>لا تتابع أحداً</h4>
+                <p>المستخدمون الذين تتابعهم غير موجودين</p>
+            </div>
+        `;
+        return;
+    }
+
+    var html = '<div class="users-cards-grid">';
+    following.forEach(function(user) {
+        html += buildUserCardSimple(user, true);
+    });
+    html += '</div>';
+    container.innerHTML = html;
+
+    setTimeout(function() {
+        applyCustomizationsToUserCards();
+        var customization = currentUserData ? currentUserData.customization || {} : {};
+        applyCardSizeToAll(customization.cardSize);
+        applyCursorStyleToAll(customization.cursorStyle);
+        applyBorderRadiusToAll(customization.borderRadius);
+        applyHoverEffectToAll(customization.hoverEffect);
+        applyOpacityToAll(customization.opacity);
+    }, 50);
+}
+
+// عرض قائمة المتابعين لي (في صفحة الطلاب)
+function renderFollowersList(container) {
+    if (!container) return;
+    if (!currentUserData) {
+        container.innerHTML = '<div class="empty-state-modern"><i class="fas fa-user-friends"></i><h4>يرجى تسجيل الدخول</h4></div>';
+        return;
+    }
+
+    var followersUids = currentUserData.followers || [];
+    console.log('📊 Followers UIDs:', followersUids);
+    
+    if (followersUids.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state-modern">
+                <i class="fas fa-user-friends"></i>
+                <h4>لا يوجد متابعين</h4>
+                <p>لم يتابعك أي مستخدم بعد</p>
+            </div>
+        `;
+        return;
+    }
+
+    var followers = users.filter(function(u) {
+        return followersUids.indexOf(u.uid) !== -1 && u.role !== 'admin';
+    });
+
+    console.log('📊 Followers users:', followers.length);
+
+    if (followers.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state-modern">
+                <i class="fas fa-user-friends"></i>
+                <h4>لا يوجد متابعين</h4>
+                <p>المستخدمون الذين يتابعونك غير موجودين</p>
+            </div>
+        `;
+        return;
+    }
+
+    var html = '<div class="users-cards-grid">';
+    followers.forEach(function(user) {
+        html += buildUserCardSimple(user, true);
+    });
+    html += '</div>';
+    container.innerHTML = html;
+
+    setTimeout(function() {
+        applyCustomizationsToUserCards();
+        var customization = currentUserData ? currentUserData.customization || {} : {};
+        applyCardSizeToAll(customization.cardSize);
+        applyCursorStyleToAll(customization.cursorStyle);
+        applyBorderRadiusToAll(customization.borderRadius);
+        applyHoverEffectToAll(customization.hoverEffect);
+        applyOpacityToAll(customization.opacity);
+    }, 50);
+}
+
+// ============================================================
+//  COMMENTS MODAL - نظام التعليقات المتطور
+// ============================================================
+
+var currentCommentPostId = null;
+
+// ===== إغلاق مودال التعليقات =====
+function closeCommentsModal() {
+    currentCommentPostId = null;
+    closeModal('commentsModal');
+}
+
+// ============================================================
+//  عرض التعليقات في المودال - مع حفظ حالة الردود
+// ============================================================
+
+// ===== متغير لتخزين حالة الردود =====
+var repliesVisibilityState = {};
+var commentIdCounter = 0;
+
+// ===== دالة للحصول على جميع الردود بشكل مسطح (بدون تداخل) =====
+function getAllRepliesFlat(commentTree, parentId) {
+    var result = [];
+    var directReplies = commentTree[parentId] || [];
+    
+    directReplies.forEach(function(reply) {
+        result.push(reply);
+        // جلب الردود على هذا الرد بشكل متكرر
+        var nestedReplies = getAllRepliesFlat(commentTree, reply._id);
+        result = result.concat(nestedReplies);
+    });
+    
+    return result;
+}
+
+// ===== إظهار/إخفاء الردود مع حفظ الحالة =====
+window.toggleRepliesVisibility = function(repliesId) {
+    var container = document.getElementById(repliesId);
+    if (!container) return;
+    
+    var parentComment = container.closest('.comment-item');
+    var btn = parentComment ? parentComment.querySelector('.toggle-replies-btn') : null;
+    var icon = btn ? btn.querySelector('.toggle-icon') : null;
+    
+    var isVisible = container.style.display !== 'none';
+    var newState = !isVisible;
+    
+    repliesVisibilityState[repliesId] = newState;
+    
+    if (newState) {
+        container.style.display = 'block';
+        if (icon) {
+            icon.className = 'fas fa-chevron-down toggle-icon';
+        }
+        if (btn) {
+            btn.classList.remove('collapsed');
+        }
+    } else {
+        container.style.display = 'none';
+        if (icon) {
+            icon.className = 'fas fa-chevron-left toggle-icon';
+        }
+        if (btn) {
+            btn.classList.add('collapsed');
+        }
+    }
+};
+
+// ===== فتح مودال التعليقات المتطور =====
+function openCommentsModal(postId) {
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) {
+        showToast('المنشور غير موجود', 'error');
+        return;
+    }
+    
+    currentCommentPostId = postId;
+    
+    // ===== إعادة تعيين حالة الردود =====
+    repliesVisibilityState = {};
+    
+    var modal = document.getElementById('commentsModal');
+    var list = document.getElementById('commentsModalList');
+    var count = document.getElementById('commentsModalCount');
+    var author = document.getElementById('commentsModalPostAuthor');
+    var postText = document.getElementById('commentsModalPostText');
+    var input = document.getElementById('commentsModalInput');
+    
+    if (!modal || !list) {
+        console.error('⚠️ عناصر مودال التعليقات غير موجودة');
+        createCommentsModal();
+        modal = document.getElementById('commentsModal');
+        list = document.getElementById('commentsModalList');
+        count = document.getElementById('commentsModalCount');
+        author = document.getElementById('commentsModalPostAuthor');
+        postText = document.getElementById('commentsModalPostText');
+        input = document.getElementById('commentsModalInput');
+    }
+    
+    var user = users.find(function(u) { return u.uid === post.uid; });
+    var userName = user ? user.displayName : 'مستخدم';
+    author.textContent = '💬 ' + userName;
+    postText.textContent = post.text ? post.text.substring(0, 80) + (post.text.length > 80 ? '...' : '') : '';
+    
+    var comments = post.comments || [];
+    count.textContent = comments.length + ' تعليق';
+    
+    if (input) {
+        input.value = '';
+        input.placeholder = 'اكتب تعليقاً...';
+        delete input.dataset.replyTo;
+        input.onkeydown = function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendCommentFromModal();
+            }
+        };
+    }
+    
+    // ===== عرض التعليقات مع التصنيف =====
+    renderCommentsInModal(comments, postId);
+    openModal('commentsModal', { layer: 2 });
+}
+
+// ===== عرض التعليقات في المودال مع دعم الردود المتداخلة =====
+function renderCommentsInModal(comments, postId) {
+    var list = document.getElementById('commentsModalList');
+    if (!list) return;
+    
+    if (!comments || comments.length === 0) {
+        list.innerHTML = `
+            <div class="comments-empty">
+                <i class="fas fa-comment-slash"></i>
+                <p>لا توجد تعليقات بعد</p>
+                <small>كن أول من يعلق!</small>
+            </div>
+        `;
+        return;
+    }
+    
+    // ===== إعطاء كل تعليق معرف فريد =====
+    var commentsWithId = comments.map(function(c) {
+        if (!c._id) {
+            commentIdCounter++;
+            c._id = 'comment_' + commentIdCounter + '_' + Date.now();
+        }
+        return c;
+    });
+    
+    // ===== بناء شجرة التعليقات =====
+    var commentTree = {};
+    var mainComments = [];
+    
+    commentsWithId.forEach(function(c) {
+        if (c.replyTo) {
+            if (!commentTree[c.replyTo]) {
+                commentTree[c.replyTo] = [];
+            }
+            commentTree[c.replyTo].push(c);
+        } else {
+            mainComments.push(c);
+        }
+    });
+    
+    // ===== ترتيب التعليقات (الأحدث أولاً) =====
+    mainComments.sort(function(a, b) {
+        var timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+        var timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+        return timeB - timeA;
+    });
+    
+    var html = '';
+    
+    mainComments.forEach(function(mainComment) {
+        var c = mainComment;
+        var commenter = users.find(function(u) { return u.uid === c.uid; });
+        var cName = commenter ? commenter.displayName : 'مستخدم';
+        var cAvatar = commenter && commenter.avatar ? commenter.avatar : generateDefaultAvatar(cName);
+        var isCommentLiked = currentUser && c.likes && c.likes.indexOf(currentUser.uid) !== -1;
+        var timeAgo = getTimeAgo(c.timestamp);
+        var isOwner = currentUser && c.uid === currentUser.uid;
+        var isAdminComment = commenter && commenter.role === 'admin';
+        
+        // ===== الحصول على جميع الردود =====
+        var allReplies = getAllRepliesFlat(commentTree, c._id);
+        
+        // ===== ترتيب الردود (الأقدم أولاً) =====
+        allReplies.sort(function(a, b) {
+            var timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+            var timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+            return timeA - timeB;
+        });
+        
+        var repliesId = 'replies_' + postId + '_' + c._id;
+        var commentIndex = commentsWithId.indexOf(c);
+        
+        if (repliesVisibilityState[repliesId] === undefined) {
+            repliesVisibilityState[repliesId] = false;
+        }
+        var isVisible = repliesVisibilityState[repliesId];
+        var displayStyle = isVisible ? 'block' : 'none';
+        var iconClass = isVisible ? 'fa-chevron-down' : 'fa-chevron-left';
+        var btnClass = isVisible ? '' : 'collapsed';
+        
+        // ===== عرض التعليق الأصلي =====
+        html += `
+            <div class="comment-item main-comment" data-comment-id="${c._id}" data-comment-uid="${c.uid}">
+                <div class="comment-main">
+                    <img src="${cAvatar}" onerror="this.src='${generateDefaultAvatar(cName)}'" class="comment-avatar" onclick="event.stopPropagation();viewUserProfile('${c.uid}')" style="cursor:pointer;" />
+                    <div class="comment-body">
+                        <div class="comment-author" onclick="event.stopPropagation();viewUserProfile('${c.uid}')" style="cursor:pointer;">
+                            ${escapeHtml(cName)}
+                            ${isAdminComment ? `<span class="comment-role admin">🛡️ مشرف</span>` : ''}
+                            <span class="comment-time">· ${timeAgo}</span>
+                        </div>
+                        <div class="comment-text">${escapeHtml(c.text)}</div>
+                        <div class="comment-actions">
+                            <button class="comment-action-btn ${isCommentLiked ? 'liked' : ''}" onclick="likeComment('${postId}', ${commentIndex}, this)" title="${isCommentLiked ? 'إلغاء الإعجاب' : 'إعجاب'}">
+                                <i class="fas ${isCommentLiked ? 'fa-heart' : 'fa-heart'}"></i>
+                                <span class="comment-like-count">${(c.likes || []).length}</span>
+                            </button>
+                            <button class="comment-action-btn" onclick="replyCommentInModal('${postId}', '${c._id}')" title="رد">
+                                <i class="fas fa-reply"></i>
+                            </button>
+                            <button class="comment-action-btn" onclick="reportComment('${postId}', ${commentIndex})" title="الإبلاغ">
+                                <i class="fas fa-flag"></i>
+                            </button>
+                            ${isOwner ? `
+                                <button class="comment-action-btn" onclick="editComment('${postId}', ${commentIndex})" title="تعديل">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="comment-action-btn danger" onclick="deleteComment('${postId}', ${commentIndex})" title="حذف">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            ` : ''}
+                            ${allReplies.length > 0 ? `
+                                <button class="comment-action-btn toggle-replies-btn ${btnClass}" onclick="toggleRepliesVisibility('${repliesId}')" title="${allReplies.length} رد">
+                                    <i class="fas fa-comments"></i>
+                                    <span class="replies-count">${allReplies.length}</span>
+                                    <i class="fas ${iconClass} toggle-icon"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // ===== عرض الردود =====
+        if (allReplies.length > 0) {
+            html += `<div class="replies-container" id="${repliesId}" style="display:${displayStyle};margin-top:0.2rem;margin-right:2rem;">`;
+            
+            allReplies.forEach(function(r) {
+                var replier = users.find(function(u) { return u.uid === r.uid; });
+                var rName = replier ? replier.displayName : 'مستخدم';
+                var rAvatar = replier && replier.avatar ? replier.avatar : generateDefaultAvatar(rName);
+                var rTimeAgo = getTimeAgo(r.timestamp);
+                var rIsLiked = currentUser && r.likes && r.likes.indexOf(currentUser.uid) !== -1;
+                var rIsOwner = currentUser && r.uid === currentUser.uid;
+                var rIndex = commentsWithId.indexOf(r);
+                var rIsAdmin = replier && replier.role === 'admin';
+                
+                var repliedToName = '';
+                if (r.replyTo) {
+                    var parentComment = commentsWithId.find(function(c) { return c._id === r.replyTo; });
+                    if (parentComment) {
+                        var parentUser = users.find(function(u) { return u.uid === parentComment.uid; });
+                        repliedToName = parentUser ? parentUser.displayName : 'مستخدم';
+                    }
+                }
+                
+                html += `
+                    <div class="comment-item reply-comment" data-comment-id="${r._id}" data-comment-uid="${r.uid}">
+                        <div class="comment-main">
+                            <img src="${rAvatar}" onerror="this.src='${generateDefaultAvatar(rName)}'" class="comment-avatar" onclick="event.stopPropagation();viewUserProfile('${r.uid}')" style="cursor:pointer;width:28px;height:28px;" />
+                            <div class="comment-body">
+                                <div class="comment-author" onclick="event.stopPropagation();viewUserProfile('${r.uid}')" style="cursor:pointer;font-size:0.8rem;">
+                                    ${escapeHtml(rName)}
+                                    ${rIsAdmin ? `<span class="comment-role admin">🛡️</span>` : ''}
+                                    ${repliedToName ? `<span style="font-size:0.6rem;color:var(--gray-400);">→ @${repliedToName}</span>` : ''}
+                                    <span class="comment-time">· ${rTimeAgo}</span>
+                                </div>
+                                <div class="comment-text" style="font-size:0.85rem;">${escapeHtml(r.text)}</div>
+                                <div class="comment-actions">
+                                    <button class="comment-action-btn ${rIsLiked ? 'liked' : ''}" onclick="likeComment('${postId}', ${rIndex}, this)" title="${rIsLiked ? 'إلغاء الإعجاب' : 'إعجاب'}">
+                                        <i class="fas ${rIsLiked ? 'fa-heart' : 'fa-heart'}"></i>
+                                        <span class="comment-like-count">${(r.likes || []).length}</span>
+                                    </button>
+                                    <button class="comment-action-btn" onclick="replyCommentInModal('${postId}', '${r._id}')" title="رد">
+                                        <i class="fas fa-reply"></i>
+                                    </button>
+                                    <button class="comment-action-btn" onclick="reportComment('${postId}', ${rIndex})" title="الإبلاغ">
+                                        <i class="fas fa-flag"></i>
+                                    </button>
+                                    ${rIsOwner ? `
+                                        <button class="comment-action-btn" onclick="editComment('${postId}', ${rIndex})" title="تعديل">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="comment-action-btn danger" onclick="deleteComment('${postId}', ${rIndex})" title="حذف">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `</div>`;
+        }
+    });
+    
+    list.innerHTML = html;
+    
+    setTimeout(function() {
+        list.scrollTop = 0;
+    }, 100);
+}
+
+// ===== إرسال تعليق من المودال =====
+async function sendCommentFromModal() {
+    if (!currentUser) {
+        showToast('يرجى تسجيل الدخول', 'error');
+        return;
+    }
+    
+    var input = document.getElementById('commentsModalInput');
+    if (!input) return;
+    
+    var text = input.value.trim();
+    if (!text) {
+        showToast('يرجى كتابة تعليق', 'warning');
+        return;
+    }
+    
+    var postId = currentCommentPostId;
+    if (!postId) {
+        showToast('حدث خطأ', 'error');
+        return;
+    }
+    
+    var replyTo = input.dataset.replyTo || null;
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) {
+        showToast('المنشور غير موجود', 'error');
+        return;
+    }
+    
+    var comments = post.comments || [];
+    var savedState = JSON.parse(JSON.stringify(repliesVisibilityState));
+    
+    commentIdCounter++;
+    var newCommentId = 'comment_' + commentIdCounter + '_' + Date.now();
+    
+    var newComment = {
+        uid: currentUser.uid,
+        text: text,
+        timestamp: new Date().toISOString(),
+        replyTo: replyTo,
+        likes: [],
+        _id: newCommentId
+    };
+    
+    // ===== إضافة التعليق في الموقع المناسب =====
+    if (replyTo) {
+        var parentFound = false;
+        var insertIndex = comments.length;
+        
+        for (var i = 0; i < comments.length; i++) {
+            if (comments[i]._id === replyTo) {
+                parentFound = true;
+                insertIndex = i + 1;
+                for (var j = insertIndex; j < comments.length; j++) {
+                    if (comments[j].replyTo === replyTo || comments[j].replyTo === comments[i]._id) {
+                        insertIndex = j + 1;
+                    } else if (!comments[j].replyTo) {
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+        
+        if (!parentFound) {
+            insertIndex = comments.length;
+        }
+        
+        comments.splice(insertIndex, 0, newComment);
+    } else {
+        comments.unshift(newComment);
+    }
+    
+    try {
+        await db.collection('posts').doc(postId).update({ comments: comments });
+        post.comments = comments;
+        
+        input.value = '';
+        input.placeholder = 'اكتب تعليقاً...';
+        delete input.dataset.replyTo;
+        
+        repliesVisibilityState = savedState;
+        renderCommentsInModal(comments, postId);
+        
+        var count = document.getElementById('commentsModalCount');
+        if (count) {
+            count.textContent = comments.length + ' تعليق';
+        }
+        
+        updatePostCommentCount(postId, comments.length);
+        
+        // ===== إرسال إشعار لصاحب المنشور =====
+        if (post.uid !== currentUser.uid) {
+            await sendNotification(post.uid, {
+                message: `💬 ${currentUserData.displayName || currentUser.email} علق على منشورك: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`,
+                type: 'comment',
+                link: '/posts'
+            });
+        }
+        
+        showToast('✅ تم إضافة التعليق', 'success');
+        
+    } catch (error) {
+        console.error('Error sending comment:', error);
+        showToast('حدث خطأ: ' + error.message, 'error');
+    }
+}
+
+// ===== دالة عرض مع الحفاظ على حالة الردود =====
+function renderCommentsInModalWithState(comments, postId, savedState) {
+    // استعادة الحالة المحفوظة
+    if (savedState) {
+        repliesVisibilityState = savedState;
+    }
+    renderCommentsInModal(comments, postId);
+}
+
+
+
+// ===== دالة مساعدة للحصول على جميع الردود (بما فيها الردود على الردود) =====
+function getAllReplies(allComments, parentId) {
+    var result = [];
+    var directReplies = allComments.filter(function(c) {
+        return c.replyTo === parentId;
+    });
+    
+    directReplies.forEach(function(reply) {
+        result.push(reply);
+        // جلب الردود على هذا الرد (ردود متداخلة)
+        var nestedReplies = getAllReplies(allComments, reply._id);
+        result = result.concat(nestedReplies);
+    });
+    
+    return result;
+}
+
+// ===== دالة لعرض الردود بشكل متداخل =====
+function renderReplies(replies, allComments, postId) {
+    var html = '';
+    
+    replies.forEach(function(r) {
+        var replier = users.find(function(u) { return u.uid === r.uid; });
+        var rName = replier ? replier.displayName : 'مستخدم';
+        var rAvatar = replier && replier.avatar ? replier.avatar : generateDefaultAvatar(rName);
+        var rTimeAgo = getTimeAgo(r.timestamp);
+        var rIsLiked = currentUser && r.likes && r.likes.indexOf(currentUser.uid) !== -1;
+        var rIsOwner = currentUser && r.uid === currentUser.uid;
+        var rIndex = allComments.indexOf(r);
+        
+        // البحث عن اسم الشخص الذي تم الرد عليه
+        var repliedToName = '';
+        if (r.replyTo) {
+            var parentComment = allComments.find(function(c) { return c._id === r.replyTo; });
+            if (parentComment) {
+                var parentUser = users.find(function(u) { return u.uid === parentComment.uid; });
+                repliedToName = parentUser ? parentUser.displayName : 'مستخدم';
+            }
+        }
+        
+        // الحصول على الردود على هذا الرد
+        var nestedReplies = getAllReplies(allComments, r._id);
+        
+        var repliesId = 'replies_' + postId + '_' + r._id;
+        
+        html += `
+            <div class="comment-item comment-reply" data-comment-id="${r._id}" data-comment-uid="${r.uid}">
+                <div class="comment-main">
+                    <img src="${rAvatar}" onerror="this.src='${generateDefaultAvatar(rName)}'" class="comment-avatar" onclick="event.stopPropagation();viewUserProfile('${r.uid}')" style="cursor:pointer;width:28px;height:28px;" />
+                    <div class="comment-body">
+                        <div class="comment-author" onclick="event.stopPropagation();viewUserProfile('${r.uid}')" style="cursor:pointer;font-size:0.75rem;">
+                            ${escapeHtml(rName)}
+                            ${repliedToName ? `<span style="font-size:0.6rem;color:var(--gray-400);">→ @${repliedToName}</span>` : ''}
+                            <span class="comment-time">· ${rTimeAgo}</span>
+                        </div>
+                        <div class="comment-text" style="font-size:0.8rem;">${escapeHtml(r.text)}</div>
+                        <div class="comment-actions">
+                            <button class="comment-action-btn ${rIsLiked ? 'liked' : ''}" onclick="likeComment('${postId}', ${rIndex}, this)" title="${rIsLiked ? 'إلغاء الإعجاب' : 'إعجاب'}">
+                                <i class="fas ${rIsLiked ? 'fa-heart' : 'fa-heart'}"></i>
+                                <span class="comment-like-count">${(r.likes || []).length}</span>
+                            </button>
+                            <button class="comment-action-btn" onclick="replyCommentInModal('${postId}', '${r._id}')" title="رد">
+                                <i class="fas fa-reply"></i>
+                            </button>
+                            <button class="comment-action-btn" onclick="reportComment('${postId}', ${rIndex})" title="الإبلاغ">
+                                <i class="fas fa-flag"></i>
+                            </button>
+                            ${rIsOwner ? `
+                                <button class="comment-action-btn" onclick="editComment('${postId}', ${rIndex})" title="تعديل">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="comment-action-btn danger" onclick="deleteComment('${postId}', ${rIndex})" title="حذف">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            ` : ''}
+                            ${nestedReplies.length > 0 ? `
+                                <button class="comment-action-btn toggle-replies-btn" onclick="toggleRepliesVisibility('${repliesId}')" title="${nestedReplies.length} رد">
+                                    <i class="fas fa-comments"></i>
+                                    <span class="replies-count">${nestedReplies.length}</span>
+                                    <i class="fas fa-chevron-down toggle-icon"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+                ${nestedReplies.length > 0 ? `
+                    <div class="replies-container" id="${repliesId}" style="display:block;margin-top:0.2rem;padding-right:1.5rem;border-right:2px solid var(--border-color);">
+                        ${renderReplies(nestedReplies, allComments, postId)}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    });
+    
+    return html;
+}
+
+// ===== إظهار/إخفاء الردود =====
+window.toggleRepliesVisibility = function(repliesId) {
+    var container = document.getElementById(repliesId);
+    if (!container) return;
+    
+    var parentItem = container.closest('.comment-item');
+    var btn = parentItem ? parentItem.querySelector('.toggle-replies-btn') : null;
+    var icon = btn ? btn.querySelector('.toggle-icon') : null;
+    
+    if (container.style.display === 'none') {
+        container.style.display = 'block';
+        if (icon) {
+            icon.className = 'fas fa-chevron-down toggle-icon';
+        }
+        if (btn) {
+            btn.classList.remove('collapsed');
+        }
+    } else {
+        container.style.display = 'none';
+        if (icon) {
+            icon.className = 'fas fa-chevron-left toggle-icon';
+        }
+        if (btn) {
+            btn.classList.add('collapsed');
+        }
+    }
+};
+
+// ===== الرد على تعليق في المودال =====
+function replyCommentInModal(postId, commentId) {
+    var input = document.getElementById('commentsModalInput');
+    if (!input) return;
+    
+    // البحث عن التعليق باستخدام _id
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) return;
+    
+    var comments = post.comments || [];
+    var targetComment = null;
+    for (var i = 0; i < comments.length; i++) {
+        if (comments[i]._id === commentId) {
+            targetComment = comments[i];
+            break;
+        }
+    }
+    
+    if (!targetComment) {
+        showToast('التعليق غير موجود', 'error');
+        return;
+    }
+    
+    var commenter = users.find(function(u) { return u.uid === targetComment.uid; });
+    var name = commenter ? commenter.displayName : 'المستخدم';
+    
+    input.focus();
+    input.placeholder = 'رد على @' + name + '...';
+    input.dataset.replyTo = commentId; // نستخدم _id كمعرّف للربط
+}
+
+// ===== الإبلاغ عن تعليق =====
+window.reportComment = async function(postId, commentIndex) {
+    if (!currentUser) {
+        showToast('يرجى تسجيل الدخول أولاً', 'error');
+        return;
+    }
+    
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) return;
+    
+    var comments = post.comments || [];
+    if (!comments[commentIndex]) return;
+    
+    var comment = comments[commentIndex];
+    var commenter = users.find(function(u) { return u.uid === comment.uid; });
+    var commenterName = commenter ? commenter.displayName : 'مستخدم';
+    
+    var reason = prompt('أدخل سبب الإبلاغ عن هذا التعليق (من ' + commenterName + '):');
+    if (reason === null) return;
+    if (!reason.trim()) {
+        showToast('يرجى إدخال سبب', 'warning');
+        return;
+    }
+    
+    try {
+        await db.collection('reports').add({
+            postId: postId,
+            commentIndex: commentIndex,
+            commentText: comment.text,
+            commenterUid: comment.uid,
+            uid: currentUser.uid,
+            reason: reason.trim(),
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            resolved: false,
+            type: 'comment'
+        });
+        showToast('✅ تم الإبلاغ عن التعليق، سيتم مراجعته من قبل المشرف', 'success');
+        // إغلاق القائمة
+        document.querySelectorAll('.comment-dropdown-menu').forEach(function(menu) {
+            menu.style.display = 'none';
+        });
+    } catch (error) {
+        console.error('Error reporting comment:', error);
+        showToast('حدث خطأ أثناء الإبلاغ', 'error');
+    }
+};
+
+// ===== تعديل تعليق =====
+window.editComment = function(postId, commentIndex) {
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) return;
+    
+    var comments = post.comments || [];
+    if (!comments[commentIndex]) return;
+    
+    var comment = comments[commentIndex];
+    
+    // التحقق من أن المستخدم هو صاحب التعليق
+    if (comment.uid !== currentUser.uid) {
+        showToast('لا يمكنك تعديل تعليق ليس لك', 'error');
+        return;
+    }
+    
+    // إغلاق القائمة
+    document.querySelectorAll('.comment-dropdown-menu').forEach(function(menu) {
+        menu.style.display = 'none';
+    });
+    
+    // البحث عن عنصر التعليق في DOM
+    var commentsContainer = document.getElementById('commentsModalList');
+    if (!commentsContainer) return;
+    
+    var commentItems = commentsContainer.querySelectorAll('.comment-item');
+    var targetItem = commentItems[commentIndex];
+    if (!targetItem) return;
+    
+    var textElement = targetItem.querySelector('.comment-text');
+    if (!textElement) return;
+    
+    var currentText = textElement.textContent;
+    
+    // استبدال النص بصندوق كتابة
+    var editInput = document.createElement('input');
+    editInput.type = 'text';
+    editInput.className = 'comment-edit-input';
+    editInput.value = currentText;
+    editInput.style.cssText = 'width:100%;padding:0.2rem 0.6rem;border:2px solid var(--primary);border-radius:12px;background:var(--gray-50);font-size:0.85rem;color:var(--text-color);';
+    
+    textElement.replaceWith(editInput);
+    
+    // التركيز على الحقل
+    editInput.focus();
+    editInput.select();
+    
+    // إضافة أزرار حفظ وإلغاء
+    var actionsElement = targetItem.querySelector('.comment-actions');
+    if (actionsElement) {
+        // إزالة الأزرار القديمة
+        var oldBtns = actionsElement.querySelectorAll('.edit-actions');
+        oldBtns.forEach(function(btn) { btn.remove(); });
+        
+        var editActions = document.createElement('span');
+        editActions.className = 'edit-actions';
+        editActions.style.cssText = 'display:flex;gap:0.3rem;';
+        
+        var saveBtn = document.createElement('button');
+        saveBtn.className = 'btn btn-success btn-sm';
+        saveBtn.innerHTML = '<i class="fas fa-save"></i> حفظ';
+        saveBtn.onclick = function() {
+            var newText = editInput.value.trim();
+            if (!newText) {
+                showToast('التعليق لا يمكن أن يكون فارغاً', 'warning');
+                return;
+            }
+            
+            comment.text = newText;
+            
+            db.collection('posts').doc(postId).update({ comments: comments }).then(function() {
+                renderCommentsInModal(comments, postId);
+                // تحديث عدد التعليقات في المنشور
+                updatePostCommentCount(postId, comments.length);
+                showToast('✅ تم تعديل التعليق', 'success');
+            }).catch(function(error) {
+                console.error('Error editing comment:', error);
+                showToast('حدث خطأ', 'error');
+            });
+        };
+        
+        var cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn btn-outline btn-sm';
+        cancelBtn.innerHTML = '<i class="fas fa-times"></i> إلغاء';
+        cancelBtn.onclick = function() {
+            renderCommentsInModal(comments, postId);
+        };
+        
+        editActions.appendChild(saveBtn);
+        editActions.appendChild(cancelBtn);
+        actionsElement.appendChild(editActions);
+    }
+};
+
+// استبدل الدالة بـ:
+window.deleteComment = async function(postId, commentIndex) {
+    if (!currentUser) {
+        showToast('يرجى تسجيل الدخول', 'error');
+        return;
+    }
+    
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) return;
+    
+    var comments = post.comments || [];
+    if (!comments[commentIndex]) return;
+    
+    // التحقق من أن المستخدم هو صاحب التعليق
+    if (comments[commentIndex].uid !== currentUser.uid) {
+        showToast('لا يمكنك حذف تعليق ليس لك', 'error');
+        return;
+    }
+    
+    if (!confirm('هل أنت متأكد من حذف هذا التعليق؟')) return;
+    
+    try {
+        // حفظ حالة الردود قبل التحديث
+        var savedState = JSON.parse(JSON.stringify(repliesVisibilityState));
+        
+        // حذف التعليق
+        var deletedComment = comments[commentIndex];
+        comments.splice(commentIndex, 1);
+        
+        // حذف الردود المرتبطة بهذا التعليق
+        if (deletedComment && deletedComment.uid) {
+            for (var i = comments.length - 1; i >= 0; i--) {
+                if (comments[i].replyTo === deletedComment.uid) {
+                    comments.splice(i, 1);
+                }
+            }
+        }
+        
+        await db.collection('posts').doc(postId).update({ comments: comments });
+        post.comments = comments;
+        
+        // ✅ تحديث العرض مع الحفاظ على حالة الردود
+        if (document.getElementById('commentsModal').classList.contains('active')) {
+            renderCommentsInModal(comments, postId);
+            // استعادة حالة الردود
+            repliesVisibilityState = savedState;
+            Object.keys(savedState).forEach(function(key) {
+                var container = document.getElementById(key);
+                if (container) {
+                    container.style.display = savedState[key] ? 'block' : 'none';
+                }
+            });
+            var count = document.getElementById('commentsModalCount');
+            if (count) {
+                count.textContent = comments.length + ' تعليق';
+            }
+        }
+        
+        // تحديث عدد التعليقات في المنشور
+        updatePostCommentCount(postId, comments.length);
+        
+        // إغلاق القائمة
+        document.querySelectorAll('.comment-dropdown-menu').forEach(function(menu) {
+            menu.style.display = 'none';
+        });
+        
+        showToast('✅ تم حذف التعليق', 'success');
+        
+    } catch (error) {
+        console.error('Error deleting comment:', error);
+        showToast('حدث خطأ: ' + error.message, 'error');
+    }
+};
+
+// ===== تبديل قائمة التعليق المنسدلة =====
+function toggleCommentDropdown(postId, commentIndex) {
+    var menu = document.getElementById('commentDropdown-' + postId + '-' + commentIndex);
+    if (!menu) return;
+    
+    // إغلاق جميع القوائم الأخرى
+    document.querySelectorAll('.comment-dropdown-menu').forEach(function(m) {
+        if (m.id !== 'commentDropdown-' + postId + '-' + commentIndex) {
+            m.style.display = 'none';
+        }
+    });
+    
+    menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+// ===== إغلاق القوائم عند النقر خارجها =====
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.comment-dropdown')) {
+        document.querySelectorAll('.comment-dropdown-menu').forEach(function(menu) {
+            menu.style.display = 'none';
+        });
+    }
+    if (!e.target.closest('.post-dropdown')) {
+        document.querySelectorAll('.post-dropdown-menu').forEach(function(menu) {
+            menu.style.display = 'none';
+        });
+    }
+});
+
+// ===== تحديث عدد التعليقات في المنشور =====
+function updatePostCommentCount(postId, count) {
+    var postCard = document.querySelector('.post-card[data-id="' + postId + '"]');
+    if (postCard) {
+        var commentCounts = postCard.querySelectorAll('.comment-count');
+        commentCounts.forEach(function(el) {
+            el.textContent = count;
+        });
+        
+        var statsComments = postCard.querySelector('.post-stats span:nth-child(2)');
+        if (statsComments) {
+            statsComments.innerHTML = '<i class="fas fa-comment"></i> ' + count;
+        }
+    }
+}
+
+// ============================================================
+//  GET TIME AGO - حساب الوقت المنقضي
+// ============================================================
+
+function getTimeAgo(timestamp) {
+    if (!timestamp) return 'الآن';
+    
+    var date;
+    if (timestamp.seconds) {
+        date = new Date(timestamp.seconds * 1000);
+    } else if (typeof timestamp === 'string') {
+        date = new Date(timestamp);
+    } else {
+        date = new Date(timestamp);
+    }
+    
+    if (isNaN(date.getTime())) return 'الآن';
+    
+    var now = new Date();
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    
+    var diffDays = Math.floor((today - dateOnly) / (1000 * 60 * 60 * 24));
+    
+    // الوقت (الساعة والدقائق فقط)
+    var hours = date.getHours().toString().padStart(2, '0');
+    var minutes = date.getMinutes().toString().padStart(2, '0');
+    var timeStr = hours + ':' + minutes;
+    
+    // التاريخ
+    var days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    var months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+    
+    if (diffDays === 0) {
+        // اليوم
+        return 'اليوم ' + timeStr;
+    } else if (diffDays === 1) {
+        // الأمس
+        return 'الأمس ' + timeStr;
+    } else if (diffDays < 7) {
+        // نفس الأسبوع (منذ أيام)
+        var dayName = days[date.getDay()];
+        return dayName + ' ' + timeStr;
+    } else if (date.getFullYear() === now.getFullYear()) {
+        // نفس السنة
+        var day = date.getDate().toString().padStart(2, '0');
+        var month = months[date.getMonth()];
+        return day + ' ' + month + ' ' + timeStr;
+    } else {
+        // أكثر من سنة
+        var day2 = date.getDate().toString().padStart(2, '0');
+        var month2 = months[date.getMonth()];
+        var year = date.getFullYear();
+        return day2 + ' ' + month2 + ' ' + year + ' ' + timeStr;
+    }
+}
+
+// ===== أنواع التفاعلات =====
+var REACTION_TYPES = {
+    'like': { emoji: '👍', label: 'أعجبني', color: '#3b82f6' },
+    'love': { emoji: '❤️', label: 'أحببته', color: '#ef4444' },
+    'laugh': { emoji: '😂', label: 'ضحكت', color: '#f59e0b' },
+    'sad': { emoji: '😢', label: 'أحزنني', color: '#8b5cf6' },
+    'angry': { emoji: '😡', label: 'أغضبني', color: '#dc2626' },
+    'wow': { emoji: '😮', label: 'مذهل', color: '#14b8a6' }
+};
+
+// ===== إضافة أو إزالة تفاعل =====
+async function addReaction(postId, reactionType) {
+    if (!currentUser) {
+        showToast('يرجى تسجيل الدخول', 'error');
+        return;
+    }
+    
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) return;
+    
+    if (!post.reactions) post.reactions = {};
+    if (!post.reactions[reactionType]) post.reactions[reactionType] = [];
+    
+    var userReaction = getUserReaction(post);
+    var currentReactions = post.reactions[reactionType];
+    var idx = currentReactions.indexOf(currentUser.uid);
+    var isReacting = idx === -1;
+    
+    // ===== إذا كان المستخدم يضغط على نفس التفاعل => إزالته =====
+    if (userReaction === reactionType) {
+        // إزالة التفاعل الحالي
+        var oldReactions = post.reactions[reactionType] || [];
+        var oldIdx = oldReactions.indexOf(currentUser.uid);
+        if (oldIdx !== -1) {
+            oldReactions.splice(oldIdx, 1);
+            post.reactions[reactionType] = oldReactions;
+        }
+        
+        try {
+            await db.collection('posts').doc(postId).update({ reactions: post.reactions });
+            updatePostReactionsUI(postId);
+            updatePostStatsUI(postId);
+            
+            // ===== تحديث مودال التفاعلات إذا كان مفتوحاً =====
+            var modal = document.getElementById('reactionsModal');
+            if (modal && modal.classList.contains('active')) {
+                var currentFilter = modal.dataset.filter || 'all';
+                renderReactionsModalTabs(postId, currentFilter);
+            }
+            
+            showToast('❌ تم إزالة التفاعل', 'warning');
+            return;
+        } catch (error) {
+            console.error('Error removing reaction:', error);
+            showToast('حدث خطأ', 'error');
+            return;
+        }
+    }
+    
+    // ===== إزالة التفاعل السابق إذا كان مختلفاً =====
+    if (userReaction && userReaction !== reactionType) {
+        var oldReactions = post.reactions[userReaction] || [];
+        var oldIdx = oldReactions.indexOf(currentUser.uid);
+        if (oldIdx !== -1) {
+            oldReactions.splice(oldIdx, 1);
+            post.reactions[userReaction] = oldReactions;
+        }
+    }
+    
+    // ===== إضافة التفاعل الجديد =====
+    if (isReacting) {
+        currentReactions.push(currentUser.uid);
+        post.reactions[reactionType] = currentReactions;
+    }
+    
+    try {
+        await db.collection('posts').doc(postId).update({ reactions: post.reactions });
+        
+        // ===== تحديث الواجهة =====
+        updatePostReactionsUI(postId);
+        updatePostStatsUI(postId);
+        
+        // ===== إغلاق القائمة المنسدلة =====
+        var picker = document.getElementById('reactionPicker-' + postId);
+        if (picker) picker.style.display = 'none';
+        
+        // ===== تحديث مودال التفاعلات إذا كان مفتوحاً =====
+        var modal = document.getElementById('reactionsModal');
+        if (modal && modal.classList.contains('active')) {
+            var currentFilter = modal.dataset.filter || 'all';
+            renderReactionsModalTabs(postId, currentFilter);
+        }
+        
+        // ===== إرسال إشعار =====
+        if (isReacting && post.uid !== currentUser.uid) {
+            var reactionLabel = REACTION_TYPES[reactionType]?.label || reactionType;
+            await sendNotification(post.uid, {
+                message: `${REACTION_TYPES[reactionType]?.emoji || '📢'} ${currentUserData.displayName || currentUser.email} ${reactionLabel} على منشورك`,
+                type: 'reaction',
+                link: '/posts'
+            });
+        }
+        
+        showToast(isReacting ? 
+            `✅ ${REACTION_TYPES[reactionType]?.label || 'تفاعل'} ${REACTION_TYPES[reactionType]?.emoji || ''}` : 
+            '❌ تم إزالة التفاعل', 'success');
+        
+    } catch (error) {
+        console.error('Error adding reaction:', error);
+        showToast('حدث خطأ', 'error');
+    }
+}
+
+// ===== تبديل قائمة اختيار التفاعل =====
+function toggleReactionPicker(postId) {
+    var picker = document.getElementById('reactionPicker-' + postId);
+    if (!picker) return;
+    
+    // إغلاق القوائم الأخرى
+    document.querySelectorAll('.reaction-picker').forEach(function(el) {
+        if (el.id !== 'reactionPicker-' + postId) {
+            el.style.display = 'none';
+        }
+    });
+    
+    var isVisible = picker.style.display === 'block';
+    picker.style.display = isVisible ? 'none' : 'block';
+}
+
+// ===== إغلاق القوائم عند النقر خارجها =====
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.reaction-picker-container') && !e.target.closest('.reaction-picker-btn')) {
+        document.querySelectorAll('.reaction-picker').forEach(function(el) {
+            el.style.display = 'none';
+        });
+    }
+});
+
+// ===== الحصول على تفاعل المستخدم =====
+function getUserReaction(post) {
+    if (!post.reactions) return null;
+    for (var type in post.reactions) {
+        if (post.reactions[type] && post.reactions[type].indexOf(currentUser?.uid) !== -1) {
+            return type;
+        }
+    }
+    return null;
+}
+
+// ===== حساب إجمالي التفاعلات =====
+function getTotalReactions(post) {
+    if (!post.reactions) return 0;
+    var total = 0;
+    for (var type in post.reactions) {
+        total += (post.reactions[type] || []).length;
+    }
+    return total;
+}
+
+// ===== الحصول على التفاعل الأكثر استخداماً =====
+function getTopReaction(post) {
+    if (!post.reactions) return 'like';
+    var topType = 'like';
+    var topCount = 0;
+    for (var type in post.reactions) {
+        var count = (post.reactions[type] || []).length;
+        if (count > topCount) {
+            topCount = count;
+            topType = type;
+        }
+    }
+    return topCount > 0 ? topType : null;
+}
+
+function updatePostReactionsUI(postId) {
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) return;
+    
+    var card = document.querySelector('.post-card[data-id="' + postId + '"]');
+    if (!card) return;
+    
+    // ===== تحديث زر عرض المتفاعلين =====
+    var showBtn = card.querySelector('.reactions-show-btn');
+    if (showBtn) {
+        var displaySpan = showBtn.querySelector('.reactions-display');
+        if (displaySpan) {
+            displaySpan.textContent = getReactionsPreview(post);
+        }
+        
+        var countSpan = showBtn.querySelector('.reactions-count');
+        if (countSpan) {
+            countSpan.textContent = getTotalReactions(post);
+        }
+    }
+    
+    // ===== تحديث زر اختيار التفاعل =====
+    var pickerBtn = card.querySelector('.reaction-picker-btn');
+    if (pickerBtn) {
+        var userReaction = getUserReaction(post);
+        pickerBtn.classList.toggle('active', !!userReaction);
+        
+        if (userReaction && REACTION_TYPES[userReaction]) {
+            pickerBtn.innerHTML = REACTION_TYPES[userReaction].emoji;
+        } else {
+            pickerBtn.innerHTML = '<i class="fas fa-plus-circle"></i><span class="picker-label">تفاعل</span>';
+        }
+    }
+}
+
+// ===== بناء شريط التفاعلات =====
+function buildReactionsBarHTML(post) {
+    if (!post.reactions) return '';
+    
+    var total = getTotalReactions(post);
+    if (total === 0) return '';
+    
+    var html = '<div class="reactions-bar">';
+    html += '<div class="reactions-bar-inner">';
+    
+    // ===== عرض الإيموجيات المتفاعلة =====
+    var reactionTypes = Object.keys(REACTION_TYPES);
+    var displayedTypes = [];
+    
+    reactionTypes.forEach(function(type) {
+        var count = (post.reactions[type] || []).length;
+        if (count > 0) {
+            displayedTypes.push({ type: type, count: count, emoji: REACTION_TYPES[type].emoji });
+        }
+    });
+    
+    // ===== عرض الإيموجيات (أول 4) =====
+    displayedTypes.forEach(function(item, index) {
+        if (index < 4) {
+            html += `<span class="reaction-emoji" title="${REACTION_TYPES[item.type].label} (${item.count})">${item.emoji}</span>`;
+        }
+    });
+    
+    if (displayedTypes.length > 4) {
+        html += `<span class="reaction-more">+${displayedTypes.length - 4}</span>`;
+    }
+    
+    html += '</div>';
+    
+    // ===== عدد التفاعلات =====
+    html += `<span class="reaction-total" onclick="showReactionsList('${post.id}')">${total}</span>`;
+    
+    html += '</div>';
+    return html;
+}
+
+// ===== عرض قائمة المتفاعلين =====
+function showReactionsList(postId) {
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) return;
+    
+    if (!post.reactions || getTotalReactions(post) === 0) {
+        showToast('لا توجد تفاعلات على هذا المنشور', 'info');
+        return;
+    }
+    
+    // ===== تجميع جميع المتفاعلين =====
+    var allReactors = {};
+    for (var type in post.reactions) {
+        var reactors = post.reactions[type] || [];
+        reactors.forEach(function(uid) {
+            if (!allReactors[uid]) {
+                allReactors[uid] = [];
+            }
+            allReactors[uid].push(type);
+        });
+    }
+    
+    var reactorUids = Object.keys(allReactors);
+    var reactorUsers = users.filter(function(u) {
+        return reactorUids.indexOf(u.uid) !== -1;
+    });
+    
+    // ===== ترتيب حسب نوع التفاعل =====
+    var order = ['like', 'love', 'laugh', 'sad', 'angry', 'wow'];
+    reactorUsers.sort(function(a, b) {
+        var aTypes = allReactors[a.uid] || [];
+        var bTypes = allReactors[b.uid] || [];
+        var aOrder = order.indexOf(aTypes[0] || 'like');
+        var bOrder = order.indexOf(bTypes[0] || 'like');
+        return aOrder - bOrder;
+    });
+    
+    // ===== عرض المودال =====
+    var modal = document.getElementById('reactionsModal');
+    var content = document.getElementById('reactionsModalContent');
+    if (!modal || !content) {
+        createReactionsModal();
+        modal = document.getElementById('reactionsModal');
+        content = document.getElementById('reactionsModalContent');
+    }
+    
+    var title = document.getElementById('reactionsModalTitle');
+    if (title) {
+        var totalReactions = getTotalReactions(post);
+        title.textContent = '🎭 التفاعلات (' + totalReactions + ')';
+    }
+    
+    // ===== عرض في صف واحد (flex-wrap) =====
+    var html = '<div class="reactions-list" style="display:flex;flex-wrap:wrap;gap:0.3rem;padding:0.3rem;">';
+    
+    reactorUsers.forEach(function(user) {
+        var userReactions = allReactors[user.uid] || [];
+        var reactionEmojis = userReactions.map(function(type) {
+            return REACTION_TYPES[type]?.emoji || '👍';
+        }).join(' ');
+        
+        // ===== الحصول على حالة المتابعة =====
+        var followStatus = getFollowStatus(user.uid);
+        var followBadge = '';
+        if (followStatus === 'following') {
+            followBadge = '<span class="follow-badge following"><i class="fas fa-user-check"></i></span>';
+        } else if (followStatus === 'self') {
+            followBadge = '<span class="follow-badge self">👤</span>';
+        } else {
+            followBadge = `<button class="follow-btn" onclick="event.stopPropagation();followUser('${user.uid}')">متابعة</button>`;
+        }
+        
+        html += `
+            <div class="reaction-item" onclick="viewUserProfile('${user.uid}')">
+                <div class="reaction-item-avatar">
+                    <img src="${user.avatar || ''}" onerror="this.src='${generateDefaultAvatar(user.displayName || 'مستخدم')}'" />
+                    <div class="reaction-item-emoji">${reactionEmojis}</div>
+                </div>
+                <div class="reaction-item-info">
+                    <div class="reaction-item-name">${escapeHtml(user.displayName || 'مستخدم')}</div>
+                    <div class="reaction-item-follow">${followBadge}</div>
+                </div>
+                <div class="reaction-item-reactions">${reactionEmojis}</div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    content.innerHTML = html;
+    openModal('reactionsModal', { layer: 2 });
+}
+
+// ===== تبديل قائمة التفاعلات =====
+function toggleReactionDropdown(postId) {
+    var dropdown = document.getElementById('reactionDropdown-' + postId);
+    if (!dropdown) return;
+    
+    // إغلاق القوائم الأخرى
+    document.querySelectorAll('.reaction-dropdown').forEach(function(el) {
+        if (el.id !== 'reactionDropdown-' + postId) {
+            el.style.display = 'none';
+        }
+    });
+    
+    dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+}
+
+// ===== إغلاق القوائم عند النقر خارجها =====
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.reaction-dropdown-container')) {
+        document.querySelectorAll('.reaction-dropdown').forEach(function(el) {
+            el.style.display = 'none';
+        });
+    }
+});
+
+// ===== تحديث إحصائيات المنشور =====
+function updatePostStatsUI(postId) {
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) return;
+    
+    var card = document.querySelector('.post-card[data-id="' + postId + '"]');
+    if (!card) return;
+    
+    var totalReactions = getTotalReactions(post);
+    var statsItems = card.querySelectorAll('.post-stats .stat-item');
+    if (statsItems.length > 0) {
+        var reactionsStat = statsItems[0];
+        var countSpan = reactionsStat.querySelector('span:last-child');
+        if (countSpan) {
+            countSpan.textContent = totalReactions;
+        }
+    }
+}
 
 // ============================================================
 //  INIT
@@ -17987,8 +26210,36 @@ async function init() {
         await loadUserData(currentUser.uid);
         updateUI();
         applyAllCustomizations(currentUserData);
+        applyAllCustomizationsToAllCards(); // ✅ إضافة
+        loadPosts('all', 1);
+        showPage('posts'); // الصفحة الافتراضية
+        updatePostBoxAvatar();
+        updatePostBoxUserInfo();
+    } else {
+        // عرض المنشورات للزوار مع تعطيل الأزرار
+        loadPosts('all', 1);
+        showPage('posts'); // الصفحة الافتراضية
+        // تعطيل أزرار التفاعل
+        document.querySelectorAll('.post-actions .btn').forEach(function(btn) {
+            btn.onclick = function(e) {
+                if (!currentUser) {
+                    e.preventDefault();
+                    showToast('يرجى تسجيل الدخول للتفاعل', 'error');
+                }
+            };
+        });
     }
     await loadAllData();
+        // التأكد من أن جميع الصفحات مخفية في البداية
+    Object.keys(pages).forEach(function(key) {
+        if (pages[key]) {
+            pages[key].classList.remove('active');
+            pages[key].style.display = 'none';
+        }
+    });
+        // تهيئة أزرار التبويبات
+    initPostTabs();
+
     await populateCollegeDropdowns();
     await loadColleges();
     await loadSpecialties();
