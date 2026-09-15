@@ -1,1181 +1,502 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>مقيّم | منصة تقييم المواد الجامعية المتطورة</title>
-    <link rel="stylesheet" href="style.css" />
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
-    </script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js">
-    </script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js">
-    </script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js">
-    </script>
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&family=Cairo:wght@400;700&family=Readex+Pro:wght@400;700&family=Noto+Sans+Arabic:wght@400;700&family=Amiri:wght@400;700&family=Lateef:wght@400;700&family=Scheherazade+New:wght@400;700&family=Inter:wght@400;700&family=Fredoka+One&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SHIFT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-    <div id="app">
-<!-- ===== NAVIGATION ===== -->
-<nav class="navbar" id="mainNav">
-    <div class="nav-container">
-        <div class="nav-brand">
-            <i class="fas fa-graduation-cap"></i>
-            <span>مقيّم</span>
+<div id="wrap">
+  <canvas id="c"></canvas>
+
+  <div id="hud">
+    <div class="hud-col">
+      <div class="run-stats">
+        <div class="stat-pill coins">
+          <span class="icon">◆</span>
+          <span class="val" id="hud-coins">0</span>
         </div>
-<div class="nav-links" id="navLinks">
-    <a href="#" class="nav-link active" data-page="posts"><i class="fas fa-newspaper"></i> الرئيسية</a>
-    <a href="#" class="nav-link" data-page="profile" id="navProfileLink"><i class="fas fa-user"></i> ملفي الشخصي</a>
-    <a href="#" class="nav-link" data-page="materials"><i class="fas fa-graduation-cap"></i> مقيم</a>
-    <a href="#" class="nav-link" data-page="users"><i class="fas fa-users"></i> الطلاب</a>
-    <a href="#" class="nav-link" data-page="admins"><i class="fas fa-user-shield"></i> الإدارة</a>
-    <a href="#" class="nav-link" data-page="settings" id="navSettingsLink"><i class="fas fa-cog"></i> الإعدادات</a>
-    <a href="#" class="nav-link" data-page="admin" id="adminLink"><i class="fas fa-cog"></i> لوحة المشرف</a>
+        <div class="stat-pill meters">
+          <span class="val" id="hud-meters">0</span>
+          <span class="unit">م</span>
+        </div>
+        <div class="stat-pill combo" id="combo-pill" style="display:none;">
+          <span class="icon">×</span>
+          <span class="val" id="hud-combo">2</span>
+        </div>
+      </div>
+      <div class="level-pill">
+        <div class="bar"><div class="bar-fill" id="level-bar" style="width:0%"></div></div>
+        <div class="num" id="level-num">LVL 1</div>
+      </div>
+      <div class="powerups-row" id="powerups-row"></div>
+    </div>
+    <div class="hud-col right">
+      <button id="pause-btn">❚❚</button>
+    </div>
+  </div>
+
+  <div id="scene-tag">DAWN</div>
+  <div id="hint"></div>
+
+  <div id="levelup">
+    <div class="lvl-title">LEVEL UP</div>
+    <div class="lvl-num" id="lvl-num-display">2</div>
+    <div class="lvl-reward" id="lvl-reward-display">◆ +30</div>
+  </div>
+
+  <div id="overlay" class="active">
+
+    <!-- ============ LOGIN SCREEN ============ -->
+<!-- ============ LOGIN SCREEN ============ -->
+<div class="screen" id="s-login">
+  <div class="login-screen">
+    <div class="login-deco"></div>
+    <div class="login-brand">
+      <div class="brand-name lg">SH<span class="accent">I</span>FT</div>
+      <div class="brand-sub lg">CALM ARCADE</div>
+    </div>
+    <div class="login-tagline">سجّل دخولك بـ Google لحفظ تقدمك ومزامنته بين الأجهزة</div>
+
+    <div class="login-buttons">
+      <button class="social-btn google" id="login-google">
+        <svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true">
+          <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.4 29.3 35.5 24 35.5 16.9 35.5 11.2 30 11.2 22.9S16.9 10.4 24 10.4c3.3 0 6.3 1.2 8.6 3.3l5.7-5.7C34.4 4.6 29.4 2.5 24 2.5 12.1 2.5 2.3 12.2 2.3 24S12.1 45.5 24 45.5 45.7 35.8 45.7 24c0-1.2-.1-2.4-.3-3.5z"/>
+          <path fill="#FF3D00" d="M4.7 15.1l6.6 4.8C13.1 16.6 18.1 13 24 13c3.3 0 6.3 1.2 8.6 3.3l5.7-5.7C34.4 7.1 29.4 5 24 5 16.2 5 9.4 8.6 4.7 15.1z"/>
+          <path fill="#4CAF50" d="M24 43c5.3 0 10.2-2 13.8-5.4l-6.4-5.4c-2.1 1.6-4.7 2.5-7.4 2.5-5.2 0-9.6-3.3-11.2-7.9l-6.5 5C9.1 39 16 43 24 43z"/>
+          <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.7 2-2 3.7-3.7 4.9l6.4 5.4c-.5.4 5.7-4.1 5.7-14.3 0-1.2-.1-2.4-.1-3.5z"/>
+        </svg>
+        <span>المتابعة مع Google</span>
+      </button>
+    </div>
+
+    <div class="login-note">
+      بالمتابعة أنت توافق على حفظ بيانات تقدمك في السحابة.
+    </div>
+
+    <div class="login-loading" id="login-loading" style="display:none;">
+      <div class="spinner"></div>
+      <div class="loading-text">جارٍ الاتصال...</div>
+    </div>
+
+    <div class="login-error" id="login-error" style="display:none;"></div>
+  </div>
 </div>
-<!-- تم حذف الكليات والتخصصات -->
-        <div class="nav-actions">
-            <button class="theme-toggle" id="themeToggle" title="الوضع المظلم/النهاري">
-                <i class="fas fa-moon"></i>
+
+    <!-- ============ PROFILE SETUP ============ -->
+    <div class="screen" id="s-profile-setup">
+      <div class="profile-screen">
+        <div class="profile-avatar-big" id="setup-avatar">
+          <span id="setup-avatar-emoji">👤</span>
+        </div>
+        <div class="setup-title">اختر اسم اللاعب</div>
+        <div class="setup-sub">سيظهر هذا الاسم في ملفك الشخصي</div>
+
+        <div class="setup-input-wrap">
+          <input type="text" id="setup-username" maxlength="16" placeholder="اسمك هنا..." autocomplete="off" spellcheck="false">
+          <span class="char-counter" id="setup-counter">0/16</span>
+        </div>
+        <div class="setup-status" id="setup-status"></div>
+
+        <button class="action-btn" id="setup-confirm" disabled>تأكيد الاسم</button>
+        <div class="setup-hint">سيتم إنشاء معرّف حسابي فريد تلقائياً</div>
+      </div>
+    </div>
+
+    <!-- ============ HOME ============ -->
+    <div class="screen" id="s-home">
+      <div class="home">
+        <div class="home-top">
+          <div class="brand">
+            <div class="brand-name">SH<span class="accent">I</span>FT</div>
+            <div class="brand-sub">CALM ARCADE</div>
+          </div>
+          <div class="top-pills">
+            <button class="profile-mini" id="profile-mini" title="ملفي الشخصي">
+              <span id="profile-mini-emoji">👤</span>
+              <img id="profile-mini-img" style="display:none;" alt="">
             </button>
-            <div style="display:flex;align-items:center;gap:0.5rem;position:relative;">
-                <button class="notification-btn" id="notificationBtn" onclick="toggleNotifications()">
-                    <i class="fas fa-bell"></i>
-                    <span class="badge" id="notificationBadge" style="display:none;">0</span>
-                </button>
-                <div class="notification-dropdown" id="notificationDropdown">
-                    <div class="notification-header">
-                        <span>الإشعارات</span>
-                        <button class="btn btn-sm btn-outline" onclick="markAllNotificationsRead()">تحديد الكل كمقروء</button>
-                    </div>
-                    <div id="notificationList" class="notification-list"></div>
-                </div>
-            </div>
-            <div class="nav-auth" id="navAuth">
-<!-- أزرار تسجيل الدخول والتسجيل -->
-<button class="btn btn-outline" id="loginBtn"><i class="fas fa-sign-in-alt"></i> دخول</button>
-<button class="btn btn-primary" id="registerBtn"><i class="fas fa-user-plus"></i> تسجيل</button>
-                <button class="btn btn-danger" id="logoutBtn" style="display:none;"><i class="fas fa-sign-out-alt"></i> خروج</button>
-            </div>
-        </div>
-        <button class="nav-toggle" id="navToggle"><i class="fas fa-bars"></i></button>
-    </div>
-</nav>
-
-        <!-- ===== PAGES ===== -->
-        <div class="pages-container">
-
-<!-- ===== PAGE: POSTS (الرئيسية المتطورة) ===== -->
-<div class="page active" id="page-posts">
-    <div class="posts-container">
-        <!-- نموذج إنشاء منشور متطور -->
-<!-- نموذج إنشاء منشور -->
-<div class="create-post-card">
-    <div class="create-post-header">
-        <img id="postUserAvatar" src="" alt="avatar" class="post-avatar-sm" />
-<!-- في index.html، استبدل حقل الإدخال -->
-<div style="display:flex;flex-direction:column;flex:1;gap:0.2rem;">
-    <span id="postUserNameDisplay" style="font-weight:600;font-size:0.85rem;color:var(--text-color);"></span>
-    <textarea id="postContentInput" placeholder="ماذا تريد أن تنشر؟" 
-              rows="1" 
-              style="border:none;padding:0.6rem 1rem;border-radius:30px;background:var(--gray-50);font-size:0.95rem;outline:none;transition:var(--transition);width:100%;resize:none;font-family:inherit;min-height:44px;max-height:200px;overflow-y:auto;"></textarea>
-</div>
-    </div>
-    
-    <!-- أزرار اختيار نوع المنشور -->
-    <div class="create-post-type">
-        <button class="type-btn active" data-type="text" onclick="setPostType('text')"><i class="fas fa-pencil-alt"></i> نص</button>
-        <button class="type-btn" data-type="image" onclick="setPostType('image')"><i class="fas fa-image"></i> صورة</button>
-        <button class="type-btn" data-type="poll" onclick="setPostType('poll')"><i class="fas fa-poll"></i> استطلاع</button>
-        <button class="type-btn" data-type="link" onclick="setPostType('link')"><i class="fas fa-link"></i> رابط</button>
-    </div>
-    
-    <!-- حقول النوع -->
-    <div id="postTypeFields">
-        <!-- حقل الصورة مع معاينة وحذف -->
-        <div id="postImageInput" style="display:none;">
-            <input type="file" id="postImageFile" accept="image/*" multiple />
-            <div id="postImagePreview" class="post-image-preview"></div>
-            <small>يمكنك اختيار عدة صور، انقر على الصورة لحذفها</small>
-        </div>
-        
-        <!-- حقل الاستطلاع -->
-        <div id="pollInput" style="display:none;">
-            <input type="text" id="pollQuestion" placeholder="سؤال الاستطلاع" class="form-control" />
-            <div id="pollOptionsContainer">
-                <input type="text" class="poll-option-input" placeholder="خيار 1" />
-                <input type="text" class="poll-option-input" placeholder="خيار 2" />
-            </div>
-            <button class="btn btn-sm btn-outline" onclick="addPollOption()">+ إضافة خيار</button>
-        </div>
-        
-        <!-- حقل الرابط -->
-        <div id="linkInput" style="display:none;">
-            <input type="url" id="postLinkUrl" placeholder="رابط URL" class="form-control" />
-            <input type="text" id="postLinkTitle" placeholder="عنوان الرابط (اختياري)" class="form-control" style="margin-top:0.3rem;" />
-        </div>
-    </div>
-    
-    <div class="create-post-actions">
-        <button class="btn btn-primary" onclick="createPost()"><i class="fas fa-paper-plane"></i> نشر</button>
-        <button class="btn btn-outline" onclick="clearPostForm()"><i class="fas fa-times"></i> إلغاء</button>
-    </div>
-</div>
-
-<!-- تبويبات المنشورات -->
-<div class="posts-tabs" id="postsTabsContainer">
-    <button class="posts-tab active" data-filter="all" onclick="handleFilterClick('all', this)">
-        <i class="fas fa-globe"></i> الكل
-    </button>
-    <button class="posts-tab" data-filter="following" onclick="handleFilterClick('following', this)">
-        <i class="fas fa-user-friends"></i> أتابعه
-    </button>
-    <button class="posts-tab" data-filter="trending" onclick="handleFilterClick('trending', this)">
-        <i class="fas fa-fire"></i> الأكثر تفاعلاً
-    </button>
-</div>
-
-<!-- حاوية المنشورات -->
-<div id="postsContainer" class="posts-feed">
-    <div id="postsLoading" class="loading"><i class="fas fa-spinner fa-spin"></i> جاري تحميل المنشورات...</div>
-</div>
-
-
-        <!-- ترقيم الصفحات -->
-        <div id="postsPagination" class="posts-pagination"></div>
-    </div>
-</div>
-
-<!-- ===== PAGE: MATERIALS (مقيم) ===== -->
-<div class="page" id="page-materials">
-    <div class="materials-container">
-        <!-- محتوى المواد والمقارنة -->
-        <h2><i class="fas fa-graduation-cap"></i> مقيم - تقييم المواد</h2>
-        
-        <!-- الفلاتر -->
-        <div class="filters-bar">
-            <div class="filter-group">
-                <i class="fas fa-search"></i>
-                <input type="text" id="searchInput" placeholder="ابحث عن مادة..." />
-            </div>
-            <div class="filter-group">
-                <i class="fas fa-filter"></i>
-                <select id="filterYear">
-                    <option value="all">كل السنوات</option>
-                    <option value="1">السنة الأولى</option>
-                    <option value="2">السنة الثانية</option>
-                    <option value="3">السنة الثالثة</option>
-                    <option value="4">السنة الرابعة</option>
-                </select>
-            </div>
-            <button class="btn btn-outline" id="clearFiltersBtn"><i class="fas fa-times"></i> مسح</button>
-        </div>
-
-        <!-- المواد -->
-        <div id="coursesContainer" class="courses-grid"></div>
-
-        <!-- قسم المقارنة -->
-        <div class="compare-section">
-            <h3><i class="fas fa-balance-scale"></i> مقارنة المواد</h3>
-            <div class="compare-controls">
-                <div class="filter-group" style="flex:2;">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="compareSearch" placeholder="ابحث عن مادة..." />
-                </div>
-                <button class="btn btn-primary" id="addToCompareBtn"><i class="fas fa-plus"></i> إضافة</button>
-                <button class="btn btn-outline" id="clearCompareBtn"><i class="fas fa-times"></i> مسح</button>
-            </div>
-            <div id="compareList" class="compare-list"></div>
-            <div id="compareResults" class="compare-results"></div>
-        </div>
-    </div>
-</div>
-
-
-
-<!-- ===== PAGE: PROFILE ===== -->
-<div class="page" id="page-profile">
-    <div class="profile-container">
-        <!-- زر عرض الملف كما يراه الآخرون -->
-        <div class="profile-view-toggle">
-            <button class="btn btn-outline" onclick="viewMyProfileAsOther()">
-                <i class="fas fa-eye"></i> عرض الملف
+            <button class="global-level" id="global-lvl-btn" style="--p:0">
+              <div class="lvl-ring"><span class="n" id="global-lvl-num">1</span></div>
+              <div class="lvl-text">
+                <span class="l">GLOBAL</span>
+                <span class="v" id="global-lvl-meters">0م</span>
+              </div>
             </button>
+            <div class="coin-pill">
+              <span class="c">◆</span>
+              <span id="home-coins">0</span>
+            </div>
+          </div>
         </div>
 
-        <div class="profile-header">
-            <div class="profile-avatar" id="profileAvatarContainer">
-                <img id="profileAvatar" src="" alt="الصورة الشخصية" style="width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid var(--primary);" />
-                <button class="btn btn-outline" id="changeAvatarBtn" style="margin-top:0.5rem;font-size:0.7rem;"><i class="fas fa-camera"></i></button>
-                <input type="file" id="avatarInput" accept="image/*" style="display:none;" />
+        <div class="hero">
+          <div class="hero-avatar" id="hero-avatar"></div>
+          <div class="hero-info">
+            <div class="hero-eyebrow">أفضل مسافة</div>
+            <div class="hero-score">
+              <span id="hero-score">0</span>
+              <span class="unit">م</span>
             </div>
-            <div class="profile-info">
-                <!-- 1. الاسم -->
-                <h2 id="profileName">مستخدم</h2>
-                
-                <!-- 2. اسم المستخدم (فوق الشارة المميزة) -->
-                <div id="profileUsernameDisplay" style="font-size:0.9rem;color:var(--gray-400);margin-bottom:0.3rem;display:inline-flex;align-items:center;gap:0.3rem;direction:rtl;">
-                    <!-- ✅ @ على اليسار (قبل الاسم في الاتجاه العربي) -->
-                    <i class="fas fa-at" style="color:var(--gray-400);font-size:0.8rem;"></i>
-                    <span id="profileUsername">غير محدد</span>
-                    
-                </div>
-                
-                <!-- 5. الشارة المميزة (ستظهر هنا بواسطة JavaScript) -->
-                <div id="featuredBadgeContainer"></div>
-
-                <!-- 3. السيرة الذاتية -->
-                <p id="profileBioDisplay" style="color:var(--gray-500);font-size:0.9rem;margin:0.3rem 0;"></p>
-                
-                <!-- 6. الإحصائيات -->
-                <div class="profile-stats">
-                    <span><i class="fas fa-star"></i> <span id="profileFavCount">0</span> مفضلة</span>
-                    <span><i class="fas fa-check-circle"></i> <span id="profileCompleteCount">0</span> مجتازة</span>
-                    <span><i class="fas fa-vote-yea"></i> <span id="profileVoteCount">0</span> تصويت</span>
-                    <span><i class="fas fa-trophy"></i> <span id="profileBadgeCount">0</span> شارة</span>
-                    <span><i class="fas fa-handshake"></i> <span id="profileTrustCount">0</span> ثقة</span>
-                    <span><i class="fas fa-gem"></i> <span id="profilePointsDisplay">0</span> نقطة</span>
-                </div>
+            <div class="hero-mode">
+              <span id="hero-mode-name">قلب الجاذبية</span>
+              <span class="dot"></span>
+              <span class="hero-lvl" id="hero-mode-lvl">LVL 1</span>
             </div>
+          </div>
         </div>
 
-        <!-- أزرار الإجراءات -->
-        <div class="profile-actions-grid">
-            <button class="profile-action-btn" onclick="openCustomizationModal()">
-                <i class="fas fa-palette"></i>
-                <span>تخصيص الملف</span>
-            </button>
-            <button class="profile-action-btn" onclick="openBadgesModal()">
-                <i class="fas fa-trophy"></i>
-                <span>الشارات</span>
-            </button>
-            <button class="profile-action-btn" onclick="openAchievementsModal()">
-                <i class="fas fa-gem"></i>
-                <span>الإنجازات</span>
-            </button>
-            <button class="profile-action-btn" onclick="openEditProfileModal()">
-                <i class="fas fa-edit"></i>
-                <span>تعديل الملف</span>
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- ===== PAGE: USERS ===== -->
-<div class="page" id="page-users">
-    <div class="users-container">
-
-        <!-- ===== أدوات التحكم ===== -->
-        <div class="students-controls">
-            <div class="students-view-tabs">
-                <button class="view-tab active" onclick="switchStudentList('all')" data-view="all">
-                    <i class="fas fa-globe"></i> الكل
-                </button>
-                <button class="view-tab" onclick="switchStudentList('following')" data-view="following">
-                    <i class="fas fa-user-plus"></i> متابعين
-                    <span class="tab-badge" id="followingTabBadge">0</span>
-                </button>
-                <button class="view-tab" onclick="switchStudentList('followers')" data-view="followers">
-                    <i class="fas fa-user-friends"></i> متابعيني
-                    <span class="tab-badge" id="followersTabBadge">0</span>
-                </button>
-                <button class="view-tab" onclick="switchStudentList('trusted')" data-view="trusted">
-                    <i class="fas fa-handshake"></i> الثقات
-                    <span class="tab-badge" id="trustedTabBadge">0</span>
-                </button>
-                <button class="view-tab" onclick="switchStudentList('reports')" data-view="reports">
-                    <i class="fas fa-flag"></i> البلاغات
-                    <span class="tab-badge warning" id="reportsTabBadge">0</span>
-                </button>
-                <button class="view-tab" onclick="switchStudentList('banned')" data-view="banned" id="bannedTab" style="display:none;">
-                    <i class="fas fa-ban"></i> المحظورين
-                    <span class="tab-badge danger" id="bannedTabBadge">0</span>
-                </button>
-                <button class="view-tab" onclick="switchStudentList('gifts')" data-view="gifts">
-                    <i class="fas fa-gift"></i> الهدايا
-                    <span class="tab-badge" id="giftsTabBadge">0</span>
-                </button>
-                <button class="view-tab" onclick="switchStudentList('messages')" data-view="messages">
-                    <i class="fas fa-envelope"></i> الرسائل
-                    <span class="tab-badge" id="messagesTabBadge">0</span>
-                </button>
-                <button class="view-tab" onclick="switchStudentList('blocked')" data-view="blocked">
-                    <i class="fas fa-ban"></i> المحظورين
-                    <span class="tab-badge danger" id="blockedTabBadge">0</span>
-                </button>
-            </div>
-
-            <div class="students-filters">
-                <div class="filter-group">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="studentsSearchInput" placeholder="ابحث عن طالب..." oninput="filterStudents()" />
-                </div>
-                <div class="filter-group">
-                    <select id="studentsFilterCollege" onchange="filterStudents()">
-                        <option value="all">كل الكليات</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <select id="studentsFilterYear" onchange="filterStudents()">
-                        <option value="all">كل السنوات</option>
-                        <option value="1">السنة الأولى</option>
-                        <option value="2">السنة الثانية</option>
-                        <option value="3">السنة الثالثة</option>
-                        <option value="4">السنة الرابعة</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <select id="studentsFilterSort" onchange="filterStudents()">
-                        <option value="name">الترتيب بالاسم</option>
-                        <option value="points">الأكثر نقاطاً</option>
-                        <option value="votes">الأكثر تصويتاً</option>
-                        <option value="friends">الأكثر أصدقاء</option>
-                        <option value="trusted">الأكثر ثقة</option>
-                        <option value="badges">الأكثر شارات</option>
-                    </select>
-                </div>
-                <button class="btn btn-outline" onclick="resetStudentsFilters()" title="إعادة تعيين الفلاتر">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
+        <div class="section">
+          <div class="section-head">
+            <div class="section-title">الأنماط</div>
+            <div class="section-sub">MODES</div>
+          </div>
+          <div class="mode-grid" id="mode-grid"></div>
         </div>
 
-        <!-- ===== قائمة الطلاب ===== -->
-        <div id="studentListContainer" class="students-list-container">
-            <div class="loading"><i class="fas fa-spinner fa-spin"></i> جاري التحميل...</div>
-        </div>
-
-        <!-- ===== ترقيم الصفحات ===== -->
-        <div id="studentsPagination" class="students-pagination"></div>
-    </div>
-</div>
-
-<!-- ===== PAGE: ADMINS ===== -->
-<div class="page" id="page-admins">
-    <div class="admins-container">
-        <!-- ===== شريط الإحصائيات ===== -->
-        <div class="admins-stats-bar">
-            <div class="admins-stat-card">
-                <i class="fas fa-crown" style="color:#ffd700;"></i>
-                <div>
-                    <span class="stat-number" id="superAdminCount">0</span>
-                    <label>المشرف الرئيسي</label>
-                </div>
-            </div>
-            <div class="admins-stat-card">
-                <i class="fas fa-user-shield" style="color:#f59e0b;"></i>
-                <div>
-                    <span class="stat-number" id="adminCount">0</span>
-                    <label>المشرفين</label>
-                </div>
-            </div>
-            <div class="admins-stat-card">
-                <i class="fas fa-user-cog" style="color:#3b82f6;"></i>
-                <div>
-                    <span class="stat-number" id="moderatorCount">0</span>
-                    <label>المدراء</label>
-                </div>
-            </div>
-            <div class="admins-stat-card">
-                <i class="fas fa-users" style="color:#8b5cf6;"></i>
-                <div>
-                    <span class="stat-number" id="totalAdminsCount">0</span>
-                    <label>إجمالي الإدارة</label>
-                </div>
-            </div>
-        </div>
-
-        <!-- ===== زر التواصل مع الإدارة ===== -->
-        <div class="admin-contact-banner">
-            <div class="contact-banner-content">
-                <i class="fas fa-headset"></i>
-                <div>
-                    <h4>تواصل مع الإدارة</h4>
-                    <p>لديك سؤال أو استفسار؟ فريق الإدارة هنا لمساعدتك</p>
-                </div>
-                <button class="btn btn-primary btn-lg" onclick="openContactAdminModal()">
-                    <i class="fas fa-envelope"></i> تواصل مع الإدارة
-                </button>
-            </div>
-        </div>
-
-        <!-- ===== قائمة المشرفين ===== -->
-        <div class="admins-list-header">
-            <h3><i class="fas fa-user-shield"></i> فريق الإدارة</h3>
-            <span class="admins-count" id="adminsCountLabel">0</span>
-        </div>
-        
-        <div id="adminsListContainer" class="admins-grid-modern">
-            <div class="loading"><i class="fas fa-spinner fa-spin"></i> جاري التحميل...</div>
-        </div>
-    </div>
-</div>
-
-            <!-- ===== PAGE: COMPARE ===== -->
-            <div class="page" id="page-compare">
-                <div class="compare-container">
-                    <h2><i class="fas fa-balance-scale"></i> مقارنة المواد</h2>
-                    <div class="compare-controls">
-                        <div class="filter-group" style="flex:2;">
-                            <i class="fas fa-search"></i>
-                            <input type="text" id="compareSearch" placeholder="ابحث عن مادة لإضافتها للمقارنة..." />
-                        </div>
-                        <button class="btn btn-primary" id="addToCompareBtn"><i class="fas fa-plus"></i> إضافة</button>
-                        <button class="btn btn-outline" id="clearCompareBtn"><i class="fas fa-times"></i> مسح الكل</button>
-                    </div>
-                    <div id="compareList" class="compare-list"></div>
-                    <div id="compareResults" class="compare-results"></div>
-                    <div id="compareEmpty" class="empty-state">
-                        <i class="fas fa-balance-scale"></i>
-                        <h3>لا توجد مواد للمقارنة</h3>
-                        <p>ابحث عن مادة وأضفها للمقارنة</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ===== PAGE: SETTINGS ===== -->
-            <div class="page" id="page-settings">
-                <div class="settings-container">
-                    <h2><i class="fas fa-cog"></i> الإعدادات المتقدمة</h2>
-                    <div id="privacySettingsContainer"></div>
-                    <div style="margin-top:2rem;border-top:1px solid var(--border-color);padding-top:1rem;">
-                        <h4>إدارة الحساب</h4>
-                        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-top:0.5rem;">
-                            <button class="btn btn-danger" onclick="if(confirm('هل أنت متأكد من حذف حسابك؟')){deleteAccount();}">
-                                <i class="fas fa-trash"></i> حذف الحساب
-                            </button>
-<button class="btn btn-warning" onclick="resetPassword()"><i class="fas fa-key"></i> إعادة تعيين كلمة المرور</button>
-                            <button class="btn btn-outline" onclick="if(confirm('هل أنت متأكد من تسجيل الخروج من جميع الأجهزة؟')){logoutAllDevices();}">
-                                <i class="fas fa-sign-out-alt"></i> تسجيل الخروج من الكل
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-
-            <!-- ===== PAGE: ADMIN ===== -->
-            <div class="page" id="page-admin">
-                <div class="admin-container">
-                    <h2><i class="fas fa-cog"></i> لوحة تحكم المشرف</h2>
-
-                    <div class="admin-featured">
-                        <div class="admin-profile-card">
-                            <div class="admin-avatar">
-                                <img id="adminFeaturedAvatar" src="" alt="المشرف" />
-                            </div>
-                            <div class="admin-info">
-                                <h3 id="adminFeaturedName">المشرف</h3>
-                                <p id="adminFeaturedEmail">admin@example.com</p>
-                                <span class="badge">👑 مشرف رئيسي</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="stats-grid">
-                        <div class="stat-card"><i class="fas fa-book"></i><span class="stat-number" id="adminTotalCourses">0</span><span class="stat-label">المواد</span></div>
-                        <div class="stat-card"><i class="fas fa-users"></i><span class="stat-number" id="adminTotalUsers">0</span><span class="stat-label">المستخدمين</span></div>
-                        <div class="stat-card"><i class="fas fa-university"></i><span class="stat-number" id="adminTotalColleges">0</span><span class="stat-label">الكليات</span></div>
-                        <div class="stat-card"><i class="fas fa-tags"></i><span class="stat-number" id="adminTotalSpecialties">0</span><span class="stat-label">التخصصات</span></div>
-                    </div>
-
-                    <div class="admin-tabs">
-                        <button class="admin-tab" data-tab="messages">الرسائل</button>
-                        <button class="admin-tab active" data-tab="courses">المواد</button>
-                        <button class="admin-tab" data-tab="colleges">الكليات</button>
-                        <button class="admin-tab" data-tab="specialties">التخصصات</button>
-                        <button class="admin-tab" data-tab="users">المستخدمين</button>
-                        <button class="admin-tab" data-tab="reports">التقارير</button>
-                    </div>
-
-                    <div class="admin-tab-content" id="adminMessages">
-                        <div id="adminMessagesList" class="admin-list"></div>
-                    </div>
-
-                    <div class="admin-tab-content active" id="adminCourses">
-                        <button class="btn btn-primary" id="adminAddCourseBtn"><i class="fas fa-plus"></i> إضافة مادة</button>
-                        <div id="adminCoursesList" class="admin-list"></div>
-                    </div>
-
-                    <div class="admin-tab-content" id="adminColleges">
-                        <div class="admin-add-form">
-                            <input type="text" id="newCollegeName" placeholder="اسم الكلية" />
-                            <button class="btn btn-success" id="addCollegeBtn"><i class="fas fa-plus"></i> إضافة كلية</button>
-                        </div>
-                        <div id="adminCollegesList" class="admin-list"></div>
-                    </div>
-
-                    <div class="admin-tab-content" id="adminSpecialties">
-                        <div class="admin-add-form">
-                            <select id="specialtyCollege"><option value="">اختر الكلية</option></select>
-                            <input type="text" id="newSpecialtyName" placeholder="اسم التخصص" />
-                            <input type="number" id="newSpecialtyHours" placeholder="عدد الساعات" min="1" max="200" />
-                            <button class="btn btn-success" id="addSpecialtyBtn"><i class="fas fa-plus"></i> إضافة تخصص</button>
-                        </div>
-                        <div id="adminSpecialtiesList" class="admin-list"></div>
-                    </div>
-
-                    <div class="admin-tab-content" id="adminUsers">
-                        <div id="adminUsersList" class="admin-list"></div>
-                    </div>
-
-                    <div class="admin-tab-content" id="adminReports">
-                        <div class="reports-grid">
-                            <div class="report-card">
-                                <h4>📊 أكثر المواد تقييماً</h4>
-                                <div id="topRatedCourses" class="report-list"></div>
-                            </div>
-                            <div class="report-card">
-                                <h4>📈 أكثر المواد تصويتاً</h4>
-                                <div id="mostVotedCourses" class="report-list"></div>
-                            </div>
-                            <div class="report-card">
-                                <h4>👥 نشاط المستخدمين</h4>
-                                <div id="userActivityReport" class="report-list"></div>
-                            </div>
-                            <div class="report-card">
-                                <h4>📊 إحصائيات التصويتات</h4>
-                                <div id="voteStats" class="report-list"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ===== MODALS ===== -->
-
-        <!-- Course Form Modal -->
-        <div class="modal" id="courseModal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3 id="courseModalTitle"><i class="fas fa-pen-fancy"></i> إضافة مقرر</h3>
-                    <button class="btn-close modal-close"><i class="fas fa-times"></i></button>
-                </div>
-                <form id="courseForm" class="form-grid">
-                    <input type="hidden" id="editCourseId" />
-                    <div class="form-group">
-                        <label>اسم المقرر</label>
-                        <input type="text" id="cName" required />
-                    </div>
-                    <div class="form-group">
-                        <label>رقم المقرر</label>
-                        <input type="text" id="cCode" required />
-                    </div>
-                    <div class="form-group full-width">
-                        <label>نبذة</label>
-                        <textarea id="cDesc" rows="2"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>التخصصات</label>
-                        <select id="cSpecialties" multiple></select>
-                        <small>اضغط Ctrl لاختيار عدة تخصصات</small>
-                    </div>
-                    <div class="form-group">
-                        <label>السنة</label>
-                        <select id="cYear"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
-                    </div>
-                    <div class="form-group">
-                        <label>الفصل</label>
-                        <select id="cSemester" multiple>
-                            <option value="الأول">الأول</option><option value="الثاني">الثاني</option><option value="الصيفي">الصيفي</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>النوع</label>
-                        <select id="cType">
-                            <option value="اجباري جامعة">إجباري جامعة</option>
-                            <option value="اختياري جامعة">اختياري جامعة</option>
-                            <option value="اجباري كلية">إجباري كلية</option>
-                            <option value="اجباري تخصص">إجباري تخصص</option>
-                            <option value="اختياري تخصص">اختياري تخصص</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>الساعات</label>
-                        <input type="number" id="cHours" min="1" max="4" value="3" />
-                    </div>
-                    <div class="form-group" id="theoryGroup">
-                        <label>ساعات نظري</label>
-                        <input type="number" id="cTheory" min="0" max="4" value="2" />
-                    </div>
-                    <div class="form-group" id="practicalGroup" style="display:none;">
-                        <label>ساعات عملي</label>
-                        <input type="number" id="cPractical" min="0" max="4" value="1" />
-                    </div>
-                    <div class="form-group">
-                        <label>له نصفي؟</label>
-                        <select id="cHasMid">
-                            <option value="نعم">نعم</option>
-                            <option value="لا">لا</option>
-                        </select>
-                    </div>
-                    <div class="form-group" id="midUnitsGroup">
-                        <label>وحدات النصفي</label>
-                        <input type="number" id="cMidUnits" value="1" min="0" />
-                    </div>
-                    <div class="form-group">
-                        <label>له عملي؟</label>
-                        <select id="cHasLab">
-                            <option value="نعم">نعم</option>
-                            <option value="لا">لا</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>له نشاط؟</label>
-                        <select id="cHasActivity">
-                            <option value="نعم">نعم</option>
-                            <option value="لا">لا</option>
-                        </select>
-                    </div>
-                    <div class="form-group" id="prereqGroup">
-                        <label>متطلب سابق</label>
-                        <select id="cPrereq">
-                            <option value="">لا يوجد</option>
-                        </select>
-                        <small>اختر مادة من التخصصات المختارة</small>
-                    </div>
-                    <div class="form-group">
-                        <label>الوحدات</label>
-                        <input type="number" id="cUnits" value="3" min="1" />
-                    </div>
-                    <div class="form-group">
-                        <label>وحدات نهائي</label>
-                        <input type="number" id="cFinalUnits" value="2" min="0" />
-                    </div>
-                    <div class="form-group" id="labUnitsGroup" style="display:none;">
-                        <label>وحدات عملي</label>
-                        <input type="number" id="cLabUnits" value="0" min="0" />
-                    </div>
-                    <div class="form-group full-width" id="labInfoGroup" style="display:none;">
-                        <label>معلومات العملي</label>
-                        <input type="text" id="cLabInfo" placeholder="معلومات عن العملي" />
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> حفظ</button>
-                        <button type="button" class="btn btn-outline modal-close">إلغاء</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Auth Modal -->
-<!-- مودال المصادقة -->
-<div class="modal" id="authModal">
-    <div class="modal-content auth-modal">
-        <div class="modal-header">
-            <h3 id="authModalTitle"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</h3>
-            <button class="btn-close modal-close"><i class="fas fa-times"></i></button>
-        </div>
-        <form id="authForm">
-            <div class="form-group">
-                <label>البريد الإلكتروني</label>
-                <input type="email" id="authEmail" required />
-            </div>
-            <div class="form-group">
-                <label>كلمة المرور</label>
-                <input type="password" id="authPassword" required />
-            </div>
-            <!-- حقل اسم المستخدم للتسجيل (يظهر فقط في وضع التسجيل) -->
-            <div id="authUsernameGroup" class="form-group" style="display:none;">
-                <label>اسم المستخدم (فريد)</label>
-                <input type="text" id="authUsernameInput" placeholder="أحرف وأرقام و _ فقط" pattern="[a-zA-Z0-9_]{3,20}" />
-                <small id="usernameFeedback" style="color:var(--gray-500);"></small>
-            </div>
-            <div id="authNameGroup" class="form-group" style="display:none;">
-                <label>الاسم</label>
-                <input type="text" id="authNameInput" />
-            </div>
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary" id="authSubmitBtn"><i class="fas fa-sign-in-alt"></i> دخول</button>
-                <button type="button" class="btn btn-outline" id="authSwitchBtn">ليس لديك حساب؟ سجل الآن</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-        <!-- Profile Required Modal -->
-        <div class="modal" id="profileRequiredModal">
-            <div class="modal-content auth-modal">
-                <div class="modal-header">
-                    <h3><i class="fas fa-user-edit"></i> أكمل ملفك الشخصي</h3>
-                </div>
-                <form id="profileRequiredForm" class="form-grid">
-                    <div class="form-group">
-                        <label><i class="fas fa-university"></i> الكلية</label>
-                        <select id="profileRequiredCollege" required>
-                            <option value="">اختر الكلية</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label><i class="fas fa-users"></i> التخصص</label>
-                        <select id="profileRequiredSpecialty" required>
-                            <option value="">اختر التخصص</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label><i class="fas fa-calendar-alt"></i> السنة الدراسية</label>
-                        <select id="profileRequiredYear">
-                            <option value="1">السنة الأولى</option>
-                            <option value="2">السنة الثانية</option>
-                            <option value="3">السنة الثالثة</option>
-                            <option value="4">السنة الرابعة</option>
-                        </select>
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> حفظ الملف</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Course Info Modal -->
-<div class="modal" id="courseInfoModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 id="courseInfoTitle"><i class="fas fa-info-circle"></i> معلومات المقرر</h3>
-            <div class="header-actions">
-                <button class="btn-back" onclick="backFromCourseInfo()">
-                    <i class="fas fa-arrow-right"></i> رجوع
-                </button>
-                <button class="btn-close-modal" onclick="closeModal('courseInfoModal')"><i class="fas fa-times"></i></button>
-            </div>
-        </div>
-        <div id="courseInfoContent"></div>
-    </div>
-</div>
-
-
-<!-- Vote Details Modal -->
-<div class="modal" id="voteDetailsModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 id="voteDetailsTitle"><i class="fas fa-chart-bar"></i> تفاصيل التصويتات</h3>
-            <div class="header-actions">
-                <button class="btn-back" onclick="backFromVoteDetails()">
-                    <i class="fas fa-arrow-right"></i> رجوع
-                </button>
-                <button class="btn-close-modal" onclick="closeModal('voteDetailsModal')"><i class="fas fa-times"></i></button>
-            </div>
-        </div>
-        <div id="voteDetailsContent"></div>
-    </div>
-</div>
-
-<!-- User Profile Mini Modal - تصميم متناسق -->
-<div class="modal" id="userProfileModal">
-    <div class="modal-content user-profile-mini">
-        <!-- شريط السحب -->
-        <div class="modal-drag-handle"></div>
-        
-        <!-- زر الإغلاق -->
-        <button class="btn-close-modal" onclick="closeUserProfileModal()">
-            <i class="fas fa-times"></i>
+        <button class="play-btn" id="play-btn">
+          <span>ابدأ اللعب</span>
+          <span class="arrow">▶</span>
         </button>
-        
-        <!-- المحتوى الرئيسي -->
-        <div id="userProfileContent" class="user-profile-mini-content"></div>
-    </div>
-</div>
 
-<!-- Course Analytics Modal -->
-<div class="modal" id="courseAnalyticsModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 id="courseAnalyticsTitle"><i class="fas fa-chart-line"></i> تحليلات المادة</h3>
-            <div class="header-actions">
-                <button class="btn-back" onclick="backFromAnalytics()">
-                    <i class="fas fa-arrow-right"></i> رجوع
-                </button>
-                <button class="btn-close-modal" onclick="closeModal('courseAnalyticsModal')"><i class="fas fa-times"></i></button>
-            </div>
-        </div>
-        <div id="courseAnalyticsContent"></div>
-    </div>
-</div>
-
-        <!-- Contact Admin Modal -->
-        <div class="modal" id="contactAdminModal">
-            <div class="modal-content" style="max-width:500px;">
-                <div class="modal-header">
-                    <h3><i class="fas fa-envelope"></i> تواصل مع المشرف</h3>
-                    <button class="btn-close" onclick="closeModal('contactAdminModal')"><i class="fas fa-times"></i></button>
-                </div>
-                <form id="contactAdminForm">
-                    <div class="form-group">
-                        <label>الموضوع</label>
-                        <input type="text" id="contactSubject" required placeholder="أدخل موضوع الرسالة" />
-                    </div>
-                    <div class="form-group full-width">
-                        <label>الرسالة</label>
-                        <textarea id="contactMessage" rows="5" required placeholder="اكتب رسالتك هنا..."></textarea>
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-success"><i class="fas fa-paper-plane"></i> إرسال</button>
-                        <button type="button" class="btn btn-outline" onclick="closeModal('contactAdminModal')">إلغاء</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Customization Modal -->
-        <div class="modal" id="customizationModal">
-            <div class="modal-content" style="max-width:700px;">
-                <div class="modal-header">
-                    <h3><i class="fas fa-palette"></i> تخصيص الملف الشخصي</h3>
-                    <button class="btn-close" onclick="closeModal('customizationModal')"><i class="fas fa-times"></i></button>
-                </div>
-                <div id="customizationContent"></div>
-            </div>
-        </div>
-
-        <!-- Badges Modal -->
-        <div class="modal" id="badgesModal">
-            <div class="modal-content" style="max-width:600px;">
-                <div class="modal-header">
-                    <h3><i class="fas fa-trophy"></i> الشارات</h3>
-                    <button class="btn-close" onclick="closeModal('badgesModal')"><i class="fas fa-times"></i></button>
-                </div>
-                <div id="badgesModalContent"></div>
-            </div>
-        </div>
-
-        <!-- Achievements Modal -->
-        <div class="modal" id="achievementsModal">
-            <div class="modal-content" style="max-width:600px;">
-                <div class="modal-header">
-                    <h3><i class="fas fa-gem"></i> الإنجازات المتقدمة</h3>
-                    <button class="btn-close" onclick="closeModal('achievementsModal')"><i class="fas fa-times"></i></button>
-                </div>
-                <div id="achievementsModalContent"></div>
-            </div>
-        </div>
-
-<!-- ===== EDIT PROFILE MODAL (متطور) ===== -->
-<div class="modal" id="editProfileModal">
-    <div class="modal-content" style="max-width:750px;max-height:90vh;overflow-y:auto;">
-        <div class="modal-header">
-            <h3><i class="fas fa-user-edit"></i> تعديل الملف الشخصي</h3>
-            <button class="btn-close" onclick="closeModal('editProfileModal')"><i class="fas fa-times"></i></button>
-        </div>
-        
-        <form id="editProfileForm">
-            <!-- ===== تبويبات ===== -->
-            <div class="edit-profile-tabs">
-                <button type="button" class="edit-tab active" data-tab="basic" onclick="switchEditTab('basic')">
-                    <i class="fas fa-user"></i> أساسي
-                </button>
-                <button type="button" class="edit-tab" data-tab="details" onclick="switchEditTab('details')">
-                    <i class="fas fa-address-card"></i> تفاصيل
-                </button>
-                <button type="button" class="edit-tab" data-tab="social" onclick="switchEditTab('social')">
-                    <i class="fas fa-share-alt"></i> تواصل
-                </button>
-                <button type="button" class="edit-tab" data-tab="courses" onclick="switchEditTab('courses')">
-                    <i class="fas fa-book"></i> المواد
-                </button>
-            </div>
-
-            <!-- ===== المحتوى ===== -->
-            <div class="edit-profile-content">
-                
-                <!-- === تبويب الأساسي === -->
-                <div class="edit-tab-panel active" data-tab="basic">
-                    <div class="form-grid">
-                        <!-- الصورة الشخصية مع معاينة -->
-                        <div class="form-group full-width" style="text-align:center;">
-                            <div class="avatar-upload-container">
-                                <div class="avatar-preview" id="editAvatarPreview">
-                                    <img id="editAvatarImg" src="" alt="الصورة الشخصية" />
-                                    <div class="avatar-overlay" onclick="document.getElementById('editAvatarInput').click()">
-                                        <i class="fas fa-camera"></i>
-                                        <span>تغيير الصورة</span>
-                                    </div>
-                                </div>
-                                <input type="file" id="editAvatarInput" accept="image/*" style="display:none;" />
-                                <small style="display:block;margin-top:0.3rem;color:var(--gray-400);">اضغط على الصورة لتغييرها</small>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label><i class="fas fa-user"></i> الاسم المعروض</label>
-                            <input type="text" id="editDisplayName" placeholder="الاسم الذي يظهر للآخرين" required />
-                        </div>
-
-                        <div class="form-group">
-                            <label><i class="fas fa-at"></i> اسم المستخدم (فريد)</label>
-                            <input type="text" id="editUsername" placeholder="أحرف/أرقام/ _ فقط" pattern="[a-zA-Z0-9_]{3,20}" />
-                            <small id="editUsernameFeedback" style="color:var(--gray-500);"></small>
-                        </div>
-
-                        <div class="form-group">
-                            <label><i class="fas fa-envelope"></i> البريد الإلكتروني</label>
-                            <input type="email" id="editEmail" disabled style="background:var(--gray-100);cursor:not-allowed;" />
-                            <small>لا يمكن تغيير البريد الإلكتروني</small>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- === تبويب التفاصيل === -->
-                <div class="edit-tab-panel" data-tab="details">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label><i class="fas fa-university"></i> الكلية</label>
-                            <select id="editProfileCollege">
-                                <option value="">اختر الكلية</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label><i class="fas fa-tag"></i> التخصص</label>
-                            <select id="editProfileSpecialty">
-                                <option value="">اختر التخصص</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label><i class="fas fa-calendar-alt"></i> السنة الدراسية</label>
-                            <select id="editProfileYear">
-                                <option value="1">السنة الأولى</option>
-                                <option value="2">السنة الثانية</option>
-                                <option value="3">السنة الثالثة</option>
-                                <option value="4">السنة الرابعة</option>
-                                <option value="5">السنة الخامسة</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label><i class="fas fa-city"></i> الفرع الجامعي</label>
-                            <select id="editProfileBranch">
-                                <option value="">اختر الفرع</option>
-                                <option value="الخليل">الخليل</option>
-                                <option value="يطا">يطا</option>
-                                <option value="دورا">دورا</option>
-                                <option value="بيت لحم">بيت لحم</option>
-                                <option value="القدس">القدس</option>
-                                <option value="رام الله والبيرة">رام الله والبيرة</option>
-                                <option value="أريحا">أريحا</option>
-                                <option value="سلفيت">سلفيت</option>
-                                <option value="قلقيلية">قلقيلية</option>
-                                <option value="طولكرم">طولكرم</option>
-                                <option value="نابلس">نابلس</option>
-                                <option value="طوباس">طوباس</option>
-                                <option value="جنين">جنين</option>
-                                <option value="غزة">غزة</option>
-                                <option value="شمال غزة">شمال غزة</option>
-                                <option value="الوسطى">الوسطى</option>
-                                <option value="خانيونس">خانيونس</option>
-                                <option value="رفح">رفح</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group full-width">
-                            <label><i class="fas fa-info-circle"></i> النبذة الشخصية</label>
-                            <textarea id="editProfileBio" rows="3" placeholder="اكتب نبذة عن نفسك..."></textarea>
-                            <small><span id="bioCharCount">0</span> / 500 حرف</small>
-                        </div>
-
-                        <div class="form-group">
-                            <label><i class="fas fa-tags"></i> الاهتمامات</label>
-                            <div class="tags-input-container">
-                                <div class="tags-list" id="editInterestsContainer"></div>
-                                <div class="tags-input-wrapper">
-                                    <input type="text" id="editInterestInput" placeholder="اكتب اهتماماً واضغط Enter" />
-                                    <button type="button" class="btn btn-sm btn-primary" onclick="addInterestTag()">
-                                        <i class="fas fa-plus"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <small>أضف اهتماماتك مثل: برمجة، تصميم، رياضة</small>
-                        </div>
-
-                        <div class="form-group">
-                            <label><i class="fas fa-tools"></i> المهارات</label>
-                            <div class="tags-input-container">
-                                <div class="tags-list" id="editSkillsContainer"></div>
-                                <div class="tags-input-wrapper">
-                                    <input type="text" id="editSkillInput" placeholder="اكتب مهارة واضغط Enter" />
-                                    <button type="button" class="btn btn-sm btn-primary" onclick="addSkillTag()">
-                                        <i class="fas fa-plus"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <small>أضف مهاراتك مثل: JavaScript, التصميم, القيادة</small>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- === تبويب التواصل === -->
-                <div class="edit-tab-panel" data-tab="social">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label><i class="fab fa-github"></i> GitHub</label>
-                            <input type="url" id="editGithub" placeholder="https://github.com/username" />
-                        </div>
-
-                        <div class="form-group">
-                            <label><i class="fab fa-linkedin"></i> LinkedIn</label>
-                            <input type="url" id="editLinkedin" placeholder="https://linkedin.com/in/username" />
-                        </div>
-
-                        <div class="form-group">
-                            <label><i class="fab fa-twitter"></i> Twitter / X</label>
-                            <input type="url" id="editTwitter" placeholder="https://twitter.com/username" />
-                        </div>
-
-                        <div class="form-group">
-                            <label><i class="fas fa-globe"></i> الموقع الشخصي</label>
-                            <input type="url" id="editWebsite" placeholder="https://example.com" />
-                        </div>
-
-                        <div class="form-group">
-                            <label><i class="fab fa-instagram"></i> Instagram</label>
-                            <input type="url" id="editInstagram" placeholder="https://instagram.com/username" />
-                        </div>
-
-                        <div class="form-group">
-                            <label><i class="fab fa-youtube"></i> YouTube</label>
-                            <input type="url" id="editYoutube" placeholder="https://youtube.com/@username" />
-                        </div>
-                    </div>
-                </div>
-
-                <!-- === تبويب المواد === -->
-                <div class="edit-tab-panel" data-tab="courses">
-                    <div class="form-grid">
-                        <div class="form-group full-width">
-                            <label><i class="fas fa-star"></i> المواد المفضلة</label>
-                            <div id="editFavoriteCourses" class="courses-tags"></div>
-                            <small>المواد التي أضفتها إلى المفضلة</small>
-                        </div>
-
-                        <div class="form-group full-width">
-                            <label><i class="fas fa-check-circle"></i> المواد المجتازة</label>
-                            <div id="editCompletedCourses" class="courses-tags"></div>
-                            <small>المواد التي اجتزتها بنجاح</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ===== أزرار الإجراء ===== -->
-            <div class="form-actions" style="display:flex;gap:0.75rem;flex-wrap:wrap;padding-top:0.75rem;border-top:1px solid var(--border-color);margin-top:1rem;">
-                <button type="submit" class="btn btn-success" style="flex:1;justify-content:center;padding:0.6rem;">
-                    <i class="fas fa-save"></i> حفظ التغييرات
-                </button>
-                <button type="button" class="btn btn-outline" onclick="closeModal('editProfileModal')" style="padding:0.6rem 1.5rem;">
-                    إلغاء
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- ===== PAGE: BANNED ===== -->
-<div class="page" id="page-banned">
-    <div class="banned-container">
-        <div class="banned-card">
-            <div class="banned-icon">
-                <i class="fas fa-ban"></i>
-            </div>
-            <h1>🚫 حسابك محظور</h1>
-            <p class="banned-message">
-                تم حظر حسابك من قبل المشرف. لا يمكنك الوصول إلى أي محتوى في التطبيق.
-            </p>
-            <div class="banned-details">
-                <div class="banned-info">
-                    <i class="fas fa-user"></i>
-                    <span id="bannedUserName">مستخدم</span>
-                </div>
-                <div class="banned-info">
-                    <i class="fas fa-envelope"></i>
-                    <span id="bannedUserEmail">email@example.com</span>
-                </div>
-                <div class="banned-info">
-                    <i class="fas fa-calendar"></i>
-                    <span>تم الحظر: <span id="bannedDate">غير معروف</span></span>
-                </div>
-            </div>
-            <div class="banned-actions">
-                <button class="btn btn-danger btn-lg" onclick="logoutUser()">
-                    <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
-                </button>
-                <button class="btn btn-outline btn-lg" onclick="contactAdminFromBanned()">
-                    <i class="fas fa-envelope"></i> تواصل مع المشرف
-                </button>
-            </div>
-            <div class="banned-footer">
-                <p>إذا كنت تعتقد أن هذا خطأ، يرجى التواصل مع المشرف.</p>
-                <small>سيتم تسجيل خروجك تلقائياً بعد فترة</small>
-            </div>
-        </div>
-    </div>
-</div>
-
-
-
-<!-- Course Actions Modal -->
-<div class="modal" id="courseActionsModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <div style="display:flex;align-items:center;gap:0.75rem;">
-                <button class="btn btn-outline btn-sm" onclick="closeCourseActionsModal()" style="padding:0.3rem 0.8rem;">
-                    <i class="fas fa-arrow-right"></i> رجوع
-                </button>
-                <h3 id="courseActionsTitle" style="margin:0;font-size:1rem;"><i class="fas fa-book"></i> تفاصيل المادة</h3>
-            </div>
-            <button class="btn-close" onclick="closeCourseActionsModal()"><i class="fas fa-times"></i></button>
-        </div>
-        <div id="courseActionsContent"></div>
-    </div>
-</div>
-        
-        <!-- ===== COMMENTS MODAL (أسفل الشاشة) ===== -->
-<div class="modal" id="commentsModal">
-    <div class="modal-content comments-modal">
-        <!-- شريط السحب -->
-        <div class="modal-drag-handle"></div>
-        
-        <!-- زر الإغلاق -->
-        <button class="btn-close-modal" onclick="closeCommentsModal()">
-            <i class="fas fa-times"></i>
-        </button>
-        
-        <!-- عنوان المودال -->
-        <div class="comments-modal-header">
-            <div class="comments-modal-title">
-                <span id="commentsModalPostAuthor"></span>
-                <span id="commentsModalPostText" style="font-size:0.7rem;color:var(--gray-400);display:block;margin-top:0.1rem;"></span>
-            </div>
-            <span class="comments-count" id="commentsModalCount">0 تعليق</span>
-        </div>
-        
-        <!-- قائمة التعليقات -->
-        <div id="commentsModalList" class="comments-modal-list"></div>
-        
-        <!-- حقل إدخال التعليق -->
-        <div class="comments-modal-input">
-            <input type="text" id="commentsModalInput" placeholder="اكتب تعليقاً..." />
-            <button class="btn btn-primary" onclick="sendCommentFromModal()">
-                <i class="fas fa-paper-plane"></i>
+        <div class="section">
+          <div class="section-head">
+            <div class="section-title">يومي وأسبوعي</div>
+            <div class="section-sub">DAILY</div>
+          </div>
+          <div class="quick-actions">
+            <button class="qa-btn highlight" data-page="daily">
+              <div class="ic">🎁</div>
+              <div class="lbl">يومي</div>
+              <div class="badge" id="daily-badge" style="display:none;">!</div>
             </button>
+            <button class="qa-btn" data-page="quests">
+              <div class="ic">📋</div>
+              <div class="lbl">المهام</div>
+              <div class="badge" id="quest-badge" style="display:none;">!</div>
+            </button>
+            <button class="qa-btn" data-page="season">
+              <div class="ic">🏅</div>
+              <div class="lbl">الموسم</div>
+            </button>
+            <button class="qa-btn highlight" data-page="battlepass">
+              <div class="ic">🎫</div>
+              <div class="lbl">باتل باس</div>
+            </button>
+          </div>
         </div>
+
+        <div class="section">
+          <div class="section-head">
+            <div class="section-title">التخصيص والمقتنيات</div>
+            <div class="section-sub">CUSTOMIZE</div>
+          </div>
+          <div class="quick-actions">
+            <button class="qa-btn" data-page="shop">
+              <div class="ic">🎨</div>
+              <div class="lbl">الأزياء</div>
+            </button>
+            <button class="qa-btn" data-page="cosmetics">
+              <div class="ic">✨</div>
+              <div class="lbl">التأثيرات</div>
+            </button>
+            <button class="qa-btn" data-page="achieve">
+              <div class="ic">🏆</div>
+              <div class="lbl">الإنجازات</div>
+              <div class="badge" id="ach-badge" style="display:none;">0</div>
+            </button>
+            <button class="qa-btn" data-page="settings">
+              <div class="ic">⚙</div>
+              <div class="lbl">إعدادات</div>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
+
+    <div class="screen" id="s-shop">
+      <div class="sub">
+        <div class="sub-top">
+          <button class="back-btn" data-back>←</button>
+          <div>
+            <div class="sub-title">الأزياء</div>
+            <div class="sub-eyebrow">SKINS</div>
+          </div>
+          <div class="sub-spacer"></div>
+        </div>
+        <div style="text-align:center;padding:12px;border-radius:16px;background:linear-gradient(135deg,#FFF9EC,#FBF1DC);border:1px solid var(--line);margin-bottom:16px;">
+          <span style="color:var(--gold);font-size:18px;">◆</span>
+          <span style="font-family:'Space Grotesk';font-size:22px;font-weight:700;margin-right:6px;" id="shop-coins">0</span>
+        </div>
+        <div class="skin-grid" id="skin-grid"></div>
+      </div>
+    </div>
+
+    <div class="screen" id="s-cosmetics">
+      <div class="sub">
+        <div class="sub-top">
+          <button class="back-btn" data-back>←</button>
+          <div>
+            <div class="sub-title">التأثيرات</div>
+            <div class="sub-eyebrow">EFFECTS</div>
+          </div>
+          <div class="sub-spacer"></div>
+        </div>
+        <div class="tab-row" id="cos-tabs">
+          <button class="tab-chip active" data-cat="spark">الشرار</button>
+          <button class="tab-chip" data-cat="trail">خط السير</button>
+          <button class="tab-chip" data-cat="jump">القفز</button>
+          <button class="tab-chip" data-cat="death">النهاية</button>
+        </div>
+        <div class="cos-grid" id="cos-grid"></div>
+      </div>
+    </div>
+
+    <div class="screen" id="s-quests">
+      <div class="sub">
+        <div class="sub-top">
+          <button class="back-btn" data-back>←</button>
+          <div>
+            <div class="sub-title">المهام</div>
+            <div class="sub-eyebrow">QUESTS</div>
+          </div>
+          <div class="sub-spacer"></div>
+        </div>
+        <div class="tab-row" id="quest-tabs">
+          <button class="tab-chip active" data-tab="daily">يومي</button>
+          <button class="tab-chip" data-tab="weekly">أسبوعي</button>
+          <button class="tab-chip" data-tab="monthly">شهري</button>
+        </div>
+        <div id="quest-list"></div>
+      </div>
+    </div>
+
+    <div class="screen" id="s-season">
+      <div class="sub">
+        <div class="sub-top">
+          <button class="back-btn" data-back>←</button>
+          <div>
+            <div class="sub-title">الموسم</div>
+            <div class="sub-eyebrow">SEASON</div>
+          </div>
+          <div class="sub-spacer"></div>
+        </div>
+        <div class="season-card">
+          <div class="sc-eyebrow">SEASON 1</div>
+          <div class="sc-title">موسم البداية</div>
+          <div class="sc-sub">اجمع النقاط وارتفع في الرتب</div>
+          <div class="sc-row">
+            <div class="sc-stat">
+              <div class="k">RANK</div>
+              <div class="v" id="season-rank">برونزي</div>
+            </div>
+            <div class="sc-stat" style="text-align:left">
+              <div class="k">POINTS</div>
+              <div class="v" id="season-points">0</div>
+            </div>
+          </div>
+          <div class="sc-prog"><div class="sc-prog-fill" id="season-prog" style="width:0%"></div></div>
+        </div>
+        <div class="section-head"><div class="section-title">الرتب</div><div class="section-sub">RANKS</div></div>
+        <div id="rank-list"></div>
+      </div>
+    </div>
+
+    <div class="screen" id="s-battlepass">
+      <div class="sub">
+        <div class="sub-top">
+          <button class="back-btn" data-back>←</button>
+          <div>
+            <div class="sub-title">باتل باس</div>
+            <div class="sub-eyebrow">BATTLE PASS</div>
+          </div>
+          <div class="sub-spacer"></div>
+        </div>
+        <div class="season-card" style="background:linear-gradient(135deg,#2A1830 0%,#4A2858 100%)">
+          <div class="sc-eyebrow">BATTLE PASS · S1</div>
+          <div class="sc-title">موسم البداية</div>
+          <div class="sc-row">
+            <div class="sc-stat"><div class="k">TIER</div><div class="v" id="bp-tier">0/30</div></div>
+            <div class="sc-stat" style="text-align:left"><div class="k">POINTS</div><div class="v" id="bp-points">0</div></div>
+          </div>
+          <div class="sc-prog"><div class="sc-prog-fill" id="bp-prog" style="width:0%"></div></div>
+        </div>
+        <div class="section-head"><div class="section-title">المكافآت</div><div class="section-sub">REWARDS</div></div>
+        <div id="bp-tiers"></div>
+      </div>
+    </div>
+
+    <div class="screen" id="s-daily">
+      <div class="sub">
+        <div class="sub-top">
+          <button class="back-btn" data-back>←</button>
+          <div>
+            <div class="sub-title">تسجيل الدخول</div>
+            <div class="sub-eyebrow">DAILY LOGIN</div>
+          </div>
+          <div class="sub-spacer"></div>
+        </div>
+        <div class="season-card" style="background:linear-gradient(135deg,#3A2010 0%,#6A3820 100%)">
+          <div class="sc-eyebrow">STREAK</div>
+          <div class="sc-title" id="login-streak">0 أيام</div>
+          <div class="sc-sub">سجّل يومياً للحصول على مكافآت أكبر</div>
+        </div>
+        <div class="section-head"><div class="section-title">٧ أيام</div><div class="section-sub">7 DAYS</div></div>
+        <div class="login-grid" id="login-grid"></div>
+        <button class="action-btn gold" id="claim-daily-btn">استلام مكافأة اليوم</button>
+      </div>
+    </div>
+
+    <div class="screen" id="s-achieve">
+      <div class="sub">
+        <div class="sub-top">
+          <button class="back-btn" data-back>←</button>
+          <div>
+            <div class="sub-title">الإنجازات</div>
+            <div class="sub-eyebrow">ACHIEVEMENTS</div>
+          </div>
+          <div class="sub-spacer"></div>
+        </div>
+        <div class="ach-list" id="ach-list"></div>
+      </div>
+    </div>
+
+    <div class="screen" id="s-stats">
+      <div class="sub">
+        <div class="sub-top">
+          <button class="back-btn" data-back>←</button>
+          <div>
+            <div class="sub-title">إحصاءات</div>
+            <div class="sub-eyebrow">STATS</div>
+          </div>
+          <div class="sub-spacer"></div>
+        </div>
+        <div id="stats-list"></div>
+      </div>
+    </div>
+
+    <!-- ============ SETTINGS (with Profile section) ============ -->
+    <div class="screen" id="s-settings">
+      <div class="sub">
+        <div class="sub-top">
+          <button class="back-btn" data-back>←</button>
+          <div>
+            <div class="sub-title">الإعدادات</div>
+            <div class="sub-eyebrow">SETTINGS</div>
+          </div>
+          <div class="sub-spacer"></div>
+        </div>
+
+        <!-- Profile card -->
+        <div class="profile-card" id="profile-card">
+          <div class="pc-avatar" id="pc-avatar">
+            <span id="pc-avatar-emoji">👤</span>
+            <img id="pc-avatar-img" style="display:none;" alt="">
+          </div>
+          <div class="pc-info">
+            <div class="pc-name" id="pc-name">ضيف</div>
+            <div class="pc-provider" id="pc-provider">لاعب محلي</div>
+          </div>
+          <div class="pc-sync" id="pc-sync">●</div>
+        </div>
+
+        <div class="profile-details" id="profile-details">
+          <div class="pd-row">
+            <span class="pd-k">الاسم</span>
+            <span class="pd-v" id="pd-name">—</span>
+          </div>
+          <div class="pd-row">
+            <span class="pd-k">معرّف اللاعب</span>
+            <span class="pd-v mono" id="pd-uid">—</span>
+          </div>
+          <div class="pd-row">
+            <span class="pd-k">نوع الحساب</span>
+            <span class="pd-v" id="pd-provider">—</span>
+          </div>
+          <div class="pd-row">
+            <span class="pd-k">حالة المزامنة</span>
+            <span class="pd-v" id="pd-sync">—</span>
+          </div>
+        </div>
+
+        <div class="section-head" style="margin-top:14px;"><div class="section-title">الصوت والتحكم</div><div class="section-sub">PREFERENCES</div></div>
+        <div class="settings-list" id="settings-list"></div>
+
+        <div class="settings-actions" style="margin-top:20px;display:flex;flex-direction:column;gap:10px;align-items:center;">
+          <button class="action-btn soft" id="change-name-btn" style="max-width:280px;">تغيير الاسم</button>
+          <button class="action-btn soft" id="logout-btn" style="max-width:280px;color:#C14A4A;">تسجيل الخروج</button>
+          <button class="action-btn soft" id="reset-btn" style="max-width:280px;color:#C14A4A;font-size:12px;">حذف التقدم المحلي</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Change name modal-ish screen -->
+    <div class="screen" id="s-change-name">
+      <div class="center-screen">
+        <div class="setup-title" style="font-size:22px;">تغيير اسم اللاعب</div>
+        <div class="setup-input-wrap" style="width:100%;max-width:300px;margin-top:12px;">
+          <input type="text" id="change-username" maxlength="16" placeholder="اسمك الجديد..." autocomplete="off" spellcheck="false">
+          <span class="char-counter" id="change-counter">0/16</span>
+        </div>
+        <div class="setup-status" id="change-status"></div>
+        <div style="display:flex;gap:10px;margin-top:10px;">
+          <button class="action-btn soft" id="change-cancel" style="max-width:130px;">إلغاء</button>
+          <button class="action-btn" id="change-confirm" style="max-width:130px;" disabled>حفظ</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen" id="s-pause">
+      <div class="center-screen">
+        <div class="pause-title">إيقاف</div>
+        <button class="action-btn" id="resume-btn">متابعة</button>
+        <button class="action-btn soft" id="restart-btn">إعادة</button>
+        <button class="action-btn soft" id="quit-btn">القائمة الرئيسية</button>
+      </div>
+    </div>
+
+    <div class="screen" id="s-over">
+      <div class="center-screen">
+        <div class="over-eyebrow" id="over-eyebrow">RUN COMPLETE</div>
+        <div class="over-title">انتهت الجولة</div>
+        <div class="over-record hidden" id="over-record">★ رقم قياسي جديد ★</div>
+        <div class="big-score"><span id="over-meters">0</span><span class="unit">م</span></div>
+        <div class="score-label">DISTANCE</div>
+        <div class="over-stats">
+          <div class="over-stat"><div class="k">BEST</div><div class="v" id="over-best">0</div></div>
+          <div class="over-stat"><div class="k">COINS</div><div class="v" id="over-coins">0</div></div>
+          <div class="over-stat"><div class="k">LEVEL</div><div class="v" id="over-level">1</div></div>
+        </div>
+        <div class="over-rewards" id="over-rewards"></div>
+        <div class="over-actions">
+          <button class="action-btn" id="retry-btn">إعادة اللعب</button>
+          <button class="action-btn soft" id="home-btn">القائمة الرئيسية</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="reward-modal">
+    <div class="reward-box">
+      <div class="ic" id="rw-icon">🎁</div>
+      <div class="k" id="rw-kicker">REWARD</div>
+      <div class="v" id="rw-value">+0</div>
+      <div class="d" id="rw-desc">مكافأة يومية</div>
+      <button class="claim-btn" id="rw-claim">استلام</button>
+    </div>
+  </div>
 </div>
 
-        <!-- ===== TOAST ===== -->
-        <div id="toast" class="toast"></div>
+<!-- Firebase SDK (compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
 
-        <footer class="footer">
-            <p><i class="fas fa-heart" style="color:#ef4444;"></i> ساعد زملائك في اختيار المواد المناسبة</p>
-            <p>© 2026 مقيّم</p>
-        </footer>
-    </div>
-
-    <script src="script.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
