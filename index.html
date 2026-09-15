@@ -108,6 +108,173 @@
       </div>
     </div>
 
+    <!-- ============================================ -->
+    <!-- ============ ADMIN PANEL SCREEN ============ -->
+    <!-- ============================================ -->
+    <div class="screen" id="s-admin">
+      <div class="sub">
+        <div class="sub-top">
+          <button class="back-btn" data-back>←</button>
+          <div>
+            <div class="sub-title">لوحة المشرف</div>
+            <div class="sub-eyebrow">ADMIN PANEL</div>
+          </div>
+          <div class="sub-spacer"></div>
+        </div>
+
+        <!-- بطاقة معلومات -->
+        <div class="admin-hero">
+          <div class="admin-hero-title">👑 ADMIN MODE</div>
+          <div class="admin-hero-sub" id="admin-hero-user">—</div>
+          <div class="admin-hero-actions">
+            <button class="admin-toggle-btn" id="admin-logout">إنهاء صلاحية المشرف</button>
+          </div>
+        </div>
+
+        <!-- قسم: تحكم سريع -->
+        <div class="section-head"><div class="section-title">تحكم سريع</div><div class="section-sub">QUICK</div></div>
+        <div class="admin-toggles">
+          <button class="admin-toggle" data-toggle="unlimitedCoins">
+            <span class="at-ic">◆</span>
+            <span class="at-lbl">نقود لا نهائية</span>
+            <span class="at-sw" id="sw-unlimitedCoins"></span>
+          </button>
+          <button class="admin-toggle" data-toggle="unlimitedUnlock">
+            <span class="at-ic">🔓</span>
+            <span class="at-lbl">فتح كل المقتنيات</span>
+            <span class="at-sw" id="sw-unlimitedUnlock"></span>
+          </button>
+          <button class="admin-toggle" data-toggle="godMode">
+            <span class="at-ic">🛡️</span>
+            <span class="at-lbl">وضع الخلود</span>
+            <span class="at-sw" id="sw-godMode"></span>
+          </button>
+        </div>
+
+        <!-- قسم: إدارة النقود -->
+        <div class="section-head"><div class="section-title">إدارة النقود</div><div class="section-sub">ECONOMY</div></div>
+        <div class="admin-coins-panel">
+          <div class="admin-coins-display">
+            <span class="c">◆</span>
+            <span id="admin-coins-value">0</span>
+          </div>
+          <div class="admin-coins-quick">
+            <button data-add-coins="1000">+1K</button>
+            <button data-add-coins="10000">+10K</button>
+            <button data-add-coins="100000">+100K</button>
+            <button data-add-coins="1000000">+1M</button>
+          </div>
+          <button class="admin-btn-full danger" id="admin-reset-coins">تصفير النقود</button>
+        </div>
+
+        <!-- قسم: إدارة المصادر -->
+        <div class="section-head"><div class="section-title">المصادر</div><div class="section-sub">SOURCES</div></div>
+
+        <button class="admin-btn-full soft" id="admin-add-source">➕ إضافة مصدر جديد</button>
+
+        <div id="admin-sources-list" class="admin-sources-list"></div>
+
+        <div class="admin-form" id="admin-source-form" style="display:none;">
+          <div class="af-title">مصدر جديد</div>
+
+          <label class="af-label">نوع المصدر</label>
+          <select class="af-input" id="asf-type">
+            <option value="battle_pass">🎫 باتل باس</option>
+            <option value="season_rank">🏅 تصنيف الموسم</option>
+            <option value="daily_login">📅 تسجيل يومي</option>
+            <option value="chest">📦 صناديق</option>
+            <option value="lucky_wheel">🎡 عجلة الحظ</option>
+          </select>
+
+          <label class="af-label">اسم المصدر</label>
+          <input class="af-input" id="asf-name" type="text" maxlength="30" placeholder="مثال: تصنيف الموسم 3">
+
+          <label class="af-label">تاريخ البداية</label>
+          <input class="af-input" id="asf-start" type="date">
+
+          <label class="af-label">تاريخ النهاية</label>
+          <input class="af-input" id="asf-end" type="date">
+
+          <div class="af-actions">
+            <button class="admin-btn-full soft" id="asf-cancel">إلغاء</button>
+            <button class="admin-btn-full" id="asf-save">حفظ المصدر</button>
+          </div>
+          <div class="af-status" id="asf-status"></div>
+        </div>
+
+        <!-- قسم: إدارة المحتوى -->
+        <div class="section-head"><div class="section-title">المحتوى المخصص</div><div class="section-sub">CONTENT</div></div>
+
+        <div class="admin-content-tabs">
+          <button class="act-chip active" data-act="skin">الأزياء</button>
+          <button class="act-chip" data-act="spark">الشرار</button>
+          <button class="act-chip" data-act="trail">خط السير</button>
+          <button class="act-chip" data-act="jump">القفز</button>
+          <button class="act-chip" data-act="death">النهاية</button>
+          <button class="act-chip" data-act="aura">الهالات</button>
+          <button class="act-chip" data-act="crown">الرأسيات</button>
+          <button class="act-chip" data-act="cape">الأوشحة</button>
+        </div>
+
+        <button class="admin-btn-full gold" id="admin-add-content">➕ إضافة عنصر جديد</button>
+
+        <div id="admin-content-list" class="admin-content-list"></div>
+
+        <!-- نموذج الإضافة -->
+        <div class="admin-form" id="admin-form" style="display:none;">
+          <div class="af-title">عنصر جديد — <span id="af-cat-label">أزياء</span></div>
+
+          <label class="af-label">الاسم بالعربية</label>
+          <input class="af-input" id="af-name" type="text" maxlength="20" placeholder="مثال: التنين الذهبي">
+
+          <label class="af-label">الاسم بالإنجليزية</label>
+          <input class="af-input" id="af-name-en" type="text" maxlength="20" placeholder="GOLD DRAGON">
+
+          <label class="af-label">السعر (◆)</label>
+          <input class="af-input" id="af-price" type="number" min="0" value="500">
+
+          <label class="af-label">الندرة</label>
+          <select class="af-input" id="af-rarity">
+            <option value="common">عادي</option>
+            <option value="rare">نادر</option>
+            <option value="epic">ملحمي</option>
+            <option value="legend">أسطوري</option>
+            <option value="mythic">خرافي</option>
+          </select>
+          <label class="af-label">المصدر *</label>
+          <select class="af-input" id="af-source">
+            <!-- سيتم ملؤها ديناميكياً -->
+          </select>
+          <label class="af-label">الصورة (PNG شفافة يُفضّل)</label>
+          <div class="af-upload">
+            <input type="file" id="af-file" accept="image/*" hidden>
+            <button class="af-upload-btn" id="af-upload-btn">
+              📷 اختر صورة
+            </button>
+            <div class="af-preview" id="af-preview">
+              <span>لا توجد صورة</span>
+            </div>
+          </div>
+
+          <label class="af-label" id="af-color-label">اللون الأساسي (اختياري)</label>
+          <input class="af-input color" id="af-color" type="color" value="#E07A3F">
+          <label class="af-label">اللون الثانوي</label>
+          <input class="af-input color" id="af-color2" type="color" value="#E8B34E">
+
+          <div class="af-actions">
+            <button class="admin-btn-full soft" id="af-cancel">إلغاء</button>
+            <button class="admin-btn-full" id="af-save">حفظ ونشر</button>
+          </div>
+          <div class="af-status" id="af-status"></div>
+        </div>
+
+        <!-- قسم: إدارة اللاعبين -->
+        <div class="section-head"><div class="section-title">اللاعبون</div><div class="section-sub">PLAYERS</div></div>
+        <button class="admin-btn-full soft" id="admin-load-players">🔄 تحميل قائمة اللاعبين</button>
+        <div id="admin-players-list" class="admin-players-list"></div>
+      </div>
+    </div>
+
     <!-- ============ HOME ============ -->
     <div class="screen" id="s-home">
       <div class="home">
@@ -117,6 +284,7 @@
             <div class="brand-sub">CALM ARCADE</div>
           </div>
           <div class="top-pills">
+            <button class="admin-btn" id="admin-btn" title="لوحة المشرف" style="display:none;">👑</button>
             <button class="profile-mini" id="profile-mini" title="ملفي الشخصي">
               <span id="profile-mini-emoji">👤</span>
               <img id="profile-mini-img" style="display:none;" alt="">
@@ -247,12 +415,15 @@
           </div>
           <div class="sub-spacer"></div>
         </div>
-        <div class="tab-row" id="cos-tabs">
-          <button class="tab-chip active" data-cat="spark">الشرار</button>
-          <button class="tab-chip" data-cat="trail">خط السير</button>
-          <button class="tab-chip" data-cat="jump">القفز</button>
-          <button class="tab-chip" data-cat="death">النهاية</button>
-        </div>
+<div class="tab-row" id="cos-tabs">
+  <button class="tab-chip active" data-cat="spark">الشرار</button>
+  <button class="tab-chip" data-cat="trail">خط السير</button>
+  <button class="tab-chip" data-cat="jump">القفز</button>
+  <button class="tab-chip" data-cat="death">النهاية</button>
+  <button class="tab-chip" data-cat="aura">الهالات</button>
+  <button class="tab-chip" data-cat="crown">الرأسيات</button>
+  <button class="tab-chip" data-cat="cape">الأوشحة</button>
+</div>
         <div class="cos-grid" id="cos-grid"></div>
       </div>
     </div>

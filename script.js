@@ -13,6 +13,20 @@ const FIREBASE_CONFIG = {
 };
 
 /* ============================================================
+   ==================== ADMIN CONFIG =========================
+   ============================================================ */
+const ADMIN_CONFIG = {
+  /* ⚠️ ضع UID الخاص بك هنا (من Firebase Console → Authentication) */
+  uids: [
+    'HyMhuOo0qLSjH736yosktQloBv12'
+  ],
+  /* كود سري كبديل للطوارئ — غيّره الآن */
+  secretCode: 'SHIFT_ADMIN_2024',
+  /* رابط الصفحة الخاصة بالمشرف (للدخول المباشر) */
+  panelRoute: 'admin'
+};
+
+/* ============================================================
    ==================== Utilities ============================
    ============================================================ */
 const rand=(a,b)=>a+Math.random()*(b-a);
@@ -151,6 +165,63 @@ const COSMETICS = {
     { id:'pixel',   name:'بكسل',    price:700, desc:'تفكك بكسلي' },
     { id:'shatter', name:'تحطم',    price:900, desc:'شظايا زجاجية' },
     { id:'nova',    name:'مستعر',   price:1200,desc:'انفجار نجمي' }
+  ],
+    /* ==================== AURAS (هالات) ==================== */
+  aura: [
+    { id:'none',      name:'بدون',      price:0,    desc:'لا هالة' },
+    { id:'amber',     name:'عنبري',     price:300,  desc:'توهج دافئ' },
+    { id:'cyan',      name:'سماوي',     price:400,  desc:'توهج بارد' },
+    { id:'fire',      name:'نار',       price:700,  desc:'جمرات دائرة' },
+    { id:'ice',       name:'جليد',      price:700,  desc:'بلورات جليد' },
+    { id:'lightning', name:'برق',       price:1000, desc:'شرارات كهربائية' },
+    { id:'shadow',    name:'ظل',        price:900,  desc:'هالة داكنة' },
+    { id:'holy',      name:'نور',       price:1200, desc:'هالة مقدسة' },
+    { id:'void',      name:'فراغ',      price:1800, desc:'طاقة بنفسجية' },
+    { id:'rainbow',   name:'قوس قزح',   price:2200, desc:'تدرج ملون دوّار' },
+    { id:'galaxy',    name:'مجرّة',     price:3000, desc:'نجوم وغيوم' }
+  ],
+
+  /* ==================== CROWNS (تيجان) ==================== */
+  crown: [
+    { id:'none',    name:'بدون',      price:0,    desc:'لا غطاء للرأس' },
+    { id:'bronze',  name:'تاج برونزي', price:200,  desc:'تاج بسيط' },
+    { id:'silver',  name:'تاج فضي',   price:400,  desc:'تاج فضي' },
+    { id:'gold',    name:'تاج ذهبي',  price:800,  desc:'تاج ملكي' },
+    { id:'diamond', name:'تاج ماسي',  price:1400, desc:'تاج ماسي' },
+    { id:'leaf',    name:'إكليل',     price:500,  desc:'إكليل زيتون' },
+    { id:'flower',  name:'زهرة',      price:600,  desc:'زهرة الرأس' },
+    { id:'horns',   name:'قرون',      price:700,  desc:'قرون شيطانية' },
+    { id:'flame',   name:'تاج لهبي',  price:1100, desc:'تاج من النار' },
+    { id:'ice',     name:'تاج جليدي', price:1100, desc:'تاج من الجليد' },
+    { id:'star',    name:'نجمة',      price:1300, desc:'نجمة ساطعة' },
+    { id:'skull',   name:'جمجمة',     price:1600, desc:'جمجمة مخيفة' },
+    { id:'king',    name:'تاج ملكي',  price:2500, desc:'تاج الأساطير' },
+    /* ➕ قبابيع */
+    { id:'hat',     name:'قبعة',      price:300,  desc:'قبعة قماشية' },
+    { id:'cap',     name:'كاب',       price:350,  desc:'كاب رياضي' },
+    { id:'beanie',  name:'قبعة صوف',  price:400,  desc:'قبعة شتوية' },
+    { id:'cowboy',  name:'قبعة راعي', price:700,  desc:'قبعة الغرب' },
+    { id:'santa',   name:'بابا نويل', price:800,  desc:'قبعة احتفالية' },
+    { id:'party',   name:'قبعة حفلة', price:500,  desc:'قبعة ملونة' },
+    { id:'wizard',  name:'قبعة ساحر', price:900,  desc:'قبعة سحرية' },
+    { id:'viking',  name:'خوذة فايكنغ', price:1200, desc:'خوذة محارب' },
+    /* ➕ قرون متنوعة */
+    { id:'deerHorns', name:'قرون غزال', price:650, desc:'قرون متفرعة' },
+    { id:'singleHorn', name:'قرن وحيد', price:550, desc:'قرن وسط الرأس' }
+  ],
+
+  /* ==================== CAPES (أوشحة وعباءات) ==================== */
+  cape: [
+    { id:'none',        name:'بدون',         price:0,    desc:'لا وشاح' },
+    { id:'scarf_red',   name:'وشاح أحمر',    price:300,  desc:'وشاح قصير' },
+    { id:'scarf_blue',  name:'وشاح أزرق',    price:300,  desc:'وشاح قصير' },
+    { id:'scarf_gold',  name:'وشاح ذهبي',    price:500,  desc:'وشاح فاخر' },
+    { id:'cape_hero',   name:'عباءة البطل',  price:900,  desc:'عباءة بطولية' },
+    { id:'cape_dark',   name:'عباءة الظلام', price:1200, desc:'عباءة داكنة' },
+    { id:'cape_royal',  name:'عباءة ملكية',  price:1500, desc:'عباءة ملوك' },
+    { id:'cape_shadow', name:'عباءة الظل',   price:1800, desc:'ظل يتبعك' },
+    { id:'cape_rainbow',name:'عباءة قوس قزح',price:2200, desc:'ألوان متحركة' },
+    { id:'cape_galaxy', name:'عباءة مجرّة',  price:3000, desc:'نجوم متلألئة' }
   ]
 };
 
@@ -182,12 +253,22 @@ const RARITY_LABELS = {
   mythic:  'خرافي'
 };
 
-function currentSkin(){ return SKINS.find(s=>s.id===Save.data.currentSkin) || SKINS[0]; }
-function currentSpark(){ return COSMETICS.spark.find(c=>c.id===Save.data.cosmetics.current.spark) || COSMETICS.spark[0]; }
-function currentTrail(){ return COSMETICS.trail.find(c=>c.id===Save.data.cosmetics.current.trail) || COSMETICS.trail[0]; }
-function currentJump(){ return COSMETICS.jump.find(c=>c.id===Save.data.cosmetics.current.jump) || COSMETICS.jump[0]; }
-function currentDeath(){ return COSMETICS.death.find(c=>c.id===Save.data.cosmetics.current.death) || COSMETICS.death[0]; }
+function currentSkin(){
+  const all = getAllSkins();
+  return all.find(s=>s.id===Save.data.currentSkin) || all[0];
+}
 
+function currentSpark(){ return getAllCosmetics('spark').find(c=>c.id===Save.data.cosmetics.current.spark) || COSMETICS.spark[0]; }
+function currentTrail(){ return getAllCosmetics('trail').find(c=>c.id===Save.data.cosmetics.current.trail) || COSMETICS.trail[0]; }
+function currentJump(){ return getAllCosmetics('jump').find(c=>c.id===Save.data.cosmetics.current.jump) || COSMETICS.jump[0]; }
+function currentDeath(){ return getAllCosmetics('death').find(c=>c.id===Save.data.cosmetics.current.death) || COSMETICS.death[0]; }
+function currentAura(){ return getAllCosmetics('aura').find(c=>c.id===Save.data.cosmetics.current.aura) || COSMETICS.aura[0]; }
+function currentCrown(){ return getAllCosmetics('crown').find(c=>c.id===Save.data.cosmetics.current.crown) || COSMETICS.crown[0]; }
+function currentCape(){ return getAllCosmetics('cape').find(c=>c.id===Save.data.cosmetics.current.cape) || COSMETICS.cape[0]; }
+
+/* ============================================================
+   ==================== Save =================================
+   ============================================================ */
 /* ============================================================
    ==================== Save =================================
    ============================================================ */
@@ -199,8 +280,24 @@ const Save = {
     ownedSkins:['cream'],
     currentSkin:'cream',
     cosmetics:{
-      owned:{ spark:['none'], trail:['default'], jump:['default'], death:['default'] },
-      current:{ spark:'none', trail:'default', jump:'default', death:'default' }
+      owned:{
+        spark:['none'],
+        trail:['default'],
+        jump:['default'],
+        death:['default'],
+        aura:['none'],
+        crown:['none'],
+        cape:['none']
+      },
+      current:{
+        spark:'none',
+        trail:'default',
+        jump:'default',
+        death:'default',
+        aura:'none',
+        crown:'none',
+        cape:'none'
+      }
     },
     achievements:{},
     claimedGlobalLevels:[],
@@ -216,7 +313,32 @@ const Save = {
       progressWeekly: { plays:0, meters:0, coins:0, orbs:0 },
       progressMonthly: { plays:0, meters:0, coins:0, orbs:0 }
     },
-    dailyLogin:{ streak: 0, lastClaim: null, claimedToday: false }
+    dailyLogin:{ streak: 0, lastClaim: null, claimedToday: false },
+    admin:{
+      access: false,
+      unlimitedCoins: false,
+      unlimitedUnlock: false,
+      godMode: false,
+      customSkins: [],
+      customSpark: [],
+      customTrail: [],
+      customJump: [],
+      customDeath: [],
+      customAura: [],
+      customCrown: [],
+      customCape: [],
+      lastContentSync: null,
+      /* ➕ المصادر */
+      sources: [
+        { id:'src_rank_1', type:'season_rank', name:'تصنيف الموسم 1', start:'2024-01-01', end:'2024-03-31', active:true },
+        { id:'src_rank_2', type:'season_rank', name:'تصنيف الموسم 2', start:'2024-04-01', end:'2024-06-30', active:false },
+        { id:'src_bp_1',   type:'battle_pass', name:'باتل باس الموسم 1', start:'2024-01-01', end:'2024-03-31', active:true },
+        { id:'src_bp_2',   type:'battle_pass', name:'باتل باس الموسم 2', start:'2024-04-01', end:'2024-06-30', active:false },
+        { id:'src_login',  type:'daily_login', name:'التسجيل اليومي', start:'2024-01-01', end:'2099-12-31', active:true },
+        { id:'src_chest',  type:'chest',       name:'الصناديق', start:'2024-01-01', end:'2099-12-31', active:true },
+        { id:'src_wheel',  type:'lucky_wheel', name:'عجلة الحظ', start:'2024-01-01', end:'2099-12-31', active:true }
+      ]
+    }
   },
   load(){
     try{
@@ -232,13 +354,85 @@ const Save = {
         }
       }
     }catch(e){}
+
+    /* ضمان وجود الحقول الأساسية */
     if(!this.data.cosmetics.owned.spark) this.data.cosmetics.owned.spark = ['none'];
     if(!this.data.cosmetics.current.spark) this.data.cosmetics.current.spark = 'none';
+
+    /* ضمان فئات التأثيرات الجديدة */
+    ['aura','crown','cape'].forEach(cat=>{
+      if(!this.data.cosmetics.owned[cat]) this.data.cosmetics.owned[cat] = ['none'];
+      if(!this.data.cosmetics.current[cat]) this.data.cosmetics.current[cat] = 'none';
+    });
   },
   save(){ try{ localStorage.setItem(this.KEY, JSON.stringify(this.data)); }catch(e){} },
   reset(){ try{ localStorage.removeItem(this.KEY); }catch(e){} location.reload(); }
 };
+
 Save.load();
+
+/* ➕ ضمان وجود قسم المشرف بعد التحميل */
+if(!Save.data.admin){
+  Save.data.admin = {
+    access:false,
+    unlimitedCoins:false,
+    unlimitedUnlock:false,
+    godMode:false,
+    customSkins:[],
+    customSpark:[],
+    customTrail:[],
+    customJump:[],
+    customDeath:[],
+    customAura:[],
+    customCrown:[],
+    customCape:[],
+    lastContentSync:null
+  };
+  Save.save();
+  if(!Save.data.admin.sources){
+  Save.data.admin.sources = [
+    { id:'src_rank_1', type:'season_rank', name:'تصنيف الموسم 1', start:'2024-01-01', end:'2024-03-31', active:true },
+    { id:'src_rank_2', type:'season_rank', name:'تصنيف الموسم 2', start:'2024-04-01', end:'2024-06-30', active:false },
+    { id:'src_bp_1',   type:'battle_pass', name:'باتل باس الموسم 1', start:'2024-01-01', end:'2024-03-31', active:true },
+    { id:'src_bp_2',   type:'battle_pass', name:'باتل باس الموسم 2', start:'2024-04-01', end:'2024-06-30', active:false },
+    { id:'src_login',  type:'daily_login', name:'التسجيل اليومي', start:'2024-01-01', end:'2099-12-31', active:true },
+    { id:'src_chest',  type:'chest',       name:'الصناديق', start:'2024-01-01', end:'2099-12-31', active:true },
+    { id:'src_wheel',  type:'lucky_wheel', name:'عجلة الحظ', start:'2024-01-01', end:'2099-12-31', active:true }
+  ];
+}
+}
+
+/* ============================================================
+   ==================== SOURCES HELPERS ======================
+   ============================================================ */
+const SOURCE_TYPES = {
+  battle_pass: { label:'باتل باس',     icon:'🎫', color:'#8E6AA8' },
+  season_rank: { label:'تصنيف الموسم', icon:'🏅', color:'#E8B34E' },
+  daily_login: { label:'تسجيل يومي',   icon:'📅', color:'#4A88C8' },
+  chest:       { label:'صناديق',       icon:'📦', color:'#C98A2E' },
+  lucky_wheel: { label:'عجلة الحظ',    icon:'🎡', color:'#E85838' }
+};
+
+function getSource(id){
+  return (Save.data.admin.sources || []).find(s => s.id === id) || null;
+}
+
+function getActiveSources(){
+  return (Save.data.admin.sources || []).filter(s => s.active);
+}
+
+function getSourceTypeInfo(type){
+  return SOURCE_TYPES[type] || { label:'مخصص', icon:'📌', color:'#8B8278' };
+}
+
+function isSourceActive(src){
+  if(!src) return false;
+  if(!src.active) return false;
+  const now = today();
+  if(src.start && now < src.start) return false;
+  if(src.end && now > src.end) return false;
+  return true;
+}
 
 /* ============================================================
    ==================== Audio ================================
@@ -476,7 +670,8 @@ const P = {
   x:0,y:0,vx:0,vy:0,r:13,baseX:100,
   gravityDir:1, rot:0,
   onGround:false, jumps:0, trail:[],
-  enginePhase: 0, legPhase: 0, bouncePhase: 0
+  enginePhase: 0, legPhase: 0, bouncePhase: 0,
+  cape: null
 };
 let obstacles=[], orbs=[], coins=[], powerups=[], particles=[], floats=[], clouds=[];
 let sparkParticles = [];
@@ -634,6 +829,19 @@ const SPARK_PALETTES = {
 function spawnSpark(){
   const spark = currentSpark();
   if(spark.id === 'none') return;
+
+  /* ➕ دعم الصور المخصصة للشرار */
+  if(spark.imageData){
+    if(sparkParticles.length > 55) return;
+    sparkParticles.push({
+      x: P.x - 10 - rand(0,6), y: P.y + rand(-6,6),
+      vx: rand(-2.2,-0.6), vy: rand(-0.6,0.6),
+      size: rand(10, 16), life: 1, decay: rand(0.014,0.028),
+      imageData: spark.imageData,
+      type: 'customImage', rot: rand(0,Math.PI*2), rotSpd: rand(-0.04,0.04)
+    });
+    return;
+  }
   const palette = SPARK_PALETTES[spark.id];
   if(!palette) return;
   if(sparkParticles.length > 55) return;
@@ -697,8 +905,22 @@ function updateSparks(){
 }
 
 function drawSparks(){
-  for(const p of sparkParticles){
-    const alpha = Math.max(0, Math.min(1, p.life*1.2));
+  
+for(const p of sparkParticles){
+  if(p.type === 'customImage'){
+    const img = getImageEl(p.imageData);
+    if(img.complete && img.naturalWidth > 0){
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1, p.life*1.2));
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      const sz = p.size * Math.max(0.5, p.life);
+      ctx.drawImage(img, -sz/2, -sz/2, sz, sz);
+      ctx.restore();
+    }
+    continue;
+  }
+      const alpha = Math.max(0, Math.min(1, p.life*1.2));
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.translate(p.x, p.y);
@@ -1200,6 +1422,7 @@ function updateGameplay(){
 
   P.enginePhase += 0.15;
   P.bouncePhase += 0.2;
+  updateCapePhysics();
 
   if(G.mode==='FLIP'){
     P.vy += 0.22 * P.gravityDir;
@@ -1430,10 +1653,832 @@ function collectOrb(ob){
 }
 
 /* ============================================================
+   ==================== CAPE (وشاح متحرك) ====================
+   ============================================================ */
+function initCape(){
+  P.cape = [];
+  const segCount = 10;
+  for(let i=0;i<segCount;i++){
+    P.cape.push({ x: P.x - i*4, y: P.y + i*1.5 });
+  }
+}
+
+function updateCapePhysics(){
+  if(!P.cape) { initCape(); return; }
+  const cape = Save.data.cosmetics.current.cape;
+  if(cape === 'none') return;
+
+  const isScarf = cape.startsWith('scarf');
+  const segCount = isScarf ? 7 : 10;
+  if(P.cape.length !== segCount){
+    P.cape = [];
+    for(let i=0;i<segCount;i++) P.cape.push({ x: P.x, y: P.y });
+  }
+
+  const segLen = P.r * (isScarf ? 0.45 : 0.62);
+  const anchorX = P.x - P.r * 0.75;
+  const anchorY = P.y - P.r * 0.1;
+
+  P.cape[0].x = anchorX;
+  P.cape[0].y = anchorY;
+
+  const windX = -0.4 - G.speed * 0.15;
+  const windY = 0.15 + G.speed * 0.03;
+  const wobble = Math.sin(G.t * 0.15) * 0.35;
+
+  for(let i=1;i<P.cape.length;i++){
+    const seg = P.cape[i];
+    const prev = P.cape[i-1];
+
+    seg.x += windX;
+    seg.y += windY + wobble * (i / P.cape.length);
+
+    const dx = seg.x - prev.x;
+    const dy = seg.y - prev.y;
+    const d = Math.hypot(dx, dy) || 1;
+    const ratio = segLen / d;
+    seg.x = prev.x + dx * ratio;
+    seg.y = prev.y + dy * ratio;
+  }
+}
+
+function drawCape(c, r, cape, t, ox, oy){
+  if(cape.id === 'none' || !P.cape) return;
+  ox = ox || 0;
+  oy = oy || 0;
+  const kind = cape.id;
+  const segs = P.cape;
+
+  const isScarf = kind.startsWith('scarf');
+  const baseW = isScarf ? r * 0.5 : r * 0.95;
+
+  let col1 = '#E04040', col2 = '#A02030';
+  if(kind === 'scarf_red'){ col1='#E84848'; col2='#A02030'; }
+  else if(kind === 'scarf_blue'){ col1='#5090E8'; col2='#2040A0'; }
+  else if(kind === 'scarf_gold'){ col1='#E8B34E'; col2='#A07028'; }
+  else if(kind === 'cape_hero'){ col1='#C03030'; col2='#801818'; }
+  else if(kind === 'cape_dark'){ col1='#2A1A30'; col2='#100810'; }
+  else if(kind === 'cape_royal'){ col1='#5A30A0'; col2='#301860'; }
+
+  c.save();
+
+  if(kind === 'cape_rainbow'){
+    for(let i=0;i<segs.length;i++){
+      const p = i/segs.length;
+      const hue = (t*4 + i*28) % 360;
+      const sz = baseW * (1 - p * 0.55);
+      c.fillStyle = `hsl(${hue}, 80%, 58%)`;
+      c.shadowColor = `hsl(${hue}, 80%, 58%)`;
+      c.shadowBlur = 8;
+      c.beginPath();
+      c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.5, 0, Math.PI*2);
+      c.fill();
+    }
+    c.shadowBlur = 0;
+  } else if(kind === 'cape_shadow'){
+    for(let i=segs.length - 1; i >= 0; i--){
+      const p = i/segs.length;
+      const alpha = 0.85 * (1 - p * 0.85);
+      const sz = baseW * (1 - p * 0.5);
+      c.fillStyle = `rgba(20,10,35,${alpha})`;
+      c.beginPath();
+      c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.5, 0, Math.PI*2);
+      c.fill();
+    }
+  } else if(kind === 'cape_galaxy'){
+    for(let i=segs.length - 1; i >= 0; i--){
+      const p = i/segs.length;
+      const sz = baseW * (1 - p * 0.5);
+      const col = i < 3 ? '#4A2880' : mixColor('#4A2880', '#100820', p);
+      c.fillStyle = col;
+      c.beginPath();
+      c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.5, 0, Math.PI*2);
+      c.fill();
+    }
+    for(let i=0;i<segs.length;i++){
+      if(i % 2 === 0){
+        const twinkle = 0.5 + Math.sin(t * 0.12 + i) * 0.5;
+        c.fillStyle = '#FFFFFF';
+        c.globalAlpha = twinkle * 0.85;
+        c.beginPath();
+        c.arc(segs[i].x - ox + Math.sin(t*0.1 + i*2) * 3, segs[i].y - oy + Math.cos(t*0.1 + i*2) * 3, 1.3, 0, Math.PI*2);
+        c.fill();
+      }
+    }
+    c.globalAlpha = 1;
+  } else {
+    for(let i=segs.length - 1; i >= 0; i--){
+      const p = i/segs.length;
+      const sz = baseW * (1 - p * 0.55);
+      const col = i < 2 ? col1 : mixColor(col1, col2, p);
+      c.fillStyle = col;
+      c.beginPath();
+      c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.5, 0, Math.PI*2);
+      c.fill();
+    }
+    if(!isScarf && segs.length > 2){
+      c.fillStyle = 'rgba(255,255,255,0.18)';
+      for(let i=1;i<segs.length-1;i+=2){
+        const sz = baseW * (1 - i/segs.length * 0.5) * 0.3;
+        c.beginPath();
+        c.arc(segs[i].x - ox, segs[i].y - oy - 2, sz, 0, Math.PI*2);
+        c.fill();
+      }
+    }
+  }
+
+  c.restore();
+}
+
+/* ============================================================
+   ==================== AURA (هالة دائمة) ====================
+   ============================================================ */
+function drawAura(c, r, aura, t){
+  const kind = aura.id;
+  if(kind === 'none') return;
+
+  const pulse = 1 + Math.sin(t * 0.08) * 0.1;
+  const aur = r * 2.3 * pulse;
+
+  if(kind === 'amber' || kind === 'cyan' || kind === 'holy' || kind === 'void'){
+    const palettes = {
+      amber: { c1:'#FFB060', c2:'#FF8020', c3:'#FFE090' },
+      cyan:  { c1:'#80E8F0', c2:'#40A0C0', c3:'#E0FFFF' },
+      holy:  { c1:'#FFF8D0', c2:'#FFD060', c3:'#FFFFFF' },
+      void:  { c1:'#C080FF', c2:'#6020A0', c3:'#FFC0FF' }
+    };
+    const p = palettes[kind];
+
+    const grad = c.createRadialGradient(0,0,r*0.7, 0,0,aur);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(0.45, p.c1);
+    grad.addColorStop(0.75, p.c2);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    c.globalAlpha = 0.45;
+    c.fillStyle = grad;
+    c.beginPath(); c.arc(0,0,aur,0,Math.PI*2); c.fill();
+    c.globalAlpha = 1;
+
+    /* حلقة دوّارة */
+    c.strokeStyle = p.c3;
+    c.lineWidth = 2.2;
+    c.globalAlpha = 0.7;
+    c.beginPath();
+    c.arc(0, 0, aur*0.85, t*0.025, t*0.025 + Math.PI*1.55);
+    c.stroke();
+    c.globalAlpha = 0.4;
+    c.beginPath();
+    c.arc(0, 0, aur*0.85, t*0.025 + Math.PI, t*0.025 + Math.PI*2);
+    c.stroke();
+    c.globalAlpha = 1;
+
+    /* جزيئات صغيرة */
+    for(let i=0;i<4;i++){
+      const a = t*0.03 + (i/4)*Math.PI*2;
+      const dist = aur * 0.9;
+      c.fillStyle = p.c3;
+      c.globalAlpha = 0.7;
+      c.beginPath();
+      c.arc(Math.cos(a)*dist, Math.sin(a)*dist, 2.2, 0, Math.PI*2);
+      c.fill();
+    }
+    c.globalAlpha = 1;
+
+  } else if(kind === 'fire'){
+    for(let i=0;i<10;i++){
+      const a = t*0.05 + (i/10)*Math.PI*2;
+      const dist = r * 1.85 + Math.sin(t*0.12 + i) * 3;
+      const px = Math.cos(a) * dist;
+      const py = Math.sin(a) * dist;
+      const sz = 4.5 + Math.sin(t*0.15 + i) * 1.6;
+      const grad = c.createRadialGradient(px, py, 0, px, py, sz*2.2);
+      grad.addColorStop(0, '#FFF8C0');
+      grad.addColorStop(0.4, '#FFB060');
+      grad.addColorStop(1, 'rgba(232,88,56,0)');
+      c.fillStyle = grad;
+      c.beginPath(); c.arc(px, py, sz*2.2, 0, Math.PI*2); c.fill();
+    }
+
+  } else if(kind === 'ice'){
+    for(let i=0;i<8;i++){
+      const a = t*0.035 + (i/8)*Math.PI*2;
+      const dist = r * 1.95;
+      const px = Math.cos(a) * dist;
+      const py = Math.sin(a) * dist;
+      c.save();
+      c.translate(px, py);
+      c.rotate(a + t*0.04);
+      c.fillStyle = 'rgba(160,224,248,0.9)';
+      c.shadowColor = '#A0E0F8';
+      c.shadowBlur = 6;
+      for(let k=0;k<3;k++){
+        const ak = (k/3)*Math.PI*2;
+        c.beginPath();
+        c.ellipse(0, 0, r*0.16, r*0.035, ak, 0, Math.PI*2);
+        c.fill();
+      }
+      c.restore();
+    }
+    c.shadowBlur = 0;
+
+  } else if(kind === 'lightning'){
+    for(let i=0;i<7;i++){
+      const a = t*0.08 + (i/7)*Math.PI*2;
+      const dist = r * 2.05;
+      const px = Math.cos(a) * dist;
+      const py = Math.sin(a) * dist;
+      c.strokeStyle = '#A0E0FF';
+      c.lineWidth = 1.6;
+      c.shadowColor = '#80D0FF';
+      c.shadowBlur = 10;
+      c.beginPath();
+      c.moveTo(px * 0.55, py * 0.55);
+      const midX = px * 0.55 + (Math.random()-0.5) * 10;
+      const midY = py * 0.55 + (Math.random()-0.5) * 10;
+      c.lineTo(midX, midY);
+      c.lineTo(px, py);
+      c.stroke();
+    }
+    c.shadowBlur = 0;
+
+  } else if(kind === 'shadow'){
+    const grad = c.createRadialGradient(0,0,r*0.5, 0,0,aur);
+    grad.addColorStop(0, 'rgba(80,40,90,0.42)');
+    grad.addColorStop(0.55, 'rgba(40,20,60,0.3)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = grad;
+    c.beginPath(); c.arc(0,0,aur,0,Math.PI*2); c.fill();
+
+    for(let i=0;i<4;i++){
+      const a = t*0.04 + (i/4)*Math.PI*2;
+      const dist = r*1.6 + Math.sin(t*0.1 + i)*4;
+      c.fillStyle = 'rgba(20,8,30,0.75)';
+      c.beginPath();
+      c.ellipse(Math.cos(a)*dist, Math.sin(a)*dist, r*0.45, r*0.16, a, 0, Math.PI*2);
+      c.fill();
+    }
+
+  } else if(kind === 'rainbow'){
+    const hue = (t*3) % 360;
+
+    const grad = c.createRadialGradient(0,0,r*0.7, 0,0,aur);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(0.5, `hsla(${hue}, 85%, 65%, 0.6)`);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = grad;
+    c.beginPath(); c.arc(0,0,aur,0,Math.PI*2); c.fill();
+
+    for(let i=0;i<8;i++){
+      const a = t*0.06 + (i/8)*Math.PI*2;
+      const dist = r * 1.85;
+      const col = `hsl(${(hue + i*45) % 360}, 85%, 65%)`;
+      c.fillStyle = col;
+      c.shadowColor = col;
+      c.shadowBlur = 12;
+      c.beginPath();
+      c.arc(Math.cos(a)*dist, Math.sin(a)*dist, 3.5, 0, Math.PI*2);
+      c.fill();
+    }
+    c.shadowBlur = 0;
+
+  } else if(kind === 'galaxy'){
+    const grad = c.createRadialGradient(0,0,r*0.5, 0,0,aur*1.15);
+    grad.addColorStop(0, 'rgba(80,40,160,0.38)');
+    grad.addColorStop(0.6, 'rgba(40,20,80,0.22)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = grad;
+    c.beginPath(); c.arc(0,0,aur*1.15,0,Math.PI*2); c.fill();
+
+    /* حلقة نجوم */
+    for(let i=0;i<18;i++){
+      const a = (i * 1.7 + t*0.012) % (Math.PI*2);
+      const dist = r * (1.4 + (i % 5) * 0.18);
+      const px = Math.cos(a) * dist;
+      const py = Math.sin(a) * dist;
+      const twinkle = 0.5 + Math.sin(t*0.18 + i) * 0.5;
+      c.fillStyle = i % 3 === 0 ? '#FFD0FF' : '#FFFFFF';
+      c.globalAlpha = twinkle * 0.85;
+      c.beginPath();
+      c.arc(px, py, 1.2 + twinkle*1.8, 0, Math.PI*2);
+      c.fill();
+    }
+    c.globalAlpha = 1;
+  }
+}
+
+/* ============================================================
+   ==================== CROWN (تاج) ==========================
+   ============================================================ */
+function drawCrown(c, r, crown, t){
+  const kind = crown.id;
+  if(kind === 'none') return;
+
+  const cy = -r * 1.08; /* فوق الرأس */
+
+  if(kind === 'bronze' || kind === 'silver' || kind === 'gold' || kind === 'diamond'){
+    const palettes = {
+      bronze:  { base:'#B8763E', light:'#E8A870', gem:'#FFD8A8' },
+      silver:  { base:'#A8B0C0', light:'#D8E0F0', gem:'#FFFFFF' },
+      gold:    { base:'#E8B34E', light:'#FFF4C0', gem:'#FF6088' },
+      diamond: { base:'#80D0E8', light:'#E0F8FF', gem:'#FFFFFF' }
+    };
+    const p = palettes[kind];
+
+    c.fillStyle = p.base;
+    c.beginPath();
+    c.moveTo(-r*0.7, cy + r*0.25);
+    c.lineTo(-r*0.7, cy - r*0.08);
+    c.lineTo(-r*0.42, cy - r*0.08);
+    c.lineTo(-r*0.30, cy - r*0.42);
+    c.lineTo(0, cy - r*0.15);
+    c.lineTo(r*0.30, cy - r*0.42);
+    c.lineTo(r*0.42, cy - r*0.08);
+    c.lineTo(r*0.7, cy - r*0.08);
+    c.lineTo(r*0.7, cy + r*0.25);
+    c.closePath();
+    c.fill();
+
+    c.fillStyle = p.light;
+    c.beginPath();
+    c.moveTo(-r*0.6, cy + r*0.18);
+    c.lineTo(-r*0.6, cy - r*0.02);
+    c.lineTo(r*0.6, cy - r*0.02);
+    c.lineTo(r*0.6, cy + r*0.18);
+    c.closePath();
+    c.fill();
+
+    c.fillStyle = p.gem;
+    c.beginPath();
+    c.arc(0, cy - r*0.13, r*0.11, 0, Math.PI*2);
+    c.fill();
+
+    if(kind === 'gold' || kind === 'diamond'){
+      c.beginPath();
+      c.arc(-r*0.42, cy + r*0.02, r*0.075, 0, Math.PI*2);
+      c.arc(r*0.42, cy + r*0.02, r*0.075, 0, Math.PI*2);
+      c.fill();
+      /* لمعة */
+      c.fillStyle = 'rgba(255,255,255,0.9)';
+      c.beginPath();
+      c.arc(-r*0.5, cy + r*0.1, r*0.06, 0, Math.PI*2);
+      c.fill();
+    }
+
+  } else if(kind === 'leaf'){
+    for(let i=0;i<5;i++){
+      const a = -1.0 + i*0.5;
+      c.save();
+      c.translate(0, cy + r*0.18);
+      c.rotate(a);
+      c.fillStyle = i % 2 === 0 ? '#5EA041' : '#7BC44C';
+      c.beginPath();
+      c.ellipse(0, -r*0.35, r*0.14, r*0.34, 0, 0, Math.PI*2);
+      c.fill();
+      c.restore();
+    }
+    c.strokeStyle = 'rgba(0,0,0,0.2)';
+    c.lineWidth = 0.8;
+    c.beginPath();
+    c.arc(0, cy + r*0.15, r*0.35, Math.PI, Math.PI*2);
+    c.stroke();
+
+  } else if(kind === 'flower'){
+    for(let i=0;i<6;i++){
+      const a = (i/6)*Math.PI*2;
+      c.fillStyle = i % 2 === 0 ? '#FF80A0' : '#FFB0C0';
+      c.beginPath();
+      c.ellipse(Math.cos(a)*r*0.26, cy + r*0.05 + Math.sin(a)*r*0.26, r*0.16, r*0.1, a, 0, Math.PI*2);
+      c.fill();
+    }
+    c.fillStyle = '#FFE060';
+    c.beginPath();
+    c.arc(0, cy + r*0.05, r*0.13, 0, Math.PI*2);
+    c.fill();
+    c.fillStyle = '#E8B34E';
+    c.beginPath();
+    c.arc(0, cy + r*0.05, r*0.06, 0, Math.PI*2);
+    c.fill();
+
+  } else if(kind === 'horns'){
+    c.fillStyle = '#2A1818';
+    /* قرن يسار */
+    c.beginPath();
+    c.moveTo(-r*0.5, cy + r*0.25);
+    c.quadraticCurveTo(-r*0.95, cy - r*0.5, -r*0.65, cy - r*0.95);
+    c.quadraticCurveTo(-r*0.55, cy - r*0.4, -r*0.25, cy + r*0.1);
+    c.closePath();
+    c.fill();
+    /* قرن يمين */
+    c.beginPath();
+    c.moveTo(r*0.5, cy + r*0.25);
+    c.quadraticCurveTo(r*0.95, cy - r*0.5, r*0.65, cy - r*0.95);
+    c.quadraticCurveTo(r*0.55, cy - r*0.4, r*0.25, cy + r*0.1);
+    c.closePath();
+    c.fill();
+    /* لمعة */
+    c.fillStyle = 'rgba(255,180,180,0.4)';
+    c.beginPath();
+    c.moveTo(-r*0.55, cy - r*0.15);
+    c.lineTo(-r*0.7, cy - r*0.55);
+    c.lineTo(-r*0.62, cy - r*0.7);
+    c.lineTo(-r*0.5, cy - r*0.3);
+    c.closePath();
+    c.fill();
+
+  } else if(kind === 'flame'){
+    c.fillStyle = '#E8B34E';
+    c.beginPath();
+    c.moveTo(-r*0.6, cy + r*0.28);
+    c.lineTo(-r*0.6, cy + r*0.05);
+    c.lineTo(r*0.6, cy + r*0.05);
+    c.lineTo(r*0.6, cy + r*0.28);
+    c.closePath();
+    c.fill();
+
+    for(let i=0;i<5;i++){
+      const x = -r*0.5 + i*r*0.25;
+      const h = r * (0.55 + Math.sin(t*0.18 + i)*0.15);
+      const grad = c.createLinearGradient(x, cy - h, x, cy + r*0.05);
+      grad.addColorStop(0, '#FFF8C0');
+      grad.addColorStop(0.5, '#FFB060');
+      grad.addColorStop(1, '#E85838');
+      c.fillStyle = grad;
+      c.beginPath();
+      c.moveTo(x - r*0.11, cy + r*0.05);
+      c.quadraticCurveTo(x - r*0.08, cy - h*0.5, x, cy - h);
+      c.quadraticCurveTo(x + r*0.08, cy - h*0.5, x + r*0.11, cy + r*0.05);
+      c.closePath();
+      c.fill();
+    }
+
+  } else if(kind === 'ice'){
+    c.fillStyle = '#5E90B0';
+    c.beginPath();
+    c.moveTo(-r*0.6, cy + r*0.28);
+    c.lineTo(-r*0.6, cy + r*0.1);
+    c.lineTo(r*0.6, cy + r*0.1);
+    c.lineTo(r*0.6, cy + r*0.28);
+    c.closePath();
+    c.fill();
+
+    for(let i=0;i<5;i++){
+      const x = -r*0.5 + i*r*0.25;
+      const h = r * (0.55 + (i%2 === 0 ? 0.18 : 0.02));
+      c.fillStyle = '#A0E0F8';
+      c.shadowColor = '#A0E0F8';
+      c.shadowBlur = 6;
+      c.beginPath();
+      c.moveTo(x - r*0.1, cy + r*0.1);
+      c.lineTo(x, cy - h);
+      c.lineTo(x + r*0.1, cy + r*0.1);
+      c.closePath();
+      c.fill();
+    }
+    c.shadowBlur = 0;
+    c.fillStyle = 'rgba(255,255,255,0.9)';
+    for(let i=0;i<3;i++){
+      c.beginPath();
+      c.arc(-r*0.4 + i*r*0.4, cy + r*0.2, r*0.055, 0, Math.PI*2);
+      c.fill();
+    }
+
+  } else if(kind === 'star'){
+    c.fillStyle = '#FFE060';
+    c.shadowColor = '#FFE060';
+    c.shadowBlur = 12;
+    c.beginPath();
+    for(let i=0;i<10;i++){
+      const a = (i/10)*Math.PI*2 - Math.PI/2;
+      const rr = i % 2 === 0 ? r*0.42 : r*0.18;
+      const px = Math.cos(a)*rr;
+      const py = cy + Math.sin(a)*rr;
+      i===0 ? c.moveTo(px, py) : c.lineTo(px, py);
+    }
+    c.closePath();
+    c.fill();
+    c.fillStyle = 'rgba(255,255,255,0.85)';
+    c.beginPath();
+    c.arc(0, cy, r*0.12, 0, Math.PI*2);
+    c.fill();
+    c.shadowBlur = 0;
+
+  } else if(kind === 'skull'){
+    /* الجمجمة */
+    c.fillStyle = '#F0E8E0';
+    c.beginPath();
+    c.arc(0, cy, r*0.34, 0, Math.PI*2);
+    c.fill();
+    /* الفك */
+    roundRect(c, -r*0.2, cy + r*0.16, r*0.4, r*0.16, r*0.05);
+    c.fill();
+    /* العيون */
+    c.fillStyle = '#1A0A0A';
+    c.beginPath();
+    c.arc(-r*0.14, cy - r*0.05, r*0.1, 0, Math.PI*2);
+    c.arc(r*0.14, cy - r*0.05, r*0.1, 0, Math.PI*2);
+    c.fill();
+    /* الأسنان */
+    c.fillStyle = '#F0E8E0';
+    for(let i=0;i<4;i++){
+      c.fillRect(-r*0.15 + i*r*0.09, cy + r*0.2, r*0.05, r*0.11);
+    }
+    /* شق في الجمجمة */
+    c.strokeStyle = 'rgba(0,0,0,0.25)';
+    c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(-r*0.15, cy - r*0.2);
+    c.lineTo(0, cy - r*0.1);
+    c.lineTo(-r*0.08, cy + r*0.02);
+    c.stroke();
+
+  } else if(kind === 'king'){
+    c.fillStyle = '#E8B34E';
+    c.shadowColor = '#FFD060';
+    c.shadowBlur = 14;
+    c.beginPath();
+    c.moveTo(-r*0.75, cy + r*0.3);
+    c.lineTo(-r*0.75, cy - r*0.12);
+    c.lineTo(-r*0.45, cy - r*0.08);
+    c.lineTo(-r*0.35, cy - r*0.58);
+    c.lineTo(-r*0.12, cy - r*0.18);
+    c.lineTo(0, cy - r*0.75);
+    c.lineTo(r*0.12, cy - r*0.18);
+    c.lineTo(r*0.35, cy - r*0.58);
+    c.lineTo(r*0.45, cy - r*0.08);
+    c.lineTo(r*0.75, cy - r*0.12);
+    c.lineTo(r*0.75, cy + r*0.3);
+    c.closePath();
+    c.fill();
+    c.shadowBlur = 0;
+
+    c.fillStyle = '#FFF4C0';
+    c.beginPath();
+    c.moveTo(-r*0.6, cy + r*0.22);
+    c.lineTo(-r*0.6, cy - r*0.02);
+    c.lineTo(r*0.6, cy - r*0.02);
+    c.lineTo(r*0.6, cy + r*0.22);
+    c.closePath();
+    c.fill();
+
+    /* جواهر */
+    c.fillStyle = '#FF4060';
+    c.beginPath();
+    c.arc(0, cy - r*0.32, r*0.1, 0, Math.PI*2);
+    c.fill();
+    c.fillStyle = '#4080FF';
+    c.beginPath();
+    c.arc(-r*0.38, cy - r*0.22, r*0.075, 0, Math.PI*2);
+    c.arc(r*0.38, cy - r*0.22, r*0.075, 0, Math.PI*2);
+    c.fill();
+    c.fillStyle = '#40FF80';
+    c.beginPath();
+    c.arc(-r*0.7, cy + r*0.1, r*0.065, 0, Math.PI*2);
+    c.arc(r*0.7, cy + r*0.1, r*0.065, 0, Math.PI*2);
+    c.fill();
+
+      } else if(kind === 'hat'){
+    c.fillStyle = '#8E4A30';
+    c.beginPath();
+    c.arc(0, cy + r*0.2, r*0.75, Math.PI, Math.PI*2);
+    c.fill();
+    c.fillStyle = '#A05838';
+    c.beginPath();
+    c.ellipse(0, cy + r*0.22, r*0.85, r*0.16, 0, 0, Math.PI*2);
+    c.fill();
+    c.fillStyle = 'rgba(0,0,0,0.15)';
+    c.beginPath();
+    c.ellipse(0, cy + r*0.2, r*0.72, r*0.1, 0, 0, Math.PI*2);
+    c.fill();
+    /* شريط */
+    c.fillStyle = '#C14A4A';
+    c.fillRect(-r*0.72, cy + r*0.02, r*1.44, r*0.12);
+
+  } else if(kind === 'cap'){
+    c.fillStyle = '#2A5A90';
+    c.beginPath();
+    c.arc(0, cy + r*0.15, r*0.72, Math.PI, Math.PI*2);
+    c.fill();
+    /* حواف */
+    c.beginPath();
+    c.moveTo(-r*0.75, cy + r*0.15);
+    c.lineTo(-r*0.9, cy + r*0.3);
+    c.lineTo(r*0.9, cy + r*0.3);
+    c.lineTo(r*0.75, cy + r*0.15);
+    c.closePath();
+    c.fill();
+    /* زر */
+    c.fillStyle = '#1A3A60';
+    c.beginPath();
+    c.arc(0, cy - r*0.5, r*0.09, 0, Math.PI*2);
+    c.fill();
+
+  } else if(kind === 'beanie'){
+    c.fillStyle = '#B03060';
+    c.beginPath();
+    c.arc(0, cy + r*0.1, r*0.78, Math.PI, Math.PI*2);
+    c.fill();
+    /* حواف عريضة */
+    c.fillStyle = '#D04070';
+    roundRect(c, -r*0.85, cy + r*0.05, r*1.7, r*0.24, r*0.08);
+    c.fill();
+    /* كرة */
+    c.fillStyle = '#E8D0D8';
+    c.beginPath();
+    c.arc(0, cy - r*0.75, r*0.2, 0, Math.PI*2);
+    c.fill();
+
+  } else if(kind === 'cowboy'){
+    c.fillStyle = '#8A5A30';
+    /* تاج القبعة */
+    c.beginPath();
+    c.moveTo(-r*0.55, cy + r*0.15);
+    c.lineTo(-r*0.5, cy - r*0.4);
+    c.lineTo(0, cy - r*0.55);
+    c.lineTo(r*0.5, cy - r*0.4);
+    c.lineTo(r*0.55, cy + r*0.15);
+    c.closePath();
+    c.fill();
+    /* الحواف العريضة */
+    c.fillStyle = '#A06838';
+    c.beginPath();
+    c.ellipse(0, cy + r*0.15, r*1.05, r*0.18, 0, 0, Math.PI*2);
+    c.fill();
+    /* شريط */
+    c.fillStyle = '#3A2010';
+    c.fillRect(-r*0.5, cy - r*0.05, r*1.0, r*0.12);
+
+  } else if(kind === 'santa'){
+    c.fillStyle = '#C03030';
+    c.beginPath();
+    c.moveTo(-r*0.7, cy + r*0.15);
+    c.quadraticCurveTo(0, cy - r*0.9, r*0.7, cy + r*0.15);
+    c.closePath();
+    c.fill();
+    /* حواف بيضاء */
+    c.fillStyle = '#FFFFFF';
+    roundRect(c, -r*0.78, cy + r*0.05, r*1.56, r*0.22, r*0.1);
+    c.fill();
+    /* كرة */
+    c.beginPath();
+    c.arc(r*0.7, cy + r*0.15, r*0.18, 0, Math.PI*2);
+    c.fill();
+
+  } else if(kind === 'party'){
+    const colors = ['#FF6088','#FFB04C','#FFE24C','#4CE0A8','#4CA8FF','#A86AFF'];
+    c.save();
+    c.translate(0, cy + r*0.15);
+    c.rotate(-0.15);
+    /* المثلث */
+    c.beginPath();
+    c.moveTo(-r*0.45, 0);
+    c.lineTo(r*0.45, 0);
+    c.lineTo(0, -r*1.1);
+    c.closePath();
+    c.fillStyle = colors[0];
+    c.fill();
+    /* خطوط ملونة */
+    for(let i=1;i<colors.length;i++){
+      const y = -i*r*0.18;
+      c.fillStyle = colors[i];
+      c.fillRect(-r*0.4 + i*r*0.08, y, r*0.8 - i*r*0.16, r*0.05);
+    }
+    /* كرة */
+    c.fillStyle = '#FFE060';
+    c.beginPath();
+    c.arc(0, -r*1.1, r*0.13, 0, Math.PI*2);
+    c.fill();
+    c.restore();
+
+  } else if(kind === 'wizard'){
+    c.save();
+    c.translate(0, cy + r*0.15);
+    /* القبعة المخروطية الطويلة */
+    c.fillStyle = '#3A2060';
+    c.beginPath();
+    c.moveTo(-r*0.75, 0);
+    c.quadraticCurveTo(-r*0.25, -r*0.9, r*0.2, -r*1.4);
+    c.quadraticCurveTo(r*0.3, -r*0.9, r*0.75, 0);
+    c.closePath();
+    c.fill();
+    /* الحواف */
+    c.fillStyle = '#4A2880';
+    c.beginPath();
+    c.ellipse(0, 0, r*0.85, r*0.18, 0, 0, Math.PI*2);
+    c.fill();
+    /* نجوم صغيرة */
+    c.fillStyle = '#FFE060';
+    for(let i=0;i<4;i++){
+      const sx = -r*0.4 + i*r*0.25;
+      const sy = -r*0.25 - i*r*0.15;
+      c.beginPath();
+      c.arc(sx, sy, r*0.06, 0, Math.PI*2);
+      c.fill();
+    }
+    c.restore();
+
+  } else if(kind === 'viking'){
+    c.fillStyle = '#808898';
+    /* قبة الخوذة */
+    c.beginPath();
+    c.arc(0, cy + r*0.1, r*0.72, Math.PI, Math.PI*2);
+    c.fill();
+    /* حواف */
+    c.fillStyle = '#A0A8B8';
+    roundRect(c, -r*0.82, cy + r*0.05, r*1.64, r*0.22, r*0.06);
+    c.fill();
+    /* قرون الفايكنغ */
+    c.fillStyle = '#F0E8D0';
+    /* قرن يسار */
+    c.beginPath();
+    c.moveTo(-r*0.6, cy + r*0.15);
+    c.quadraticCurveTo(-r*1.2, cy - r*0.2, -r*1.0, cy - r*0.75);
+    c.quadraticCurveTo(-r*1.05, cy - r*0.3, -r*0.7, cy + r*0.05);
+    c.closePath();
+    c.fill();
+    /* قرن يمين */
+    c.beginPath();
+    c.moveTo(r*0.6, cy + r*0.15);
+    c.quadraticCurveTo(r*1.2, cy - r*0.2, r*1.0, cy - r*0.75);
+    c.quadraticCurveTo(r*1.05, cy - r*0.3, r*0.7, cy + r*0.05);
+    c.closePath();
+    c.fill();
+    /* تفاصيل */
+    c.fillStyle = '#3A4050';
+    c.fillRect(-r*0.5, cy + r*0.0, r*1.0, r*0.06);
+
+  } else if(kind === 'deerHorns'){
+    c.strokeStyle = '#8A6030';
+    c.lineWidth = r*0.14;
+    c.lineCap = 'round';
+    c.lineJoin = 'round';
+    /* قرن يسار متفرع */
+    c.beginPath();
+    c.moveTo(-r*0.35, cy + r*0.3);
+    c.quadraticCurveTo(-r*0.7, cy - r*0.3, -r*0.55, cy - r*0.95);
+    c.stroke();
+    c.beginPath();
+    c.moveTo(-r*0.55, cy - r*0.4);
+    c.lineTo(-r*0.95, cy - r*0.5);
+    c.stroke();
+    c.beginPath();
+    c.moveTo(-r*0.5, cy - r*0.7);
+    c.lineTo(-r*0.85, cy - r*0.85);
+    c.stroke();
+    /* قرن يمين */
+    c.beginPath();
+    c.moveTo(r*0.35, cy + r*0.3);
+    c.quadraticCurveTo(r*0.7, cy - r*0.3, r*0.55, cy - r*0.95);
+    c.stroke();
+    c.beginPath();
+    c.moveTo(r*0.55, cy - r*0.4);
+    c.lineTo(r*0.95, cy - r*0.5);
+    c.stroke();
+    c.beginPath();
+    c.moveTo(r*0.5, cy - r*0.7);
+    c.lineTo(r*0.85, cy - r*0.85);
+    c.stroke();
+
+  } else if(kind === 'singleHorn'){
+    c.fillStyle = '#F0E0C0';
+    /* قرن وحيد من منتصف الجبهة */
+    c.beginPath();
+    c.moveTo(-r*0.12, cy + r*0.2);
+    c.quadraticCurveTo(-r*0.15, cy - r*0.5, 0, cy - r*1.0);
+    c.quadraticCurveTo(r*0.15, cy - r*0.5, r*0.12, cy + r*0.2);
+    c.closePath();
+    c.fill();
+    /* خطوط الحلزون */
+    c.strokeStyle = 'rgba(0,0,0,0.15)';
+    c.lineWidth = 1;
+    for(let i=0;i<4;i++){
+      const y = cy + r*0.05 - i*r*0.22;
+      c.beginPath();
+      c.moveTo(-r*0.1 + i*r*0.02, y);
+      c.lineTo(r*0.1 - i*r*0.02, y);
+      c.stroke();
+    }
+  }
+}
+
+/* ============================================================
    ==================== Character drawing ====================
    ============================================================ */
 function drawCharacterBody(c, r, skin, t){
-  const rainbow = skin.rainbow;
+  /* ➕ إذا كان هناك صورة مخصصة، استخدمها */
+  if(skin.imageData){
+    const img = getImageEl(skin.imageData);
+    if(img.complete && img.naturalWidth > 0){
+      const size = r * 2.4;
+      c.drawImage(img, -size/2, -size/2, size, size);
+      return;
+    } else {
+      /* صورة قيد التحميل — ارسم دائرة بديلة */
+      c.fillStyle = skin.body;
+      c.beginPath(); c.arc(0,0,r,0,Math.PI*2); c.fill();
+      return;
+    }
+  }
+    const rainbow = skin.rainbow;
   c.fillStyle = 'rgba(0,0,0,0.12)';
   c.beginPath(); c.arc(0, 1.5, r + 0.8, 0, Math.PI*2); c.fill();
 
@@ -1477,7 +2522,8 @@ function drawCharacterBody(c, r, skin, t){
 }
 
 function drawCharacterFace(c, r, skin){
-  const eyeY = -r*0.15, eyeX = r*0.28, eyeR = r*0.24;
+  if(skin.imageData) return; /* التخطي للصورة المخصصة */
+    const eyeY = -r*0.15, eyeX = r*0.28, eyeR = r*0.24;
   c.fillStyle = '#FFFFFF';
   c.beginPath(); c.arc(-eyeX, eyeY, eyeR, 0, Math.PI*2); c.arc( eyeX, eyeY, eyeR, 0, Math.PI*2); c.fill();
   c.fillStyle = skin.detail;
@@ -1679,9 +2725,22 @@ function renderCharacter(c, r, skin, opts){
   const isFlippedWalk = mode === 'FLIP_WALK';
   const isShip = mode === 'FLIP' || mode === 'FLAP' || mode === 'DRIFT';
   const alpha = opts.alpha ?? 1;
+  const skipExtras = opts.skipExtras || false;
+
+  const aura  = currentAura();
+  const crown = currentCrown();
+  const cape  = currentCape();
 
   c.save();
   c.globalAlpha = alpha;
+
+  /* ➕ 1) AURA (قبل الدوران) */
+  if(!skipExtras) drawAura(c, r, aura, G.t);
+
+  /* ➕ 2) CAPE (قبل الدوران - يبقى خلف الشخصية في العالم) */
+  if(!skipExtras && cape.id !== 'none' && P.cape){
+    drawCape(c, r, cape, G.t, P.x, P.y);
+  }
 
   if(isShip && facingRot !== 0) c.rotate(facingRot);
   if(isFlippedWalk) c.rotate(Math.PI);
@@ -1715,6 +2774,9 @@ function renderCharacter(c, r, skin, opts){
   if(['horns','leaf','cloud','spikes','halo','star'].includes(skin.accessory)){
     drawCharacterAccessory(c, r, skin, G.t);
   }
+
+  /* ➕ 3) CROWN (فوق الرأس) */
+  if(!skipExtras && !skin.imageData) drawCrown(c, r, crown, G.t);
 
   c.restore();
 }
@@ -2386,6 +3448,7 @@ function update(){
     G.currentScene = SCENES[G.sceneIdx];
     updateWeather();
     updateSparks();
+    if(P.cape) updateCapePhysics();
   }
   if(G.state==='PLAYING') updateGameplay();
 }
@@ -2400,9 +3463,13 @@ function updateLevelUI(){
   document.getElementById('level-num').textContent = 'LVL ' + lv;
 }
 function updateCoinsUI(){
-  document.getElementById('home-coins').textContent = Save.data.coins;
+  const unlimited = hasAdminAccess() && Save.data.admin.unlimitedCoins;
+  const home = document.getElementById('home-coins');
   const shop = document.getElementById('shop-coins');
-  if(shop) shop.textContent = Save.data.coins;
+  if(home) home.textContent = unlimited ? '' : Save.data.coins;
+  if(shop) shop.textContent = unlimited ? '' : Save.data.coins;
+  const w = document.getElementById('wrap');
+  if(w) w.classList.toggle('unlimited-coins', unlimited);
 }
 
 /* ============================================================
@@ -2650,8 +3717,8 @@ function buildDaily(){
 function buildShop(){
   const grid = document.getElementById('skin-grid');
   grid.innerHTML = '';
-  SKINS.forEach(s=>{
-    const owned = Save.data.ownedSkins.includes(s.id);
+  getAllSkins().forEach(s=>{
+        const owned = Save.data.ownedSkins.includes(s.id);
     const eq = Save.data.currentSkin === s.id;
     const rarity = s.rarity || 'common';
     const el = document.createElement('button');
@@ -2710,9 +3777,9 @@ function buildShop(){
         Save.save();
         Sfx.tap(); haptic(8);
         buildShop();
-      } else if(Save.data.coins >= s.price){
-        Save.data.coins -= s.price;
-        Save.data.ownedSkins.push(s.id);
+      } else if(hasAdminAccess() && Save.data.admin.unlimitedUnlock || Save.data.coins >= s.price){
+        if(!Save.data.admin.unlimitedUnlock) Save.data.coins -= s.price;
+        if(!Save.data.ownedSkins.includes(s.id)) Save.data.ownedSkins.push(s.id);
         Save.data.currentSkin = s.id;
         Save.save();
         Sfx.reward(); haptic(15);
@@ -2929,13 +3996,67 @@ function renderCosPreview(pctx, w, h, cat, item){
     } else {
       pctx.beginPath(); pctx.arc(cx, cy, 12, 0, Math.PI*2); pctx.fill();
     }
+    } else if(cat === 'aura'){
+    const fakeR = 16;
+    /* شخصية مصغّرة */
+    pctx.save();
+    pctx.translate(cx, cy);
+    if(item.id !== 'none'){
+      drawCape(pctx, fakeR, item, 60, 0, 0);
+    }
+    pctx.fillStyle = '#E07A3F';
+    pctx.beginPath(); pctx.arc(0, 0, fakeR*0.7, 0, Math.PI*2); pctx.fill();
+    pctx.fillStyle = '#FFF';
+    pctx.beginPath(); pctx.arc(-4, -3, 3, 0, Math.PI*2); pctx.arc(4, -3, 3, 0, Math.PI*2); pctx.fill();
+    pctx.restore();
+
+  } else if(cat === 'crown'){
+    const fakeR = 22;
+    pctx.save();
+    pctx.translate(cx, cy + 8);
+    /* رأس */
+    pctx.fillStyle = '#E0A44C';
+    pctx.beginPath(); pctx.arc(0, 0, fakeR*0.75, 0, Math.PI*2); pctx.fill();
+    pctx.fillStyle = '#B07628';
+    pctx.beginPath(); pctx.arc(0, fakeR*0.15, fakeR*0.72, 0.15*Math.PI, 0.85*Math.PI); pctx.fill();
+    /* عيون */
+    pctx.fillStyle = '#1A1512';
+    pctx.beginPath();
+    pctx.arc(-4, -2, 2, 0, Math.PI*2);
+    pctx.arc(4, -2, 2, 0, Math.PI*2);
+    pctx.fill();
+    if(item.id !== 'none') drawCrown(pctx, fakeR*0.75, item, 60);
+    pctx.restore();
+
+  } else if(cat === 'cape'){
+    const fakeR = 20;
+    pctx.save();
+    pctx.translate(cx - 8, cy);
+    /* استخدام نسخة مؤقتة من P.cape للمعاينة */
+    const savedCape = P.cape;
+    P.cape = [];
+    for(let i=0;i<10;i++){
+      P.cape.push({ x: -i*4 + Math.sin(i*0.8)*3, y: i*1.2 });
+    }
+    if(item.id !== 'none'){
+      drawCape(pctx, fakeR, item, 60, 0, 0);
+    }
+    P.cape = savedCape;
+    /* شخصية مصغرة */
+    pctx.fillStyle = '#E0A44C';
+    pctx.beginPath(); pctx.arc(0, 0, fakeR*0.7, 0, Math.PI*2); pctx.fill();
+    pctx.fillStyle = '#FFF';
+    pctx.beginPath(); pctx.arc(-4, -3, 3, 0, Math.PI*2); pctx.arc(4, -3, 3, 0, Math.PI*2); pctx.fill();
+    pctx.fillStyle = '#1A1512';
+    pctx.beginPath(); pctx.arc(-4, -3, 1.5, 0, Math.PI*2); pctx.arc(4, -3, 1.5, 0, Math.PI*2); pctx.fill();
+    pctx.restore();
   }
 }
 
 function buildCosmetics(){
   const grid = document.getElementById('cos-grid');
   grid.innerHTML = '';
-  const list = COSMETICS[currentCosTab];
+  const list = getAllCosmetics(currentCosTab);
   if(!list) return;
   const owned = Save.data.cosmetics.owned[currentCosTab] || [];
   const current = Save.data.cosmetics.current[currentCosTab];
@@ -2957,7 +4078,21 @@ function buildCosmetics(){
     pc.style.height = ph + 'px';
     const pctx = pc.getContext('2d');
     pctx.setTransform(pDPR, 0, 0, pDPR, 0, 0);
-    renderCosPreview(pctx, pw, ph, currentCosTab, item);
+    if(item.imageData){
+      const img = getImageEl(item.imageData);
+      if(img.complete && img.naturalWidth > 0){
+        const sz = 48;
+        pctx.drawImage(img, pw/2 - sz/2, ph/2 - sz/2, sz, sz);
+      } else {
+        img.onload = ()=>{
+          pctx.clearRect(0,0,pw,ph);
+          const sz2 = 48;
+          pctx.drawImage(img, pw/2 - sz2/2, ph/2 - sz2/2, sz2, sz2);
+        };
+      }
+    } else {
+      renderCosPreview(pctx, pw, ph, currentCosTab, item);
+    }
     prev.appendChild(pc);
     el.appendChild(prev);
 
@@ -2986,9 +4121,10 @@ function buildCosmetics(){
         Save.save();
         Sfx.tap(); haptic(8);
         buildCosmetics();
-      } else if(Save.data.coins >= item.price){
-        Save.data.coins -= item.price;
-        Save.data.cosmetics.owned[currentCosTab].push(item.id);
+      } else if(hasAdminAccess() && Save.data.admin.unlimitedUnlock || Save.data.coins >= item.price){
+        if(!Save.data.admin.unlimitedUnlock) Save.data.coins -= item.price;
+        if(!Save.data.cosmetics.owned[currentCosTab].includes(item.id))
+          Save.data.cosmetics.owned[currentCosTab].push(item.id);
         Save.data.cosmetics.current[currentCosTab] = item.id;
         Save.save();
         Sfx.reward(); haptic(15);
@@ -3002,6 +4138,42 @@ function buildCosmetics(){
 
     grid.appendChild(el);
   });
+}
+
+/* ============================================================
+   ==================== ADMIN HELPERS ========================
+   ============================================================ */
+function isAdminUser(){
+  if(!Cloud || !Cloud.user) return false;
+  if(ADMIN_CONFIG.uids.includes(Cloud.user.uid)) return true;
+  /* فحص البريد أيضاً إن وُجد */
+  return false;
+}
+
+function hasAdminAccess(){
+  return Save.data.admin && Save.data.admin.access;
+}
+
+function grantAdminAccess(){
+  Save.data.admin.access = true;
+  Save.save();
+  updateAdminUI();
+}
+
+function revokeAdminAccess(){
+  Save.data.admin.access = false;
+  Save.data.admin.unlimitedCoins = false;
+  Save.data.admin.unlimitedUnlock = false;
+  Save.data.admin.godMode = false;
+  Save.save();
+  updateAdminUI();
+}
+
+function updateAdminUI(){
+  const btn = document.getElementById('admin-btn');
+  if(!btn) return;
+  const should = hasAdminAccess();
+  btn.style.display = should ? 'flex' : 'none';
 }
 
 /* ============================================================
@@ -3181,6 +4353,7 @@ function resetRun(){
   P.trail = [];
   P.vx = 0; P.vy = 0; P.gravityDir = 1; P.rot = 0; P.jumps = 0;
   P.enginePhase = 0; P.legPhase = 0; P.bouncePhase = 0;
+    initCape();
 
   if(G.mode==='WALK'){ P.y = GROUND_Y-P.r; P.onGround = true; }
   else if(G.mode==='FLIP_WALK'){ P.y = CEILING_H + P.r; P.onGround = true; P.vy = 0; }
@@ -4129,6 +5302,13 @@ function setupAuthListener() {
       } catch (e) {
         console.warn('[Cloud] Load profile failed:', e);
       }
+      /* ➕ فحص صلاحية المشرف */
+      if(isAdminUser()){
+        Save.data.admin.access = true;
+        Save.save();
+      }
+      applyAdminEffects();
+
       updateProfileUI();
 
       if (!Cloud.profile || !Cloud.profile.username) {
@@ -4283,6 +5463,532 @@ buildSettings = function() {
 };
 
 /* ============================================================
+   ==================== ADMIN PANEL LOGIC ====================
+   ============================================================ */
+let currentAdminTab = 'skin';
+let pendingImageData = null;
+
+function buildAdminPanel(){
+  /* بطاقة المعلومات */
+  const u = Cloud.user;
+  document.getElementById('admin-hero-user').textContent =
+    u ? (u.email || u.displayName || u.uid.slice(0,12)) : 'غير مسجّل';
+
+  /* حالة المفاتيح */
+  ['unlimitedCoins','unlimitedUnlock','godMode'].forEach(k=>{
+    const sw = document.getElementById('sw-' + k);
+    if(sw) sw.classList.toggle('on', !!Save.data.admin[k]);
+  });
+
+  /* النقود */
+  document.getElementById('admin-coins-value').textContent = Save.data.coins;
+
+  /* تبويبات المحتوى */
+  document.querySelectorAll('.act-chip').forEach(c=>{
+    c.classList.toggle('active', c.dataset.act === currentAdminTab);
+  });
+
+  /* قائمة المحتوى */
+  buildAdminContentList();
+}
+
+function buildAdminContentList(){
+  const list = document.getElementById('admin-content-list');
+  list.innerHTML = '';
+  let items = [];
+  if(currentAdminTab === 'skin') items = Save.data.admin.customSkins || [];
+  else {
+    const key = 'custom' + currentAdminTab.charAt(0).toUpperCase() + currentAdminTab.slice(1);
+    items = Save.data.admin[key] || [];
+  }
+
+  if(items.length === 0){
+    list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-mute);font-size:12px;">لا توجد عناصر مخصصة بعد</div>';
+    return;
+  }
+
+  items.forEach((item, idx)=>{
+    const el = document.createElement('div');
+    el.className = 'admin-content-item';
+    const thumb = item.imageData
+      ? `<img src="${item.imageData}" alt="">`
+      : `<div style="width:100%;height:100%;background:${item.color || '#E07A3F'};display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:800;">${(item.name||'?').charAt(0)}</div>`;
+
+    const src = item.sourceId ? getSource(item.sourceId) : null;
+    const srcInfo = src ? getSourceTypeInfo(src.type) : null;
+    const srcHtml = src
+      ? `<span class="aci-source" style="color:${srcInfo.color};">${srcInfo.icon} ${src.name}</span>`
+      : `<span class="aci-source" style="color:#C14A4A;">⚠ بلا مصدر</span>`;
+
+    el.innerHTML = `
+      <div class="aci-thumb">${thumb}</div>
+      <div class="aci-info">
+        <div class="aci-name">${item.name || 'بدون اسم'} ${srcHtml}</div>
+        <div class="aci-meta">◆ ${item.price} · ${item.rarity || 'common'} · ${item.enabled !== false ? 'ظاهر' : 'مخفي'}</div>
+      </div>
+      <button class="aci-del" data-del="${idx}">🗑</button>
+    `;
+    el.querySelector('[data-del]').addEventListener('click', ()=>{
+      if(!confirm('حذف هذا العنصر نهائياً؟')) return;
+      deleteCustomItem(currentAdminTab, idx);
+    });
+    list.appendChild(el);
+  });
+}
+
+/* ============ Build Sources List ============ */
+function buildAdminSourcesList(){
+  const list = document.getElementById('admin-sources-list');
+  if(!list) return;
+  list.innerHTML = '';
+  const sources = Save.data.admin.sources || [];
+
+  if(sources.length === 0){
+    list.innerHTML = '<div style="text-align:center;padding:16px;color:var(--ink-mute);font-size:12px;">لا توجد مصادر بعد</div>';
+    return;
+  }
+
+  sources.forEach((src, idx)=>{
+    const info = getSourceTypeInfo(src.type);
+    const el = document.createElement('div');
+    el.className = 'admin-source-item' + (src.active ? '' : ' inactive');
+    el.innerHTML = `
+      <div class="asi-icon" style="background:${info.color}22;color:${info.color};">${info.icon}</div>
+      <div class="asi-info">
+        <div class="asi-name">${src.name}</div>
+        <div class="asi-meta">${src.start} → ${src.end}</div>
+      </div>
+      <div class="asi-toggle ${src.active ? 'on' : ''}" data-toggle-src="${idx}"></div>
+      <button class="asi-del" data-del-src="${idx}">🗑</button>
+    `;
+    el.querySelector('[data-toggle-src]').addEventListener('click', ()=>{
+      Save.data.admin.sources[idx].active = !Save.data.admin.sources[idx].active;
+      Save.save();
+      buildAdminSourcesList();
+      Sfx.tap();
+    });
+    el.querySelector('[data-del-src]').addEventListener('click', ()=>{
+      if(!confirm('حذف هذا المصدر؟')) return;
+      Save.data.admin.sources.splice(idx, 1);
+      Save.save();
+      buildAdminSourcesList();
+      Sfx.tap();
+    });
+    list.appendChild(el);
+  });
+}
+
+/* ============ Populate source select ============ */
+function populateSourceSelect(selectedId){
+  const sel = document.getElementById('af-source');
+  if(!sel) return;
+  const sources = Save.data.admin.sources || [];
+  sel.innerHTML = sources.map(s=>{
+    const info = getSourceTypeInfo(s.type);
+    const mark = s.active ? '' : ' (غير نشط)';
+    return `<option value="${s.id}"${s.id===selectedId?' selected':''}>${info.icon} ${s.name}${mark}</option>`;
+  }).join('');
+  if(!sources.length){
+    sel.innerHTML = '<option value="">لا توجد مصادر — أضف مصدراً أولاً</option>';
+  }
+}
+
+async function deleteCustomItem(cat, idx){
+  if(cat === 'skin'){
+    Save.data.admin.customSkins.splice(idx, 1);
+    /* احذف أيضاً من ownedSkins إن وُجد */
+    const skinId = Save.data.admin.customSkins[idx]?.id;
+  } else {
+    const key = 'custom' + cat.charAt(0).toUpperCase() + cat.slice(1);
+    Save.data.admin[key].splice(idx, 1);
+  }
+  Save.save();
+  /* احفظ في Firestore */
+  await pushAdminContent();
+  /* قائمة المحتوى والمصادر */
+  buildAdminContentList();
+  buildAdminSourcesList();
+
+  Sfx.tap();
+}
+
+/* ============ Push content to Firestore ============ */
+async function pushAdminContent(){
+  if(!Cloud.user || !Cloud.db) return { ok:false, msg:'غير متصل بالسحابة' };
+  try {
+    const ref = Cloud.db.collection('admin_content').doc('global');
+    await ref.set({
+      customSkins: Save.data.admin.customSkins || [],
+      customSpark: Save.data.admin.customSpark || [],
+      customTrail: Save.data.admin.customTrail || [],
+      customJump: Save.data.admin.customJump || [],
+      customDeath: Save.data.admin.customDeath || [],
+      customAura: Save.data.admin.customAura || [],
+      customCrown: Save.data.admin.customCrown || [],
+      customCape: Save.data.admin.customCape || [],
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedBy: Cloud.user.uid
+    }, { merge: true });
+    Save.data.admin.lastContentSync = Date.now();
+    Save.save();
+    return { ok:true };
+  } catch(e){
+    console.error('[Admin] push failed:', e);
+    return { ok:false, msg: e.message };
+  }
+}
+
+/* ============ Pull content from Firestore ============ */
+async function pullAdminContent(){
+  if(!Cloud.db) return null;
+  try {
+    const ref = Cloud.db.collection('admin_content').doc('global');
+    const snap = await ref.get();
+    if(snap.exists){
+      const d = snap.data();
+      Save.data.admin.customSkins = d.customSkins || [];
+      Save.data.admin.customSpark = d.customSpark || [];
+      Save.data.admin.customTrail = d.customTrail || [];
+      Save.data.admin.customJump  = d.customJump  || [];
+      Save.data.admin.customDeath = d.customDeath || [];
+      Save.data.admin.customAura  = d.customAura  || [];
+      Save.data.admin.customCrown = d.customCrown || [];
+      Save.data.admin.customCape  = d.customCape  || [];
+      Save.save();
+      return d;
+    }
+    return null;
+  } catch(e){
+    console.warn('[Admin] pull failed:', e);
+    return null;
+  }
+}
+
+/* ============ Image compression ============ */
+function compressImage(file, maxSize = 256, quality = 0.85){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = e=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+        if(width > height && width > maxSize){
+          height = Math.round(height * maxSize / width);
+          width = maxSize;
+        } else if(height > maxSize){
+          width = Math.round(width * maxSize / height);
+          height = maxSize;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0,0,width,height);
+        ctx.drawImage(img, 0, 0, width, height);
+        /* PNG للحفاظ على الشفافية */
+        const data = canvas.toDataURL('image/png');
+        resolve(data);
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ============ Image cache for rendering ============ */
+const ImageCache = {};
+function getImageEl(dataUrl){
+  if(ImageCache[dataUrl]) return ImageCache[dataUrl];
+  const img = new Image();
+  img.src = dataUrl;
+  ImageCache[dataUrl] = img;
+  return img;
+}
+
+/* ============ Wire admin panel ============ */
+function wireAdminPanel(){
+  const $ = id => document.getElementById(id);
+
+  /* فتح اللوحة */
+  const adminBtn = $('admin-btn');
+  if(adminBtn) adminBtn.addEventListener('click', ()=>{
+    showScreen('s-admin');
+    buildAdminPanel();
+    Sfx.tap(); haptic(8);
+  });
+
+  /* إنهاء صلاحية المشرف */
+  const logout = $('admin-logout');
+  if(logout) logout.addEventListener('click', ()=>{
+    if(!confirm('إنهاء صلاحية المشرف؟')) return;
+    revokeAdminAccess();
+    showScreen('s-home');
+    buildHome();
+  });
+
+  /* المفاتيح */
+  document.querySelectorAll('.admin-toggle').forEach(t=>{
+    t.addEventListener('click', ()=>{
+      const k = t.dataset.toggle;
+      Save.data.admin[k] = !Save.data.admin[k];
+      Save.save();
+      const sw = $('sw-' + k);
+      if(sw) sw.classList.toggle('on', Save.data.admin[k]);
+      applyAdminEffects();
+      Sfx.tap(); haptic(6);
+    });
+  });
+
+  /* إضافة نقود */
+  document.querySelectorAll('[data-add-coins]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const amount = parseInt(b.dataset.addCoins, 10);
+      Save.data.coins += amount;
+      Save.save();
+      $('admin-coins-value').textContent = Save.data.coins;
+      updateCoinsUI();
+      Sfx.coin(); haptic(10);
+    });
+  });
+
+  const resetCoins = $('admin-reset-coins');
+  if(resetCoins) resetCoins.addEventListener('click', ()=>{
+    if(!confirm('تصفير النقود؟')) return;
+    Save.data.coins = 0;
+    Save.save();
+    $('admin-coins-value').textContent = '0';
+    updateCoinsUI();
+    Sfx.tap();
+  });
+
+  /* تبويبات المحتوى */
+  document.querySelectorAll('.act-chip').forEach(c=>{
+    c.addEventListener('click', ()=>{
+      currentAdminTab = c.dataset.act;
+      document.querySelectorAll('.act-chip').forEach(x=>x.classList.toggle('active', x === c));
+      buildAdminContentList();
+      Sfx.tap();
+    });
+  });
+
+  /* فتح نموذج الإضافة */
+  const addBtn = $('admin-add-content');
+  if(addBtn) addBtn.addEventListener('click', ()=>{
+    pendingImageData = null;
+    $('af-name').value = '';
+    $('af-name-en').value = '';
+    $('af-price').value = 500;
+    $('af-rarity').value = 'common';
+    $('af-color').value = '#E07A3F';
+    $('af-color2').value = '#E8B34E';
+    $('af-preview').innerHTML = '<span>لا توجد صورة</span>';
+    $('af-status').textContent = '';
+    $('af-status').className = 'af-status';
+    const labels = { skin:'أزياء', spark:'شرار', trail:'خط سير', jump:'قفز', death:'نهاية', aura:'هالات', crown:'رأسيات', cape:'أوشحة' };
+    $('af-cat-label').textContent = labels[currentAdminTab] || currentAdminTab;
+    /* ➕ ملء قائمة المصادر */
+    populateSourceSelect();
+    $('admin-form').style.display = 'block';
+    $('admin-form').scrollIntoView({ behavior:'smooth', block:'start' });
+  });
+
+  /* زر الصورة */
+  const upBtn = $('af-upload-btn');
+  const fileInput = $('af-file');
+  if(upBtn && fileInput){
+    upBtn.addEventListener('click', ()=> fileInput.click());
+    fileInput.addEventListener('change', async (e)=>{
+      const file = e.target.files[0];
+      if(!file) return;
+      $('af-status').textContent = 'جارٍ المعالجة...';
+      $('af-status').className = 'af-status';
+      try {
+        const data = await compressImage(file, 256, 0.85);
+        pendingImageData = data;
+        $('af-preview').innerHTML = `<img src="${data}" alt="">`;
+        $('af-status').textContent = '✓ الصورة جاهزة';
+        $('af-status').className = 'af-status ok';
+      } catch(err){
+        $('af-status').textContent = '✗ فشل تحميل الصورة';
+        $('af-status').className = 'af-status err';
+      }
+    });
+  }
+
+  /* إلغاء */
+  const cancel = $('af-cancel');
+  if(cancel) cancel.addEventListener('click', ()=>{
+    $('admin-form').style.display = 'none';
+    pendingImageData = null;
+  });
+
+  /* حفظ */
+  const save = $('af-save');
+  if(save) save.addEventListener('click', async ()=>{
+    const name = $('af-name').value.trim();
+    const nameEn = $('af-name-en').value.trim() || name.toUpperCase();
+    const price = parseInt($('af-price').value, 10) || 0;
+    const rarity = $('af-rarity').value;
+    const color = $('af-color').value;
+    const color2 = $('af-color2').value;
+    const sourceId = $('af-source') ? $('af-source').value : '';
+
+    if(!name){ $('af-status').textContent = '✗ الاسم مطلوب'; $('af-status').className = 'af-status err'; return; }
+    if(!pendingImageData){ $('af-status').textContent = '✗ الصورة مطلوبة'; $('af-status').className = 'af-status err'; return; }
+    if(!sourceId){ $('af-status').textContent = '✗ يجب اختيار مصدر'; $('af-status').className = 'af-status err'; return; }
+
+    const id = 'custom_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+
+    const item = {
+      id, name, en: nameEn, price, rarity,
+      color, color2,
+      imageData: pendingImageData,
+      sourceId,                 /* ➕ المصدر */
+      enabled: true,
+      isCustom: true,
+      createdAt: Date.now()
+    };
+
+    if(currentAdminTab === 'skin'){
+      Save.data.admin.customSkins.push(item);
+    } else {
+      const key = 'custom' + currentAdminTab.charAt(0).toUpperCase() + currentAdminTab.slice(1);
+      Save.data.admin[key].push(item);
+    }
+
+    $('af-status').textContent = 'جارٍ الحفظ...';
+    $('af-status').className = 'af-status';
+
+    const r = await pushAdminContent();
+    if(r.ok){
+      Save.save();
+      $('af-status').textContent = '✓ تم النشر';
+      $('af-status').className = 'af-status ok';
+      buildAdminContentList();
+      refreshContentEverywhere();
+      setTimeout(()=>{
+        $('admin-form').style.display = 'none';
+        pendingImageData = null;
+      }, 900);
+    } else {
+      Save.save(); /* احفظ محلياً على الأقل */
+      $('af-status').textContent = '⚠ حُفظ محلياً (' + (r.msg || '') + ')';
+      $('af-status').className = 'af-status err';
+      buildAdminContentList();
+      refreshContentEverywhere();
+    }
+  });
+
+  /* اللاعبون */
+  const loadPlayers = $('admin-load-players');
+  if(loadPlayers) loadPlayers.addEventListener('click', async ()=>{
+    $('admin-players-list').innerHTML = '<div style="padding:12px;text-align:center;color:var(--ink-mute);font-size:12px;">جارٍ التحميل...</div>';
+    try {
+      const snap = await Cloud.db.collection('players').limit(50).get();
+      const list = $('admin-players-list');
+      list.innerHTML = '';
+      if(snap.empty){
+        list.innerHTML = '<div style="padding:12px;text-align:center;color:var(--ink-mute);font-size:12px;">لا يوجد لاعبون</div>';
+        return;
+      }
+      snap.forEach(doc=>{
+        const d = doc.data();
+        const el = document.createElement('div');
+        el.className = 'admin-player-item';
+        const photo = d.photoURL || '';
+        const av = photo ? `<img src="${photo}" alt="">` : '👤';
+        el.innerHTML = `
+          <div class="api-av">${av}</div>
+          <div class="api-info">
+            <div class="api-name">${d.username || d.displayName || 'لاعب'}</div>
+            <div class="api-uid">${doc.id.slice(0,12)}…</div>
+          </div>
+        `;
+        list.appendChild(el);
+      });
+    } catch(e){
+      $('admin-players-list').innerHTML = '<div style="padding:12px;text-align:center;color:#C14A4A;font-size:12px;">فشل التحميل: ' + e.message + '</div>';
+    }
+  });
+    /* دخول بكود سري */
+  let secretBuffer = '';
+  window.addEventListener('keydown', (e)=>{
+    if(e.key.length === 1){
+      secretBuffer += e.key;
+      if(secretBuffer.length > 30) secretBuffer = secretBuffer.slice(-30);
+      if(secretBuffer.endsWith(ADMIN_CONFIG.secretCode)){
+        secretBuffer = '';
+        const code = prompt('أدخل كود المشرف:');
+        if(code === ADMIN_CONFIG.secretCode){
+          grantAdminAccess();
+          alert('✓ تم تفعيل صلاحية المشرف');
+          showScreen('s-admin');
+          buildAdminPanel();
+        } else if(code !== null){
+          alert('✗ كود خاطئ');
+        }
+      }
+    }
+  });
+}
+
+/* ============ Apply admin effects (unlimited coins etc) ============ */
+function applyAdminEffects(){
+  if(!Save.data.admin) return;
+  const w = document.getElementById('wrap');
+  if(!w) return;
+  w.classList.toggle('unlimited-coins', !!Save.data.admin.unlimitedCoins);
+  /* unfreeze coins at UI */
+  updateCoinsUI();
+  updateGlobalLevelUI();
+}
+
+/* ============ Refresh everything after content change ============ */
+function refreshContentEverywhere(){
+  try { buildShop(); } catch(e){}
+  try { buildCosmetics(); } catch(e){}
+}
+
+/* ============ Get all skins (built-in + custom) ============ */
+function getAllSkins(){
+  const custom = (Save.data.admin.customSkins || []).filter(s=>s.enabled !== false).map(s=>({
+    id: s.id,
+    ar: s.name,
+    en: s.en || s.name,
+    body: s.color || '#E07A3F',
+    bodyDark: s.color2 || '#A05020',
+    detail: '#1A1512',
+    accent: s.color || '#E07A3F',
+    accessory: 'none',
+    pattern: 'none',
+    price: s.price || 0,
+    rarity: s.rarity || 'common',
+    imageData: s.imageData,
+    isCustom: true
+  }));
+  return [...SKINS, ...custom];
+}
+
+/* ============ Get all cosmetics of a category ============ */
+function getAllCosmetics(cat){
+  const base = COSMETICS[cat] || [];
+  const key = 'custom' + cat.charAt(0).toUpperCase() + cat.slice(1);
+  const custom = (Save.data.admin[key] || []).filter(c=>c.enabled !== false).map(c=>({
+    id: c.id,
+    name: c.name,
+    price: c.price || 0,
+    desc: c.en || c.name,
+    color: c.color,
+    color2: c.color2,
+    imageData: c.imageData,
+    isCustom: true
+  }));
+  return [...base, ...custom];
+}
+
+/* ============================================================
    ==================== BOOT =================================
    ============================================================ */
 function boot() {
@@ -4302,7 +6008,9 @@ function boot() {
 
   // 2) Wire game buttons (always)
   wireGameButtons();
-
+  wireAdminPanel();
+  applyAdminEffects();
+  updateAdminUI();
   // 3) Try Firebase
   let firebaseOk = false;
   try {
