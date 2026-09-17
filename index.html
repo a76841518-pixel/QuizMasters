@@ -14,6 +14,9 @@
 <div id="wrap">
   <canvas id="c"></canvas>
 
+  <!-- ============================================================
+       HUD (يظهر أثناء اللعب)
+       ============================================================ -->
   <div id="hud">
     <div class="hud-col">
       <div class="run-stats">
@@ -35,6 +38,7 @@
         <div class="num" id="level-num">LVL 1</div>
       </div>
       <div class="powerups-row" id="powerups-row"></div>
+      <div class="synergy-row" id="synergy-row"></div>
     </div>
     <div class="hud-col right">
       <button id="pause-btn">❚❚</button>
@@ -50,43 +54,45 @@
     <div class="lvl-reward" id="lvl-reward-display">◆ +30</div>
   </div>
 
+  <!-- ============================================================
+       OVERLAY (جميع الشاشات)
+       ============================================================ -->
   <div id="overlay" class="active">
 
     <!-- ============ LOGIN SCREEN ============ -->
-<!-- ============ LOGIN SCREEN ============ -->
-<div class="screen" id="s-login">
-  <div class="login-screen">
-    <div class="login-deco"></div>
-    <div class="login-brand">
-      <div class="brand-name lg">SH<span class="accent">I</span>FT</div>
-      <div class="brand-sub lg">CALM ARCADE</div>
-    </div>
-    <div class="login-tagline">سجّل دخولك بـ Google لحفظ تقدمك ومزامنته بين الأجهزة</div>
+    <div class="screen" id="s-login">
+      <div class="login-screen">
+        <div class="login-deco"></div>
+        <div class="login-brand">
+          <div class="brand-name lg">SH<span class="accent">I</span>FT</div>
+          <div class="brand-sub lg">CALM ARCADE</div>
+        </div>
+        <div class="login-tagline">سجّل دخولك بـ Google لحفظ تقدمك ومزامنته بين الأجهزة</div>
 
-    <div class="login-buttons">
-      <button class="social-btn google" id="login-google">
-        <svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true">
-          <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.4 29.3 35.5 24 35.5 16.9 35.5 11.2 30 11.2 22.9S16.9 10.4 24 10.4c3.3 0 6.3 1.2 8.6 3.3l5.7-5.7C34.4 4.6 29.4 2.5 24 2.5 12.1 2.5 2.3 12.2 2.3 24S12.1 45.5 24 45.5 45.7 35.8 45.7 24c0-1.2-.1-2.4-.3-3.5z"/>
-          <path fill="#FF3D00" d="M4.7 15.1l6.6 4.8C13.1 16.6 18.1 13 24 13c3.3 0 6.3 1.2 8.6 3.3l5.7-5.7C34.4 7.1 29.4 5 24 5 16.2 5 9.4 8.6 4.7 15.1z"/>
-          <path fill="#4CAF50" d="M24 43c5.3 0 10.2-2 13.8-5.4l-6.4-5.4c-2.1 1.6-4.7 2.5-7.4 2.5-5.2 0-9.6-3.3-11.2-7.9l-6.5 5C9.1 39 16 43 24 43z"/>
-          <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.7 2-2 3.7-3.7 4.9l6.4 5.4c-.5.4 5.7-4.1 5.7-14.3 0-1.2-.1-2.4-.1-3.5z"/>
-        </svg>
-        <span>المتابعة مع Google</span>
-      </button>
-    </div>
+        <div class="login-buttons">
+          <button class="social-btn google" id="login-google">
+            <svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true">
+              <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.4 29.3 35.5 24 35.5 16.9 35.5 11.2 30 11.2 22.9S16.9 10.4 24 10.4c3.3 0 6.3 1.2 8.6 3.3l5.7-5.7C34.4 4.6 29.4 2.5 24 2.5 12.1 2.5 2.3 12.2 2.3 24S12.1 45.5 24 45.5 45.7 35.8 45.7 24c0-1.2-.1-2.4-.3-3.5z"/>
+              <path fill="#FF3D00" d="M4.7 15.1l6.6 4.8C13.1 16.6 18.1 13 24 13c3.3 0 6.3 1.2 8.6 3.3l5.7-5.7C34.4 7.1 29.4 5 24 5 16.2 5 9.4 8.6 4.7 15.1z"/>
+              <path fill="#4CAF50" d="M24 43c5.3 0 10.2-2 13.8-5.4l-6.4-5.4c-2.1 1.6-4.7 2.5-7.4 2.5-5.2 0-9.6-3.3-11.2-7.9l-6.5 5C9.1 39 16 43 24 43z"/>
+              <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.7 2-2 3.7-3.7 4.9l6.4 5.4c-.5.4 5.7-4.1 5.7-14.3 0-1.2-.1-2.4-.1-3.5z"/>
+            </svg>
+            <span>المتابعة مع Google</span>
+          </button>
+        </div>
 
-    <div class="login-note">
-      بالمتابعة أنت توافق على حفظ بيانات تقدمك في السحابة.
-    </div>
+        <div class="login-note">
+          بالمتابعة أنت توافق على حفظ بيانات تقدمك في السحابة.
+        </div>
 
-    <div class="login-loading" id="login-loading" style="display:none;">
-      <div class="spinner"></div>
-      <div class="loading-text">جارٍ الاتصال...</div>
-    </div>
+        <div class="login-loading" id="login-loading" style="display:none;">
+          <div class="spinner"></div>
+          <div class="loading-text">جارٍ الاتصال...</div>
+        </div>
 
-    <div class="login-error" id="login-error" style="display:none;"></div>
-  </div>
-</div>
+        <div class="login-error" id="login-error" style="display:none;"></div>
+      </div>
+    </div>
 
     <!-- ============ PROFILE SETUP ============ -->
     <div class="screen" id="s-profile-setup">
@@ -108,9 +114,9 @@
       </div>
     </div>
 
-    <!-- ============================================ -->
-    <!-- ============ ADMIN PANEL SCREEN ============ -->
-    <!-- ============================================ -->
+    <!-- ============================================================
+         ADMIN PANEL
+         ============================================================ -->
     <div class="screen" id="s-admin">
       <div class="sub">
         <div class="sub-top">
@@ -122,7 +128,6 @@
           <div class="sub-spacer"></div>
         </div>
 
-        <!-- بطاقة معلومات -->
         <div class="admin-hero">
           <div class="admin-hero-title">👑 ADMIN MODE</div>
           <div class="admin-hero-sub" id="admin-hero-user">—</div>
@@ -169,14 +174,11 @@
 
         <!-- قسم: إدارة المصادر -->
         <div class="section-head"><div class="section-title">المصادر</div><div class="section-sub">SOURCES</div></div>
-
         <button class="admin-btn-full soft" id="admin-add-source">➕ إضافة مصدر جديد</button>
-
         <div id="admin-sources-list" class="admin-sources-list"></div>
 
         <div class="admin-form" id="admin-source-form" style="display:none;">
           <div class="af-title">مصدر جديد</div>
-
           <label class="af-label">نوع المصدر</label>
           <select class="af-input" id="asf-type">
             <option value="battle_pass">🎫 باتل باس</option>
@@ -185,16 +187,12 @@
             <option value="chest">📦 صناديق</option>
             <option value="lucky_wheel">🎡 عجلة الحظ</option>
           </select>
-
           <label class="af-label">اسم المصدر</label>
           <input class="af-input" id="asf-name" type="text" maxlength="30" placeholder="مثال: تصنيف الموسم 3">
-
           <label class="af-label">تاريخ البداية</label>
           <input class="af-input" id="asf-start" type="date">
-
           <label class="af-label">تاريخ النهاية</label>
           <input class="af-input" id="asf-end" type="date">
-
           <div class="af-actions">
             <button class="admin-btn-full soft" id="asf-cancel">إلغاء</button>
             <button class="admin-btn-full" id="asf-save">حفظ المصدر</button>
@@ -204,7 +202,6 @@
 
         <!-- قسم: إدارة المحتوى -->
         <div class="section-head"><div class="section-title">المحتوى المخصص</div><div class="section-sub">CONTENT</div></div>
-
         <div class="admin-content-tabs">
           <button class="act-chip active" data-act="skin">الأزياء</button>
           <button class="act-chip" data-act="spark">الشرار</button>
@@ -217,22 +214,16 @@
         </div>
 
         <button class="admin-btn-full gold" id="admin-add-content">➕ إضافة عنصر جديد</button>
-
         <div id="admin-content-list" class="admin-content-list"></div>
 
-        <!-- نموذج الإضافة -->
         <div class="admin-form" id="admin-form" style="display:none;">
           <div class="af-title">عنصر جديد — <span id="af-cat-label">أزياء</span></div>
-
           <label class="af-label">الاسم بالعربية</label>
           <input class="af-input" id="af-name" type="text" maxlength="20" placeholder="مثال: التنين الذهبي">
-
           <label class="af-label">الاسم بالإنجليزية</label>
           <input class="af-input" id="af-name-en" type="text" maxlength="20" placeholder="GOLD DRAGON">
-
           <label class="af-label">السعر (◆)</label>
           <input class="af-input" id="af-price" type="number" min="0" value="500">
-
           <label class="af-label">الندرة</label>
           <select class="af-input" id="af-rarity">
             <option value="common">عادي</option>
@@ -242,25 +233,17 @@
             <option value="mythic">خرافي</option>
           </select>
           <label class="af-label">المصدر *</label>
-          <select class="af-input" id="af-source">
-            <!-- سيتم ملؤها ديناميكياً -->
-          </select>
+          <select class="af-input" id="af-source"></select>
           <label class="af-label">الصورة (PNG شفافة يُفضّل)</label>
           <div class="af-upload">
             <input type="file" id="af-file" accept="image/*" hidden>
-            <button class="af-upload-btn" id="af-upload-btn">
-              📷 اختر صورة
-            </button>
-            <div class="af-preview" id="af-preview">
-              <span>لا توجد صورة</span>
-            </div>
+            <button class="af-upload-btn" id="af-upload-btn">📷 اختر صورة</button>
+            <div class="af-preview" id="af-preview"><span>لا توجد صورة</span></div>
           </div>
-
           <label class="af-label" id="af-color-label">اللون الأساسي (اختياري)</label>
           <input class="af-input color" id="af-color" type="color" value="#E07A3F">
           <label class="af-label">اللون الثانوي</label>
           <input class="af-input color" id="af-color2" type="color" value="#E8B34E">
-
           <div class="af-actions">
             <button class="admin-btn-full soft" id="af-cancel">إلغاء</button>
             <button class="admin-btn-full" id="af-save">حفظ ونشر</button>
@@ -275,7 +258,9 @@
       </div>
     </div>
 
-    <!-- ============ HOME ============ -->
+    <!-- ============================================================
+         HOME SCREEN
+         ============================================================ -->
     <div class="screen" id="s-home">
       <div class="home">
         <div class="home-top">
@@ -284,11 +269,6 @@
             <div class="brand-sub">CALM ARCADE</div>
           </div>
           <div class="top-pills">
-            <button class="admin-btn" id="admin-btn" title="لوحة المشرف" style="display:none;">👑</button>
-            <button class="profile-mini" id="profile-mini" title="ملفي الشخصي">
-              <span id="profile-mini-emoji">👤</span>
-              <img id="profile-mini-img" style="display:none;" alt="">
-            </button>
             <button class="global-level" id="global-lvl-btn" style="--p:0">
               <div class="lvl-ring"><span class="n" id="global-lvl-num">1</span></div>
               <div class="lvl-text">
@@ -300,6 +280,7 @@
               <span class="c">◆</span>
               <span id="home-coins">0</span>
             </div>
+            <button class="menu-btn" id="menu-btn" title="القائمة">☰</button>
           </div>
         </div>
 
@@ -321,10 +302,18 @@
 
         <div class="section">
           <div class="section-head">
-            <div class="section-title">الأنماط</div>
+            <div class="section-title">الأنماط الأساسية</div>
             <div class="section-sub">MODES</div>
           </div>
           <div class="mode-grid" id="mode-grid"></div>
+        </div>
+
+        <div class="section">
+          <div class="section-head">
+            <div class="section-title">نمط الجولة</div>
+            <div class="section-sub">RUN TYPE</div>
+          </div>
+          <div id="run-type-grid" class="run-type-grid"></div>
         </div>
 
         <button class="play-btn" id="play-btn">
@@ -373,20 +362,138 @@
               <div class="ic">✨</div>
               <div class="lbl">التأثيرات</div>
             </button>
+            <button class="qa-btn highlight" data-page="powerups">
+              <div class="ic">⚡</div>
+              <div class="lbl">التعزيزات</div>
+            </button>
             <button class="qa-btn" data-page="achieve">
               <div class="ic">🏆</div>
               <div class="lbl">الإنجازات</div>
               <div class="badge" id="ach-badge" style="display:none;">0</div>
             </button>
-            <button class="qa-btn" data-page="settings">
-              <div class="ic">⚙</div>
-              <div class="lbl">إعدادات</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-head">
+            <div class="section-title">الأحداث والفعاليات</div>
+            <div class="section-sub">EVENTS</div>
+          </div>
+          <div class="quick-actions">
+            <button class="qa-btn highlight" data-page="events" style="grid-column: span 4;">
+              <div class="ic">🎪</div>
+              <div class="lbl">الأحداث الأسبوعية</div>
             </button>
           </div>
         </div>
       </div>
+
+      <!-- ============================================================
+           HOME MENU (القائمة المنسدلة)
+           ============================================================ -->
+      <div id="home-menu" class="home-menu">
+        <div class="home-menu-backdrop"></div>
+        <div class="home-menu-panel">
+
+          <div class="hm-header">
+            <div class="hm-avatar" id="hm-avatar">
+              <span id="hm-avatar-emoji">👤</span>
+              <img id="hm-avatar-img" style="display:none;" alt="">
+            </div>
+            <div class="hm-user">
+              <div class="hm-username" id="hm-username">ضيف</div>
+              <div class="hm-user-sub" id="hm-user-sub">لاعب محلي</div>
+            </div>
+          </div>
+
+          <div class="hm-divider"></div>
+
+          <button class="hm-item" data-menu="player-card">
+            <span class="hm-ic">🎖️</span>
+            <span class="hm-lbl">بطاقة اللاعب</span>
+            <span class="hm-arrow">‹</span>
+          </button>
+          <button class="hm-item" data-menu="stats">
+            <span class="hm-ic">📊</span>
+            <span class="hm-lbl">الإحصاءات</span>
+            <span class="hm-arrow">‹</span>
+          </button>
+          <button class="hm-item" data-menu="settings">
+            <span class="hm-ic">⚙️</span>
+            <span class="hm-lbl">الإعدادات</span>
+            <span class="hm-arrow">‹</span>
+          </button>
+
+          <button class="hm-item hm-admin" data-menu="admin" id="menu-admin-btn" style="display:none;">
+            <span class="hm-ic">👑</span>
+            <span class="hm-lbl">لوحة المشرف</span>
+            <span class="hm-arrow">‹</span>
+          </button>
+
+        </div>
+      </div>
     </div>
 
+    <!-- ============================================================
+         PLAYER CARD
+         ============================================================ -->
+    <div class="screen" id="s-player-card">
+      <div class="sub">
+        <div class="sub-top">
+          <button class="back-btn" data-back>←</button>
+          <div>
+            <div class="sub-title">بطاقة اللاعب</div>
+            <div class="sub-eyebrow">PLAYER CARD</div>
+          </div>
+          <div class="sub-spacer"></div>
+        </div>
+
+        <div class="player-card-hero">
+          <div class="pcard-avatar" id="pcard-avatar">
+            <span id="pcard-emoji">👤</span>
+          </div>
+          <div class="pcard-name" id="pcard-name">لاعب</div>
+          <div class="pcard-level">
+            <span>مستوى</span>
+            <strong id="pcard-level">1</strong>
+          </div>
+          <div class="pcard-title" id="pcard-title">🌱 مبتدئ</div>
+        </div>
+
+        <div class="section-head">
+          <div class="section-title">الإحصاءات</div>
+          <div class="section-sub">STATS</div>
+        </div>
+        <div class="player-stats" id="pcard-stats"></div>
+
+        <div class="section-head" style="margin-top:18px;">
+          <div class="section-title">الشارات</div>
+          <div class="section-sub">BADGES</div>
+        </div>
+        <div class="badges-grid" id="pcard-badges"></div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         EVENTS SCREEN
+         ============================================================ -->
+    <div class="screen" id="s-events">
+      <div class="sub">
+        <div class="sub-top">
+          <button class="back-btn" data-back>←</button>
+          <div>
+            <div class="sub-title">الأحداث</div>
+            <div class="sub-eyebrow">EVENTS</div>
+          </div>
+          <div class="sub-spacer"></div>
+        </div>
+        <div id="events-list"></div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         SHOP SCREEN
+         ============================================================ -->
     <div class="screen" id="s-shop">
       <div class="sub">
         <div class="sub-top">
@@ -405,6 +512,9 @@
       </div>
     </div>
 
+    <!-- ============================================================
+         COSMETICS SCREEN
+         ============================================================ -->
     <div class="screen" id="s-cosmetics">
       <div class="sub">
         <div class="sub-top">
@@ -415,19 +525,44 @@
           </div>
           <div class="sub-spacer"></div>
         </div>
-<div class="tab-row" id="cos-tabs">
-  <button class="tab-chip active" data-cat="spark">الشرار</button>
-  <button class="tab-chip" data-cat="trail">خط السير</button>
-  <button class="tab-chip" data-cat="jump">القفز</button>
-  <button class="tab-chip" data-cat="death">النهاية</button>
-  <button class="tab-chip" data-cat="aura">الهالات</button>
-  <button class="tab-chip" data-cat="crown">الرأسيات</button>
-  <button class="tab-chip" data-cat="cape">الأوشحة</button>
-</div>
+        <div class="tab-row" id="cos-tabs">
+          <button class="tab-chip active" data-cat="spark">الشرار</button>
+          <button class="tab-chip" data-cat="trail">خط السير</button>
+          <button class="tab-chip" data-cat="jump">القفز</button>
+          <button class="tab-chip" data-cat="death">النهاية</button>
+          <button class="tab-chip" data-cat="aura">الهالات</button>
+          <button class="tab-chip" data-cat="crown">الرأسيات</button>
+          <button class="tab-chip" data-cat="cape">الأوشحة</button>
+        </div>
         <div class="cos-grid" id="cos-grid"></div>
       </div>
     </div>
 
+    <!-- ============================================================
+         POWERUPS SCREEN
+         ============================================================ -->
+    <div class="screen" id="s-powerups">
+      <div class="sub">
+        <div class="sub-top">
+          <button class="back-btn" data-back>←</button>
+          <div>
+            <div class="sub-title">التعزيزات</div>
+            <div class="sub-eyebrow">POWER-UPS</div>
+          </div>
+          <div class="sub-spacer"></div>
+        </div>
+        <div class="season-card" style="background:linear-gradient(135deg,#201A28 0%,#3A2A48 100%)">
+          <div class="sc-eyebrow">UPGRADE SYSTEM</div>
+          <div class="sc-title">طوّر تعزيزاتك</div>
+          <div class="sc-sub">كل تطوير يزيد ٥ ثواني — حتى ٣٠ ثانية</div>
+        </div>
+        <div id="powerups-list"></div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         QUESTS SCREEN
+         ============================================================ -->
     <div class="screen" id="s-quests">
       <div class="sub">
         <div class="sub-top">
@@ -447,6 +582,9 @@
       </div>
     </div>
 
+    <!-- ============================================================
+         SEASON SCREEN
+         ============================================================ -->
     <div class="screen" id="s-season">
       <div class="sub">
         <div class="sub-top">
@@ -478,6 +616,9 @@
       </div>
     </div>
 
+    <!-- ============================================================
+         BATTLE PASS SCREEN
+         ============================================================ -->
     <div class="screen" id="s-battlepass">
       <div class="sub">
         <div class="sub-top">
@@ -502,6 +643,9 @@
       </div>
     </div>
 
+    <!-- ============================================================
+         DAILY LOGIN SCREEN
+         ============================================================ -->
     <div class="screen" id="s-daily">
       <div class="sub">
         <div class="sub-top">
@@ -523,6 +667,9 @@
       </div>
     </div>
 
+    <!-- ============================================================
+         ACHIEVEMENTS SCREEN
+         ============================================================ -->
     <div class="screen" id="s-achieve">
       <div class="sub">
         <div class="sub-top">
@@ -537,6 +684,9 @@
       </div>
     </div>
 
+    <!-- ============================================================
+         STATS SCREEN
+         ============================================================ -->
     <div class="screen" id="s-stats">
       <div class="sub">
         <div class="sub-top">
@@ -551,7 +701,9 @@
       </div>
     </div>
 
-    <!-- ============ SETTINGS (with Profile section) ============ -->
+    <!-- ============================================================
+         SETTINGS SCREEN
+         ============================================================ -->
     <div class="screen" id="s-settings">
       <div class="sub">
         <div class="sub-top">
@@ -563,7 +715,6 @@
           <div class="sub-spacer"></div>
         </div>
 
-        <!-- Profile card -->
         <div class="profile-card" id="profile-card">
           <div class="pc-avatar" id="pc-avatar">
             <span id="pc-avatar-emoji">👤</span>
@@ -595,7 +746,10 @@
           </div>
         </div>
 
-        <div class="section-head" style="margin-top:14px;"><div class="section-title">الصوت والتحكم</div><div class="section-sub">PREFERENCES</div></div>
+        <div class="section-head" style="margin-top:14px;">
+          <div class="section-title">الصوت والتحكم</div>
+          <div class="section-sub">PREFERENCES</div>
+        </div>
         <div class="settings-list" id="settings-list"></div>
 
         <div class="settings-actions" style="margin-top:20px;display:flex;flex-direction:column;gap:10px;align-items:center;">
@@ -606,7 +760,9 @@
       </div>
     </div>
 
-    <!-- Change name modal-ish screen -->
+    <!-- ============================================================
+         CHANGE NAME SCREEN
+         ============================================================ -->
     <div class="screen" id="s-change-name">
       <div class="center-screen">
         <div class="setup-title" style="font-size:22px;">تغيير اسم اللاعب</div>
@@ -622,6 +778,9 @@
       </div>
     </div>
 
+    <!-- ============================================================
+         PAUSE SCREEN
+         ============================================================ -->
     <div class="screen" id="s-pause">
       <div class="center-screen">
         <div class="pause-title">إيقاف</div>
@@ -631,6 +790,9 @@
       </div>
     </div>
 
+    <!-- ============================================================
+         GAME OVER SCREEN
+         ============================================================ -->
     <div class="screen" id="s-over">
       <div class="center-screen">
         <div class="over-eyebrow" id="over-eyebrow">RUN COMPLETE</div>
@@ -652,6 +814,9 @@
     </div>
   </div>
 
+  <!-- ============================================================
+       REWARD MODAL
+       ============================================================ -->
   <div id="reward-modal">
     <div class="reward-box">
       <div class="ic" id="rw-icon">🎁</div>

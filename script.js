@@ -1,7 +1,6 @@
 /* ============================================================
    ==================== FIREBASE CONFIG ======================
    ============================================================ */
-/* إعدادات Firebase — الصق إعدادات مشروعك هنا */
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyDypGd-cIYxc0AedJR1f5eCqSrpUs6GNic",
   authDomain: "soccer-3b49e.firebaseapp.com",
@@ -16,13 +15,10 @@ const FIREBASE_CONFIG = {
    ==================== ADMIN CONFIG =========================
    ============================================================ */
 const ADMIN_CONFIG = {
-  /* ⚠️ ضع UID الخاص بك هنا (من Firebase Console → Authentication) */
   uids: [
     'HyMhuOo0qLSjH736yosktQloBv12'
   ],
-  /* كود سري كبديل للطوارئ — غيّره الآن */
   secretCode: 'SHIFT_ADMIN_2024',
-  /* رابط الصفحة الخاصة بالمشرف (للدخول المباشر) */
   panelRoute: 'admin'
 };
 
@@ -166,7 +162,6 @@ const COSMETICS = {
     { id:'shatter', name:'تحطم',    price:900, desc:'شظايا زجاجية' },
     { id:'nova',    name:'مستعر',   price:1200,desc:'انفجار نجمي' }
   ],
-    /* ==================== AURAS (هالات) ==================== */
   aura: [
     { id:'none',      name:'بدون',      price:0,    desc:'لا هالة' },
     { id:'amber',     name:'عنبري',     price:300,  desc:'توهج دافئ' },
@@ -180,8 +175,6 @@ const COSMETICS = {
     { id:'rainbow',   name:'قوس قزح',   price:2200, desc:'تدرج ملون دوّار' },
     { id:'galaxy',    name:'مجرّة',     price:3000, desc:'نجوم وغيوم' }
   ],
-
-  /* ==================== CROWNS (تيجان) ==================== */
   crown: [
     { id:'none',    name:'بدون',      price:0,    desc:'لا غطاء للرأس' },
     { id:'bronze',  name:'تاج برونزي', price:200,  desc:'تاج بسيط' },
@@ -196,7 +189,6 @@ const COSMETICS = {
     { id:'star',    name:'نجمة',      price:1300, desc:'نجمة ساطعة' },
     { id:'skull',   name:'جمجمة',     price:1600, desc:'جمجمة مخيفة' },
     { id:'king',    name:'تاج ملكي',  price:2500, desc:'تاج الأساطير' },
-    /* ➕ قبابيع */
     { id:'hat',     name:'قبعة',      price:300,  desc:'قبعة قماشية' },
     { id:'cap',     name:'كاب',       price:350,  desc:'كاب رياضي' },
     { id:'beanie',  name:'قبعة صوف',  price:400,  desc:'قبعة شتوية' },
@@ -205,12 +197,9 @@ const COSMETICS = {
     { id:'party',   name:'قبعة حفلة', price:500,  desc:'قبعة ملونة' },
     { id:'wizard',  name:'قبعة ساحر', price:900,  desc:'قبعة سحرية' },
     { id:'viking',  name:'خوذة فايكنغ', price:1200, desc:'خوذة محارب' },
-    /* ➕ قرون متنوعة */
     { id:'deerHorns', name:'قرون غزال', price:650, desc:'قرون متفرعة' },
     { id:'singleHorn', name:'قرن وحيد', price:550, desc:'قرن وسط الرأس' }
   ],
-
-  /* ==================== CAPES (أوشحة وعباءات) ==================== */
   cape: [
     { id:'none',        name:'بدون',         price:0,    desc:'لا وشاح' },
     { id:'scarf_red',   name:'وشاح أحمر',    price:300,  desc:'وشاح قصير' },
@@ -267,8 +256,149 @@ function currentCrown(){ return getAllCosmetics('crown').find(c=>c.id===Save.dat
 function currentCape(){ return getAllCosmetics('cape').find(c=>c.id===Save.data.cosmetics.current.cape) || COSMETICS.cape[0]; }
 
 /* ============================================================
-   ==================== Save =================================
+   ==================== Power-ups System (المطوّر) ===========
    ============================================================ */
+const POWERUP_DEFS = {
+  magnet: {
+    id:'magnet', icon:'◉', color:'#C99AC9', label:'مغناطيس',
+    desc:'يجذب العملات والكرات نحوك تلقائياً',
+    modes:['FLIP','FLAP','DRIFT','WALK'],
+    basePrice:150, priceStep:75
+  },
+  double: {
+    id:'double', icon:'×2', color:'#E4B853', label:'مضاعف',
+    desc:'يضاعف قيمة كل ما تجمعه',
+    modes:['FLIP','FLAP','DRIFT','WALK'],
+    basePrice:200, priceStep:100
+  },
+  shield: {
+    id:'shield', icon:'◈', color:'#7BC4B0', label:'درع',
+    desc:'يحميك من ضربة واحدة',
+    modes:['FLIP','FLAP','DRIFT','WALK'],
+    basePrice:250, priceStep:150,
+    singleUse:true
+  },
+  ghost: {
+    id:'ghost', icon:'◯', color:'#B8A4C9', label:'شبح',
+    desc:'يمر بك عبر العقبات دون ضرر',
+    modes:['FLIP','FLAP','DRIFT','WALK'],
+    basePrice:300, priceStep:150
+  },
+  slow: {
+    id:'slow', icon:'◔', color:'#8FB8D8', label:'تبطيء',
+    desc:'يبطئ سرعة العالم مؤقتاً',
+    modes:['FLIP','FLAP','DRIFT'],
+    basePrice:180, priceStep:90
+  },
+  shrink: {
+    id:'shrink', icon:'◐', color:'#4A88C8', label:'تصغير',
+    desc:'يصغّر حجم اللاعب لتفادي العقبات',
+    modes:['FLIP','FLAP','DRIFT'],
+    basePrice:300, priceStep:150
+  },
+  timeWarp: {
+    id:'timeWarp', icon:'⏱', color:'#9A6AC8', label:'تشويه الزمن',
+    desc:'يبطئ الزمن بشكل كبير جداً',
+    modes:['FLIP','FLAP','DRIFT'],
+    basePrice:350, priceStep:175
+  },
+  extraJump: {
+    id:'extraJump', icon:'↑↑', color:'#4CAF50', label:'قفزات إضافية',
+    desc:'يمنحك قفزتين إضافيتين',
+    modes:['WALK'],
+    basePrice:220, priceStep:110
+  },
+  glide: {
+    id:'glide', icon:'🪂', color:'#87CEEB', label:'انزلاق',
+    desc:'ينزلق بك في الهواء عند الإمساك',
+    modes:['WALK'],
+    basePrice:280, priceStep:140
+  },
+  rocket: {
+    id:'rocket', icon:'🚀', color:'#FF6B35', label:'صاروخ',
+    desc:'يطير بك للأعلى بسرعة عالية',
+    modes:['WALK'],
+    basePrice:400, priceStep:200
+  },
+  megaJump: {
+    id:'megaJump', icon:'⚡', color:'#FFD700', label:'قفزة خارقة',
+    desc:'قفزة عالية جداً تتجاوز العقبات',
+    modes:['WALK'],
+    basePrice:380, priceStep:190
+  },
+  wallStick: {
+    id:'wallStick', icon:'🧲', color:'#8B4513', label:'التصاق',
+    desc:'يتيح الالتصاق بالجدران مؤقتاً',
+    modes:['WALK'],
+    basePrice:320, priceStep:160
+  }
+};
+
+const POWERUP_LIST = Object.values(POWERUP_DEFS);
+const POWERUP_MAX_LEVEL = 5;
+const POWERUP_BASE_SECONDS = 5;
+const POWERUP_STEP_SECONDS = 5;
+
+/* ═══ الدوال المساعدة ═══ */
+function getPowerupLevel(id){
+  if(typeof Save === 'undefined' || !Save.data) return 0;
+  if(!Save.data.powerupUpgrades) Save.data.powerupUpgrades = {};
+  return Save.data.powerupUpgrades[id] || 0;
+}
+
+function getPowerupDurationSeconds(id){
+  const def = POWERUP_DEFS[id];
+  if(!def || def.singleUse) return 1;
+  return POWERUP_BASE_SECONDS + getPowerupLevel(id) * POWERUP_STEP_SECONDS;
+}
+
+function getPowerupDuration(id){
+  return getPowerupDurationSeconds(id) * 60;
+}
+
+function getPowerupUpgradePrice(id){
+  const def = POWERUP_DEFS[id];
+  if(!def) return 0;
+  const lvl = getPowerupLevel(id);
+  if(lvl >= POWERUP_MAX_LEVEL) return 0;
+  return def.basePrice + lvl * def.priceStep;
+}
+
+function isPowerupMaxed(id){
+  return getPowerupLevel(id) >= POWERUP_MAX_LEVEL;
+}
+
+function isPowerupAvailableInMode(id, mode){
+  const def = POWERUP_DEFS[id];
+  if(!def) return false;
+  if(!def.modes) return true;
+  return def.modes.includes(mode);
+}
+
+function getAvailablePowerupIds(mode){
+  return POWERUP_LIST
+    .filter(p => isPowerupAvailableInMode(p.id, mode))
+    .map(p => p.id);
+}
+
+function makePowerup(x, y, opts){
+  const available = getAvailablePowerupIds(G.mode);
+  if(available.length === 0) return null;
+  const id = available[Math.floor(Math.random() * available.length)];
+  const def = POWERUP_DEFS[id];
+  return Object.assign({
+    x, y, r: 14,
+    type: def,
+    duration: getPowerupDuration(id),
+    t: 0, dead: false
+  }, opts || {});
+}
+
+function spawnPowerup(cx, cy){
+  const p = makePowerup(cx, cy);
+  if(p) powerups.push(p);
+}
+
 /* ============================================================
    ==================== Save =================================
    ============================================================ */
@@ -276,7 +406,7 @@ const Save = {
   KEY:'shift_v10',
   data:{
     coins:0,
-    bestMeters:{FLIP:0,FLAP:0,DRIFT:0,WALK:0,FLIP_WALK:0,SKY_JUMP:0},
+    bestMeters:{FLIP:0,FLAP:0,DRIFT:0,WALK:0,FLIP_WALK:0,SKY_JUMP:0,MIXED:0},
     ownedSkins:['cream'],
     currentSkin:'cream',
     cosmetics:{
@@ -302,7 +432,8 @@ const Save = {
     achievements:{},
     claimedGlobalLevels:[],
     mode:'FLIP',
-    stats:{totalPlays:0,totalMeters:0,totalCoins:0,orbCount:0,bestMeters:0,bestCombo:0},
+    runType:'classic',
+    stats:{totalPlays:0,totalMeters:0,totalCoins:0,orbCount:0,bestMeters:0,bestCombo:0,shiftRuns:0},
     settings:{sound:true,haptics:true},
     season:{ number: 1, startDate: null, points: 0 },
     battlePass:{ claimedFree: [], claimedPremium: [] },
@@ -314,6 +445,7 @@ const Save = {
       progressMonthly: { plays:0, meters:0, coins:0, orbs:0 }
     },
     dailyLogin:{ streak: 0, lastClaim: null, claimedToday: false },
+    powerupUpgrades: {},
     admin:{
       access: false,
       unlimitedCoins: false,
@@ -328,7 +460,6 @@ const Save = {
       customCrown: [],
       customCape: [],
       lastContentSync: null,
-      /* ➕ المصادر */
       sources: [
         { id:'src_rank_1', type:'season_rank', name:'تصنيف الموسم 1', start:'2024-01-01', end:'2024-03-31', active:true },
         { id:'src_rank_2', type:'season_rank', name:'تصنيف الموسم 2', start:'2024-04-01', end:'2024-06-30', active:false },
@@ -355,20 +486,41 @@ const Save = {
       }
     }catch(e){}
 
-    /* ضمان وجود الحقول الأساسية */
     if(!this.data.cosmetics.owned.spark) this.data.cosmetics.owned.spark = ['none'];
     if(!this.data.cosmetics.current.spark) this.data.cosmetics.current.spark = 'none';
 
-    /* ضمان فئات التأثيرات الجديدة */
     ['aura','crown','cape'].forEach(cat=>{
       if(!this.data.cosmetics.owned[cat]) this.data.cosmetics.owned[cat] = ['none'];
       if(!this.data.cosmetics.current[cat]) this.data.cosmetics.current[cat] = 'none';
     });
 
-    /* ✅ ترحيل الأوضاع القديمة — أضف هذا */
+    /* ترحيل الأوضاع القديمة */
     if(this.data.mode === 'FLIP_WALK' || this.data.mode === 'SKY_JUMP'){
       this.data.mode = 'WALK';
     }
+
+    /* ضمان وجود shiftRuns */
+    if(typeof this.data.stats.shiftRuns !== 'number') this.data.stats.shiftRuns = 0;
+
+    /* ترحيل: ضمان وجود MIXED في bestMeters */
+    if(typeof this.data.bestMeters.MIXED !== 'number') this.data.bestMeters.MIXED = 0;
+
+    /* ترحيل: حذف runType القديم */
+    delete this.data.runType;
+
+    /* ✅✅✅ أضف هنا ✅✅✅ */
+    /* ضمان وجود powerupUpgrades */
+    if(!this.data.powerupUpgrades || typeof this.data.powerupUpgrades !== 'object'){
+      this.data.powerupUpgrades = {};
+    }
+    /* تأكد من وجود جميع التعزيزات */
+    Object.keys(POWERUP_DEFS).forEach(id => {
+      if(typeof this.data.powerupUpgrades[id] !== 'number'){
+        this.data.powerupUpgrades[id] = 0;
+      }
+    });
+    /* ✅✅✅ نهاية الإضافة ✅✅✅ */
+
   },
   save(){ try{ localStorage.setItem(this.KEY, JSON.stringify(this.data)); }catch(e){} },
   reset(){ try{ localStorage.removeItem(this.KEY); }catch(e){} location.reload(); }
@@ -376,7 +528,7 @@ const Save = {
 
 Save.load();
 
-/* ➕ ضمان وجود قسم المشرف بعد التحميل */
+/* ضمان وجود قسم المشرف */
 if(!Save.data.admin){
   Save.data.admin = {
     access:false,
@@ -391,21 +543,20 @@ if(!Save.data.admin){
     customAura:[],
     customCrown:[],
     customCape:[],
-    lastContentSync:null
+    lastContentSync:null,
+    sources:[]
   };
-  Save.save();
-  if(!Save.data.admin.sources){
+}
+if(!Save.data.admin.sources || !Save.data.admin.sources.length){
   Save.data.admin.sources = [
     { id:'src_rank_1', type:'season_rank', name:'تصنيف الموسم 1', start:'2024-01-01', end:'2024-03-31', active:true },
-    { id:'src_rank_2', type:'season_rank', name:'تصنيف الموسم 2', start:'2024-04-01', end:'2024-06-30', active:false },
     { id:'src_bp_1',   type:'battle_pass', name:'باتل باس الموسم 1', start:'2024-01-01', end:'2024-03-31', active:true },
-    { id:'src_bp_2',   type:'battle_pass', name:'باتل باس الموسم 2', start:'2024-04-01', end:'2024-06-30', active:false },
     { id:'src_login',  type:'daily_login', name:'التسجيل اليومي', start:'2024-01-01', end:'2099-12-31', active:true },
     { id:'src_chest',  type:'chest',       name:'الصناديق', start:'2024-01-01', end:'2099-12-31', active:true },
     { id:'src_wheel',  type:'lucky_wheel', name:'عجلة الحظ', start:'2024-01-01', end:'2099-12-31', active:true }
   ];
 }
-}
+Save.save();
 
 /* ============================================================
    ==================== SOURCES HELPERS ======================
@@ -421,15 +572,12 @@ const SOURCE_TYPES = {
 function getSource(id){
   return (Save.data.admin.sources || []).find(s => s.id === id) || null;
 }
-
 function getActiveSources(){
   return (Save.data.admin.sources || []).filter(s => s.active);
 }
-
 function getSourceTypeInfo(type){
   return SOURCE_TYPES[type] || { label:'مخصص', icon:'📌', color:'#8B8278' };
 }
-
 function isSourceActive(src){
   if(!src) return false;
   if(!src.active) return false;
@@ -476,24 +624,6 @@ const Sfx = {
 const haptic = (ms=10) => { if(!Save.data.settings.haptics) return; if(navigator.vibrate) navigator.vibrate(ms); };
 
 /* ============================================================
-   ==================== Power-ups ============================
-   ============================================================ */
-const POWERUP_TYPES = [
-  { id:'magnet',      icon:'◉',  color:'#C99AC9', label:'مغناطيس' },
-  { id:'double',      icon:'×2', color:'#E4B853', label:'مضاعف' },
-  { id:'slow',        icon:'◔',  color:'#8FB8D8', label:'تبطيء' },
-  { id:'shield',      icon:'◈',  color:'#7BC4B0', label:'درع' },
-  { id:'ghost',       icon:'◯',  color:'#B8A4C9', label:'شبح' },
-  /* ➕ جديدة */
-  { id:'extraJump',   icon:'↑↑', color:'#4CAF50', label:'قفزات إضافية' },
-  { id:'glide',       icon:'🪂', color:'#87CEEB', label:'انزلاق' },
-  { id:'rocket',      icon:'🚀', color:'#FF6B35', label:'صاروخ' },
-  { id:'megaJump',    icon:'⚡', color:'#FFD700', label:'قفزة خارقة' },
-  { id:'wallStick',   icon:'🧲', color:'#8B4513', label:'التصاق' }
-];
-function rollPowerupDuration(){ return Math.floor(rand(300, 1800)); }
-
-/* ============================================================
    ==================== Achievements =========================
    ============================================================ */
 const ACHIEVEMENTS = [
@@ -520,12 +650,7 @@ const SCENE_DEFAULTS = {
   moon:'#F0E8D0', moonGlow:'#F5D77E',
   moonAmount: 0, starAmount: 0,
   weather:'petal', weatherRate:0.3,
-  /* ➕ حقول الطقس المتقدم */
-  wind: 0,           /* قوة الدفع الأفقي (-1 إلى 1) */
-  fog: 0,            /* كثافة الضباب (0-1) */
-  lightning: false,  /* هل يحدث برق؟ */
-  lightningTimer: 0,
-  weatherColor: null /* لون مخصص للطقس */
+  wind: 0, fog: 0, lightning: false, lightningTimer: 0, weatherColor: null
 };
 function mkScene(o){ return Object.assign({}, SCENE_DEFAULTS, o); }
 
@@ -534,87 +659,70 @@ const SCENES = [
     hillFar:'#E8A580', hillMid:'#C77A55', hillNear:'#8E4F35',
     ground:'#5E3223', groundDark:'#3A1F14', accent:'#E86A2E', wall:'#8E4F35', wallDark:'#5E3223',
     cloud:'#FFFFFF', sun:'#FFCB5A', sunGlow:'#FFE0A0', weather:'petal', weatherRate:0.3 }),
-
   mkScene({ id:'meadow', en:'MEADOW', ar:'المرج', sky:'#BCE3A8', skyBot:'#7CC258',
     hillFar:'#8FC878', hillMid:'#5EA041', hillNear:'#3A6E28',
     ground:'#2C5620', groundDark:'#1A3812', accent:'#E8A52C', wall:'#3A6E28', wallDark:'#244818',
     cloud:'#FFFFFF', sun:'#FFE87A', sunGlow:'#FFF4B0', weather:'pollen', weatherRate:0.35 }),
-
   mkScene({ id:'forest', en:'FOREST', ar:'الغابة', sky:'#4A7A4E', skyBot:'#2A4A2E',
     hillFar:'#3A6A3E', hillMid:'#2A5028', hillNear:'#1A3018',
     ground:'#1A2818', groundDark:'#0A140A', accent:'#9AC84C', wall:'#1A3018', wallDark:'#0A140A',
-    cloud:'#C8D8C0', sun:'#E8E8A0', sunGlow:'#F8F8C0', weather:'leaves', weatherRate:0.5,
-    wind:0.2 }),
-
+    cloud:'#C8D8C0', sun:'#E8E8A0', sunGlow:'#F8F8C0', weather:'leaves', weatherRate:0.5, wind:0.2 }),
   mkScene({ id:'lagoon', en:'LAGOON', ar:'البحيرة', sky:'#A8D8E8', skyBot:'#5EA8C8',
     hillFar:'#7CB8D0', hillMid:'#4A88A8', hillNear:'#2A5878',
     ground:'#1E4460', groundDark:'#0E2A40', accent:'#FFC84A', wall:'#2A5878', wallDark:'#183C58',
     cloud:'#FFFFFF', sun:'#FFF0B8', sunGlow:'#FFF8D8', weather:'rain', weatherRate:0.55 }),
-
   mkScene({ id:'canyon', en:'CANYON', ar:'الوادي', sky:'#FFC088', skyBot:'#F07840',
     hillFar:'#E89860', hillMid:'#C86030', hillNear:'#8E3E18',
     ground:'#5E2810', groundDark:'#381608', accent:'#FF4A2A', wall:'#8E3E18', wallDark:'#5E2810',
     cloud:'#FFE8D0', sun:'#FFB050', sunGlow:'#FFD890', weather:'ember', weatherRate:0.28 }),
-
   mkScene({ id:'temple', en:'TEMPLE', ar:'المعبد', sky:'#C8A878', skyBot:'#8E6848',
     hillFar:'#A88868', hillMid:'#806848', hillNear:'#5A4028',
     ground:'#3A2818', groundDark:'#1E1408', accent:'#E8B34E', wall:'#5A4028', wallDark:'#3A2818',
     cloud:'#F0E0C0', sun:'#FFE080', sunGlow:'#FFF0B0', weather:'pollen', weatherRate:0.2 }),
-
   mkScene({ id:'dusk', en:'DUSK', ar:'الغسق', sky:'#8A78A8', skyBot:'#4A3A68',
     hillFar:'#6E5888', hillMid:'#4A3868', hillNear:'#2E2048',
     ground:'#1E1430', groundDark:'#0E0820', accent:'#F0A0A8', wall:'#2E2048', wallDark:'#1A1030',
     cloud:'#C8B8D8', sun:'#F5D88A', sunGlow:'#FFE8C0', weather:'firefly', weatherRate:0.22 }),
-
   mkScene({ id:'frost', en:'FROST', ar:'الصقيع', sky:'#B8CCE0', skyBot:'#7898B8',
     hillFar:'#98B0C8', hillMid:'#6888A8', hillNear:'#406080',
     ground:'#284058', groundDark:'#142838', accent:'#FFE8A0', wall:'#406080', wallDark:'#284058',
     cloud:'#FFFFFF', sun:'#FFF8E0', sunGlow:'#FFFFFF', weather:'snow', weatherRate:0.5 }),
-
   mkScene({ id:'storm', en:'STORM', ar:'العاصفة', sky:'#3A3A50', skyBot:'#5A5A70',
     hillFar:'#4A4A60', hillMid:'#3A3A50', hillNear:'#2A2A40',
     ground:'#1A1A28', groundDark:'#0A0A18', accent:'#FFE060', wall:'#2A2A40', wallDark:'#1A1A28',
     cloud:'#6A6A80', moon:'#E8E8F8', moonGlow:'#C8C8E0', moonAmount:0.5, starAmount:0.3,
     weather:'rain', weatherRate:1.2, lightning:true, wind:0.6 }),
-
   mkScene({ id:'night', en:'NIGHT', ar:'الليل', sky:'#0F1430', skyBot:'#1F2750',
     hillFar:'#2A3050', hillMid:'#1E2440', hillNear:'#141828',
     ground:'#0E1220', groundDark:'#05070F', accent:'#F5D77E', wall:'#2A3050', wallDark:'#141828',
     cloud:'#3A4060', moon:'#F0E8D0', moonGlow:'#F5D77E', moonAmount:1, starAmount:1,
     weather:'firefly', weatherRate:0.4 }),
-
   mkScene({ id:'sakura', en:'SAKURA', ar:'ساكورا', sky:'#FBE0E8', skyBot:'#F5C8D8',
     hillFar:'#EAB8C8', hillMid:'#D890A8', hillNear:'#B86888',
     ground:'#8E4868', groundDark:'#5E2E48', accent:'#E87A98', wall:'#B86888', wallDark:'#8E4868',
     cloud:'#FFFFFF', sun:'#FFD8E0', sunGlow:'#FFECF0', weather:'petal', weatherRate:0.7 }),
-
   mkScene({ id:'desert', en:'DESERT', ar:'الصحراء', sky:'#FFE0A8', skyBot:'#F5A860',
     hillFar:'#F0B878', hillMid:'#D89860', hillNear:'#B87048',
     ground:'#8E5030', groundDark:'#5E3218', accent:'#E85838', wall:'#B87048', wallDark:'#8E5030',
     cloud:'#FFF4DC', sun:'#FFF0A8', sunGlow:'#FFF8D8', weather:'sandstorm', weatherRate:1.0, wind:0.4 }),
-
   mkScene({ id:'city', en:'NEON CITY', ar:'المدينة السيبرانية', sky:'#1A0E2E', skyBot:'#3A1A5E',
     hillFar:'#2A1A4E', hillMid:'#1E1038', hillNear:'#12082A',
     ground:'#0E0620', groundDark:'#06020F', accent:'#FF00D8', wall:'#2A1A4E', wallDark:'#12082A',
     cloud:'#4A2A6E', moon:'#F0A0FF', moonGlow:'#FF60E8', moonAmount:1, starAmount:0.4,
     weather:'neon', weatherRate:0.4, lightning:true }),
-
   mkScene({ id:'ocean', en:'ABYSS', ar:'الأعماق', sky:'#0A3050', skyBot:'#041820',
     hillFar:'#0E4A6A', hillMid:'#083850', hillNear:'#042838',
     ground:'#021020', groundDark:'#000810', accent:'#40E8D0', wall:'#042838', wallDark:'#021020',
     cloud:'#1A5080', sun:'#40C8E8', sunGlow:'#80E8F8', weather:'bubbles', weatherRate:0.8 }),
-
   mkScene({ id:'space', en:'COSMOS', ar:'الفضاء', sky:'#0A0420', skyBot:'#1A0838',
     hillFar:'#2A1058', hillMid:'#1A0838', hillNear:'#10041E',
     ground:'#08021A', groundDark:'#02000A', accent:'#C060FF', wall:'#10041E', wallDark:'#08021A',
     cloud:'#2A1A4E', moon:'#E8D0FF', moonGlow:'#B080FF', moonAmount:1, starAmount:1,
     weather:'starfield', weatherRate:0.3 }),
-
   mkScene({ id:'candy', en:'CANDY', ar:'الحلوى', sky:'#FFD0E8', skyBot:'#FFA8D8',
     hillFar:'#FFC0E0', hillMid:'#FF90C0', hillNear:'#E860A0',
     ground:'#A04078', groundDark:'#6A2850', accent:'#FFE060', wall:'#E860A0', wallDark:'#A04078',
     cloud:'#FFFFFF', sun:'#FFE0F0', sunGlow:'#FFF0F8', weather:'bubbles', weatherRate:0.5 }),
-
   mkScene({ id:'volcano', en:'VOLCANO', ar:'البركان', sky:'#3A1020', skyBot:'#6E1A18',
     hillFar:'#4E1A20', hillMid:'#3A1018', hillNear:'#2A0A12',
     ground:'#1A0608', groundDark:'#0A0204', accent:'#FF5020', wall:'#3A1018', wallDark:'#1A0608',
@@ -643,11 +751,243 @@ function blendScene(a,b,t){
 }
 
 const MODES = [
-  { id:'FLIP',      ar:'قلب الجاذبية', en:'FLIP',   icon:'⇅', color:'#4A7FA0', desc:'اضغط لقلب الاتجاه' },
-  { id:'FLAP',      ar:'التحليق',      en:'THRUST', icon:'▲', color:'#8E6AA8', desc:'اضغط للارتفاع' },
-  { id:'DRIFT',     ar:'الانسياق',     en:'DRIFT',  icon:'✦', color:'#C98A2E', desc:'اسحب بحرية' },
-  { id:'WALK',      ar:'المشي والقفز', en:'RUN',    icon:'♟', color:'#4A8040', desc:'اقفز فوق العقبات' }
+  { id:'FLIP',   ar:'قلب الجاذبية', en:'FLIP',   icon:'⇅', color:'#4A7FA0', desc:'اضغط لقلب الاتجاه' },
+  { id:'FLAP',   ar:'التحليق',      en:'THRUST', icon:'▲', color:'#8E6AA8', desc:'اضغط للارتفاع' },
+  { id:'DRIFT',  ar:'الانسياق',     en:'DRIFT',  icon:'✦', color:'#C98A2E', desc:'اسحب بحرية' },
+  { id:'WALK',   ar:'المشي والقفز', en:'RUN',    icon:'♟', color:'#4A8040', desc:'اقفز فوق العقبات' },
+  { id:'MIXED',  ar:'المتنوّع',     en:'MIXED',  icon:'◆', color:'#A06AD8', desc:'تحوّل عشوائي بين الأنماط' }
 ];
+
+/* ============================================================
+   ==================== REALM SYSTEM (العوالم) ===============
+   ============================================================ */
+const REALM = {
+  GROUND: 'GROUND',
+  SKY: 'SKY',
+  UNDERGROUND: 'UNDERGROUND'
+};
+
+/* ═══════════════ SKY REALM ═══════════════ */
+const SKY_REALM = {
+  enterOffset: 900,   /* يدخل السماء عندما يرتفع 900px فوق الأرض */
+  exitOffset: 700,    /* يخرج عندما ينزل إلى 700px */
+
+  layers: [
+    {
+      id: 'clouds', name:'CLOUDS', ar:'السحاب',
+      from: 0, to: 500,
+      sky:'#A8D8FF', skyBot:'#E0F0FF', accent:'#FFFFFF',
+      wall:'#E8F4FF', wallDark:'#A8C8E8',
+      weather:'clouds', weatherRate: 0.6
+    },
+    {
+      id: 'ruins', name:'RUINS', ar:'الأطلال',
+      from: 500, to: 1100,
+      sky:'#7A88A8', skyBot:'#4A5878', accent:'#C8B8A0',
+      wall:'#8E7A68', wallDark:'#4A3830',
+      weather:'dust', weatherRate: 0.4
+    },
+    {
+      id: 'storm', name:'STORM', ar:'العاصفة',
+      from: 1100, to: 1800,
+      sky:'#3A3A50', skyBot:'#2A2A40', accent:'#FFE060',
+      wall:'#5A5A70', wallDark:'#2A2A40',
+      weather:'storm', weatherRate: 1.2, lightning: true
+    },
+    {
+      id: 'crystal', name:'CRYSTAL', ar:'البلور',
+      from: 1800, to: 2600,
+      sky:'#C8A0E8', skyBot:'#6A48A8', accent:'#E0D0FF',
+      wall:'#B080E8', wallDark:'#6040A8',
+      weather:'sparkle', weatherRate: 0.5
+    },
+    {
+      id: 'golden', name:'GOLDEN GATE', ar:'البوابة الذهبية',
+      from: 2600, to: 99999,
+      sky:'#FFE0A0', skyBot:'#E8B34E', accent:'#FFF4C0',
+      wall:'#E8B34E', wallDark:'#A07028',
+      weather:'gold', weatherRate: 0.7
+    }
+  ]
+};
+
+const UNDER_FLOOR_SPACING = 300;        /* المسافة بين طوابق الأرض */
+const UNDER_FLOOR_HOLE_PERIOD = 1200;   /* طول الدورة بين الحفر */
+const UNDER_FLOOR_HOLE_WIDTH = 150;     /* عرض الحفرة */
+const UNDER_FLOOR_THICKNESS = 22;       /* سماكة الطابق */
+
+/* ═══ نظام الغرف الواسعة والأبنية الضخمة ═══ */
+const UNDER_CHAMBER_EVERY = 4;          /* كل 4 طوابق = غرفة واسعة */
+const UNDER_CHAMBER_HOLE_WIDTH = 380;   /* عرض الحفرة في الغرفة */
+const UNDER_BIG_PLATFORM_MIN = 200;     /* أصغر منصة عريضة */
+const UNDER_BIG_PLATFORM_MAX = 420;     /* أكبر منصة عريضة */
+const UNDER_COLUMN_HEIGHT = 180;        /* ارتفاع العمود الصخري */
+
+const UNDER_REALM = {
+  enterOffset: 100,     /* يدخل الأعماق بسرعة */
+  exitOffset: 0,
+
+  layers: [
+    {
+      id: 'caves', name:'CAVES', ar:'الكهوف',
+      from: 0, to: 500,
+      bg:'#3A2818', bgBot:'#1A0E08', accent:'#8E6A48',
+      wall:'#5E4028', wallDark:'#2A1810',
+      weather:'dust', weatherRate: 0.5
+    },
+    {
+      id: 'magma', name:'MAGMA', ar:'الحمم',
+      from: 500, to: 1100,
+      bg:'#3A1010', bgBot:'#1A0404', accent:'#FF5020',
+      wall:'#8E2018', wallDark:'#3A0808',
+      weather:'ember', weatherRate: 0.8, glow:true
+    },
+    {
+      id: 'abyss', name:'ABYSS', ar:'الهاوية',
+      from: 1100, to: 1800,
+      bg:'#0A0420', bgBot:'#040010', accent:'#A080FF',
+      wall:'#1A0838', wallDark:'#08021A',
+      weather:'void', weatherRate: 0.4
+    },
+    {
+      id: 'void', name:'VOID', ar:'الفراغ',
+      from: 1800, to: 2600,
+      bg:'#000000', bgBot:'#000000', accent:'#C080FF',
+      wall:'#100820', wallDark:'#040208',
+      weather:'void', weatherRate: 0.6
+    },
+    {
+      id: 'core', name:'CORE', ar:'النواة',
+      from: 2600, to: 99999,
+      bg:'#4A0810', bgBot:'#1A0208', accent:'#FFD060',
+      wall:'#C03020', wallDark:'#5A0810',
+      weather:'ember', weatherRate: 1.0, glow:true
+    }
+  ]
+};
+
+/* ============================================================
+   ==================== SHIFT GATES ==========================
+   ============================================================ */
+const SEGMENT_LENGTH_METERS = 120;   /* 120 متر بين كل بوابة */
+const MODE_COLORS = {
+  FLIP: '#4A7FA0', FLAP: '#8E6AA8', DRIFT: '#C98A2E', WALK: '#4A8040'
+};
+const MODE_ICONS = {
+  FLIP: '⇅', FLAP: '▲', DRIFT: '✦', WALK: '♟'
+};
+
+/* ============================================================
+   ==================== SYNERGIES (Power-up Combos) ==========
+   ============================================================ */
+const SYNERGIES = [
+  {
+    id: 'coinStorm', needs: ['magnet','double'],
+    name: 'عاصفة العملات', icon: '💰', color: '#FFD700',
+    desc: 'عملات مضاعفة تتساقط بغزارة',
+    effect: () => {
+      if(G.t % 20 === 0){
+        G.runCoins += 3;
+        addFloat(P.x + rand(-30,30), P.y - 40, '+3', '#FFD700', 12);
+      }
+    }
+  },
+  {
+    id: 'ram', needs: ['shield','slow'],
+    name: 'الكبش', icon: '🛡', color: '#7BC4B0',
+    desc: 'تهشيم العقبات عند اللمس',
+    effect: () => {
+      for(const o of obstacles){
+        if(o.dead) continue;
+        if(o.isWalk && !o.isPlatform && Math.abs(o.x - P.x) < 40){
+          o.dead = true;
+          burst(o.x, o.y || GROUND_Y - 30, '#7BC4B0', 10, 5);
+        }
+      }
+    }
+  },
+  {
+    id: 'laserPhase', needs: ['ghost','magnet'],
+    name: 'اختراق الليزر', icon: '🔮', color: '#B8A4C9',
+    desc: 'عبور الليزر بأمان + جذب أقوى',
+    effect: () => {}
+  },
+  {
+    id: 'airControl', needs: ['glide','extraJump'],
+    name: 'التحكم الجوي', icon: '🪂', color: '#87CEEB',
+    desc: 'قفزات إضافية + انزلاق لانهائي',
+    effect: () => {
+      if(P.jumpHeld && P.vy > 0) P.vy = Math.min(P.vy, 1.5);
+    }
+  },
+  {
+    id: 'skyMagnet', needs: ['rocket','magnet'],
+    name: 'الصاروخ الجاذب', icon: '🚀', color: '#FF6B35',
+    desc: 'جمع العملات أثناء الصعود',
+    effect: () => {
+      for(const c of coins){
+        if(c.dead) continue;
+        const dx = P.x - c.x, dy = P.y - c.y;
+        const d = Math.hypot(dx,dy) || 1;
+        if(d < 400){ c.x += (dx/d)*12; c.y += (dy/d)*12; }
+      }
+    }
+  }
+];
+
+let activeSynergies = [];
+
+function checkSynergies(){
+  const active = new Set(Object.keys(G.activePowerups));
+  if(G.shield) active.add('shield');
+  if(G.ghost > 0) active.add('ghost');
+
+  const newSynergies = [];
+  for(const syn of SYNERGIES){
+    const ok = syn.needs.every(n => active.has(n));
+    if(ok){
+      newSynergies.push(syn.id);
+      if(!activeSynergies.includes(syn.id)){
+        showBanner(syn.name, syn.icon + ' ' + syn.desc);
+        Sfx.play(880, 0.4, 'sine', 0.06, 1760);
+        shake(10); haptic(25);
+        for(let i=0;i<30;i++){
+          const a = (i/30)*Math.PI*2;
+          particles.push({
+            x:P.x, y:P.y,
+            vx:Math.cos(a)*rand(4,9), vy:Math.sin(a)*rand(4,9),
+            life:1.3, decay:0.018, color:syn.color, size:rand(3,6)
+          });
+        }
+      }
+    }
+  }
+  activeSynergies = newSynergies;
+}
+
+function updateSynergies(){
+  for(const id of activeSynergies){
+    const syn = SYNERGIES.find(s => s.id === id);
+    if(syn && syn.effect) syn.effect();
+  }
+}
+
+/* ✅ الإصلاح 5: تنظيف الشريط عند الفراغ */
+function drawSynergiesUI(){
+  const row = document.getElementById('synergy-row');
+  if(!row) return;
+  if(activeSynergies.length === 0){
+    if(row.innerHTML !== '') row.innerHTML = '';
+    return;
+  }
+  row.innerHTML = activeSynergies.map(id => {
+    const s = SYNERGIES.find(x => x.id === id);
+    return `<div class="synergy-chip" style="--sc:${s.color}">
+      <span class="sc-ic">${s.icon}</span>
+      <span class="sc-nm">${s.name}</span>
+    </div>`;
+  }).join('');
+}
 
 /* ============================================================
    ==================== Progression ==========================
@@ -675,6 +1015,10 @@ function getProgression(){
     hasSpike: m >= PROGRESSION.spikeUnlock,
     hasTall: m >= PROGRESSION.tallUnlock
   };
+}
+function getSpeedScale(){
+  const ratio = G.speed / PROGRESSION.speedStart;
+  return Math.pow(clamp(ratio, 1, 4.5), 0.65);
 }
 function getLevelIndex(){ return levelFromMeters(getMeters(), PROGRESSION.levels); }
 function getLevelProgress(){
@@ -714,6 +1058,7 @@ window.addEventListener('resize', resize);
 /* ============================================================
    ==================== State ================================
    ============================================================ */
+/* ✅ الإصلاح 6: حذف G.activeSynergies غير المستخدم */
 const G = {
   state:'MENU', mode: Save.data.mode || 'FLIP',
   t:0, dist:0, meters:0, orbCount:0, runCoins:0,
@@ -729,33 +1074,54 @@ const G = {
   combo: 0, comboTimer: 0, comboMax: 0,
   lightningTimer: 0,
   lightningFlash: 0,
-skyCeilY: 0,
-skyDecor: [],      /* عناصر السماء العالية */
-  camY: 0,          /* إزاحة الكاميرا للأعلى */
-  camTargetY: 0,    /* الهدف (للـ lerp) */
-    /* ✅ حقول Power-ups الجديدة */
+  skyCeilY: 0,
+  skyDecor: [],
+  camY: 0,
+  camTargetY: 0,
   extraJumps: 0,
   glideActive: false,
   rocketActive: false,
   megaJumpActive: 0,
   wallStickActive: false,
   rocketFrames: 0,
-rocketMaxAltitude: 0,
-maxAltitude: 0
+  rocketMaxAltitude: 0,
+  maxAltitude: 0,
+  selectedMode: 'FLIP',
+  isMixedMode: false,
+  distSinceGate: 0,
+  pendingShift: false,
+  shiftGrace: 0,
+    /* ═══════════════ Realms ═══════════════ */
+  realm: REALM.GROUND,
+  skyLayerIdx: 0,
+  underLayerIdx: 0,
+  skyLayersVisited: [],
+  underLayersVisited: [],
+  realmTransition: 0,       /* 0-1 blend */
+  realmFrom: REALM.GROUND,
+  realmTo: REALM.GROUND,
+
+nextHoleMeters: 450,
+
+  /* ═══════════════ Underground ═══════════════ */
+  isDigging: false,         /* هل يمكن تجاوز مستوى الأرض */
+  underDepthPx: 0,          /* عمق اللاعب تحت الأرض */
+  camYUnder: 0              /* إزاحة الكاميرا للأسفل */
 };
+
 const P = {
   x:0,y:0,vx:0,vy:0,r:13,baseX:100,
   gravityDir:1, rot:0,
   onGround:false, jumps:0, trail:[],
   enginePhase: 0, legPhase: 0, bouncePhase: 0,
   cape: null,
-  /* ➕ جديدة */
   jumpHeld: false,
   jumpHoldTimer: 0,
   coyoteTimer: 0,
   jumpBufferTimer: 0,
   onPlatform: null,
-  walkAnim: 0
+  walkAnim: 0,
+  inRealm: 'GROUND'
 };
 let obstacles=[], orbs=[], coins=[], powerups=[], particles=[], floats=[], clouds=[];
 let sparkParticles = [];
@@ -914,7 +1280,6 @@ function spawnSpark(){
   const spark = currentSpark();
   if(spark.id === 'none') return;
 
-  /* ➕ دعم الصور المخصصة للشرار */
   if(spark.imageData){
     if(sparkParticles.length > 55) return;
     sparkParticles.push({
@@ -947,7 +1312,6 @@ function spawnSpark(){
     phase: rand(0, Math.PI*2),
     wobble: rand(0.2, 0.7),
     grow: spark.id==='bubbles' ? 0.06 : 0,
-    sparkTrail: spark.id==='sparks' || spark.id==='lightning' ? 1 : 0,
     sparkHue: spark.id==='rainbow' ? Math.floor(Math.random()*360) : 0
   });
 }
@@ -966,7 +1330,8 @@ function updateSparks(){
 
   for(let i=sparkParticles.length-1;i>=0;i--){
     const p = sparkParticles[i];
-    if(p.type === 'sparks' || p.type === 'lightning'){ p.vy += 0.06; p.vx *= 0.97; }
+    if(p.type === 'customImage'){ p.rot += p.rotSpd; }
+    else if(p.type === 'sparks' || p.type === 'lightning'){ p.vy += 0.06; p.vx *= 0.97; }
     else if(p.type === 'bubbles'){ p.vy = -0.5 - Math.sin(G.t*0.05 + p.phase)*0.2; p.vx *= 0.99; p.size += p.grow; }
     else if(p.type === 'firefly' || p.type === 'cosmic' || p.type === 'gold'){
       p.vy += Math.sin(G.t*0.08 + p.phase)*0.04;
@@ -989,22 +1354,21 @@ function updateSparks(){
 }
 
 function drawSparks(){
-  
-for(const p of sparkParticles){
-  if(p.type === 'customImage'){
-    const img = getImageEl(p.imageData);
-    if(img.complete && img.naturalWidth > 0){
-      ctx.save();
-      ctx.globalAlpha = Math.max(0, Math.min(1, p.life*1.2));
-      ctx.translate(p.x, p.y);
-      ctx.rotate(p.rot);
-      const sz = p.size * Math.max(0.5, p.life);
-      ctx.drawImage(img, -sz/2, -sz/2, sz, sz);
-      ctx.restore();
+  for(const p of sparkParticles){
+    if(p.type === 'customImage'){
+      const img = getImageEl(p.imageData);
+      if(img.complete && img.naturalWidth > 0){
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, Math.min(1, p.life*1.2));
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        const sz = p.size * Math.max(0.5, p.life);
+        ctx.drawImage(img, -sz/2, -sz/2, sz, sz);
+        ctx.restore();
+      }
+      continue;
     }
-    continue;
-  }
-      const alpha = Math.max(0, Math.min(1, p.life*1.2));
+    const alpha = Math.max(0, Math.min(1, p.life*1.2));
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.translate(p.x, p.y);
@@ -1141,14 +1505,12 @@ function updateWeather(){
   const s = G.currentScene;
   if(!s.weather) return;
 
-  /* ➕ تأثير الرياح على اللاعب */
   if(s.wind && G.state === 'PLAYING'){
     if(G.mode === 'DRIFT' || G.mode === 'WALK'){
       P.x += s.wind * 0.15;
     }
   }
 
-  /* ➕ مؤقت البرق */
   if(s.lightning){
     G.lightningTimer = (G.lightningTimer || 0) - 1;
     if(G.lightningTimer <= 0 && Math.random() < 0.008){
@@ -1160,7 +1522,6 @@ function updateWeather(){
     if(G.lightningFlash > 0) G.lightningFlash -= 0.06;
   }
 
-  /* ➕ جزيئات حسب النوع */
   const rate = s.weatherRate || 0.4;
   const maxParts = s.weather === 'rain' ? 120 : (s.weather === 'sandstorm' ? 90 : 70);
   if(Math.random() < rate && G.weather.length < maxParts){
@@ -1195,14 +1556,13 @@ function updateWeather(){
         p.vx = rand(-1.5,-0.3); p.vy = rand(-0.2,0.2); p.size = rand(1.5,3); break;
       case 'starfield':
         p.vx = rand(-0.4,-0.1); p.vy = rand(-0.3,0.1); p.size = rand(0.8,2); p.life = rand(300,700); break;
-      default: /* petal, pollen, snow, ember, firefly */
+      default:
         p.vx = rand(-0.5,-0.1); p.vy = rising ? rand(-0.6,-0.2) : rand(0.4,1.2);
     }
     p.maxLife = p.life;
     G.weather.push(p);
   }
 
-  /* ➕ تحديث الجزيئات */
   for(let i=G.weather.length-1;i>=0;i--){
     const p = G.weather[i];
     p.life--;
@@ -1230,6 +1590,7 @@ function updateWeather(){
     if(p.life<=0 || p.x<-60 || p.x>W+60 || p.y>H+40 || p.y<-40){ G.weather.splice(i,1); }
   }
 }
+
 function drawWeather(){
   for(const p of G.weather){
     const life = p.life/p.maxLife;
@@ -1272,13 +1633,14 @@ function drawWeather(){
         ctx.lineWidth = 1;
         ctx.beginPath(); ctx.arc(p.x,p.y,p.size,0,Math.PI*2); ctx.fill(); ctx.stroke();
         break;
-      case 'neon':
+      case 'neon': {
         const neonCol = `hsl(${(G.t*2 + p.phase*100) % 360}, 100%, 65%)`;
         ctx.fillStyle = neonCol;
         ctx.shadowColor = neonCol; ctx.shadowBlur = 8;
         ctx.fillRect(p.x, p.y, p.size, p.size*2);
         ctx.shadowBlur = 0;
         break;
+      }
       case 'starfield':
         ctx.fillStyle = '#FFFFFF';
         ctx.globalAlpha = fade * (0.4 + Math.sin(G.t*0.05+p.phase)*0.6);
@@ -1308,7 +1670,6 @@ function drawWeather(){
   }
   ctx.globalAlpha = 1;
 
-  /* ➕ الضباب (Fog overlay) */
   const s = G.currentScene;
   if(s.fog > 0){
     const grad = ctx.createRadialGradient(W*0.3, H*0.5, 40, W*0.3, H*0.5, W*0.9);
@@ -1318,7 +1679,6 @@ function drawWeather(){
     ctx.fillRect(0,0,W,H);
   }
 
-  /* ➕ وميض البرق */
   if(G.lightningFlash > 0){
     ctx.fillStyle = `rgba(255,255,255,${G.lightningFlash * 0.7})`;
     ctx.fillRect(0,0,W,H);
@@ -1344,13 +1704,11 @@ function initClouds(){
    ============================================================ */
 function initSkyDecor(){
   G.skyDecor = [];
-  
-  /* ✅ كواكب صغيرة */
   for(let i = 0; i < 4; i++){
     G.skyDecor.push({
       type: 'planet',
       x: rand(0, W * 1.5),
-      y: rand(-200, -50),          /* فوق الشاشة بقليل */
+      y: rand(-200, -50),
       r: rand(18, 42),
       hue: Math.floor(rand(0, 360)),
       ringed: Math.random() < 0.4,
@@ -1358,8 +1716,6 @@ function initSkyDecor(){
       parallax: rand(0.7, 0.9)
     });
   }
-  
-  /* ✅ أقمار صغيرة */
   for(let i = 0; i < 6; i++){
     G.skyDecor.push({
       type: 'moon',
@@ -1370,8 +1726,6 @@ function initSkyDecor(){
       parallax: rand(0.75, 0.95)
     });
   }
-  
-  /* ✅ شهاب في السماء */
   for(let i = 0; i < 3; i++){
     G.skyDecor.push({
       type: 'comet',
@@ -1383,8 +1737,6 @@ function initSkyDecor(){
       angle: rand(-0.4, -0.2)
     });
   }
-  
-  /* ✅ سديم ملوّن */
   for(let i = 0; i < 2; i++){
     G.skyDecor.push({
       type: 'nebula',
@@ -1411,12 +1763,29 @@ function spawnCoinCluster(cx, cy, count){
 function spawnPowerup(cx, cy){
   const base = POWERUP_TYPES[Math.floor(Math.random()*POWERUP_TYPES.length)];
   const duration = base.id === 'shield' ? 1 : rollPowerupDuration();
-  powerups.push({ x: cx, y: cy, r: 14, type: base, duration, t: 0, dead: false });
+  /* ✅ جديد */
+const skyPU = makePowerup(W + 40 + w/2 + 50, topY, { r: 16, isSkyReward: true });
+if(skyPU) powerups.push(skyPU);
 }
 
 function spawnObstacle(){
-  if(G.mode === 'WALK') spawnWalkObstacle();
-  else spawnTunnelObstacle();
+  if(G.mode !== 'WALK'){
+    spawnTunnelObstacle();
+    return;
+  }
+
+  /* ═══ حسب العالم الحالي ═══ */
+  if(G.realm === REALM.SKY){
+    spawnSkyRealmObstacle();
+    return;
+  }
+  if(G.realm === REALM.UNDERGROUND){
+    spawnUnderRealmObstacle();
+    return;
+  }
+
+  /* الأرض العادية */
+  spawnWalkObstacle();
 }
 
 function spawnTunnelObstacle(){
@@ -1445,18 +1814,23 @@ function spawnWalkObstacle(){
   const m = getMeters();
   const roll = Math.random();
 
-  /* ═══════════════ البداية (0-200م) ═══════════════ */
+  /* توليد حفر بشكل دوري للسماح بالنزول */
+  if(G.realm === REALM.GROUND && m >= G.nextHoleMeters){
+    G.nextHoleMeters = m + rand(400, 800);
+    spawnGroundHole();
+    return;
+  }
+
   if(m < 200){
     if(roll < 0.40)      spawnGroundObstacle(prog, s);
     else if(roll < 0.62) spawnPlatform(prog, s);
     else if(roll < 0.78) spawnSpring(prog, s);
     else if(roll < 0.92) spawnStaircase(prog, s);
     else if(roll < 0.97) spawnPlatformChain(prog, s);
-    else                 spawnSkyElevator(prog, s);   /* نادر */
+    else                 spawnSkyElevator(prog, s);
     return;
   }
 
-  /* ═══════════════ المنتصف (200-800م) ═══════════════ */
   if(m < 800){
     if(roll < 0.18)      spawnGroundObstacle(prog, s);
     else if(roll < 0.32) spawnPlatform(prog, s);
@@ -1466,14 +1840,13 @@ function spawnWalkObstacle(){
     else if(roll < 0.64) spawnPiston(prog, s);
     else if(roll < 0.70) spawnFallingSpike(prog, s);
     else if(roll < 0.74) spawnRotatingBar(prog, s);
-    else if(roll < 0.88) spawnStaircase(prog, s);     /* ✅ 14% */
+    else if(roll < 0.88) spawnStaircase(prog, s);
     else if(roll < 0.95) spawnSkyPlatform(prog, s);
-    else if(roll < 0.98) spawnSkyElevator(prog, s);   /* نادر 3% */
+    else if(roll < 0.98) spawnSkyElevator(prog, s);
     else                 spawnLaserFence(prog, s);
     return;
   }
 
-  /* ═══════════════ متقدم (>800م) ═══════════════ */
   if(roll < 0.10)      spawnGroundObstacle(prog, s);
   else if(roll < 0.18) spawnPlatform(prog, s);
   else if(roll < 0.26) spawnPlatformChain(prog, s);
@@ -1483,13 +1856,12 @@ function spawnWalkObstacle(){
   else if(roll < 0.52) spawnFallingSpike(prog, s);
   else if(roll < 0.56) spawnRotatingBar(prog, s);
   else if(roll < 0.60) spawnSkyPlatform(prog, s);
-  else if(roll < 0.86) spawnStaircase(prog, s);     /* ✅ 26% */
+  else if(roll < 0.86) spawnStaircase(prog, s);
   else if(roll < 0.94) spawnLaserFence(prog, s);
-  else if(roll < 0.98) spawnSkyElevator(prog, s);   /* نادر 2% */
+  else if(roll < 0.98) spawnSkyElevator(prog, s);
   else                 spawnVortex(prog, s);
 }
 
-/* ============ عقبة أرضية عادية ============ */
 function spawnGroundObstacle(prog, s){
   const types = ['block'];
   if(prog.hasSpike) types.push('spike');
@@ -1512,21 +1884,18 @@ function spawnGroundObstacle(prog, s){
 }
 
 function spawnPlatform(prog, s){
-  /* ✅ ارتفاعات مصححة حسب قدرات القفز الفعلية */
   const level = Math.random();
   let baseY;
-  if(level < 0.55)      baseY = GROUND_Y - rand(85, 125);    /* قفزة واحدة — سهل */
-  else if(level < 0.88) baseY = GROUND_Y - rand(145, 195);   /* قفزة مزدوجة — متوسط */
-  else                  baseY = GROUND_Y - rand(205, 255);   /* قفزة مزدوجة قوية — صعب */
+  if(level < 0.55)      baseY = GROUND_Y - rand(85, 125);
+  else if(level < 0.88) baseY = GROUND_Y - rand(145, 195);
+  else                  baseY = GROUND_Y - rand(205, 255);
 
-  /* ✅ أنواع المنصات */
   const platformTypes = ['static', 'static', 'moving_y', 'moving_x', 'crumble', 'bouncy'];
   const platformType = platformTypes[Math.floor(Math.random() * platformTypes.length)];
 
   const w = rand(70, 120);
   const h = 14;
 
-  /* ✅ المنصات المتحركة: اقفل الارتفاع الأعلى */
   if(platformType === 'moving_y' || platformType === 'moving_x'){
     baseY = Math.min(baseY, GROUND_Y - 200);
   }
@@ -1536,7 +1905,6 @@ function spawnPlatform(prog, s){
     isWalk:true, isPlatform:true,
     platformType,
     y: baseY, baseY, baseX: W+40,
-    /* ✅ تقليل مدى الحركة العمودية */
     amp: platformType === 'moving_y' ? rand(15, 30)
        : (platformType === 'moving_x' ? rand(20, 40) : 0),
     phase: rand(0, Math.PI*2),
@@ -1555,7 +1923,6 @@ function spawnPlatform(prog, s){
 
   obstacles.push(plat);
 
-  /* ✅ مكافآت ملتصقة بالمنصة (30px فوقها) */
   const rewardType = Math.random();
   if(rewardType < 0.20) spawnPowerup(plat.x + w/2, baseY - 35);
   else if(rewardType < 0.40) orbs.push({ x:plat.x + w/2, y:baseY - 35, r:11, t:0, dead:false, color:'#FFF4C0', isSkyOrb:true });
@@ -1565,18 +1932,16 @@ function spawnPlatform(prog, s){
 function spawnPlatformChain(prog, s){
   const count = Math.floor(rand(3, 6));
   const startX = W + 40;
-  const startY = GROUND_Y - rand(90, 140);   /* ✅ ابدأ منخفض */
-  const spacing = rand(140, 190);
-  const direction = Math.random() < 0.5 ? -1 : 1;
+  const startY = GROUND_Y - rand(90, 140);
+const spacing = rand(140, 190) * getSpeedScale();
+const direction = Math.random() < 0.5 ? -1 : 1;
 
   let lastY = startY;
 
   for(let i = 0; i < count; i++){
     const w = rand(70, 100);
     const h = 12;
-    /* ✅ خطوات أصغر */
     const dy = direction * rand(15, 35) * (i % 2 === 0 ? 1 : -0.4);
-    /* ✅ نطاق محدود جداً */
     let y = clamp(lastY + dy, GROUND_Y - 250, GROUND_Y - 80);
     lastY = y;
 
@@ -1592,7 +1957,6 @@ function spawnPlatformChain(prog, s){
       bounceBoost: i === count - 1 ? -22 : 0
     });
 
-    /* ✅ عملات قريبة من المنصات */
     if(i < count - 1){
       const midX = startX + i * spacing + spacing/2;
       const midY = (y + lastY) / 2 - 15;
@@ -1600,7 +1964,6 @@ function spawnPlatformChain(prog, s){
     }
   }
 
-  /* ✅ مكافأة نهائية قريبة جداً (25px) */
   const endX = startX + count * spacing;
   const endY = lastY;
   if(Math.random() < 0.4){
@@ -1610,19 +1973,12 @@ function spawnPlatformChain(prog, s){
   }
 }
 
-/* ============================================================
-   ==================== SKY ELEVATOR =========================
-   ============================================================ */
 function spawnSkyElevator(prog, s){
   const w = 110;
   const h = 16;
-  
-  /* ✅ ارتفاع أكبر: 300-700 بكسل */
   const maxRise = rand(300, 700);
-  
-  /* ✅ ارتفاع البداية عشوائي */
   const startY = GROUND_Y - rand(90, 150);
-  
+
   obstacles.push({
     x: W + 40, w, h, type:'platform',
     isWalk: true, isPlatform: true,
@@ -1630,32 +1986,25 @@ function spawnSkyElevator(prog, s){
     isSingleElevator: true,
     platformType: 'static',
     y: startY, baseY: startY, baseX: W + 40,
-    
-    /* ✅ آلية الرفع */
     riseSpeed: rand(1.4, 2.0),
     maxRise: maxRise,
     risen: 0,
     isCarryingPlayer: false,
     exhausted: false,
     warmupTimer: 0,
-    
-    /* ✅ ستايل */
     color: '#B8E8F0', colorDark: '#5090A0', accent: '#E0FFFF',
     glow: '#80E8FF',
     isSkyPlatform: true,
     skyTier: 3,
-    
     amp: 0, phase: 0,
     t: 0, passed: false, dead: false,
     solid: false,
     crumbleTimer: 0, crumbled: false,
     bounceBoost: 0
   });
-  
-  /* ✅ جوائز متعددة في نهاية المسار */
+
   const topY = startY - maxRise - 30;
-  
-  /* عملات متتابعة على طول المسار */
+
   const coinCount = Math.floor(maxRise / 60);
   for(let i = 1; i <= coinCount; i++){
     if(Math.random() < 0.7){
@@ -1666,122 +2015,89 @@ function spawnSkyElevator(prog, s){
       });
     }
   }
-  
-  /* مكافأة في الأعلى */
+
   orbs.push({
     x: W + 40 + w/2, y: topY, r: 16, t: 0, dead: false,
     color: '#FFD700', isSkyOrb: true, value: 15
   });
-  
-  /* 30% احتمال Power-up */
+
   if(Math.random() < 0.3){
-    powerups.push({
-      x: W + 40 + w/2 + 50, y: topY, r: 16,
-      type: POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)],
-      duration: rollPowerupDuration(),
-      t: 0, dead: false,
-      isSkyReward: true
-    });
+/* ✅ جديد */
+const skyPU = makePowerup(W + 40 + w/2 + 50, topY, { r: 16, isSkyReward: true });
+if(skyPU) powerups.push(skyPU);
   }
-  
+
   Sfx.play(660, 0.3, 'sine', 0.04, 1320);
 }
-/* ============================================================
-   ==================== SKY ELEVATOR CHAIN ===================
-   ============================================================ */
+
 function spawnSkyElevatorChain(prog, s){
-  /* ✅ 3-5 مصاعد متتالية تشكّل "درج إلى السماء" */
   const count = Math.floor(rand(3, 6));
   const startX = W + 60;
-  const spacing = rand(180, 240);   /* مسافة كافية للقفز بينها */
-  const baseRise = 200;             /* ارتفاع أول مصعد */
-  
-  let accumulatedRise = 0;
+const spacing = rand(180, 240) * getSpeedScale();
+const baseRise = 200;
+
   let lastY = GROUND_Y - 100;
-  
+
   for(let i = 0; i < count; i++){
-    const w = 100 - i * 5;          /* تصغر تدريجياً */
+    const w = 100 - i * 5;
     const h = 14;
-    
-    /* كل مصعد يرتفع أكثر قليلاً */
     const riseAmount = baseRise + i * 60;
-    
+
     obstacles.push({
-      x: startX + i * spacing, 
-      w, h, 
+      x: startX + i * spacing,
+      w, h,
       type:'platform',
-      isWalk: true, 
+      isWalk: true,
       isPlatform: true,
       isElevator: true,
       isChainElevator: true,
       chainIndex: i,
       platformType: 'static',
-      y: lastY, 
-      baseY: lastY, 
+      y: lastY,
+      baseY: lastY,
       baseX: startX + i * spacing,
-      
-      riseSpeed: 1.5 + i * 0.15,    /* الأحدث يرتفع أسرع */
+      riseSpeed: 1.5 + i * 0.15,
       maxRise: riseAmount,
       risen: 0,
       isCarryingPlayer: false,
       exhausted: false,
       warmupTimer: 0,
-      
-      /* ✅ ستايل متدرج (أزرق → بنفسجي → ذهبي) */
       color: i === count-1 ? '#FFD060' : (i % 2 === 0 ? '#B8E8F0' : '#C0A0E8'),
       colorDark: i === count-1 ? '#A07028' : (i % 2 === 0 ? '#5090A0' : '#6040A8'),
       accent: i === count-1 ? '#FFF4C0' : '#E0FFFF',
       glow: i === count-1 ? '#FFE080' : '#80E8FF',
       isSkyPlatform: true,
       skyTier: 3 + i,
-      
       amp: 0, phase: 0,
       t: 0, passed: false, dead: false,
       solid: false,
       crumbleTimer: 0, crumbled: false,
       bounceBoost: 0
     });
-    
-    lastY -= 60;   /* المصعد التالي أعلى قليلاً في البداية */
+
+    lastY -= 60;
   }
-  
-  /* ✅ مكافأة ضخمة في نهاية السلسلة */
+
   const endX = startX + (count - 1) * spacing + 200;
   const topY = lastY - baseRise - (count - 1) * 60 - 80;
-  
-  /* صندوقان ذهبيان */
-  orbs.push({
-    x: endX, y: topY, r: 18, t: 0, dead: false,
-    color: '#FFD700', isSkyOrb: true, value: 25
-  });
-  orbs.push({
-    x: endX + 60, y: topY, r: 18, t: 0, dead: false,
-    color: '#FFD700', isSkyOrb: true, value: 25
-  });
-  
-  /* Power-up نادر في الأعلى */
-  powerups.push({
-    x: endX + 30, y: topY - 60, r: 18,
-    type: POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)],
-    duration: rollPowerupDuration(),
-    t: 0, dead: false,
-    isSkyReward: true
-  });
-  
-  /* عملات وسط السلسلة */
+
+  orbs.push({ x: endX, y: topY, r: 18, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 25 });
+  orbs.push({ x: endX + 60, y: topY, r: 18, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 25 });
+
+/* ✅ جديد */
+const skyPU = makePowerup(W + 40 + w/2 + 50, topY, { r: 16, isSkyReward: true });
+if(skyPU) powerups.push(skyPU);
+
   for(let i = 0; i < count - 1; i++){
     const midX = startX + i * spacing + spacing / 2;
     const midY = lastY + (i * 60) - 80;
     spawnCoinCluster(midX, midY, 4);
   }
-  
+
   Sfx.play(880, 0.4, 'sine', 0.04, 1320);
 }
-/* ============================================================
-   ==================== SKY PLATFORMS ========================
-   ============================================================ */
+
 function spawnSkyPlatform(prog, s){
-  /* ✅ اختيار الطابق حسب التقدم */
   const m = getMeters();
   let maxTier = 1;
   if(m > 300) maxTier = 2;
@@ -1794,7 +2110,6 @@ function spawnSkyPlatform(prog, s){
   const w = rand(90, 130);
   const h = 14;
 
-  /* ✅ ألوان حسب الطابق */
   const tierColors = [
     { color:'#80C0E8', dark:'#4080B0', accent:'#C0E0FF', glow:'#80D0FF' },
     { color:'#80D0A8', dark:'#408068', accent:'#C0FFE0', glow:'#80FFD0' },
@@ -1804,7 +2119,6 @@ function spawnSkyPlatform(prog, s){
   ];
   const col = tierColors[tier - 1];
 
-  /* ✅ نوع خاص للطوابق العالية */
   let platformType = 'static';
   if(tier >= 3 && Math.random() < 0.4){
     platformType = Math.random() < 0.5 ? 'moving_y' : 'bouncy';
@@ -1817,7 +2131,6 @@ function spawnSkyPlatform(prog, s){
     skyTier: tier,
     platformType,
     y: baseY, baseY, baseX: W+40,
-    /* ✅ منصات عالية: حركة قليلة */
     amp: platformType === 'moving_y' ? rand(12, 22) : 0,
     phase: rand(0, Math.PI*2),
     color: col.color, colorDark: col.dark, accent: col.accent,
@@ -1828,10 +2141,8 @@ function spawnSkyPlatform(prog, s){
     bounceBoost: platformType === 'bouncy' ? -24 : 0
   });
 
-  /* ✅ مكافأة حسب الطابق */
   const rewardY = baseY - 35;
   if(tier >= 5){
-    /* أسطوري: صندوق + Power-up */
     orbs.push({ x: W+40+w/2, y: rewardY, r: 16, t:0, dead:false, color:'#FFD700', isSkyOrb: true, value: 20 });
     spawnPowerup(W+40 + w/2 + 40, rewardY);
   } else if(tier === 4){
@@ -1844,26 +2155,17 @@ function spawnSkyPlatform(prog, s){
   }
 }
 
-/* ============================================================
-   ==================== STAIRCASE (موحد) =====================
-   ============================================================ */
 function spawnStaircase(prog, s){
-  /* ✅ عدد عشوائي من الخطوات (4-14) */
   const count = Math.floor(rand(4, 15));
   const isLong = count >= 9;
-  
-  /* ✅ نقطة البداية */
+
   const startX = W + 60;
   const startY = GROUND_Y - 100;
-  
-  /* ✅ مسافات تتناسب مع صعوبة السلّم */
-  const stepX = isLong ? rand(85, 115) : rand(75, 105);
-  const stepY = isLong ? rand(60, 85)   : rand(55, 75);
-  
-  /* ✅ ارتفاع إجمالي تقديري */
-  const totalHeight = count * stepY;
-  
-  /* ✅ ألوان متدرجة حسب الارتفاع */
+
+const speedScale = getSpeedScale();
+const stepX = (isLong ? rand(85, 115) : rand(75, 105)) * speedScale;
+const stepY = isLong ? rand(60, 85)   : rand(55, 75);
+
   const colors = [
     { color:'#80C0E8', dark:'#4080B0', accent:'#C0E0FF', glow:'#80D0FF' },
     { color:'#80D0A8', dark:'#408068', accent:'#C0FFE0', glow:'#80FFD0' },
@@ -1871,31 +2173,25 @@ function spawnStaircase(prog, s){
     { color:'#E8B34E', dark:'#A07028', accent:'#FFF4C0', glow:'#FFD060' },
     { color:'#FF80C0', dark:'#A03060', accent:'#FFD0E8', glow:'#FFA0D8' }
   ];
-  
+
   let currentX = startX;
   let currentY = startY;
-  
-  /* ✅ كل الخطوات تسير في نفس الاتجاه (نحو اليمين) */
+
   for(let i = 0; i < count; i++){
     const w = isLong ? rand(70, 90) - i * 1.2 : rand(75, 100) - i * 2;
     const h = 12;
-    
-    /* ✅ كل خطوة أعلى وفوق اليمين (نفس الاتجاه دائماً) */
+
     currentX += i === 0 ? 0 : stepX;
     currentY -= stepY;
-    
-    /* ✅ حد أقصى للارتفاع */
     currentY = Math.max(currentY, GROUND_Y - 1200);
-    
-    /* ✅ لون متدرج */
+
     const colIdx = Math.min(Math.floor((i / count) * colors.length), colors.length - 1);
     const col = colors[colIdx];
-    
-    /* ✅ خطوات خاصة (عشوائية) */
+
     const isBouncy = isLong && i > 0 && i % 4 === 0;
     const isCrumble = isLong && i > 2 && !isBouncy && Math.random() < 0.15;
     const isMoving = !isLong && i > 2 && Math.random() < 0.2;
-    
+
     obstacles.push({
       x: currentX, w, h,
       type: 'platform',
@@ -1906,15 +2202,12 @@ function spawnStaircase(prog, s){
       stairTotal: count,
       platformType: isBouncy ? 'bouncy' : (isCrumble ? 'crumble' : (isMoving ? 'moving_x' : 'static')),
       y: currentY, baseY: currentY, baseX: currentX,
-      /* ✅ الحركة الأفقية فقط للسلّم القصير (خطوات خاصة) */
       amp: isMoving ? rand(15, 30) : 0,
       phase: rand(0, Math.PI*2),
-      
       color: isBouncy ? '#E89B4C' : (isCrumble ? '#A88868' : col.color),
       colorDark: isBouncy ? '#A06028' : (isCrumble ? '#6A4838' : col.dark),
       accent: col.accent,
       glow: col.glow,
-      
       isSkyPlatform: true,
       skyTier: Math.min(Math.floor((i / count) * 5) + 1, 5),
       t: 0, passed: false, dead: false,
@@ -1922,56 +2215,34 @@ function spawnStaircase(prog, s){
       crumbleTimer: 0, crumbled: false,
       bounceBoost: isBouncy ? -24 : 0
     });
-    
-    /* ✅ عملات بين الخطوات (تتبع نفس الاتجاه) */
+
     if(i < count - 1){
       const midX = currentX + stepX / 2;
       const midY = currentY - stepY / 2 - 15;
       spawnCoinCluster(midX, midY, i % 3 === 0 ? 4 : 3);
     }
-    
-    /* ✅ Power-up كل 4 خطوات في السلالم الطويلة */
+
     if(isLong && i > 0 && i % 4 === 2){
       spawnPowerup(currentX + w/2, currentY - 30);
     }
   }
-  
-  /* ═══════════ مكافأة في القمة ═══════════ */
+
   const topX = currentX + stepX + 20;
   const topY = currentY - 50;
-  
+
   if(isLong){
-    /* سلّم طويل → 3 صناديق + Power-up */
-    orbs.push({
-      x: topX, y: topY, r: 18, t: 0, dead: false,
-      color: '#FFD700', isSkyOrb: true, value: 20
-    });
-    orbs.push({
-      x: topX + 55, y: topY, r: 16, t: 0, dead: false,
-      color: '#FFD700', isSkyOrb: true, value: 15
-    });
-    orbs.push({
-      x: topX - 55, y: topY, r: 16, t: 0, dead: false,
-      color: '#FFD700', isSkyOrb: true, value: 15
-    });
-    powerups.push({
-      x: topX, y: topY - 60, r: 18,
-      type: POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)],
-      duration: rollPowerupDuration(),
-      t: 0, dead: false,
-      isSkyReward: true
-    });
+    orbs.push({ x: topX, y: topY, r: 18, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 20 });
+    orbs.push({ x: topX + 55, y: topY, r: 16, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 15 });
+    orbs.push({ x: topX - 55, y: topY, r: 16, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 15 });
+/* ✅ جديد */
+const skyPU = makePowerup(W + 40 + w/2 + 50, topY, { r: 16, isSkyReward: true });
+if(skyPU) powerups.push(skyPU);
   } else {
-    /* سلّم قصير → مكافأة واحدة */
     const rewardRoll = Math.random();
     if(rewardRoll < 0.35){
-      powerups.push({
-        x: topX, y: topY, r: 16,
-        type: POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)],
-        duration: rollPowerupDuration(),
-        t: 0, dead: false,
-        isSkyReward: true
-      });
+/* ✅ جديد */
+const skyPU = makePowerup(W + 40 + w/2 + 50, topY, { r: 16, isSkyReward: true });
+if(skyPU) powerups.push(skyPU);
     } else if(rewardRoll < 0.75){
       orbs.push({
         x: topX, y: topY, r: 16, t: 0, dead: false,
@@ -1981,8 +2252,7 @@ function spawnStaircase(prog, s){
       spawnCoinCluster(topX, topY, 8);
     }
   }
-  
-  /* ✅ صوت بدء السلّم */
+
   Sfx.play(660, 0.3, 'sine', 0.03, 990);
 }
 
@@ -1995,7 +2265,6 @@ function spawnSpring(prog, s){
     color:'#E8B34E', colorDark:'#A07028', accent:'#FFF4C0'
   });
 
-  /* ✅ جوائز في نطاق قذفة السوسة (256px كحد أقصى) */
   const skyY = GROUND_Y - rand(140, 210);
   orbs.push({ x: W+40 + w/2, y: skyY, r:13, t:0, dead:false, color:'#FFF4C0', isSkyOrb:true });
   spawnCoinCluster(W+40 + w/2, skyY + 35, Math.floor(rand(3,5)));
@@ -2028,15 +2297,12 @@ function spawnSaw(prog, s){
   if(Math.random() < 0.3) spawnCoinCluster(W+40, y - 60, 2);
 }
 
-/* ✅ أضف هذه الدالة */
 function spawnLaserFence(prog, s){
   const isVertical = Math.random() < 0.7;
 
   if(isVertical){
-    /* شعاع عمودي بأماكن متعددة */
     const gapCount = Math.floor(rand(2, 4));
     const segments = [];
-    const totalH = GROUND_Y - CEILING_H - 60;
     let curY = CEILING_H + 40;
     const gapSize = rand(60, 90);
 
@@ -2058,7 +2324,6 @@ function spawnLaserFence(prog, s){
       damage: true
     });
   } else {
-    /* شعاع أفقي متحرك */
     obstacles.push({
       x: W+40, w: 14, type:'laser',
       t:0, passed:false, dead:false,
@@ -2137,10 +2402,8 @@ function spawnFallingSpike(prog, s){
 }
 
 function spawnRotatingBar(prog, s){
-  /* ✅ قضيب أقصر بكثير */
-  const length = rand(60, 100);        /* كان 120-180 */
-  /* ✅ أعلى قليلاً لترك مساحة للاعب */
-  const cy = GROUND_Y - rand(120, 180); /* كان 80-140 */
+  const length = rand(60, 100);
+  const cy = GROUND_Y - rand(120, 180);
 
   obstacles.push({
     x: W+40, w: length, h: 20, type:'rotBar',
@@ -2148,21 +2411,55 @@ function spawnRotatingBar(prog, s){
     isWalk:true, isRotBar:true,
     cx: W+40 + length/2, cy,
     length, thickness: 10,
-    /* ✅ دوران أبطأ بكثير */
     angle: 0,
-    angleSpd: rand(0.012, 0.025) * (Math.random() < 0.5 ? 1 : -1), /* كان 0.02-0.045 */
-    /* ✅ مرحلة تحضير قبل البدء بالدوران */
+    angleSpd: rand(0.012, 0.025) * (Math.random() < 0.5 ? 1 : -1),
     warmupTimer: 30,
     color:'#6A5A48', colorDark:'#3A2820', accent:'#E8B34E'
   });
 }
 
-/* ============ مكافأة عشوائية ============ */
 function maybeReward(x, y, s){
   const r = Math.random();
   if(r < 0.06) spawnPowerup(x, y);
   else if(r < 0.20) orbs.push({ x, y, r:10, t:0, dead:false, color:s.accent });
   else if(r < 0.80) spawnCoinCluster(x, y, Math.floor(rand(2,4)));
+}
+
+/* ═══════════════ GROUND HOLES (النزول للأعماق) ═══════════════ */
+function spawnGroundHole(){
+  const w = rand(110, 160);
+  const hole = {
+    x: W + 60,
+    w,
+    h: 20,
+    y: GROUND_Y - 4,
+    type: 'groundHole',
+    isGroundHole: true,
+    isWalk: true,
+    t: 0, passed: false, dead: false
+  };
+  obstacles.push(hole);
+
+  /* مكافأة تشجّع على النزول */
+  orbs.push({
+    x: W + 60 + w/2,
+    y: GROUND_Y + 100,
+    r: 16, t: 0, dead: false,
+    color: '#FF8060', isSkyOrb: true, value: 20
+  });
+  spawnCoinCluster(W + 60 + w/2, GROUND_Y + 180, 4);
+
+  showBanner('↓ HOLE', 'حفرة — انزل للأعماق');
+  Sfx.play(200, 0.5, 'sine', 0.05, 90);
+}
+
+function isPlayerOverHole(){
+  for(const o of obstacles){
+    if(!o.isGroundHole || o.dead) continue;
+    /* نستخدم مركز اللاعب فقط — إذا كان مركزه داخل الحفرة فهو فوقها */
+    if(P.x >= o.x && P.x <= o.x + o.w) return true;
+  }
+  return false;
 }
 
 /* ============================================================
@@ -2180,31 +2477,28 @@ function circleCircle(x1,y1,r1,x2,y2,r2){
 }
 function hitObstacle(o){
   if(G.ghost > 0) return false;
+  if(o.isShiftGate) return false;
+  if(o.isGroundHole) return false;   /* ⬅️ الحفرة غير قاتلة */
   const pr = P.r * 0.72;
 
   if(o.isWalk){
-    /* السقف (احتياط) */
     if(o.isCeiling){ return circleRect(P.x,P.y,pr, o.x, -10, o.w, o.h + 10); }
 
-    /* المنصات: One-Way فقط */
-    if(o.isPlatform){
-      if(o.solid){ return circleRect(P.x,P.y,pr, o.x, o.y, o.w, o.h); }
-      return false;
-    }
+if(o.isPlatform){
+  /* المنصات ليست قاتلة — الالتقاط من الأعلى فقط */
+  return false;
+}
 
-    /* السوستة: تُعالج في updateGameplay */
     if(o.isSpring) return false;
 
-    /* ✅✅✅ العقبات المعلقة: تصادمها يُعالج في updateGameplay فقط ✅✅✅ */
-    if(o.isSaw || o.isPiston || o.isFallingSpike || o.isRotBar || o.isLaser || o.isVortex){
+    if(o.isSaw || o.isPiston || o.isFallingSpike || o.isRotBar || o.isLaser || o.isVortex
+       || o.isFallingRock || o.isUnderSpike || o.isLavaPool || o.isDrill || o.isGhost){
       return false;
     }
 
-    /* ✅ العقبات الأرضية العادية فقط (block, spike, tall) */
     return circleRect(P.x,P.y,pr, o.x, GROUND_Y - o.h, o.w, o.h);
   }
 
-  /* الأنفاق */
   const topH = o.gapY - o.gap/2;
   const botY = o.gapY + o.gap/2;
   if(circleRect(P.x,P.y,pr, o.x, -40, o.w, topH+40)) return true;
@@ -2218,12 +2512,11 @@ function hitObstacle(o){
 function handleTap(){
   if(G.state!=='PLAYING') return;
   Sfx.init();
-  /* ✅ إلغاء ارتباط المصعد عند القفز */
-if(G.mode === 'WALK' || G.mode === 'SKY_JUMP'){
-  for(const o of obstacles){
-    if(o.isElevator) o.isCarryingPlayer = false;
+  if(G.mode === 'WALK' || G.mode === 'SKY_JUMP'){
+    for(const o of obstacles){
+      if(o.isElevator) o.isCarryingPlayer = false;
+    }
   }
-}
   if(G.mode==='FLIP'){
     P.gravityDir *= -1;
     P.vy = -5.5 * P.gravityDir;
@@ -2233,39 +2526,36 @@ if(G.mode === 'WALK' || G.mode === 'SKY_JUMP'){
     P.vy = -5.2; P.gravityDir = 1;
     burst(P.x,P.y+6,'#FFFFFF',4,2.5);
     shake(2); Sfx.tap(); haptic(6);
-} else if(G.mode==='WALK'){
-  /* ➕ Coyote Time + Jump Buffer + قفزة متغيرة */
-  if(P.onGround || P.coyoteTimer > 0){
-    P.vy = -12.5;
-    P.onGround = false;
-    P.coyoteTimer = 0;
-    P.jumps = 1;
-    P.jumpHeld = true;
-    P.jumpHoldTimer = 0;
-    spawnJumpEffect(P.x, P.y + P.r, G.currentScene.groundDark);
-    Sfx.tap(); haptic(8);
-} else if(P.jumps < 2 + (G.extraJumps > 0 ? 2 : 0)){
-  /* قفزة مزدوجة (أو أكثر مع Power-up) */
-  P.vy = G.megaJumpActive > 0 ? -16 : -10.5;
-  P.jumps++;
-  P.jumpHeld = true;
-  P.jumpHoldTimer = 0;
-  spawnJumpEffect(P.x, P.y + P.r, G.currentScene.accent);
-  for(let i=0;i<8;i++){
-    const a = (i/8)*Math.PI*2;
-    particles.push({
-      x: P.x, y: P.y,
-      vx: Math.cos(a)*3.5, vy: Math.sin(a)*3.5,
-      life: 0.9, decay: 0.035, color: G.currentScene.accent, size: 3
-    });
-  }
-  Sfx.play(660, 0.12, 'sine', 0.04, 990);
-  haptic(8);
-} else {
-    /* ➕ Jump Buffer — إذا كان اللاعب قريباً من الأرض، احفظ النقرة */
-    P.jumpBufferTimer = 8;
-  }
-} else if(G.mode==='FLIP_WALK'){
+  } else if(G.mode==='WALK'){
+    if(P.onGround || P.coyoteTimer > 0){
+      P.vy = -12.5;
+      P.onGround = false;
+      P.coyoteTimer = 0;
+      P.jumps = 1;
+      P.jumpHeld = true;
+      P.jumpHoldTimer = 0;
+      spawnJumpEffect(P.x, P.y + P.r, G.currentScene.groundDark);
+      Sfx.tap(); haptic(8);
+    } else if(P.jumps < 2 + (G.extraJumps > 0 ? 2 : 0)){
+      P.vy = G.megaJumpActive > 0 ? -16 : -10.5;
+      P.jumps++;
+      P.jumpHeld = true;
+      P.jumpHoldTimer = 0;
+      spawnJumpEffect(P.x, P.y + P.r, G.currentScene.accent);
+      for(let i=0;i<8;i++){
+        const a = (i/8)*Math.PI*2;
+        particles.push({
+          x: P.x, y: P.y,
+          vx: Math.cos(a)*3.5, vy: Math.sin(a)*3.5,
+          life: 0.9, decay: 0.035, color: G.currentScene.accent, size: 3
+        });
+      }
+      Sfx.play(660, 0.12, 'sine', 0.04, 990);
+      haptic(8);
+    } else {
+      P.jumpBufferTimer = 8;
+    }
+  } else if(G.mode==='FLIP_WALK'){
     if(P.onGround){
       P.vy = 13.0; P.onGround=false; P.jumps=1;
       spawnJumpEffect(P.x, P.y + P.r, G.currentScene.accent);
@@ -2310,17 +2600,15 @@ canvas.addEventListener('mousedown', e=>{ setPointer(e); pointer.down=true; });
 canvas.addEventListener('touchend', ()=> pointer.down=false);
 canvas.addEventListener('mouseleave', ()=> pointer.down=false);
 window.addEventListener('mouseup', ()=> pointer.down=false);
-window.addEventListener('mouseup', releaseJump);
 
 /* ============================================================
-   ==================== Power-ups ============================
+   ==================== Power-ups Logic ======================
    ============================================================ */
 function updatePowerups(){
   for(const id in G.activePowerups){
     G.activePowerups[id].remaining--;
     if(G.activePowerups[id].remaining <= 0){
       delete G.activePowerups[id];
-      /* ➕ إيقاف التأثيرات */
       if(id === 'extraJump') G.extraJumps = 0;
       if(id === 'glide') G.glideActive = false;
       if(id === 'rocket') G.rocketActive = false;
@@ -2337,52 +2625,65 @@ function collectPowerup(p){
   const type = p.type;
   Sfx.power(); haptic(15); shake(6);
   burst(p.x, p.y, type.color, 20, 6);
-  const secs = type.id === 'shield' || type.id === 'megaJump' ? 'درع' : Math.ceil(p.duration/60) + 'ث';
+
+  /* ═══ نص المدة ═══ */
+  const secs = type.singleUse
+    ? 'درع'
+    : Math.ceil(p.duration / 60) + 'ث';
   addFloat(p.x, p.y, type.label + ' ' + secs, type.color, 15);
 
-  if(type.id === 'shield'){ G.shield = true; }
+  /* ═══ تطبيق التأثير ═══ */
+  if(type.id === 'shield'){
+    G.shield = true;
+  }
   else if(type.id === 'ghost'){
     G.ghost = p.duration;
-    G.activePowerups.ghost = { remaining: p.duration, color: type.color, icon: type.icon };
+    G.activePowerups.ghost = { remaining:p.duration, color:type.color, icon:type.icon };
   }
-  /* ➕ جديد */
   else if(type.id === 'extraJump'){
-    G.extraJumps = p.duration; /* يزيد الحد الأقصى للقفزات */
-    G.activePowerups.extraJump = { remaining: p.duration, color: type.color, icon: type.icon };
+    G.extraJumps = p.duration;
+    G.activePowerups.extraJump = { remaining:p.duration, color:type.color, icon:type.icon };
   }
   else if(type.id === 'glide'){
     G.glideActive = true;
-    G.activePowerups.glide = { remaining: p.duration, color: type.color, icon: type.icon };
+    G.activePowerups.glide = { remaining:p.duration, color:type.color, icon:type.icon };
   }
-else if(type.id === 'rocket'){
-  G.rocketActive = true;
-  G.rocketFrames = 75;   /* ✅ 1.25 ثانية فقط */
-  G.rocketMaxAltitude = 0;
-  P.vy = -12;
-  G.activePowerups.rocket = { remaining: 75, color: type.color, icon: type.icon, isRocket: true };
-  /* ✅ وميض انطلاق */
-  for(let i=0;i<24;i++){
-    const a = (i/24)*Math.PI*2;
-    particles.push({ x:P.x, y:P.y,
-      vx:Math.cos(a)*rand(4,8), vy:Math.sin(a)*rand(4,8) + 4,
-      life:1.2, decay:0.02, color:'#FF6B35', size:rand(3,6) });
+  else if(type.id === 'rocket'){
+    G.rocketActive = true;
+    G.rocketFrames = p.duration;   /* ← يستخدم مدة المطوّرة */
+    G.rocketMaxAltitude = 0;
+    P.vy = -12;
+    G.activePowerups.rocket = { remaining:p.duration, color:type.color, icon:type.icon, isRocket:true };
+    for(let i=0;i<24;i++){
+      const a = (i/24)*Math.PI*2;
+      particles.push({ x:P.x, y:P.y,
+        vx:Math.cos(a)*rand(4,8), vy:Math.sin(a)*rand(4,8) + 4,
+        life:1.2, decay:0.02, color:'#FF6B35', size:rand(3,6) });
+    }
   }
-}
   else if(type.id === 'megaJump'){
     G.megaJumpActive = p.duration;
-    G.activePowerups.megaJump = { remaining: p.duration, color: type.color, icon: type.icon };
+    G.activePowerups.megaJump = { remaining:p.duration, color:type.color, icon:type.icon };
   }
   else if(type.id === 'wallStick'){
     G.wallStickActive = true;
-    G.activePowerups.wallStick = { remaining: p.duration, color: type.color, icon: type.icon };
+    G.activePowerups.wallStick = { remaining:p.duration, color:type.color, icon:type.icon };
+  }
+  else if(type.id === 'shrink'){
+    G.activePowerups.shrink = { remaining:p.duration, color:type.color, icon:type.icon };
+    G.shrinkActive = p.duration;
+  }
+  else if(type.id === 'timeWarp'){
+    G.activePowerups.timeWarp = { remaining:p.duration, color:type.color, icon:type.icon };
   }
   else {
-    G.activePowerups[type.id] = { remaining: p.duration, color: type.color, icon: type.icon };
+    G.activePowerups[type.id] = { remaining:p.duration, color:type.color, icon:type.icon };
   }
   updatePowerupsUI();
 }
 function updatePowerupsUI(){
   const row = document.getElementById('powerups-row');
+  if(!row) return;
   const items = [];
   if(G.shield) items.push({icon:'◈', color:'#7BC4B0', label:'درع'});
   for(const id in G.activePowerups){
@@ -2397,11 +2698,24 @@ function updatePowerupsUI(){
     </div>`).join('');
 }
 
+/* ============================================================
+   ==================== HUD ==================================
+   ============================================================ */
+function updateLevelUI(){
+  const pct = getLevelProgress() * 100;
+  const lv = getLevelIndex() + 1;
+  const bar = document.getElementById('level-bar');
+  const num = document.getElementById('level-num');
+  if(bar) bar.style.width = pct + '%';
+  if(num) num.textContent = 'LVL ' + lv;
+}
+
+/* ✅ الإصلاح 4: نسخة واحدة فقط من updateAltitudeUI */
 function updateAltitudeUI(){
-  const alt = Math.floor(G.maxAltitude / 10);  /* 10 بكسل = 1 وحدة ارتفاع */
+  const alt = Math.floor(G.camY / 8);
+
   let hud = document.getElementById('altitude-hud');
   if(!hud){
-    /* إنشاء العنصر لأول مرة */
     const newHud = document.createElement('div');
     newHud.id = 'altitude-hud';
     newHud.className = 'stat-pill altitude';
@@ -2414,8 +2728,404 @@ function updateAltitudeUI(){
     if(runStats) runStats.appendChild(newHud);
     hud = newHud;
   }
+
   const val = document.getElementById('hud-altitude');
   if(val) val.textContent = alt;
+
+  if(hud) hud.style.opacity = alt > 5 ? '1' : '0';
+}
+
+function updateElevatorIndicator(){
+  const hasElevator = obstacles.some(o => o.isElevator && !o.exhausted && o.x < W && o.x > -100);
+
+  let indicator = document.getElementById('elevator-indicator');
+  if(!indicator){
+    const el = document.createElement('div');
+    el.id = 'elevator-indicator';
+    el.style.cssText = `
+      position:absolute;
+      right:16px;
+      top:50%;
+      transform:translateY(-50%);
+      padding:10px 14px;
+      border-radius:100px;
+      background:linear-gradient(135deg,#B0F0FF,#80D0F0);
+      color:#1A4080;
+      font-family:'Space Grotesk',sans-serif;
+      font-size:11px;
+      font-weight:700;
+      letter-spacing:2px;
+      box-shadow:0 6px 20px rgba(128,208,240,0.5);
+      z-index:4;
+      pointer-events:none;
+      opacity:0;
+      transition:opacity 0.3s, transform 0.3s;
+    `;
+    el.innerHTML = '↑↑';
+    wrapEl.appendChild(el);
+    indicator = el;
+  }
+
+  if(hasElevator){
+    indicator.style.opacity = '1';
+    const pulse = 1 + Math.sin(G.t * 0.15) * 0.08;
+    indicator.style.transform = `translateY(-50%) scale(${pulse})`;
+  } else {
+    indicator.style.opacity = '0';
+  }
+}
+
+function updateCoinsUI(){
+  const unlimited = hasAdminAccess() && Save.data.admin.unlimitedCoins;
+  const home = document.getElementById('home-coins');
+  const shop = document.getElementById('shop-coins');
+  if(home) home.textContent = unlimited ? '' : Save.data.coins;
+  if(shop) shop.textContent = unlimited ? '' : Save.data.coins;
+  const w = document.getElementById('wrap');
+  if(w) w.classList.toggle('unlimited-coins', unlimited);
+}
+
+/* ============================================================
+   ==================== CAMERA (مطوّرة) ======================
+   ============================================================ */
+function updateCamera(){
+  if(G.mode !== 'WALK') return;
+
+  const alt = getPlayerAltitude();
+  const TRIGGER = 220;
+
+  /* ═══ كاميرا السماء ═══ */
+  const skyTarget = Math.max(0, alt - TRIGGER);
+  G.camTargetY = Math.min(skyTarget, H * 4);
+  G.camY = lerp(G.camY, G.camTargetY, 0.09);
+
+  /* ═══ كاميرا الأعماق — تجعل اللاعب دائماً عند 35% من الشاشة ═══ */
+  const depth = Math.max(0, -alt);
+  let underTarget = 0;
+
+  if(depth > 0){
+    /* الموضع المثالي للاعب على الشاشة = 35% من الارتفاع */
+    const playerFollow = Math.max(0, P.y - H * 0.35);
+
+    /* انتقال تدريجي من "كاميرا الأرض" إلى "كاميرا الأعماق" */
+    const blendEnd = 250;
+    const t = clamp(depth / blendEnd, 0, 1);
+    const tEased = t * t * (3 - 2 * t);   /* smoothstep */
+
+    underTarget = depth * (1 - tEased) + playerFollow * tEased;
+  }
+
+  G.camYUnder = lerp(G.camYUnder, Math.min(underTarget, H * 4), 0.09);
+
+  if(Math.abs(G.camY - G.camTargetY) < 0.5) G.camY = G.camTargetY;
+  if(Math.abs(G.camYUnder - underTarget) < 0.5) G.camYUnder = underTarget;
+}
+
+/* ⬇️ أضف هنا ⬇️ */
+function updateRealmUI(){
+  const el = document.getElementById('realm-indicator');
+  if(!el){
+    const newEl = document.createElement('div');
+    newEl.id = 'realm-indicator';
+    newEl.style.cssText = `
+      position:absolute;
+      top:64px;left:50%;transform:translateX(-50%);
+      padding:6px 14px;border-radius:100px;
+      background:rgba(0,0,0,0.65);backdrop-filter:blur(8px);
+      color:#fff;font-family:'Space Grotesk',sans-serif;
+      font-size:10px;font-weight:700;letter-spacing:2px;
+      z-index:4;pointer-events:none;
+      opacity:0;transition:opacity .4s, background .4s;
+      border:1px solid rgba(255,255,255,.15);
+    `;
+    wrapEl.appendChild(newEl);
+  }
+
+  const indicator = document.getElementById('realm-indicator');
+  if(!indicator) return;
+
+  if(G.mode !== 'WALK' || G.realm === REALM.GROUND){
+    indicator.style.opacity = '0';
+    return;
+  }
+
+  if(G.realm === REALM.SKY){
+    const layer = SKY_REALM.layers[G.skyLayerIdx];
+    indicator.textContent = '☁ SKY ' + (G.skyLayerIdx + 1) + ' · ' + layer.name;
+    indicator.style.background = 'rgba(50, 90, 140, 0.75)';
+    indicator.style.borderColor = 'rgba(168, 216, 255, 0.5)';
+  } else {
+    const layer = UNDER_REALM.layers[G.underLayerIdx];
+    indicator.textContent = '⛏ DEPTH ' + (G.underLayerIdx + 1) + ' · ' + layer.name;
+    indicator.style.background = 'rgba(80, 30, 20, 0.75)';
+    indicator.style.borderColor = 'rgba(255, 128, 96, 0.5)';
+  }
+  indicator.style.opacity = '1';
+}
+
+/* ============================================================
+   ==================== REALM HELPERS ========================
+   ============================================================ */
+
+/* حساب إزاحة اللاعب عن مستوى الأرض (موجب = فوق، سالب = تحت) */
+function getPlayerAltitude(){
+  return (GROUND_Y - P.r) - P.y;  /* فوق الأرض = موجب */
+}
+
+/* تحديد الطبقة في السماء حسب الارتفاع */
+function getSkyLayer(altitude){
+  for(let i = SKY_REALM.layers.length - 1; i >= 0; i--){
+    if(altitude >= SKY_REALM.layers[i].from) return i;
+  }
+  return 0;
+}
+
+/* تحديد الطبقة تحت الأرض حسب العمق */
+function getUnderLayer(depth){
+  for(let i = UNDER_REALM.layers.length - 1; i >= 0; i--){
+    if(depth >= UNDER_REALM.layers[i].from) return i;
+  }
+  return 0;
+}
+
+/* ═══════════════ UNDER FLOORS SYSTEM ═══════════════ */
+function getUnderFloorWorldY(floorIdx){
+  return GROUND_Y + (floorIdx + 1) * UNDER_FLOOR_SPACING;
+}
+
+function isPlayerOverUnderHole(floorIdx){
+  const offset = floorIdx * 431;
+  const playerWorldX = G.dist + P.baseX;
+  
+  /* ═══ حدّد نوع الطابق: غرفة واسعة أم عادي ═══ */
+  const isChamber = (floorIdx % UNDER_CHAMBER_EVERY === 0) && (floorIdx > 0);
+  const holeWidth = isChamber ? UNDER_CHAMBER_HOLE_WIDTH : UNDER_FLOOR_HOLE_WIDTH;
+  const holePeriod = isChamber ? UNDER_FLOOR_HOLE_PERIOD * 1.5 : UNDER_FLOOR_HOLE_PERIOD;
+  
+  const localX = ((playerWorldX - offset) % holePeriod + holePeriod) % holePeriod;
+  return localX < holeWidth;
+}
+
+function checkUnderFloorCollision(){
+  if(P.vy < 0) return null;
+  const feetY = P.y + P.r;
+  if(feetY <= GROUND_Y + 30) return null;
+  
+  const prevFeetY = feetY - P.vy;
+  const depth = feetY - GROUND_Y;
+  const idxLow = Math.max(0, Math.floor(depth / UNDER_FLOOR_SPACING) - 2);
+  const idxHigh = Math.floor(depth / UNDER_FLOOR_SPACING) + 1;
+  
+  for(let idx = idxLow; idx <= idxHigh; idx++){
+    const floorY = getUnderFloorWorldY(idx);
+    if(prevFeetY <= floorY && feetY >= floorY){
+      if(!isPlayerOverUnderHole(idx)){
+        return { floorIdx: idx, floorY };
+      }
+    }
+  }
+  return null;
+}
+
+/* دخول عالم جديد */
+function enterRealm(newRealm){
+  if(G.realm === newRealm) return;
+  G.realmFrom = G.realm;
+  G.realmTo = newRealm;
+  G.realmTransition = 0;
+  G.realm = newRealm;
+
+  const layerName = newRealm === REALM.SKY
+    ? SKY_REALM.layers[0].name
+    : newRealm === REALM.UNDERGROUND
+      ? UNDER_REALM.layers[0].name
+      : 'GROUND';
+
+  const layerAr = newRealm === REALM.SKY
+    ? SKY_REALM.layers[0].ar
+    : newRealm === REALM.UNDERGROUND
+      ? UNDER_REALM.layers[0].ar
+      : 'الأرض';
+
+  const bannerText = newRealm === REALM.SKY ? '☁ SKY REALM'
+                    : newRealm === REALM.UNDERGROUND ? '⛏ UNDER REALM'
+                    : '🌍 GROUND';
+  showBanner(bannerText, layerAr);
+
+  Sfx.play(newRealm === REALM.SKY ? 880 : 220, 0.6, 'sine', 0.07, newRealm === REALM.SKY ? 1760 : 110);
+  shake(15); haptic(35);
+
+  /* انفجار بصري عند الانتقال */
+  for(let i = 0; i < 40; i++){
+    const a = (i/40) * Math.PI * 2;
+    particles.push({
+      x: P.x, y: P.y,
+      vx: Math.cos(a) * rand(6, 12),
+      vy: Math.sin(a) * rand(6, 12),
+      life: 1.4, decay: 0.016,
+      color: newRealm === REALM.SKY ? '#A8D8FF' : newRealm === REALM.UNDERGROUND ? '#FF8060' : '#FFFFFF',
+      size: rand(3, 6)
+    });
+  }
+}
+
+/* التحقق من الانتقال بين العوالم */
+function checkRealmTransition(){
+  if(G.mode !== 'WALK') return;
+
+  const alt = getPlayerAltitude();
+
+  if(G.realm === REALM.GROUND){
+    if(alt >= SKY_REALM.enterOffset){
+      enterRealm(REALM.SKY);
+    } else if(alt <= -UNDER_REALM.enterOffset){
+      enterRealm(REALM.UNDERGROUND);
+    }
+  } else if(G.realm === REALM.SKY){
+    if(alt <= SKY_REALM.exitOffset){
+      enterRealm(REALM.GROUND);
+    }
+  } else if(G.realm === REALM.UNDERGROUND){
+    if(alt >= -UNDER_REALM.exitOffset){
+      enterRealm(REALM.GROUND);
+    }
+  }
+
+  /* تحديث طبقة السماء */
+  if(G.realm === REALM.SKY){
+    const newIdx = getSkyLayer(alt);
+    if(newIdx !== G.skyLayerIdx){
+      G.skyLayerIdx = newIdx;
+      const layer = SKY_REALM.layers[newIdx];
+      showBanner('SKY ' + (newIdx+1), layer.ar);
+      Sfx.level(); haptic(20);
+      if(!G.skyLayersVisited.includes(newIdx)){
+        G.skyLayersVisited.push(newIdx);
+      }
+    }
+  }
+
+  /* تحديث طبقة الأعماق */
+  if(G.realm === REALM.UNDERGROUND){
+    const newIdx = getUnderLayer(-alt);
+    if(newIdx !== G.underLayerIdx){
+      G.underLayerIdx = newIdx;
+      const layer = UNDER_REALM.layers[newIdx];
+      showBanner('DEPTH ' + (newIdx+1), layer.ar);
+      Sfx.play(180, 0.5, 'sine', 0.06, 80); haptic(25);
+      if(!G.underLayersVisited.includes(newIdx)){
+        G.underLayersVisited.push(newIdx);
+      }
+    }
+  }
+}
+
+/* ============================================================
+   ==================== SHIFT GATE SYSTEM ====================
+   ============================================================ */
+function spawnShiftGate(targetMode){
+  const color = MODE_COLORS[targetMode] || '#A06AD8';
+  const icon  = MODE_ICONS[targetMode]  || '◆';
+
+  obstacles.push({
+    x: W + 80,
+    w: 44,
+    h: GROUND_Y - CEILING_H,
+    y: CEILING_H,
+    type: 'shiftGate',
+    isShiftGate: true,
+    isWalk: true,
+    targetMode,
+    gateColor: color,
+    gateIcon: icon,
+    t: 0, passed: false, dead: false,
+    color: color,
+    damage: false
+  });
+
+  Sfx.play(440, 0.15, 'sine', 0.04, 660);
+}
+
+function checkShiftGateSpawn(){
+  /* فقط في الوضع المتنوّع */
+  if(!G.isMixedMode) return;
+  if(G.pendingShift) return;
+
+  G.distSinceGate += G.speed;
+  const gateThreshold = SEGMENT_LENGTH_METERS * PIXELS_PER_METER;
+
+  if(G.distSinceGate >= gateThreshold){
+    G.distSinceGate = 0;
+
+    /* اختر نمطاً عشوائياً مختلفاً عن الحالي */
+    const allModes = ['FLIP','FLAP','DRIFT','WALK'];
+    const available = allModes.filter(m => m !== G.mode);
+    const nextMode = available[Math.floor(Math.random() * available.length)];
+
+    spawnShiftGate(nextMode);
+    G.pendingShift = true;
+  }
+}
+
+/* ✅ الإصلاح 7: مسح العقبات البعيدة عند التحول */
+function performShift(targetMode){
+  if(G.shiftGrace > 0) return;
+
+  const oldMode = G.mode;
+  G.mode = targetMode;
+
+  /* ✅ الإصلاح: نستخدم dead flag بدلاً من splice لتجنّب إفساد حلقة التحديث */
+  for(const o of obstacles){
+    if(o.x > W && !o.isShiftGate) o.dead = true;
+  }
+
+  G.shiftGrace = 90;
+  G.invuln = Math.max(G.invuln, 120);
+
+  if(targetMode === 'WALK'){
+    P.y = Math.min(P.y, GROUND_Y - P.r - 20);
+    P.vy = 0;
+    P.gravityDir = 1;
+  } else if(targetMode === 'FLIP'){
+    P.gravityDir = P.y > H/2 ? 1 : -1;
+    P.vy = 0;
+  } else if(targetMode === 'FLAP'){
+    P.vy = -2;
+  }
+
+  P.trail = [];
+
+  const modeData = MODES.find(m => m.id === targetMode);
+  showBanner('SHIFT: ' + (modeData ? modeData.ar : targetMode), MODE_ICONS[targetMode] + ' ' + (modeData ? modeData.en : ''));
+  Sfx.play(520, 0.5, 'sine', 0.07, 1320);
+
+  /* ✅ إعادة ضبط فيزياء اللاعب حسب النمط الجديد */
+  if(targetMode === 'WALK'){
+    P.vy = Math.min(P.vy, 0);
+    P.jumps = 0;
+    P.coyoteTimer = 0;
+  } else if(targetMode === 'FLIP'){
+    P.gravityDir = P.y > H/2 ? 1 : -1;
+    P.vy = 0;
+  }
+  shake(15); haptic(30);
+
+  const col = MODE_COLORS[targetMode] || '#FFFFFF';
+  for(let i=0;i<40;i++){
+    const a = (i/40)*Math.PI*2;
+    particles.push({
+      x: P.x, y: P.y,
+      vx: Math.cos(a)*rand(5,12), vy: Math.sin(a)*rand(5,12),
+      life: 1.4, decay: 0.016, color: col, size: rand(3,7)
+    });
+  }
+
+  G.pendingShift = false;
+
+  /* إعادة ضبط الكاميرا عند مغادرة WALK */
+  if(oldMode === 'WALK' && targetMode !== 'WALK'){
+    G.camTargetY = 0;
+  }
 }
 
 /* ============================================================
@@ -2427,17 +3137,44 @@ function updateGameplay(){
 
   updatePowerups();
   updateCombo();
-  updateSparks();
+  checkRealmTransition();
 
+  /* ✅ الإصلاح 9: حدّث السرعة أولاً، ثم افحص بوابة Shift */
   const targetSpeed = prog.speed * (s.speed || 1);
-  const slowMul = G.activePowerups.slow ? 0.55 : 1;
+
+  /* ✅✅✅ تأثير التبطيء + تشويه الزمن ✅✅✅ */
+  let slowMul = 1;
+  if(G.activePowerups.slow)     slowMul *= 0.55;
+  if(G.activePowerups.timeWarp) slowMul *= 0.35;
+
   G.speed = lerp(G.speed, targetSpeed*slowMul, 0.035);
   G.dist += G.speed;
 
+  /* ✅✅✅ تصغير حجم اللاعب ✅✅✅ */
+  if(G.activePowerups.shrink){
+    P.r = lerp(P.r, 8, 0.15);
+  } else if(P.r < 13){
+    P.r = lerp(P.r, 13, 0.15);
+    if(Math.abs(P.r - 13) < 0.1) P.r = 13;
+  }
+
+  checkShiftGateSpawn();
+  if(G.shiftGrace > 0) G.shiftGrace--;
+  checkSynergies();
+  updateSynergies();
+  drawSynergiesUI();
+  updateSparks();
+
   updateSceneTransition();
   updateWeather();
+
   if(G.mode === 'WALK') checkSkyZoneSpawn();
-if(G.mode === 'WALK') updateCamera();
+  if(G.mode === 'WALK') updateCamera();
+  /* ✅ الإصلاح 8: عودة الكاميرا تدريجياً عند مغادرة WALK */
+  else if(G.camY > 0.5){
+    G.camTargetY = 0;
+    G.camY = lerp(G.camY, 0, 0.08);
+  }
 
   const lv = getLevelIndex();
   if(lv > G.lastLevel){
@@ -2457,11 +3194,10 @@ if(G.mode === 'WALK') updateCamera();
   if(G.invuln > 0) G.invuln--;
   const wasOnGround = P.onGround;
 
-/* ✅ تتبع أقصى ارتفاع */
-const currentAlt = Math.max(0, GROUND_Y - P.y - P.r);
-if(currentAlt > G.maxAltitude){
-  G.maxAltitude = currentAlt;
-}
+  const currentAlt = Math.max(0, GROUND_Y - P.y - P.r);
+  if(currentAlt > G.maxAltitude){
+    G.maxAltitude = currentAlt;
+  }
 
   P.enginePhase += 0.15;
   P.bouncePhase += 0.2;
@@ -2488,172 +3224,163 @@ if(currentAlt > G.maxAltitude){
     P.vx = clamp(P.vx,-10,10); P.vy = clamp(P.vy,-10,10);
     P.x += P.vx; P.y += P.vy;
     P.rot = Math.atan2(P.vy, Math.max(2,P.vx));
-} else if(G.mode==='WALK'){
-  const wasOnGround = P.onGround;
+  } else if(G.mode==='WALK'){
+    if(P.onGround){ P.coyoteTimer = 8; }
+    else if(P.coyoteTimer > 0){ P.coyoteTimer--; }
+    if(P.jumpBufferTimer > 0) P.jumpBufferTimer--;
 
-  /* Coyote Time + Jump Buffer */
-  if(P.onGround){ P.coyoteTimer = 8; }
-  else if(P.coyoteTimer > 0){ P.coyoteTimer--; }
-  if(P.jumpBufferTimer > 0) P.jumpBufferTimer--;
+    const isRising = P.vy < 0;
+    const holdingJump = P.jumpHeld && P.jumpHoldTimer < 14;
+    const gravity = (isRising && holdingJump) ? 0.45 : 0.78;
 
-  /* جاذبية متغيرة */
-  const isRising = P.vy < 0;
-  const holdingJump = P.jumpHeld && P.jumpHoldTimer < 14;
-  const gravity = (isRising && holdingJump) ? 0.45 : 0.78;
-
-/* ➕ تأثير الانزلاق */
-if(G.glideActive && P.vy > 0 && P.jumpHeld){
-  P.vy = Math.min(P.vy, 2.5); /* هبوط بطيء */
-  if(G.t % 6 === 0){
-    particles.push({
-      x: P.x + rand(-8,8), y: P.y + P.r,
-      vx: rand(-1,1), vy: rand(-0.5,0.5),
-      life: 0.6, decay: 0.04, color: '#87CEEB', size: rand(2,3)
-    });
-  }
-}
-
-/* ➕ الصاروخ */
-/* ✅ الصاروخ — مصحح بالكامل */
-if(G.rocketActive){
-  const topLimit = CEILING_H + P.r + 50;  /* ✅ سقف الشاشة */
-  
-  if(G.rocketFrames > 0 && P.y > topLimit){
-    G.rocketFrames--;
-    /* ✅ قوة تصاعدية قوية */
-    P.vy = Math.min(P.vy, -7.5);
-    /* ✅ مسار ناري */
-    for(let i = 0; i < 3; i++){
-      particles.push({
-        x: P.x + rand(-5,5),
-        y: P.y + P.r + rand(0,15),
-        vx: rand(-1.5,1.5),
-        vy: rand(4,8),
-        life: 0.8, decay: 0.03,
-        color: ['#FFF8C0','#FFD700','#FF6B35'][Math.floor(Math.random()*3)],
-        size: rand(3,7)
-      });
+    if(G.glideActive && P.vy > 0 && P.jumpHeld){
+      P.vy = Math.min(P.vy, 2.5);
+      if(G.t % 6 === 0){
+        particles.push({
+          x: P.x + rand(-8,8), y: P.y + P.r,
+          vx: rand(-1,1), vy: rand(-0.5,0.5),
+          life: 0.6, decay: 0.04, color: '#87CEEB', size: rand(2,3)
+        });
+      }
     }
-    /* ✅ هالة نارية حول اللاعب */
-    if(G.t % 3 === 0){
-      particles.push({
-        x: P.x + rand(-12,12), y: P.y + rand(-12,12),
-        vx: rand(-1,1), vy: rand(-2,0),
-        life: 0.5, decay: 0.05,
-        color: '#FFA040', size: rand(2,4)
-      });
-    }
-  } else {
-    /* ✅ انتهى الوقود أو وصل للسقف */
-    if(G.rocketFrames <= 0){
-      Sfx.play(200, 0.3, 'sine', 0.05, 400);
-    }
-    G.rocketActive = false;
-    G.rocketFrames = 0;
-    if(G.activePowerups.rocket) delete G.activePowerups.rocket;
-    updatePowerupsUI();
-  }
-}
 
-  P.vy += gravity;
-  P.vy = clamp(P.vy, -22, 24);
-  if(P.jumpHoldTimer < 60) P.jumpHoldTimer++;
-  P.y += P.vy;
+    if(G.rocketActive){
+      const topLimit = CEILING_H + P.r + 50;
 
-  /* ============ اصطدام بالمنصات (One-Way) ============ */
-  let landedOnPlatform = null;
-  if(P.vy >= 0){
+      if(G.rocketFrames > 0 && P.y > topLimit){
+        G.rocketFrames--;
+        P.vy = Math.min(P.vy, -7.5);
+        for(let i = 0; i < 3; i++){
+          particles.push({
+            x: P.x + rand(-5,5),
+            y: P.y + P.r + rand(0,15),
+            vx: rand(-1.5,1.5),
+            vy: rand(4,8),
+            life: 0.8, decay: 0.03,
+            color: ['#FFF8C0','#FFD700','#FF6B35'][Math.floor(Math.random()*3)],
+            size: rand(3,7)
+          });
+        }
+        if(G.t % 3 === 0){
+          particles.push({
+            x: P.x + rand(-12,12), y: P.y + rand(-12,12),
+            vx: rand(-1,1), vy: rand(-2,0),
+            life: 0.5, decay: 0.05,
+            color: '#FFA040', size: rand(2,4)
+          });
+        }
+      } else {
+        if(G.rocketFrames <= 0){
+          Sfx.play(200, 0.3, 'sine', 0.05, 400);
+        }
+        G.rocketActive = false;
+        G.rocketFrames = 0;
+        if(G.activePowerups.rocket) delete G.activePowerups.rocket;
+        updatePowerupsUI();
+      }
+    }
+
+    P.vy += gravity;
+    P.vy = clamp(P.vy, -22, 24);
+    if(P.jumpHoldTimer < 60) P.jumpHoldTimer++;
+    P.y += P.vy;
+
+    let landedOnPlatform = null;
+    if(P.vy >= 0){
+      for(const o of obstacles){
+        if(!o.isPlatform || o.dead || o.crumbled) continue;
+
+        const pxLeft  = P.x - P.r*0.85;
+        const pxRight = P.x + P.r*0.85;
+        const pyBottom = P.y + P.r;
+        const oTop = o.y;
+
+        if(pxRight > o.x + 2 && pxLeft < o.x + o.w - 2){
+          const prevBottom = pyBottom - P.vy;
+          if(prevBottom <= oTop + 4 && pyBottom >= oTop){
+            P.y = oTop - P.r;
+            P.vy = o.bounceBoost ? o.bounceBoost : 0;
+            P.onGround = !o.bounceBoost;
+            P.jumps = 0;
+            landedOnPlatform = o;
+
+            if(o.isElevator && !o.exhausted){
+              o.isCarryingPlayer = true;
+              Sfx.play(520, 0.15, 'sine', 0.05, 880);
+              haptic(10);
+            }
+
+            if(o.platformType === 'bouncy'){
+              spawnJumpEffect(P.x, oTop, o.accent);
+              for(let i=0;i<15;i++){
+                const a = (i/15)*Math.PI*2;
+                particles.push({ x:P.x, y:oTop,
+                  vx:Math.cos(a)*rand(3,6), vy:Math.sin(a)*rand(2,5) - 3,
+                  life:1, decay:0.028, color:'#FFE090', size:rand(2,4)});
+              }
+              Sfx.play(560, 0.18, 'sine', 0.06, 1200);
+              haptic(12); shake(5);
+            } else if(o.platformType === 'crumble'){
+              if(o.crumbleTimer === 0){ o.crumbleTimer = 45; }
+              if(!wasOnGround){
+                spawnJumpEffect(P.x, oTop, o.accent);
+                Sfx.bounce(); haptic(5);
+              }
+            } else {
+              if(!wasOnGround){
+                spawnJumpEffect(P.x, oTop, o.accent);
+                Sfx.bounce(); haptic(5);
+              }
+            }
+            break;
+          }
+        }
+      }
+    }
+
     for(const o of obstacles){
-      if(!o.isPlatform || o.dead || o.crumbled) continue;
-
+      if(!o.isSpring || o.dead) continue;
+      const sTop = GROUND_Y - o.h;
       const pxLeft  = P.x - P.r*0.85;
       const pxRight = P.x + P.r*0.85;
       const pyBottom = P.y + P.r;
-      const oTop = o.y;
-
-      /* شرط الهبوط: القدمان فوق المنصة، والحركة هابطة */
-      if(pxRight > o.x + 2 && pxLeft < o.x + o.w - 2){
-        const prevBottom = pyBottom - P.vy;
-        if(prevBottom <= oTop + 4 && pyBottom >= oTop){
-          P.y = oTop - P.r;
-          P.vy = o.bounceBoost ? o.bounceBoost : 0;
-          P.onGround = !o.bounceBoost;
+      if(pxRight > o.x && pxLeft < o.x + o.w){
+        if(pyBottom >= sTop && pyBottom < sTop + 26 && P.vy >= 0){
+          P.y = sTop - P.r;
+          P.vy = -20;
+          P.onGround = false;
           P.jumps = 0;
-          landedOnPlatform = o;
-
-          /* ✅ المصعد: ابدأ الرفع */
-          if(o.isElevator && !o.exhausted){
-            o.isCarryingPlayer = true;
-            Sfx.play(520, 0.15, 'sine', 0.05, 880);
-            haptic(10);
+          P.jumpHeld = false;
+          spawnJumpEffect(P.x, sTop, '#FFF4C0');
+          for(let i=0;i<20;i++){
+            const a = (i/20)*Math.PI*2;
+            particles.push({ x:P.x, y:sTop,
+              vx:Math.cos(a)*rand(4,8), vy:Math.sin(a)*rand(4,8) - 3,
+              life:1, decay:0.025, color:'#FFE080', size:rand(2,4)});
           }
-          
-          /* سلوك خاص حسب النوع */
-          if(o.platformType === 'bouncy'){
-            spawnJumpEffect(P.x, oTop, o.accent);
-            for(let i=0;i<15;i++){
-              const a = (i/15)*Math.PI*2;
-              particles.push({ x:P.x, y:oTop,
-                vx:Math.cos(a)*rand(3,6), vy:Math.sin(a)*rand(2,5) - 3,
-                life:1, decay:0.028, color:'#FFE090', size:rand(2,4)});
-            }
-            Sfx.play(560, 0.18, 'sine', 0.06, 1200);
-            haptic(12); shake(5);
-          } else if(o.platformType === 'crumble'){
-            if(o.crumbleTimer === 0){ o.crumbleTimer = 45; }
-            if(!wasOnGround){
-              spawnJumpEffect(P.x, oTop, o.accent);
-              Sfx.bounce(); haptic(5);
-            }
-          } else {
-            if(!wasOnGround){
-              spawnJumpEffect(P.x, oTop, o.accent);
-              Sfx.bounce(); haptic(5);
-            }
-          }
+          Sfx.play(440, 0.25, 'sine', 0.06, 1200);
+          shake(10); haptic(15);
           break;
         }
       }
     }
-  }
 
-  /* ============ اصطدام السوستة ============ */
-  for(const o of obstacles){
-    if(!o.isSpring || o.dead) continue;
-    const sTop = GROUND_Y - o.h;
-    const pxLeft  = P.x - P.r*0.85;
-    const pxRight = P.x + P.r*0.85;
-    const pyBottom = P.y + P.r;
-    if(pxRight > o.x && pxLeft < o.x + o.w){
-      if(pyBottom >= sTop && pyBottom < sTop + 26 && P.vy >= 0){
-        P.y = sTop - P.r;
-        P.vy = -20;
-        P.onGround = false;
-        P.jumps = 0;
-        P.jumpHeld = false;
-        spawnJumpEffect(P.x, sTop, '#FFF4C0');
-        for(let i=0;i<20;i++){
-          const a = (i/20)*Math.PI*2;
-          particles.push({ x:P.x, y:sTop,
-            vx:Math.cos(a)*rand(4,8), vy:Math.sin(a)*rand(4,8) - 3,
-            life:1, decay:0.025, color:'#FFE080', size:rand(2,4)});
-        }
-        Sfx.play(440, 0.25, 'sine', 0.06, 1200);
-        shake(10); haptic(15);
-        break;
-      }
-    }
-  }
-
-  /* ============ الأرض ============ */
-  const gy = GROUND_Y - P.r;
+  /* ============ الأرض وطبقات الأعماق ============ */
   if(!landedOnPlatform){
-    if(P.y >= gy){
+    const feetY = P.y + P.r;
+    const prevFeetY = feetY - P.vy;
+    const canPassGround = isPlayerOverHole();
+    
+    /* ═══ سطح الأرض ═══ */
+    if(!canPassGround && prevFeetY <= GROUND_Y && feetY >= GROUND_Y){
       if(!wasOnGround){
         spawnJumpEffect(P.x, GROUND_Y, s.groundDark);
         Sfx.bounce(); haptic(4);
       }
-      P.y = gy; P.vy = 0; P.onGround = true; P.jumps = 0;
+      P.y = GROUND_Y - P.r;
+      P.vy = 0;
+      P.onGround = true;
+      P.jumps = 0;
 
       if(P.jumpBufferTimer > 0){
         P.vy = -12.5;
@@ -2665,23 +3392,50 @@ if(G.rocketActive){
         spawnJumpEffect(P.x, P.y + P.r, s.accent);
         Sfx.tap(); haptic(8);
       }
-    } else {
-      P.onGround = false;
+    }
+    /* ═══ طبقات الأعماق ═══ */
+    else {
+      const underHit = checkUnderFloorCollision();
+      if(underHit){
+        P.y = underHit.floorY - P.r;
+        P.vy = 0;
+        P.onGround = true;
+        P.jumps = 0;
+        landedOnPlatform = { isUnderFloor: true, y: underHit.floorY };
+        
+        if(!wasOnGround){
+          spawnJumpEffect(P.x, underHit.floorY, s.accent);
+          Sfx.bounce(); haptic(4);
+          dust(P.x, underHit.floorY, s.groundDark, 6, -1);
+        }
+      } else {
+        P.onGround = false;
+      }
     }
   }
 
-  P.x = P.baseX; P.rot = 0;
-  P.legPhase += P.onGround ? 0.55 : 0.15;
-  P.walkAnim += P.onGround ? 0.35 : 0.1;
-
-  if(P.onGround && G.t%6===0){
-    particles.push({
-      x:P.x-6, y:P.y+P.r-2,
-      vx:-1.4+rand(-0.4,0.4), vy:-0.6+rand(-0.3,0.3),
-      life:0.7, decay:0.032, color:s.groundDark, size:rand(1.5,2.8)
-    });
+  /* ✅ منع السقوط اللانهائي في UNDERGROUND */
+  if(G.realm === REALM.UNDERGROUND && P.y > GROUND_Y + 3500){
+    /* حد أقصى للعمق — ارتد للأعلى */
+    P.y = GROUND_Y + 3500;
+    P.vy = -15;
+    addFloat(P.x, P.y - 40, 'MAX DEPTH', '#FF8060', 16);
+    Sfx.play(120, 0.4, 'sine', 0.06, 60);
+    shake(10);
   }
-} else if(G.mode==='FLIP_WALK'){
+
+    P.x = P.baseX; P.rot = 0;
+    P.legPhase += P.onGround ? 0.55 : 0.15;
+    P.walkAnim += P.onGround ? 0.35 : 0.1;
+
+    if(P.onGround && G.t%6===0){
+      particles.push({
+        x:P.x-6, y:P.y+P.r-2,
+        vx:-1.4+rand(-0.4,0.4), vy:-0.6+rand(-0.3,0.3),
+        life:0.7, decay:0.032, color:s.groundDark, size:rand(1.5,2.8)
+      });
+    }
+  } else if(G.mode==='FLIP_WALK'){
     P.vy -= 0.68; P.vy = clamp(P.vy,-20,22);
     P.y += P.vy;
     const ceilY = CEILING_H + P.r;
@@ -2746,191 +3500,216 @@ if(G.rocketActive){
   G.spawnCd -= G.speed;
   if(G.spawnCd <= 0){
     spawnObstacle();
+    const realmMul = (G.realm === REALM.UNDERGROUND) ? 1.15 : 1.0;
     const modeMul = (G.mode==='WALK') ? 1.35
                   : (G.mode==='FLIP_WALK') ? 1.45
                   : (G.mode==='SKY_JUMP') ? 1.5
                   : 1.0;
-    G.spawnCd = prog.spawnDist * modeMul * rand(0.92, 1.12);
+    G.spawnCd = prog.spawnDist * modeMul * realmMul * rand(0.92, 1.12);
   }
 
-/* ============ تحديث حركات العقبات الخاصة ============ */
-for(const o of obstacles){
-  if(o.dead) continue;
+  /* تحديث حركات العقبات الخاصة */
+  for(const o of obstacles){
+    if(o.dead) continue;
 
-  /* منصات متحركة */
-  if(o.isPlatform){
-    if(o.platformType === 'moving_y'){
-      o.y = o.baseY + Math.sin(o.t*0.022 + o.phase) * o.amp;
-    } else if(o.platformType === 'moving_x'){
-      o.x += Math.cos(o.t*0.018 + o.phase) * 0.6;
-    } else if(o.platformType === 'crumble' && o.crumbleTimer > 0){
-      o.crumbleTimer--;
-      if(o.crumbleTimer <= 0){
-        o.crumbled = true;
-        for(let i=0;i<16;i++){
+    if(o.isPlatform){
+      if(o.platformType === 'moving_y'){
+        o.y = o.baseY + Math.sin(o.t*0.022 + o.phase) * o.amp;
+      } else if(o.platformType === 'moving_x'){
+        o.x += Math.cos(o.t*0.018 + o.phase) * 0.6;
+      } else if(o.platformType === 'crumble' && o.crumbleTimer > 0){
+        o.crumbleTimer--;
+        if(o.crumbleTimer <= 0){
+          o.crumbled = true;
+          for(let i=0;i<16;i++){
+            particles.push({
+              x: o.x + Math.random()*o.w,
+              y: o.y + Math.random()*o.h,
+              vx: rand(-3,3), vy: rand(-4,1),
+              life: 1, decay: 0.025,
+              color: o.colorDark, size: rand(2,4)
+            });
+          }
+          Sfx.play(180, 0.3, 'sawtooth', 0.05, 80);
+          haptic(10);
+          o.dead = true;
+        }
+      }
+    }
+
+    if(o.isSaw){
+      o.angle += o.angleSpd;
+      o.cx = o.x + o.r;
+      if(o.movingY){
+        o.cy = o.baseY + o.r + Math.sin(o.t*0.03 + o.phase) * o.amp;
+        o.y = o.cy - o.r;
+      }
+    }
+
+    if(o.isPiston){
+      o.cycle++;
+      const cyclePos = (o.cycle % o.period) / o.period;
+      if(cyclePos < 0.15)       o.extend = (cyclePos / 0.15) * o.extendDist;
+      else if(cyclePos < 0.4)   o.extend = o.extendDist;
+      else if(cyclePos < 0.55)  o.extend = o.extendDist * (1 - (cyclePos - 0.4) / 0.15);
+      else                      o.extend = 0;
+    }
+
+    if(o.isFallingSpike){
+      if(!o.falling){
+        const distToPlayer = o.x - P.x;
+        if(!o.warned && distToPlayer < o.triggerDistance + 100 && distToPlayer > 0){
+          o.warned = true;
+          Sfx.play(400, 0.1, 'square', 0.03, 500);
+        }
+        if(distToPlayer < o.triggerDistance && distToPlayer > 0){
+          o.falling = true;
+          Sfx.play(300, 0.15, 'square', 0.04, 200);
+        }
+      }
+      if(o.falling){
+        o.y += 9;
+        if(o.y >= o.targetY){
+          o.y = o.targetY;
+          if(!o.landed){
+            o.landed = true;
+            dust(o.x + o.w/2, GROUND_Y, o.colorDark, 8);
+            shake(2);
+          }
+        }
+      }
+    }
+
+    if(o.isRotBar){
+      o.angle += o.angleSpd;
+      o.cx = o.x + o.length/2;
+    }
+
+    if(o.isLaser && !o.isVertical){
+      o.y = o.baseY + Math.sin(o.t * 0.04 + o.phase) * o.amp;
+    }
+
+        /* ═══ صخرة متساقطة ═══ */
+    if(o.isFallingRock){
+      if(!o.falling){
+        const distToPlayer = o.x - P.x;
+        if(!o.warned && distToPlayer < o.triggerDistance + 100 && distToPlayer > 0){
+          o.warned = true;
+          Sfx.play(400, 0.1, 'square', 0.03, 500);
+        }
+        if(distToPlayer < o.triggerDistance && distToPlayer > 0){
+          o.falling = true;
+          Sfx.play(300, 0.15, 'square', 0.04, 200);
+        }
+      }
+      if(o.falling){
+        o.y += 9;
+        if(o.y >= o.targetY){
+          o.y = o.targetY;
+          if(!o.landed){
+            o.landed = true;
+            dust(o.x + o.w/2, o.y + o.h, o.colorDark, 10);
+            shake(4);
+            Sfx.play(120, 0.3, 'sawtooth', 0.06, 60);
+          }
+        }
+      }
+    }
+    
+    /* ═══ رمح متحرك ═══ */
+    if(o.isDrill){
+      o.cycle++;
+      const cyclePos = (o.cycle % o.period) / o.period;
+      if(cyclePos < 0.15)       o.extend = (cyclePos / 0.15) * o.extendDist;
+      else if(cyclePos < 0.4)   o.extend = o.extendDist;
+      else if(cyclePos < 0.55)  o.extend = o.extendDist * (1 - (cyclePos - 0.4) / 0.15);
+      else                      o.extend = 0;
+    }
+    
+    /* ═══ شبح متحرك ═══ */
+    if(o.isGhost){
+      o.angle += o.speed;
+      o.cy = o.baseY + 20 + Math.sin(o.t * 0.03 + o.phase) * o.amp;
+      o.y = o.cy - 20;
+      o.cx = o.x + 20;
+    }
+
+    if(o.isElevator && !o.dead){
+      if(o.isCarryingPlayer && !o.exhausted){
+        o.x = P.baseX - o.w/2;
+        o.y -= o.riseSpeed;
+        o.risen += o.riseSpeed;
+
+        if(G.t % 2 === 0){
           particles.push({
-            x: o.x + Math.random()*o.w,
-            y: o.y + Math.random()*o.h,
-            vx: rand(-3,3), vy: rand(-4,1),
-            life: 1, decay: 0.025,
-            color: o.colorDark, size: rand(2,4)
+            x: o.x + rand(0, o.w),
+            y: o.y + o.h,
+            vx: rand(-1, 1),
+            vy: rand(1, 4),
+            life: 0.9, decay: 0.028,
+            color: o.glow,
+            size: rand(2, 5)
           });
         }
-        Sfx.play(180, 0.3, 'sawtooth', 0.05, 80);
-        haptic(10);
-        o.dead = true;
+        if(G.t % 3 === 0){
+          particles.push({
+            x: o.x - 5, y: o.y + o.h/2,
+            vx: -2, vy: rand(-0.5, 0.5),
+            life: 0.7, decay: 0.04,
+            color: o.accent, size: 3
+          });
+          particles.push({
+            x: o.x + o.w + 5, y: o.y + o.h/2,
+            vx: 2, vy: rand(-0.5, 0.5),
+            life: 0.7, decay: 0.04,
+            color: o.accent, size: 3
+          });
+        }
+
+        P.y = o.y - P.r;
+        P.vy = 0;
+        P.onGround = true;
+        P.jumps = 0;
+
+        if(G.t % 3 === 0){
+          particles.push({
+            x: o.x + rand(0, o.w),
+            y: o.y + o.h,
+            vx: rand(-1, 1),
+            vy: rand(2, 5),
+            life: 0.7, decay: 0.035,
+            color: '#80E8FF', size: rand(2, 4)
+          });
+        }
+
+        if(o.risen >= o.maxRise){
+          o.exhausted = true;
+          o.isCarryingPlayer = false;
+          shake(3);
+          Sfx.play(440, 0.2, 'sine', 0.04, 220);
+        }
+      } else if(o.exhausted){
+        o.y += 0.4;
+        if(o.y > GROUND_Y - 100) o.dead = true;
       }
     }
-  }
 
-  /* ✅ شفرة دوّارة — مصححة */
-  if(o.isSaw){
-    o.angle += o.angleSpd;
-    o.cx = o.x + o.r;   /* ✅ أضفنا هذا السطر */
-    if(o.movingY){
-      o.cy = o.baseY + o.r + Math.sin(o.t*0.03 + o.phase) * o.amp;
-      o.y = o.cy - o.r;
-    }
-  }
-
-  /* مكبس */
-  if(o.isPiston){
-    o.cycle++;
-    const cyclePos = (o.cycle % o.period) / o.period;
-    if(cyclePos < 0.15)       o.extend = (cyclePos / 0.15) * o.extendDist;
-    else if(cyclePos < 0.4)   o.extend = o.extendDist;
-    else if(cyclePos < 0.55)  o.extend = o.extendDist * (1 - (cyclePos - 0.4) / 0.15);
-    else                      o.extend = 0;
-  }
-
-  /* ✅ شوكة ساقطة — مصححة بالكامل */
-  if(o.isFallingSpike){
-    if(!o.falling){
-      const distToPlayer = o.x - P.x;
-      /* تحذير بصري */
-      if(!o.warned && distToPlayer < o.triggerDistance + 100 && distToPlayer > 0){
-        o.warned = true;
-        Sfx.play(400, 0.1, 'square', 0.03, 500);
-      }
-      /* ✅ السقوط عندما تقترب من اللاعب */
-      if(distToPlayer < o.triggerDistance && distToPlayer > 0){
-        o.falling = true;
-        Sfx.play(300, 0.15, 'square', 0.04, 200);
-      }
-    }
-    if(o.falling){
-      o.y += 9;
-      if(o.y >= o.targetY){
-        o.y = o.targetY;
-        if(!o.landed){
-          o.landed = true;
-          dust(o.x + o.w/2, GROUND_Y, o.colorDark, 8);
-          shake(2);
+    if(o.isVortex){
+      o.angle += 0.08;
+      const dx = o.cx - P.x;
+      const dy = o.cy - P.y;
+      const d = Math.hypot(dx, dy) || 1;
+      if(d < 260){
+        const force = (1 - d/260) * o.pullForce;
+        if(G.mode === 'WALK'){
+          P.vy += (dy/d) * force * 0.6;
+        } else {
+          P.vx += (dx/d) * force;
+          P.vy += (dy/d) * force;
         }
       }
     }
   }
-
-  /* قضيب دوّار */
-  if(o.isRotBar){
-    o.angle += o.angleSpd;
-    o.cx = o.x + o.length/2;
-  }
-
-  /* ✅✅✅ أضف هذا — تحديث الشعاع الكهربائي ✅✅✅ */
-  if(o.isLaser && !o.isVertical){
-    o.y = o.baseY + Math.sin(o.t * 0.04 + o.phase) * o.amp;
-  }
-
-  /* ✅✅✅ المصعد السماوي — يرفع اللاعب ✅✅✅ */
-  if(o.isElevator && !o.dead){
-    if(o.isCarryingPlayer && !o.exhausted){
-      /* ✅ يثبّت X ليبقى تحت اللاعب */
-      o.x = P.baseX - o.w/2;
-      
-      /* ✅ يرتفع */
-      o.y -= o.riseSpeed;
-      o.risen += o.riseSpeed;
-      
-/* ✅ أثر مرئي على طول المسار */
-if(G.t % 2 === 0){
-  particles.push({
-    x: o.x + rand(0, o.w),
-    y: o.y + o.h,
-    vx: rand(-1, 1),
-    vy: rand(1, 4),
-    life: 0.9, decay: 0.028,
-    color: o.glow,
-    size: rand(2, 5)
-  });
-}
-
-/* ✅ أثر جانبي */
-if(G.t % 3 === 0){
-  particles.push({
-    x: o.x - 5, y: o.y + o.h/2,
-    vx: -2, vy: rand(-0.5, 0.5),
-    life: 0.7, decay: 0.04,
-    color: o.accent, size: 3
-  });
-  particles.push({
-    x: o.x + o.w + 5, y: o.y + o.h/2,
-    vx: 2, vy: rand(-0.5, 0.5),
-    life: 0.7, decay: 0.04,
-    color: o.accent, size: 3
-  });
-}
-
-      /* ✅ يثبّت اللاعب فوقه */
-      P.y = o.y - P.r;
-      P.vy = 0;
-      P.onGround = true;
-      P.jumps = 0;
-      
-      /* ✅ جسيمات الرفع */
-      if(G.t % 3 === 0){
-        particles.push({
-          x: o.x + rand(0, o.w),
-          y: o.y + o.h,
-          vx: rand(-1, 1),
-          vy: rand(2, 5),
-          life: 0.7, decay: 0.035,
-          color: '#80E8FF', size: rand(2, 4)
-        });
-      }
-      
-      /* ✅ إذا وصل للحد الأقصى */
-      if(o.risen >= o.maxRise){
-        o.exhausted = true;
-        o.isCarryingPlayer = false;
-        /* اهتزاز */
-        shake(3);
-        Sfx.play(440, 0.2, 'sine', 0.04, 220);
-      }
-    } else if(o.exhausted){
-      /* ✅ بعد الانتهاء: يتحرك بشكل عادي (لكن يهبط قليلاً كتحذير) */
-      o.y += 0.4;
-      if(o.y > GROUND_Y - 100) o.dead = true;
-    }
-  }
-
-  /* ✅✅✅ أضف هذا — تحديث الدوّامة + جذب اللاعب ✅✅✅ */
-  if(o.isVortex){
-    o.angle += 0.08;
-    const dx = o.cx - P.x;
-    const dy = o.cy - P.y;
-    const d = Math.hypot(dx, dy) || 1;
-    if(d < 260){
-      const force = (1 - d/260) * o.pullForce;
-      if(G.mode === 'WALK'){
-        P.vy += (dy/d) * force * 0.6;
-      } else {
-        P.vx += (dx/d) * force;
-        P.vy += (dy/d) * force;
-      }
-    }
-  }
-}
 
   for(let i=obstacles.length-1;i>=0;i--){
     const o = obstacles[i];
@@ -2940,72 +3719,100 @@ if(G.t % 3 === 0){
       o.gapY = o.baseGapY + Math.sin(o.t*0.016+o.phase)*o.amp;
       o.gapY = clamp(o.gapY, 70+o.gap/2, GROUND_Y-70-o.gap/2);
     }
-    if(!o.passed && o.x+o.w < P.x){ o.passed = true; onPass(o); }
-let hit = hitObstacle(o);
 
-/* ➕ تصادمات خاصة بالعقبات الجديدة */
-if(!hit && o.isWalk){
-  const pr = P.r * 0.75;
-
-  /* شفرة دوّارة */
-  if(o.isSaw){
-    const dx = P.x - o.cx, dy = P.y - o.cy;
-    if(dx*dx + dy*dy < (o.r + pr) * (o.r + pr)) hit = true;
-  }
-
-  /* ✅ شوكة ساقطة: تصادم فقط عندما تسقط وداخل الشاشة */
-  if(o.isFallingSpike && o.falling && o.y > 0){
-    if(circleRect(P.x, P.y, pr, o.x, o.y, o.w, o.h)) hit = true;
-  }
-
-  /* قضيب دوّار */
-  if(o.isRotBar){
-    /* تحويل نقطة اللاعب إلى إحداثيات القضيب المحلية */
-    const cosA = Math.cos(-o.angle), sinA = Math.sin(-o.angle);
-    const relX = P.x - o.cx, relY = P.y - o.cy;
-    const localX = relX * cosA - relY * sinA;
-    const localY = relX * sinA + relY * cosA;
-    /* المربع المحيط بالقضيب: من -length/2 إلى +length/2، سماكة thickness */
-    if(Math.abs(localX) < o.length/2 + pr && Math.abs(localY) < o.thickness/2 + pr){
-      hit = true;
+    /* ✅ الإصلاح 1: معالجة موحدة لعبور بوابة Shift والعقبات العادية */
+    if(!o.passed && o.x + o.w < P.x){
+      o.passed = true;
+      if(o.isShiftGate){
+        performShift(o.targetMode);
+      } else {
+        onPass(o);
+      }
     }
-  }
 
-  /* ✅ مكبس — الجسم (فقط السفلي، لأن العلوي على السقف) */
-  if(o.isPiston && !o.isTop){
-    if(circleRect(P.x, P.y, pr, o.x, GROUND_Y - o.h, o.w, o.h)) hit = true;
-  }
+    let hit = hitObstacle(o);
 
-  /* مكبس — الرأس الممتد */
-  if(o.isPiston && o.extend > 4){
-    const headH = 16;
-    const headY = o.isTop
-      ? o.h + o.extend
-      : GROUND_Y - o.h - o.extend - headH;
-    if(circleRect(P.x, P.y, pr, o.x + 4, headY, o.w - 8, headH)) hit = true;
-    /* القضيب أيضاً */
-    const rodW = o.w * 0.4;
-    const rodX = o.x + (o.w - rodW)/2;
-    const rodY = o.isTop ? o.h : GROUND_Y - o.h - o.extend;
-    const rodH = o.extend;
-    if(circleRect(P.x, P.y, pr, rodX, rodY, rodW, rodH)) hit = true;
-  }
-  if(o.isLaser){
-    if(o.isVertical){
-      for(const seg of o.segments){
-        if(circleRect(P.x, P.y, pr, o.x, seg.y, o.w, seg.h)){
-          hit = true; break;
+    if(!hit && o.isWalk){
+      const pr = P.r * 0.75;
+
+      if(o.isSaw){
+        const dx = P.x - o.cx, dy = P.y - o.cy;
+        if(dx*dx + dy*dy < (o.r + pr) * (o.r + pr)) hit = true;
+      }
+
+      if(o.isFallingSpike && o.falling && o.y > 0){
+        if(circleRect(P.x, P.y, pr, o.x, o.y, o.w, o.h)) hit = true;
+      }
+
+      if(o.isRotBar){
+        const cosA = Math.cos(-o.angle), sinA = Math.sin(-o.angle);
+        const relX = P.x - o.cx, relY = P.y - o.cy;
+        const localX = relX * cosA - relY * sinA;
+        const localY = relX * sinA + relY * cosA;
+        if(Math.abs(localX) < o.length/2 + pr && Math.abs(localY) < o.thickness/2 + pr){
+          hit = true;
         }
       }
-    } else {
-      if(circleRect(P.x, P.y, pr, o.x, o.y - 3, o.w, 6)) hit = true;
+
+      if(o.isPiston && !o.isTop){
+        if(circleRect(P.x, P.y, pr, o.x, GROUND_Y - o.h, o.w, o.h)) hit = true;
+      }
+
+      if(o.isPiston && o.extend > 4){
+        const headH = 16;
+        const headY = o.isTop
+          ? o.h + o.extend
+          : GROUND_Y - o.h - o.extend - headH;
+        if(circleRect(P.x, P.y, pr, o.x + 4, headY, o.w - 8, headH)) hit = true;
+        const rodW = o.w * 0.4;
+        const rodX = o.x + (o.w - rodW)/2;
+        const rodY = o.isTop ? o.h : GROUND_Y - o.h - o.extend;
+        const rodH = o.extend;
+        if(circleRect(P.x, P.y, pr, rodX, rodY, rodW, rodH)) hit = true;
+      }
+      if(o.isLaser){
+        if(o.isVertical){
+          for(const seg of o.segments){
+            if(circleRect(P.x, P.y, pr, o.x, seg.y, o.w, seg.h)){
+              hit = true; break;
+            }
+          }
+        } else {
+          if(circleRect(P.x, P.y, pr, o.x, o.y - 3, o.w, 6)) hit = true;
+        }
+      }
+      
+      /* ═══ عقبات الأعماق ═══ */
+      if(o.isUnderSpike){
+        if(circleRect(P.x, P.y, pr, o.x, o.y, o.w, o.h)) hit = true;
+      }
+      
+      if(o.isSaw){
+        const dx = P.x - o.cx, dy = P.y - o.cy;
+        if(dx*dx + dy*dy < (o.r + pr) * (o.r + pr)) hit = true;
+      }
+      
+      if(o.isFallingRock && o.falling){
+        if(circleRect(P.x, P.y, pr, o.x, o.y, o.w, o.h)) hit = true;
+      }
+      
+      if(o.isLavaPool){
+        if(circleRect(P.x, P.y, pr, o.x, o.y - 4, o.w, o.h + 8)) hit = true;
+      }
+      
+      if(o.isDrill && o.extend > 4){
+        const headY = o.isTop ? o.floorY + o.extend - 60 : o.floorY - o.extend;
+        if(circleRect(P.x, P.y, pr, o.x + 4, headY, o.w - 8, 60)) hit = true;
+      }
+      
+      if(o.isGhost){
+        const dx = P.x - o.cx, dy = P.y - o.cy;
+        if(dx*dx + dy*dy < (o.r + pr) * (o.r + pr)) hit = true;
+      }
     }
-  }
 
-}
-
-if(hit){
-        if(G.invuln > 0){}
+    if(hit){
+      if(G.invuln > 0){}
       else if(G.shield){
         G.shield = false;
         G.invuln = 100;
@@ -3032,23 +3839,22 @@ if(hit){
       const d = Math.hypot(dx,dy) || 1;
       if(d < 280){ c.x += (dx/d)*7.5; c.y += (dy/d)*7.5; }
     }
-if(circleCircle(P.x,P.y,P.r+5, c.x,c.y,c.r)){
-  c.dead = true;
-  addCombo();
-  const baseGain = c.isSkyCoin ? 5 : 1;
-  const gain = baseGain * coinMul * getComboMul();
-  G.runCoins += gain;
-  Sfx.coin();
-  /* تأثير بصري أكبر للعملات السماوية */
-  if(c.isSkyCoin){
-    burst(c.x, c.y, '#FFD700', 12, 5);
-    addFloat(c.x, c.y, '+' + gain + ' ⭐', '#FFD700', 14);
-    shake(3);
-  } else {
-    burst(c.x, c.y, '#E8B34E', 6, 3);
-    addFloat(c.x, c.y, '+' + gain, '#C98A2E', 11);
-  }
-}
+    if(circleCircle(P.x,P.y,P.r+5, c.x,c.y,c.r)){
+      c.dead = true;
+      addCombo();
+      const baseGain = c.isSkyCoin ? 5 : 1;
+      const gain = baseGain * coinMul * getComboMul();
+      G.runCoins += gain;
+      Sfx.coin();
+      if(c.isSkyCoin){
+        burst(c.x, c.y, '#FFD700', 12, 5);
+        addFloat(c.x, c.y, '+' + gain + ' ⭐', '#FFD700', 14);
+        shake(3);
+      } else {
+        burst(c.x, c.y, '#E8B34E', 6, 3);
+        addFloat(c.x, c.y, '+' + gain, '#C98A2E', 11);
+      }
+    }
     if(c.x < -60) coins.splice(i,1);
   }
 
@@ -3103,13 +3909,15 @@ if(circleCircle(P.x,P.y,P.r+5, c.x,c.y,c.r)){
     if(G.hintTimer === 0) document.getElementById('hint').classList.remove('show');
   }
 
-if(G.t%3===0){
-  document.getElementById('hud-meters').textContent = getMeters();
-  document.getElementById('hud-coins').textContent = G.runCoins;
-  /* ✅ مؤشر الارتفاع */
-  updateAltitudeUI();
-  updateElevatorIndicator();
-}
+  if(G.t%3===0){
+    const hudM = document.getElementById('hud-meters');
+    const hudC = document.getElementById('hud-coins');
+    if(hudM) hudM.textContent = getMeters();
+    if(hudC) hudC.textContent = G.runCoins;
+    updateAltitudeUI();
+    updateElevatorIndicator();
+    updateRealmUI();
+  }
 }
 
 function onPass(o){
@@ -3127,7 +3935,6 @@ function collectOrb(ob){
   addFloat(ob.x, ob.y, '+'+gain, ob.color || G.currentScene.accent, 14);
   if(ob.isSkyOrb){
     shake(5);
-    /* حلقة ذهبية */
     for(let i=0;i<16;i++){
       const a = (i/16)*Math.PI*2;
       particles.push({
@@ -3306,7 +4113,6 @@ function drawAura(c, r, aura, t){
     c.beginPath(); c.arc(0,0,aur,0,Math.PI*2); c.fill();
     c.globalAlpha = 1;
 
-    /* حلقة دوّارة */
     c.strokeStyle = p.c3;
     c.lineWidth = 2.2;
     c.globalAlpha = 0.7;
@@ -3319,7 +4125,6 @@ function drawAura(c, r, aura, t){
     c.stroke();
     c.globalAlpha = 1;
 
-    /* جزيئات صغيرة */
     for(let i=0;i<4;i++){
       const a = t*0.03 + (i/4)*Math.PI*2;
       const dist = aur * 0.9;
@@ -3436,7 +4241,6 @@ function drawAura(c, r, aura, t){
     c.fillStyle = grad;
     c.beginPath(); c.arc(0,0,aur*1.15,0,Math.PI*2); c.fill();
 
-    /* حلقة نجوم */
     for(let i=0;i<18;i++){
       const a = (i * 1.7 + t*0.012) % (Math.PI*2);
       const dist = r * (1.4 + (i % 5) * 0.18);
@@ -3460,7 +4264,7 @@ function drawCrown(c, r, crown, t){
   const kind = crown.id;
   if(kind === 'none') return;
 
-  const cy = -r * 1.08; /* فوق الرأس */
+  const cy = -r * 1.08;
 
   if(kind === 'bronze' || kind === 'silver' || kind === 'gold' || kind === 'diamond'){
     const palettes = {
@@ -3504,7 +4308,6 @@ function drawCrown(c, r, crown, t){
       c.arc(-r*0.42, cy + r*0.02, r*0.075, 0, Math.PI*2);
       c.arc(r*0.42, cy + r*0.02, r*0.075, 0, Math.PI*2);
       c.fill();
-      /* لمعة */
       c.fillStyle = 'rgba(255,255,255,0.9)';
       c.beginPath();
       c.arc(-r*0.5, cy + r*0.1, r*0.06, 0, Math.PI*2);
@@ -3548,21 +4351,18 @@ function drawCrown(c, r, crown, t){
 
   } else if(kind === 'horns'){
     c.fillStyle = '#2A1818';
-    /* قرن يسار */
     c.beginPath();
     c.moveTo(-r*0.5, cy + r*0.25);
     c.quadraticCurveTo(-r*0.95, cy - r*0.5, -r*0.65, cy - r*0.95);
     c.quadraticCurveTo(-r*0.55, cy - r*0.4, -r*0.25, cy + r*0.1);
     c.closePath();
     c.fill();
-    /* قرن يمين */
     c.beginPath();
     c.moveTo(r*0.5, cy + r*0.25);
     c.quadraticCurveTo(r*0.95, cy - r*0.5, r*0.65, cy - r*0.95);
     c.quadraticCurveTo(r*0.55, cy - r*0.4, r*0.25, cy + r*0.1);
     c.closePath();
     c.fill();
-    /* لمعة */
     c.fillStyle = 'rgba(255,180,180,0.4)';
     c.beginPath();
     c.moveTo(-r*0.55, cy - r*0.15);
@@ -3650,26 +4450,21 @@ function drawCrown(c, r, crown, t){
     c.shadowBlur = 0;
 
   } else if(kind === 'skull'){
-    /* الجمجمة */
     c.fillStyle = '#F0E8E0';
     c.beginPath();
     c.arc(0, cy, r*0.34, 0, Math.PI*2);
     c.fill();
-    /* الفك */
     roundRect(c, -r*0.2, cy + r*0.16, r*0.4, r*0.16, r*0.05);
     c.fill();
-    /* العيون */
     c.fillStyle = '#1A0A0A';
     c.beginPath();
     c.arc(-r*0.14, cy - r*0.05, r*0.1, 0, Math.PI*2);
     c.arc(r*0.14, cy - r*0.05, r*0.1, 0, Math.PI*2);
     c.fill();
-    /* الأسنان */
     c.fillStyle = '#F0E8E0';
     for(let i=0;i<4;i++){
       c.fillRect(-r*0.15 + i*r*0.09, cy + r*0.2, r*0.05, r*0.11);
     }
-    /* شق في الجمجمة */
     c.strokeStyle = 'rgba(0,0,0,0.25)';
     c.lineWidth = 1;
     c.beginPath();
@@ -3707,7 +4502,6 @@ function drawCrown(c, r, crown, t){
     c.closePath();
     c.fill();
 
-    /* جواهر */
     c.fillStyle = '#FF4060';
     c.beginPath();
     c.arc(0, cy - r*0.32, r*0.1, 0, Math.PI*2);
@@ -3723,7 +4517,7 @@ function drawCrown(c, r, crown, t){
     c.arc(r*0.7, cy + r*0.1, r*0.065, 0, Math.PI*2);
     c.fill();
 
-      } else if(kind === 'hat'){
+  } else if(kind === 'hat'){
     c.fillStyle = '#8E4A30';
     c.beginPath();
     c.arc(0, cy + r*0.2, r*0.75, Math.PI, Math.PI*2);
@@ -3736,7 +4530,6 @@ function drawCrown(c, r, crown, t){
     c.beginPath();
     c.ellipse(0, cy + r*0.2, r*0.72, r*0.1, 0, 0, Math.PI*2);
     c.fill();
-    /* شريط */
     c.fillStyle = '#C14A4A';
     c.fillRect(-r*0.72, cy + r*0.02, r*1.44, r*0.12);
 
@@ -3745,7 +4538,6 @@ function drawCrown(c, r, crown, t){
     c.beginPath();
     c.arc(0, cy + r*0.15, r*0.72, Math.PI, Math.PI*2);
     c.fill();
-    /* حواف */
     c.beginPath();
     c.moveTo(-r*0.75, cy + r*0.15);
     c.lineTo(-r*0.9, cy + r*0.3);
@@ -3753,7 +4545,6 @@ function drawCrown(c, r, crown, t){
     c.lineTo(r*0.75, cy + r*0.15);
     c.closePath();
     c.fill();
-    /* زر */
     c.fillStyle = '#1A3A60';
     c.beginPath();
     c.arc(0, cy - r*0.5, r*0.09, 0, Math.PI*2);
@@ -3764,11 +4555,9 @@ function drawCrown(c, r, crown, t){
     c.beginPath();
     c.arc(0, cy + r*0.1, r*0.78, Math.PI, Math.PI*2);
     c.fill();
-    /* حواف عريضة */
     c.fillStyle = '#D04070';
     roundRect(c, -r*0.85, cy + r*0.05, r*1.7, r*0.24, r*0.08);
     c.fill();
-    /* كرة */
     c.fillStyle = '#E8D0D8';
     c.beginPath();
     c.arc(0, cy - r*0.75, r*0.2, 0, Math.PI*2);
@@ -3776,7 +4565,6 @@ function drawCrown(c, r, crown, t){
 
   } else if(kind === 'cowboy'){
     c.fillStyle = '#8A5A30';
-    /* تاج القبعة */
     c.beginPath();
     c.moveTo(-r*0.55, cy + r*0.15);
     c.lineTo(-r*0.5, cy - r*0.4);
@@ -3785,12 +4573,10 @@ function drawCrown(c, r, crown, t){
     c.lineTo(r*0.55, cy + r*0.15);
     c.closePath();
     c.fill();
-    /* الحواف العريضة */
     c.fillStyle = '#A06838';
     c.beginPath();
     c.ellipse(0, cy + r*0.15, r*1.05, r*0.18, 0, 0, Math.PI*2);
     c.fill();
-    /* شريط */
     c.fillStyle = '#3A2010';
     c.fillRect(-r*0.5, cy - r*0.05, r*1.0, r*0.12);
 
@@ -3801,11 +4587,9 @@ function drawCrown(c, r, crown, t){
     c.quadraticCurveTo(0, cy - r*0.9, r*0.7, cy + r*0.15);
     c.closePath();
     c.fill();
-    /* حواف بيضاء */
     c.fillStyle = '#FFFFFF';
     roundRect(c, -r*0.78, cy + r*0.05, r*1.56, r*0.22, r*0.1);
     c.fill();
-    /* كرة */
     c.beginPath();
     c.arc(r*0.7, cy + r*0.15, r*0.18, 0, Math.PI*2);
     c.fill();
@@ -3815,7 +4599,6 @@ function drawCrown(c, r, crown, t){
     c.save();
     c.translate(0, cy + r*0.15);
     c.rotate(-0.15);
-    /* المثلث */
     c.beginPath();
     c.moveTo(-r*0.45, 0);
     c.lineTo(r*0.45, 0);
@@ -3823,13 +4606,11 @@ function drawCrown(c, r, crown, t){
     c.closePath();
     c.fillStyle = colors[0];
     c.fill();
-    /* خطوط ملونة */
     for(let i=1;i<colors.length;i++){
       const y = -i*r*0.18;
       c.fillStyle = colors[i];
       c.fillRect(-r*0.4 + i*r*0.08, y, r*0.8 - i*r*0.16, r*0.05);
     }
-    /* كرة */
     c.fillStyle = '#FFE060';
     c.beginPath();
     c.arc(0, -r*1.1, r*0.13, 0, Math.PI*2);
@@ -3839,7 +4620,6 @@ function drawCrown(c, r, crown, t){
   } else if(kind === 'wizard'){
     c.save();
     c.translate(0, cy + r*0.15);
-    /* القبعة المخروطية الطويلة */
     c.fillStyle = '#3A2060';
     c.beginPath();
     c.moveTo(-r*0.75, 0);
@@ -3847,12 +4627,10 @@ function drawCrown(c, r, crown, t){
     c.quadraticCurveTo(r*0.3, -r*0.9, r*0.75, 0);
     c.closePath();
     c.fill();
-    /* الحواف */
     c.fillStyle = '#4A2880';
     c.beginPath();
     c.ellipse(0, 0, r*0.85, r*0.18, 0, 0, Math.PI*2);
     c.fill();
-    /* نجوم صغيرة */
     c.fillStyle = '#FFE060';
     for(let i=0;i<4;i++){
       const sx = -r*0.4 + i*r*0.25;
@@ -3865,31 +4643,25 @@ function drawCrown(c, r, crown, t){
 
   } else if(kind === 'viking'){
     c.fillStyle = '#808898';
-    /* قبة الخوذة */
     c.beginPath();
     c.arc(0, cy + r*0.1, r*0.72, Math.PI, Math.PI*2);
     c.fill();
-    /* حواف */
     c.fillStyle = '#A0A8B8';
     roundRect(c, -r*0.82, cy + r*0.05, r*1.64, r*0.22, r*0.06);
     c.fill();
-    /* قرون الفايكنغ */
     c.fillStyle = '#F0E8D0';
-    /* قرن يسار */
     c.beginPath();
     c.moveTo(-r*0.6, cy + r*0.15);
     c.quadraticCurveTo(-r*1.2, cy - r*0.2, -r*1.0, cy - r*0.75);
     c.quadraticCurveTo(-r*1.05, cy - r*0.3, -r*0.7, cy + r*0.05);
     c.closePath();
     c.fill();
-    /* قرن يمين */
     c.beginPath();
     c.moveTo(r*0.6, cy + r*0.15);
     c.quadraticCurveTo(r*1.2, cy - r*0.2, r*1.0, cy - r*0.75);
     c.quadraticCurveTo(r*1.05, cy - r*0.3, r*0.7, cy + r*0.05);
     c.closePath();
     c.fill();
-    /* تفاصيل */
     c.fillStyle = '#3A4050';
     c.fillRect(-r*0.5, cy + r*0.0, r*1.0, r*0.06);
 
@@ -3898,7 +4670,6 @@ function drawCrown(c, r, crown, t){
     c.lineWidth = r*0.14;
     c.lineCap = 'round';
     c.lineJoin = 'round';
-    /* قرن يسار متفرع */
     c.beginPath();
     c.moveTo(-r*0.35, cy + r*0.3);
     c.quadraticCurveTo(-r*0.7, cy - r*0.3, -r*0.55, cy - r*0.95);
@@ -3911,7 +4682,6 @@ function drawCrown(c, r, crown, t){
     c.moveTo(-r*0.5, cy - r*0.7);
     c.lineTo(-r*0.85, cy - r*0.85);
     c.stroke();
-    /* قرن يمين */
     c.beginPath();
     c.moveTo(r*0.35, cy + r*0.3);
     c.quadraticCurveTo(r*0.7, cy - r*0.3, r*0.55, cy - r*0.95);
@@ -3927,14 +4697,12 @@ function drawCrown(c, r, crown, t){
 
   } else if(kind === 'singleHorn'){
     c.fillStyle = '#F0E0C0';
-    /* قرن وحيد من منتصف الجبهة */
     c.beginPath();
     c.moveTo(-r*0.12, cy + r*0.2);
     c.quadraticCurveTo(-r*0.15, cy - r*0.5, 0, cy - r*1.0);
     c.quadraticCurveTo(r*0.15, cy - r*0.5, r*0.12, cy + r*0.2);
     c.closePath();
     c.fill();
-    /* خطوط الحلزون */
     c.strokeStyle = 'rgba(0,0,0,0.15)';
     c.lineWidth = 1;
     for(let i=0;i<4;i++){
@@ -3951,7 +4719,6 @@ function drawCrown(c, r, crown, t){
    ==================== Character drawing ====================
    ============================================================ */
 function drawCharacterBody(c, r, skin, t){
-  /* ➕ إذا كان هناك صورة مخصصة، استخدمها */
   if(skin.imageData){
     const img = getImageEl(skin.imageData);
     if(img.complete && img.naturalWidth > 0){
@@ -3959,13 +4726,13 @@ function drawCharacterBody(c, r, skin, t){
       c.drawImage(img, -size/2, -size/2, size, size);
       return;
     } else {
-      /* صورة قيد التحميل — ارسم دائرة بديلة */
       c.fillStyle = skin.body;
       c.beginPath(); c.arc(0,0,r,0,Math.PI*2); c.fill();
       return;
     }
   }
-    const rainbow = skin.rainbow;
+
+  const rainbow = skin.rainbow;
   c.fillStyle = 'rgba(0,0,0,0.12)';
   c.beginPath(); c.arc(0, 1.5, r + 0.8, 0, Math.PI*2); c.fill();
 
@@ -4009,8 +4776,8 @@ function drawCharacterBody(c, r, skin, t){
 }
 
 function drawCharacterFace(c, r, skin){
-  if(skin.imageData) return; /* التخطي للصورة المخصصة */
-    const eyeY = -r*0.15, eyeX = r*0.28, eyeR = r*0.24;
+  if(skin.imageData) return;
+  const eyeY = -r*0.15, eyeX = r*0.28, eyeR = r*0.24;
   c.fillStyle = '#FFFFFF';
   c.beginPath(); c.arc(-eyeX, eyeY, eyeR, 0, Math.PI*2); c.arc( eyeX, eyeY, eyeR, 0, Math.PI*2); c.fill();
   c.fillStyle = skin.detail;
@@ -4221,10 +4988,8 @@ function renderCharacter(c, r, skin, opts){
   c.save();
   c.globalAlpha = alpha;
 
-  /* ➕ 1) AURA (قبل الدوران) */
   if(!skipExtras) drawAura(c, r, aura, G.t);
 
-  /* ➕ 2) CAPE (قبل الدوران - يبقى خلف الشخصية في العالم) */
   if(!skipExtras && cape.id !== 'none' && P.cape){
     drawCape(c, r, cape, G.t, P.x, P.y);
   }
@@ -4262,7 +5027,6 @@ function renderCharacter(c, r, skin, opts){
     drawCharacterAccessory(c, r, skin, G.t);
   }
 
-  /* ➕ 3) CROWN (فوق الرأس) */
   if(!skipExtras && !skin.imageData) drawCrown(c, r, crown, G.t);
 
   c.restore();
@@ -4376,39 +5140,52 @@ function drawPlayer(){
    ============================================================ */
 function drawSky(){
   const s = G.currentScene;
-  
-  /* ✅ نسبة الارتفاع الحالي (0 = على الأرض، 1 = فضاء) */
+
+  /* ═══ تحت الأرض: املأ الشاشة بلون خلفية الأعماق ═══ */
+  if(G.realm === REALM.UNDERGROUND || G.camYUnder > 20){
+    const layer = UNDER_REALM.layers[G.underLayerIdx] || UNDER_REALM.layers[0];
+    ctx.fillStyle = layer.bgBot || '#000000';
+    ctx.fillRect(0, 0, W, H);
+    return;
+  }
+
+  /* ═══ في السماء: خلفية بلون الطبقة ═══ */
+  if(G.realm === REALM.SKY){
+    const layer = SKY_REALM.layers[G.skyLayerIdx];
+    const g = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+    g.addColorStop(0, layer.sky);
+    g.addColorStop(1, layer.skyBot);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, GROUND_Y);
+    return;
+  }
+
   const altN = clamp(G.camY / 700, 0, 1);
-  
-  /* ✅ حساب ألوان السماء حسب الارتفاع */
-  let skyTop, skyBot, starBoost = 0, fogColor = null, fogAlpha = 0;
-  
+
+  let skyTop, skyBot, starBoost = 0;
+
   if(altN < 0.35){
-    /* طبقة 1: جو العالم الطبيعي */
     const t = altN / 0.35;
     skyTop = mixColor(s.sky, '#A8D8FF', t * 0.55);
     skyBot = mixColor(s.skyBot || s.sky, '#70A8E0', t * 0.55);
   } else if(altN < 0.65){
-    /* طبقة 2: الغلاف الجوي العلوي */
     const t = (altN - 0.35) / 0.3;
     skyTop = mixColor('#A8D8FF', '#2A3A80', t);
     skyBot = mixColor('#70A8E0', '#101840', t);
     starBoost = t * 0.5;
   } else {
-    /* طبقة 3: الفضاء */
     const t = (altN - 0.65) / 0.35;
     skyTop = mixColor('#2A3A80', '#040418', t);
     skyBot = mixColor('#101840', '#0A0420', t);
     starBoost = 0.5 + t * 0.5;
   }
-  
+
   const g = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
   g.addColorStop(0, skyTop);
   g.addColorStop(1, skyBot);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, GROUND_Y);
-  
-  /* ✅ النجوم */
+
   const totalStars = Math.min((s.starAmount || 0) + starBoost, 1);
   if(totalStars > 0.01){
     for(const st of G.stars){
@@ -4420,11 +5197,10 @@ function drawSky(){
     }
     ctx.globalAlpha = 1;
   }
-  
-  /* ✅ الشمس/القمر: يصغران مع الارتفاع */
+
   const celX = W * 0.75, celY = H * 0.18;
   const celScale = Math.max(0.35, 1 - altN * 0.65);
-  
+
   if(s.moonAmount < 0.99){
     const sunA = (1 - s.moonAmount) * (1 - altN * 0.7);
     if(sunA > 0.02){
@@ -4457,8 +5233,7 @@ function drawSky(){
       ctx.globalAlpha = 1;
     }
   }
-  
-  /* ✅ طبقة "الأفق المتوهج" — تظهر عند الارتفاع المتوسط */
+
   if(altN > 0.2 && altN < 0.8){
     const horizonA = Math.sin((altN - 0.2) / 0.6 * Math.PI) * 0.35;
     const horizon = ctx.createLinearGradient(0, GROUND_Y * 0.75, 0, GROUND_Y);
@@ -4471,25 +5246,24 @@ function drawSky(){
 
 function drawHills(){
   const s = G.currentScene;
-  
-  /* ✅ التلال تختفي تدريجياً عند الصعود */
   const hillsFade = clamp(1 - G.camY / 500, 0, 1);
   if(hillsFade <= 0.01) return;
-  
+  if(G.realm === REALM.UNDERGROUND || G.realm === REALM.SKY) return;
+  if(G.camYUnder > 20) return;   /* ⬅️ أضف هذا السطر */
+
   const layers = [
     { color:s.hillFar,  baseY:H*0.52, amp:30, freq:0.005, phase:0,   speed:0.15, depth:1.0, parallax:0.15 },
     { color:s.hillMid,  baseY:H*0.65, amp:34, freq:0.008, phase:1.6, speed:0.35, depth:0.65, parallax:0.30 },
     { color:s.hillNear, baseY:H*0.78, amp:26, freq:0.012, phase:3.2, speed:0.6,  depth:0.35, parallax:0.50 }
   ];
-  
+
   for(const L of layers){
     const alpha = hillsFade * L.depth;
     if(alpha <= 0.01) continue;
-    
-    /* ✅ Parallax: كل طبقة تتحرك بسرعة مختلفة */
+
     ctx.save();
     ctx.translate(0, G.camY * L.parallax);
-    
+
     ctx.globalAlpha = alpha;
     ctx.fillStyle = L.color;
     ctx.beginPath();
@@ -4503,42 +5277,501 @@ function drawHills(){
     ctx.lineTo(W + 20, GROUND_Y);
     ctx.closePath();
     ctx.fill();
-    
+
     ctx.restore();
     ctx.globalAlpha = 1;
   }
 }
 
+function drawUnderworld(){
+  if(G.realm !== REALM.UNDERGROUND && G.camYUnder < 10) return;
+
+  const layer = UNDER_REALM.layers[G.underLayerIdx] || UNDER_REALM.layers[0];
+
+  const worldTop = Math.min(GROUND_Y - 80, G.camYUnder - 200);
+  const worldBot = G.camYUnder + H + 400;
+
+  /* ═══ 1) الخلفية المتدرجة ═══ */
+  const bg = ctx.createLinearGradient(0, worldTop, 0, worldBot);
+  bg.addColorStop(0,   layer.bg    || '#1A0E08');
+  bg.addColorStop(0.6, mixColor(layer.bg || '#1A0E08', layer.bgBot || '#000', 0.5));
+  bg.addColorStop(1,   layer.bgBot || '#000000');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, worldTop, W, worldBot - worldTop);
+
+  /* ═══ 2) جبال بعيدة في العمق (parallax بطيء) ═══ */
+  {
+    const farColor = mixColor(layer.wall, '#000', 0.65);
+    ctx.save();
+    ctx.globalAlpha = 0.4;
+    ctx.fillStyle = farColor;
+    const off = (G.dist * 0.05) % W;
+    const midWorld = G.camYUnder + H * 0.5;
+    const farBase = midWorld + 200;
+    ctx.beginPath();
+    ctx.moveTo(-40, farBase);
+    for(let x = -40; x <= W + 40; x += 30){
+      const wx = x + off;
+      const h = 120 + Math.abs(Math.sin(wx * 0.004)) * 180 + Math.sin(wx * 0.009) * 60;
+      ctx.lineTo(x, farBase - h);
+    }
+    ctx.lineTo(W + 40, farBase);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /* ═══ 3) طبقات صخرية (parallax) ═══ */
+  const rockLayers = [
+    { speed: 0.15, offset: 0,   color: mixColor(layer.wall, '#000', 0.4), amp: 55, freq: 0.006, alpha: 0.45 },
+    { speed: 0.35, offset: 130, color: layer.wall,                        amp: 75, freq: 0.010, alpha: 0.65 },
+    { speed: 0.60, offset: 300, color: layer.wallDark,                    amp: 95, freq: 0.014, alpha: 0.85 }
+  ];
+
+  for(const L of rockLayers){
+    const off = (G.dist * L.speed) % W;
+    ctx.save();
+    ctx.globalAlpha = L.alpha;
+    ctx.fillStyle = L.color;
+
+    const topBase = worldTop + L.offset;
+    ctx.beginPath();
+    ctx.moveTo(-20, topBase);
+    for(let x = -20; x <= W + 20; x += 22){
+      const wx = x + off;
+      const h = 35 + Math.abs(Math.sin(wx * L.freq + L.offset * 0.01)) * L.amp
+              + Math.sin(wx * L.freq * 2.3) * L.amp * 0.3;
+      ctx.lineTo(x, topBase + h);
+    }
+    ctx.lineTo(W + 20, topBase);
+    ctx.closePath();
+    ctx.fill();
+
+    const botBase = worldBot - L.offset;
+    ctx.beginPath();
+    ctx.moveTo(-20, botBase);
+    for(let x = -20; x <= W + 20; x += 22){
+      const wx = x + off;
+      const h = 35 + Math.abs(Math.cos(wx * L.freq + L.offset * 0.01)) * L.amp
+              + Math.cos(wx * L.freq * 2.1) * L.amp * 0.3;
+      ctx.lineTo(x, botBase - h);
+    }
+    ctx.lineTo(W + 20, botBase);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  /* ═══ 4) جسور صخرية طويلة في المنتصف ═══ */
+  {
+    const accent = layer.accent || '#FF8060';
+    const wall = layer.wall;
+    const wallDark = layer.wallDark;
+    
+    /* 3 جسور موزعة عمودياً */
+    for(let i = 0; i < 3; i++){
+      const seed = i * 971;
+      const worldY = G.camYUnder + H * (0.3 + i * 0.25);
+      const parallax = 0.25 + i * 0.15;
+      const off = (G.dist * parallax + seed) % (W * 2);
+      const bx = W + 100 - off;
+      
+      if(bx > -500 && bx < W + 500){
+        const bw = 180 + (i % 2) * 120;
+        const bh = 14;
+        
+        /* الظل */
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.fillRect(bx + 6, worldY + 6, bw, bh);
+        
+        /* الجسم */
+        ctx.fillStyle = wall;
+        ctx.fillRect(bx, worldY, bw, bh);
+        
+        /* حافة سفلية داكنة */
+        ctx.fillStyle = wallDark;
+        ctx.fillRect(bx, worldY + bh - 4, bw, 4);
+        
+        /* حافة علوية مضيئة */
+        ctx.fillStyle = accent;
+        ctx.globalAlpha = 0.5;
+        ctx.fillRect(bx, worldY, bw, 2);
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+
+  /* ═══ 5) بلورات لامعة كبيرة ═══ */
+  for(let i = 0; i < 14; i++){
+    const seed = i * 133;
+    const parallax = 0.4 + (i % 3) * 0.15;
+    const baseX = (seed * 47) % W;
+    const x = ((baseX - G.dist * parallax * 0.3) % W + W) % W;
+
+    const worldY = G.camYUnder + 80 + ((seed * 71) % Math.max(1, H - 160));
+    const size = 8 + (i % 4) * 4;
+    const pulse = 0.5 + Math.sin(G.t * 0.05 + i * 1.3) * 0.5;
+    const accent = layer.accent || '#FF8060';
+
+    ctx.save();
+    ctx.globalAlpha = 0.7 * pulse;
+    ctx.fillStyle = accent;
+    ctx.shadowColor = accent;
+    ctx.shadowBlur = 20;
+    ctx.beginPath();
+    for(let k = 0; k < 6; k++){
+      const a = (k / 6) * Math.PI * 2;
+      const rr = k % 2 === 0 ? size : size * 0.5;
+      const px = x + Math.cos(a) * rr;
+      const py = worldY + Math.sin(a) * rr;
+      k === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /* ═══ 6) عروق معدنية على الجدران ═══ */
+  for(let i = 0; i < 20; i++){
+    const seed = i * 271;
+    const baseX = (seed * 37) % W;
+    const parallax = 0.5 + (i % 4) * 0.1;
+    const x = ((baseX - G.dist * parallax * 0.4) % W + W) % W;
+    const worldY = G.camYUnder + 40 + ((seed * 89) % Math.max(1, H - 80));
+    const size = 1.5 + (i % 3) * 0.8;
+    const glow = 0.4 + Math.sin(G.t * 0.1 + i) * 0.3;
+    
+    ctx.save();
+    ctx.globalAlpha = glow;
+    ctx.fillStyle = layer.accent || '#FFD060';
+    ctx.shadowColor = layer.accent || '#FFD060';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(x, worldY, size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /* ═══ 7) غبار متحرك ═══ */
+  for(let i = 0; i < 60; i++){
+    const seed = i * 73;
+    const baseX = (seed * 37) % W;
+    const x = ((baseX - G.dist * 0.15) % W + W) % W;
+
+    const yJitter = (seed * 91) % Math.max(1, H - 100);
+    const worldY = G.camYUnder + 50 + yJitter + Math.sin(G.t * 0.02 + i * 0.7) * 18;
+    const sz = 1 + (i % 3) * 0.9;
+    const alpha = 0.15 + (i % 4) * 0.08;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = layer.accent || '#FF8060';
+    ctx.beginPath();
+    ctx.arc(x, worldY, sz, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /* ═══ 8) توهج حول اللاعب ═══ */
+  if(G.realm === REALM.UNDERGROUND && G.state === 'PLAYING'){
+    const accent = layer.accent || '#FF8060';
+    ctx.save();
+    const glow = ctx.createRadialGradient(P.x, P.y, 40, P.x, P.y, 340);
+    glow.addColorStop(0,   accent + '44');
+    glow.addColorStop(0.5, accent + '11');
+    glow.addColorStop(1,   'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(P.x, P.y, 340, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawUnderTerrain(){
+  if(G.realm !== REALM.UNDERGROUND && G.camYUnder < 20) return;
+  
+  const layer = UNDER_REALM.layers[G.underLayerIdx] || UNDER_REALM.layers[0];
+  const layerId = layer.id;
+  const accent = layer.accent || '#FF8060';
+  const wall = layer.wall;
+  const wallDark = layer.wallDark;
+  
+  const worldTop = G.camYUnder - 150;
+  const worldBot = G.camYUnder + H + 150;
+  
+  /* نطاق الطوابق المرئية */
+  let iLow = Math.max(0, Math.floor((worldTop - GROUND_Y) / UNDER_FLOOR_SPACING) - 1);
+  let iHigh = Math.floor((worldBot - GROUND_Y) / UNDER_FLOOR_SPACING) + 1;
+  if(iHigh - iLow > 12) iHigh = iLow + 12;
+  
+  for(let idx = iLow; idx <= iHigh; idx++){
+    const floorY = getUnderFloorWorldY(idx);
+    const worldOffset = idx * 431;
+    
+    /* ═══ عناصر كل 3 طوابق: عمود ضخم ═══ */
+    if(idx % 3 === 0){
+      const pillarWorldX = (Math.floor(G.dist / 500) * 500) + (idx * 200);
+      const px = pillarWorldX - G.dist;
+      
+      if(px > -200 && px < W + 200){
+        const pw = 60 + (idx % 3) * 15;
+        const ph = UNDER_COLUMN_HEIGHT;
+        const py = floorY - ph;
+        
+        /* الظل */
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.fillRect(px + 8, py + 8, pw, ph);
+        
+        /* العمود */
+        ctx.fillStyle = wall;
+        ctx.fillRect(px, py, pw, ph);
+        
+        /* حافة داكنة */
+        ctx.fillStyle = wallDark;
+        ctx.fillRect(px + pw - 8, py, 8, ph);
+        
+        /* خطوط أفقية */
+        ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+        ctx.lineWidth = 2;
+        for(let ly = py + 20; ly < py + ph - 10; ly += 30){
+          ctx.beginPath();
+          ctx.moveTo(px + 4, ly);
+          ctx.lineTo(px + pw - 4, ly);
+          ctx.stroke();
+        }
+        
+        /* نقاط مضيئة على العمود */
+        ctx.fillStyle = accent;
+        ctx.globalAlpha = 0.6 + Math.sin(G.t * 0.1 + idx) * 0.3;
+        for(let i = 0; i < 3; i++){
+          ctx.beginPath();
+          ctx.arc(px + 15 + i * 18, py + 40 + i * 40, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      }
+    }
+    
+    /* ═══ عناصر كل 5 طوابق: هيكل عظمي/أطلال ═══ */
+    if(idx % 5 === 2){
+      const ruinWorldX = (Math.floor(G.dist / 700) * 700) + (idx * 350);
+      const rx = ruinWorldX - G.dist;
+      
+      if(rx > -300 && rx < W + 300){
+        const rw = 280;
+        const rh = 120;
+        const ry = floorY - rh;
+        
+        /* جدار متهدم */
+        ctx.fillStyle = wallDark;
+        ctx.beginPath();
+        ctx.moveTo(rx, ry + 30);
+        ctx.lineTo(rx + 40, ry);
+        ctx.lineTo(rx + 80, ry + 20);
+        ctx.lineTo(rx + 130, ry - 10);
+        ctx.lineTo(rx + 180, ry + 25);
+        ctx.lineTo(rx + 240, ry + 5);
+        ctx.lineTo(rx + rw, ry + 35);
+        ctx.lineTo(rx + rw, ry + rh);
+        ctx.lineTo(rx, ry + rh);
+        ctx.closePath();
+        ctx.fill();
+        
+        /* شقوق */
+        ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+        ctx.lineWidth = 2;
+        for(let i = 0; i < 5; i++){
+          ctx.beginPath();
+          ctx.moveTo(rx + 30 + i * 50, ry + 20);
+          ctx.lineTo(rx + 40 + i * 50, ry + rh);
+          ctx.stroke();
+        }
+        
+        /* نقاط مضيئة (أضواء قديمة) */
+        ctx.fillStyle = accent;
+        ctx.globalAlpha = 0.5 + Math.sin(G.t * 0.08 + idx) * 0.3;
+        for(let i = 0; i < 3; i++){
+          ctx.beginPath();
+          ctx.arc(rx + 60 + i * 80, ry + 60, 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      }
+    }
+    
+    /* ═══ عناصر كل 7 طوابق: بحيرة حمم/بلورات (حسب الطبقة) ═══ */
+    if(idx % 7 === 3){
+      const poolWorldX = (Math.floor(G.dist / 900) * 900) + (idx * 450);
+      const px2 = poolWorldX - G.dist;
+      
+      if(px2 > -250 && px2 < W + 250){
+        const pw = 220;
+        const ph = 30;
+        const py = floorY - ph;
+        
+        /* لون الحوض حسب الطبقة */
+        let poolColor1 = accent;
+        let poolColor2 = wall;
+        if(layerId === 'magma' || layerId === 'core'){
+          poolColor1 = '#FF5020';
+          poolColor2 = '#8E2018';
+        } else if(layerId === 'abyss' || layerId === 'void'){
+          poolColor1 = '#A080FF';
+          poolColor2 = '#302060';
+        } else {
+          poolColor1 = '#40E8D0';
+          poolColor2 = '#1A6050';
+        }
+        
+        /* حوض الحمم/البلورات */
+        const grad = ctx.createLinearGradient(px2, py, px2, py + ph);
+        grad.addColorStop(0, poolColor1);
+        grad.addColorStop(1, poolColor2);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.ellipse(px2 + pw/2, py + ph/2, pw/2, ph/2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        /* توهج */
+        const glow = ctx.createRadialGradient(px2 + pw/2, py, 5, px2 + pw/2, py, pw * 0.7);
+        glow.addColorStop(0, poolColor1 + '88');
+        glow.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(px2 + pw/2, py, pw * 0.7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+}
+
+function drawUnderFloors(){
+  if(G.realm !== REALM.UNDERGROUND && G.camYUnder < 20) return;
+  
+  const layer = UNDER_REALM.layers[G.underLayerIdx] || UNDER_REALM.layers[0];
+  
+  const viewTop = G.camYUnder - 100;
+  const viewBot = G.camYUnder + H + 100;
+  
+  let iLow = Math.max(0, Math.floor((viewTop - GROUND_Y) / UNDER_FLOOR_SPACING) - 1);
+  let iHigh = Math.floor((viewBot - GROUND_Y) / UNDER_FLOOR_SPACING) - 1;
+  
+  if(iHigh < iLow) return;
+  if(iHigh - iLow > 30) iHigh = iLow + 30;
+  
+  const thick = UNDER_FLOOR_THICKNESS;
+  const wall = layer.wall;
+  const wallDark = layer.wallDark;
+  const accent = layer.accent;
+  
+  for(let idx = iLow; idx <= iHigh; idx++){
+    const worldY = getUnderFloorWorldY(idx);
+    const worldOffset = idx * 431;
+    
+    const worldStartX = G.dist - 100;
+    const worldEndX = G.dist + W + 100;
+    
+    /* ═══ حدّد نوع الطابق ═══ */
+    const isChamber = (idx % UNDER_CHAMBER_EVERY === 0) && (idx > 0);
+    const holeWidth = isChamber ? UNDER_CHAMBER_HOLE_WIDTH : UNDER_FLOOR_HOLE_WIDTH;
+    const holePeriod = isChamber ? UNDER_FLOOR_HOLE_PERIOD * 1.5 : UNDER_FLOOR_HOLE_PERIOD;
+    
+    let nLow = Math.floor((worldStartX - worldOffset) / holePeriod) - 1;
+    let nHigh = Math.ceil((worldEndX - worldOffset) / holePeriod) + 1;
+    if(nHigh - nLow > 20) nHigh = nLow + 20;
+    
+    for(let n = nLow; n <= nHigh; n++){
+      const segStart = worldOffset + n * holePeriod + holeWidth;
+      const segEnd = worldOffset + (n + 1) * holePeriod;
+      
+      const sx1 = segStart - G.dist;
+      const sx2 = segEnd - G.dist;
+      
+      if(sx2 < -50 || sx1 > W + 50) continue;
+      
+      const x1 = Math.max(-50, sx1);
+      const x2 = Math.min(W + 50, sx2);
+      const w = x2 - x1;
+      if(w <= 0) continue;
+      
+      /* جسم الطابق */
+      ctx.fillStyle = wall;
+      ctx.fillRect(x1, worldY, w, thick);
+      
+      /* حافة سفلية داكنة */
+      ctx.fillStyle = wallDark;
+      ctx.fillRect(x1, worldY + thick - 5, w, 5);
+      
+      /* حافة علوية مضيئة */
+      ctx.fillStyle = accent;
+      ctx.globalAlpha = 0.6;
+      ctx.fillRect(x1, worldY, w, 2);
+      ctx.globalAlpha = 1;
+      
+      /* خطوط صخرية */
+      ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+      ctx.lineWidth = 1;
+      for(let cx = x1 + 40; cx < x2 - 20; cx += 90){
+        ctx.beginPath();
+        ctx.moveTo(cx, worldY + 4);
+        ctx.lineTo(cx + 7, worldY + thick - 6);
+        ctx.stroke();
+      }
+    }
+    
+    /* حواف الحفر مضيئة */
+    /* حواف الحفر مضيئة */
+    for(let n = nLow; n <= nHigh; n++){
+      const holeStart = worldOffset + n * holePeriod;
+      const holeEnd = holeStart + holeWidth;
+      
+      const sx1 = holeStart - G.dist;
+      const sx2 = holeEnd - G.dist;
+      
+      if(sx1 > -50 && sx1 < W + 50){
+        ctx.fillStyle = accent;
+        ctx.globalAlpha = 0.85;
+        ctx.fillRect(sx1 - 2, worldY, 2, thick);
+        ctx.globalAlpha = 1;
+      }
+      if(sx2 > -50 && sx2 < W + 50){
+        ctx.fillStyle = accent;
+        ctx.globalAlpha = 0.85;
+        ctx.fillRect(sx2, worldY, 2, thick);
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+}
+
 function drawClouds(){
   const s = G.currentScene;
-  
-  /* ✅ السحاب يزيد ثم يختفي */
   const altN = G.camY / 900;
+  if(G.realm === REALM.UNDERGROUND || G.realm === REALM.SKY) return;
+  if(G.camYUnder > 20) return;   /* ⬅️ أضف هذا السطر */
   let cloudAlpha;
   if(altN < 0.5){
-    /* يزيد من 1.0 إلى 1.5 */
     cloudAlpha = 1.0 + altN * 1.0;
   } else {
-    /* يختفي تدريجياً */
     cloudAlpha = Math.max(0, 1.5 - (altN - 0.5) * 3);
   }
   if(cloudAlpha <= 0.01) return;
-  
-  /* ✅ Parallax: السحاب يتحرك مع الكاميرا */
+
   ctx.save();
   ctx.translate(0, G.camY * 0.65);
-  
+
   for(const c of clouds){
     c.x -= c.v * G.speed * 0.4;
     if(c.x < -140*c.s){
       c.x = W + 100*c.s;
       c.y = rand(H*0.08, H*0.32);
     }
-    
+
     const w = 60*c.s, h = 22*c.s;
     const alpha = Math.min(1, c.a * cloudAlpha * 0.85);
-    
-    /* ظل */
+
     ctx.globalAlpha = alpha * 0.35;
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath();
@@ -4547,8 +5780,7 @@ function drawClouds(){
     ctx.arc(c.x+w*0.7+2, c.y+4, h*0.85, 0, Math.PI*2);
     ctx.arc(c.x+w*0.35+2, c.y+h*0.15+4, h*0.9, 0, Math.PI*2);
     ctx.fill();
-    
-    /* الجسم */
+
     ctx.globalAlpha = alpha;
     ctx.fillStyle = s.cloud;
     ctx.beginPath();
@@ -4558,29 +5790,24 @@ function drawClouds(){
     ctx.arc(c.x+w*0.35, c.y+h*0.15, h*0.9, 0, Math.PI*2);
     ctx.fill();
   }
-  
+
   ctx.restore();
   ctx.globalAlpha = 1;
 }
 
-/* ============================================================
-   ==================== DRAW SKY DECOR =======================
-   ============================================================ */
 function drawSkyDecor(){
-  /* ✅ تظهر فقط عند الصعود */
   const altN = clamp((G.camY - 100) / 500, 0, 1);
   if(altN <= 0.01) return;
-  
+  if(G.camYUnder > 20) return;   /* ⬅️ أضف هذا السطر */
+
   for(const d of G.skyDecor){
-    /* Parallax فردي */
     ctx.save();
     ctx.translate(0, G.camY * d.parallax);
-    
+
     if(d.type === 'planet'){
       const pulse = 0.85 + Math.sin(G.t * 0.02 + d.r) * 0.15;
       const alpha = altN * pulse;
-      
-      /* هالة الكوكب */
+
       ctx.globalAlpha = alpha * 0.4;
       const grad = ctx.createRadialGradient(d.x, d.y, d.r * 0.3, d.x, d.y, d.r * 2);
       grad.addColorStop(0, `hsl(${d.hue}, 70%, 65%)`);
@@ -4589,8 +5816,7 @@ function drawSkyDecor(){
       ctx.beginPath();
       ctx.arc(d.x, d.y, d.r * 2, 0, Math.PI*2);
       ctx.fill();
-      
-      /* الجسم */
+
       ctx.globalAlpha = alpha;
       const bodyGrad = ctx.createRadialGradient(
         d.x - d.r*0.3, d.y - d.r*0.3, d.r*0.1,
@@ -4603,8 +5829,7 @@ function drawSkyDecor(){
       ctx.beginPath();
       ctx.arc(d.x, d.y, d.r, 0, Math.PI*2);
       ctx.fill();
-      
-      /* حلقة */
+
       if(d.ringed){
         ctx.globalAlpha = alpha * 0.7;
         ctx.strokeStyle = `hsl(${d.hue}, 60%, 70%)`;
@@ -4621,8 +5846,7 @@ function drawSkyDecor(){
       ctx.beginPath();
       ctx.arc(d.x, d.y, d.r, 0, Math.PI*2);
       ctx.fill();
-      
-      /* فوهة */
+
       ctx.fillStyle = 'rgba(0,0,0,0.15)';
       ctx.beginPath();
       ctx.arc(d.x - d.r*0.3, d.y - d.r*0.2, d.r*0.25, 0, Math.PI*2);
@@ -4632,11 +5856,10 @@ function drawSkyDecor(){
     else if(d.type === 'comet'){
       d.x -= d.speed * G.speed * 0.5;
       if(d.x < -150){ d.x = W + 150; }
-      
+
       const alpha = altN * 0.8;
       ctx.globalAlpha = alpha;
-      
-      /* الذيل */
+
       const tailGrad = ctx.createLinearGradient(
         d.x, d.y,
         d.x + d.len * Math.cos(d.angle), d.y + d.len * Math.sin(d.angle)
@@ -4650,8 +5873,7 @@ function drawSkyDecor(){
       ctx.moveTo(d.x, d.y);
       ctx.lineTo(d.x + d.len * Math.cos(d.angle), d.y + d.len * Math.sin(d.angle));
       ctx.stroke();
-      
-      /* الرأس */
+
       ctx.fillStyle = '#FFFFFF';
       ctx.beginPath();
       ctx.arc(d.x, d.y, 3, 0, Math.PI*2);
@@ -4669,7 +5891,7 @@ function drawSkyDecor(){
       ctx.arc(d.x, d.y, d.r, 0, Math.PI*2);
       ctx.fill();
     }
-    
+
     ctx.restore();
   }
   ctx.globalAlpha = 1;
@@ -4677,6 +5899,23 @@ function drawSkyDecor(){
 
 function drawGround(){
   const s = G.currentScene;
+
+  /* ═══ في السماء: الأرض مخفية، والخلفية بلون طبقة السماء ═══ */
+  if(G.realm === REALM.SKY){
+    const layer = SKY_REALM.layers[G.skyLayerIdx];
+    ctx.fillStyle = layer.wallDark;
+    ctx.fillRect(0, GROUND_Y, W, H);   /* ملء الشاشة بأكملها */
+    return;
+  }
+
+  /* ═══ تحت الأرض: ارسم فقط حافة الحفر ═══ */
+  if(G.realm === REALM.UNDERGROUND || G.camYUnder > 20){
+    ctx.fillStyle = s.ground;
+    ctx.fillRect(0, GROUND_Y - 20, W, 20);
+    ctx.fillStyle = s.groundDark;
+    ctx.fillRect(0, GROUND_Y, W, 6);
+    return;
+  }
 
   if(G.mode === 'FLIP_WALK'){
     ctx.fillStyle = s.groundDark;
@@ -4832,26 +6071,114 @@ function drawTunnelObstacle(o){
   roundRect(ctx, o.x+2, botY+3, o.w*0.4, 4, 2); ctx.fill();
 }
 
+function drawShiftGate(o){
+  const pulse = 0.6 + Math.sin(o.t * 0.1) * 0.4;
+  const col = o.gateColor;
+  const topY = CEILING_H + 20;
+  const botY = GROUND_Y - 20;
+  const cx = o.x + o.w/2;
+
+  ctx.save();
+
+  ctx.globalAlpha = 0.35 * pulse;
+  const halo = ctx.createLinearGradient(o.x - 30, 0, o.x + o.w + 30, 0);
+  halo.addColorStop(0, 'rgba(0,0,0,0)');
+  halo.addColorStop(0.5, col);
+  halo.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = halo;
+  ctx.fillRect(o.x - 30, topY, o.w + 60, botY - topY);
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = col;
+  ctx.shadowColor = col;
+  ctx.shadowBlur = 20;
+  roundRect(ctx, o.x, topY, o.w, botY - topY, 22);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  ctx.globalAlpha = 0.6;
+  ctx.strokeStyle = '#FFFFFF';
+  ctx.lineWidth = 2;
+  for(let i = 0; i < 8; i++){
+    const y = topY + 30 + ((o.t * 3 + i * 40) % (botY - topY - 60));
+    ctx.beginPath();
+    ctx.moveTo(o.x + 6, y);
+    ctx.lineTo(o.x + o.w - 6, y);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = 'bold 28px "Space Grotesk", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor = '#FFFFFF';
+  ctx.shadowBlur = 12;
+  ctx.fillText(o.gateIcon, cx, (topY + botY) / 2);
+  ctx.shadowBlur = 0;
+
+  ctx.font = 'bold 11px "Space Grotesk", sans-serif';
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillText('SHIFT', cx, (topY + botY) / 2 + 30);
+
+  ctx.restore();
+}
+
 function drawWalkObstacle(o){
   const wall = o.color, dark = o.colorDark, accent = o.accent;
+  if(o.isShiftGate){ drawShiftGate(o); return; }
 
-  /* ============ منصة ============ */
+if(o.isGroundHole){
+  /* حفرة سوداء في الأرض */
+  const grad = ctx.createLinearGradient(0, GROUND_Y - 4, 0, H);
+  grad.addColorStop(0, '#000000');
+  grad.addColorStop(0.4, 'rgba(0,0,0,0.92)');
+  grad.addColorStop(1, 'rgba(10,4,4,0.75)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(o.x, GROUND_Y - 4, o.w, GROUND_H + 30);
+
+  /* حواف صخرية */
+  ctx.fillStyle = o.color || '#6A4838';
+  ctx.beginPath();
+  ctx.moveTo(o.x - 4, GROUND_Y - 4);
+  ctx.lineTo(o.x + 12, GROUND_Y + 12);
+  ctx.lineTo(o.x + 6, GROUND_Y - 6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(o.x + o.w + 4, GROUND_Y - 4);
+  ctx.lineTo(o.x + o.w - 12, GROUND_Y + 12);
+  ctx.lineTo(o.x + o.w - 6, GROUND_Y - 6);
+  ctx.closePath();
+  ctx.fill();
+
+  /* سهم ▼ نابض */
+  const pulse = 0.55 + Math.sin(G.t * 0.12) * 0.35;
+  ctx.globalAlpha = pulse;
+  ctx.fillStyle = '#FF8060';
+  ctx.shadowColor = '#FF8060';
+  ctx.shadowBlur = 15;
+  ctx.font = 'bold 26px "Space Grotesk", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('▼', o.x + o.w/2, GROUND_Y - 40 + Math.sin(G.t*0.1)*4);
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
+  return;
+}
+
   if(o.isPlatform){
     if(o.crumbled) return;
 
-    /* اهتزاز عند الانهيار الوشيك */
     let shakeX = 0;
     if(o.platformType === 'crumble' && o.crumbleTimer > 0){
       shakeX = (Math.random() - 0.5) * 3;
-      /* شقوق تظهر تدريجياً */
     }
 
     ctx.save();
     ctx.translate(shakeX, 0);
 
-    /* ✅ مؤثرات المصعد */
     if(o.isElevator){
-      /* هالة سماوية قوية */
       const pulse = 0.5 + Math.sin(G.t * 0.1) * 0.3;
       ctx.globalAlpha = pulse;
       const elevatorGlow = ctx.createRadialGradient(
@@ -4866,8 +6193,7 @@ function drawWalkObstacle(o){
       ctx.arc(o.x + o.w/2, o.y + o.h/2, o.w * 1.2, 0, Math.PI*2);
       ctx.fill();
       ctx.globalAlpha = 1;
-      
-      /* أسهم صاعدة على المنصة */
+
       ctx.save();
       ctx.globalAlpha = 0.6 + Math.sin(G.t * 0.15) * 0.3;
       ctx.strokeStyle = '#E0FFFF';
@@ -4882,8 +6208,7 @@ function drawWalkObstacle(o){
         ctx.stroke();
       }
       ctx.restore();
-      
-      /* مؤشر التقدم */
+
       if(o.isCarryingPlayer && !o.exhausted){
         const prog = o.risen / o.maxRise;
         ctx.fillStyle = 'rgba(0,0,0,0.3)';
@@ -4893,58 +6218,48 @@ function drawWalkObstacle(o){
       }
     }
 
-/* ✅ هالة للمنصات السماوية */
-if(o.isSkyPlatform && !o.isElevator){
-  const pulse = 0.3 + Math.sin(G.t * 0.08 + o.t * 0.02) * 0.2;
-  
-  /* ✅ هالة خاصة للسلالم */
-  const glowSize = o.isStaircase ? o.w * 0.9 : Math.max(o.w, 60);
-  const glowAlpha = o.isStaircase ? pulse * 0.7 : pulse;
-  
-  ctx.globalAlpha = glowAlpha;
-  const glowGrad = ctx.createRadialGradient(
-    o.x + o.w/2, o.y + o.h/2, 5,
-    o.x + o.w/2, o.y + o.h/2, glowSize
-  );
-  glowGrad.addColorStop(0, o.glow);
-  glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = glowGrad;
-  ctx.beginPath();
-  ctx.arc(o.x + o.w/2, o.y + o.h/2, glowSize, 0, Math.PI*2);
-  ctx.fill();
-  ctx.globalAlpha = 1;
-  
-  /* ✅ خط رأسي يربط المنصات المتسلسلة */
-  if(o.isStaircase && o.stairIndex > 0 && G.t % 2 === 0){
-    /* وميض أعلى المنصة يشير للخطوة التالية */
-    ctx.globalAlpha = 0.5 + Math.sin(G.t * 0.15) * 0.3;
-    ctx.fillStyle = o.accent;
-    ctx.beginPath();
-    ctx.arc(o.x + o.w/2, o.y - 8, 3, 0, Math.PI*2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-  }
-}
+    if(o.isSkyPlatform && !o.isElevator){
+      const pulse = 0.3 + Math.sin(G.t * 0.08 + o.t * 0.02) * 0.2;
+      const glowSize = o.isStaircase ? o.w * 0.9 : Math.max(o.w, 60);
+      const glowAlpha = o.isStaircase ? pulse * 0.7 : pulse;
 
-    /* ظل */
+      ctx.globalAlpha = glowAlpha;
+      const glowGrad = ctx.createRadialGradient(
+        o.x + o.w/2, o.y + o.h/2, 5,
+        o.x + o.w/2, o.y + o.h/2, glowSize
+      );
+      glowGrad.addColorStop(0, o.glow);
+      glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = glowGrad;
+      ctx.beginPath();
+      ctx.arc(o.x + o.w/2, o.y + o.h/2, glowSize, 0, Math.PI*2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      if(o.isStaircase && o.stairIndex > 0 && G.t % 2 === 0){
+        ctx.globalAlpha = 0.5 + Math.sin(G.t * 0.15) * 0.3;
+        ctx.fillStyle = o.accent;
+        ctx.beginPath();
+        ctx.arc(o.x + o.w/2, o.y - 8, 3, 0, Math.PI*2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    }
+
     ctx.fillStyle = 'rgba(0,0,0,0.18)';
     roundRect(ctx, o.x+3, o.y+5, o.w, o.h, 6); ctx.fill();
 
-    /* جسم المنصة */
     ctx.fillStyle = wall;
     roundRect(ctx, o.x, o.y, o.w, o.h, 6); ctx.fill();
 
-    /* سطح علوي */
     ctx.fillStyle = 'rgba(255,255,255,0.4)';
     roundRect(ctx, o.x+3, o.y+2, o.w-6, 3, 2); ctx.fill();
 
-    /* شريط لوني مميز */
     ctx.fillStyle = accent;
     ctx.globalAlpha = 0.9;
     roundRect(ctx, o.x+3, o.y+o.h-4, o.w-6, 2, 1); ctx.fill();
     ctx.globalAlpha = 1;
 
-    /* شقوق لمنصة crumble */
     if(o.platformType === 'crumble'){
       ctx.strokeStyle = 'rgba(0,0,0,0.4)';
       ctx.lineWidth = 1;
@@ -4958,27 +6273,24 @@ if(o.isSkyPlatform && !o.isElevator){
       }
     }
 
-/* ✅ رقم الخطوة على المنصات السماوية */
-if(o.isSkyPlatform){
-  ctx.save();
-  ctx.font = 'bold 11px "Space Grotesk", sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = o.accent;
-  ctx.shadowColor = o.glow;
-  ctx.shadowBlur = 8;
-  
-  if(o.isStaircase){
-    /* ✅ رمز موحد ↗ (لأن الاتجاه واحد دائماً) */
-    const symbol = o.isStaircaseLong ? '↟' : '↗';
-    ctx.fillText(`${symbol} ${o.stairIndex + 1}/${o.stairTotal}`, o.x + o.w/2, o.y + o.h/2);
-  } else {
-    ctx.fillText('★' + o.skyTier, o.x + o.w/2, o.y + o.h/2);
-  }
-  ctx.restore();
-}
+    if(o.isSkyPlatform){
+      ctx.save();
+      ctx.font = 'bold 11px "Space Grotesk", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = o.accent;
+      ctx.shadowColor = o.glow;
+      ctx.shadowBlur = 8;
 
-    /* نقاط للـ bouncy */
+      if(o.isStaircase){
+        const symbol = o.isStaircaseLong ? '↟' : '↗';
+        ctx.fillText(`${symbol} ${o.stairIndex + 1}/${o.stairTotal}`, o.x + o.w/2, o.y + o.h/2);
+      } else {
+        ctx.fillText('★' + o.skyTier, o.x + o.w/2, o.y + o.h/2);
+      }
+      ctx.restore();
+    }
+
     if(o.platformType === 'bouncy'){
       ctx.fillStyle = '#FFF4C0';
       for(let i=0;i<3;i++){
@@ -4990,7 +6302,6 @@ if(o.isSkyPlatform){
       }
     }
 
-    /* سلاسل للـ moving_y */
     if(o.platformType === 'moving_y'){
       ctx.strokeStyle = 'rgba(255,255,255,0.15)';
       ctx.lineWidth = 1.5;
@@ -5008,16 +6319,13 @@ if(o.isSkyPlatform){
     return;
   }
 
-  /* ============ سوسة ============ */
   if(o.isSpring){
     const baseY = GROUND_Y;
     const compress = Math.max(0, Math.sin(G.t*0.1) * 3);
 
-    /* القاعدة */
     ctx.fillStyle = dark;
     roundRect(ctx, o.x-2, baseY - 6, o.w+4, 6, 2); ctx.fill();
 
-    /* الزنبرك */
     ctx.strokeStyle = accent;
     ctx.lineWidth = 2.5;
     ctx.beginPath();
@@ -5030,13 +6338,11 @@ if(o.isSkyPlatform){
     }
     ctx.stroke();
 
-    /* القرص العلوي */
     ctx.fillStyle = wall;
     roundRect(ctx, o.x-4, baseY - o.h - 6 + compress, o.w+8, 8, 3); ctx.fill();
     ctx.fillStyle = accent;
     roundRect(ctx, o.x-2, baseY - o.h - 5 + compress, o.w+4, 3, 2); ctx.fill();
 
-    /* وميض */
     ctx.globalAlpha = 0.5 + Math.sin(G.t*0.15)*0.3;
     ctx.fillStyle = '#FFF4C0';
     ctx.beginPath();
@@ -5046,13 +6352,11 @@ if(o.isSkyPlatform){
     return;
   }
 
-  /* ============ شفرة دوّارة ============ */
   if(o.isSaw){
     ctx.save();
     ctx.translate(o.cx, o.cy);
     ctx.rotate(o.angle);
 
-    /* هالة حمراء */
     ctx.globalAlpha = 0.35;
     const halo = ctx.createRadialGradient(0,0,o.r*0.5, 0,0,o.r*1.6);
     halo.addColorStop(0, '#FF6040');
@@ -5061,7 +6365,6 @@ if(o.isSkyPlatform){
     ctx.beginPath(); ctx.arc(0,0,o.r*1.6,0,Math.PI*2); ctx.fill();
     ctx.globalAlpha = 1;
 
-    /* الأسنان */
     const teeth = 12;
     ctx.fillStyle = wall;
     ctx.beginPath();
@@ -5073,11 +6376,9 @@ if(o.isSkyPlatform){
     }
     ctx.closePath(); ctx.fill();
 
-    /* المركز */
     ctx.fillStyle = dark;
     ctx.beginPath(); ctx.arc(0,0,o.r*0.55,0,Math.PI*2); ctx.fill();
 
-    /* تفاصيل */
     ctx.fillStyle = accent;
     ctx.beginPath(); ctx.arc(0,0,o.r*0.22,0,Math.PI*2); ctx.fill();
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
@@ -5087,153 +6388,136 @@ if(o.isSkyPlatform){
     return;
   }
 
-  /* ============ مكبس ============ */
-if(o.isPiston){
-  const headH = 16;
-  const bodyY = o.isTop ? 0 : GROUND_Y - o.h;
-  const rodY = o.isTop ? o.h : GROUND_Y - o.h - o.extend;
-  const headY = o.isTop
-    ? o.h + o.extend
-    : GROUND_Y - o.h - o.extend - headH;
+  if(o.isPiston){
+    const headH = 16;
+    const bodyY = o.isTop ? 0 : GROUND_Y - o.h;
+    const rodY = o.isTop ? o.h : GROUND_Y - o.h - o.extend;
+    const headY = o.isTop
+      ? o.h + o.extend
+      : GROUND_Y - o.h - o.extend - headH;
 
-  /* جسم المكبس */
-  ctx.fillStyle = dark;
-  roundRect(ctx, o.x, bodyY, o.w, o.h, 4); ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,0.15)';
-  roundRect(ctx, o.x + 4, bodyY + 4, o.w - 8, 3, 1.5); ctx.fill();
+    ctx.fillStyle = dark;
+    roundRect(ctx, o.x, bodyY, o.w, o.h, 4); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    roundRect(ctx, o.x + 4, bodyY + 4, o.w - 8, 3, 1.5); ctx.fill();
 
-  /* القضيب */
-  if(o.extend > 0){
-    const rodW = o.w * 0.4;
-    const rodX = o.x + (o.w - rodW)/2;
-    ctx.fillStyle = '#909AA8';
-    ctx.fillRect(rodX, rodY, rodW, o.extend);
-    ctx.fillStyle = 'rgba(0,0,0,0.15)';
-    ctx.fillRect(rodX + rodW - 3, rodY, 3, o.extend);
-  }
-
-  /* الرأس */
-  ctx.fillStyle = accent;
-  roundRect(ctx, o.x + 4, headY, o.w - 8, headH, 3); ctx.fill();
-
-  /* خطوط تحذيرية */
-  ctx.strokeStyle = 'rgba(0,0,0,0.35)';
-  ctx.lineWidth = 1.5;
-  for(let i = 0; i < 4; i++){
-    const lx = o.x + 8 + i * ((o.w - 16) / 4);
-    ctx.beginPath();
-    ctx.moveTo(lx, headY + 2);
-    ctx.lineTo(lx + 4, headY + headH - 2);
-    ctx.stroke();
-  }
-
-  /* ✅ مسامير اختيارية */
-  if(o.hasSpikes){
-    ctx.fillStyle = '#C14A4A';
-    const spikeCount = 5;
-    for(let i = 0; i < spikeCount; i++){
-      const sx = o.x + 8 + i * ((o.w - 16) / (spikeCount - 1));
-      const spikeY = o.isTop ? headY + headH : headY;
-      const dir = o.isTop ? 1 : -1;
-      ctx.beginPath();
-      ctx.moveTo(sx - 3, spikeY);
-      ctx.lineTo(sx, spikeY + dir * 8);
-      ctx.lineTo(sx + 3, spikeY);
-      ctx.closePath();
-      ctx.fill();
+    if(o.extend > 0){
+      const rodW = o.w * 0.4;
+      const rodX = o.x + (o.w - rodW)/2;
+      ctx.fillStyle = '#909AA8';
+      ctx.fillRect(rodX, rodY, rodW, o.extend);
+      ctx.fillStyle = 'rgba(0,0,0,0.15)';
+      ctx.fillRect(rodX + rodW - 3, rodY, 3, o.extend);
     }
-  }
-  return;
-}
 
-  /* ============ شوكة ساقطة ============ */
-if(o.isFallingSpike){
-  ctx.save();
-  ctx.translate(o.x + o.w/2, o.y + o.h/2);
+    ctx.fillStyle = accent;
+    roundRect(ctx, o.x + 4, headY, o.w - 8, headH, 3); ctx.fill();
 
-  /* ✅ تحذير على الأرض عند مكان السقوط */
-  if(!o.falling){
-    const distToPlayer = o.x - P.x;
-    if(o.warned || (distToPlayer < o.triggerDistance + 100 && distToPlayer > 0)){
-      /* دائرة حمراء تنبض على الأرض */
-      const warnX = o.x + o.w/2;
-      const pulse = 0.4 + Math.sin(G.t * 0.4) * 0.4;
-      ctx.save();
-      ctx.globalAlpha = pulse;
-      ctx.fillStyle = '#FF3030';
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+    ctx.lineWidth = 1.5;
+    for(let i = 0; i < 4; i++){
+      const lx = o.x + 8 + i * ((o.w - 16) / 4);
       ctx.beginPath();
-      ctx.ellipse(warnX - (o.x + o.w/2), GROUND_Y - 4, 16, 4, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-
-      /* خط رأسي رفيع */
-      ctx.strokeStyle = `rgba(255,80,80,${pulse * 0.6})`;
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([4, 6]);
-      ctx.beginPath();
-      ctx.moveTo(0, -o.y + CEILING_H);
-      ctx.lineTo(0, GROUND_Y - o.y - o.h/2);
+      ctx.moveTo(lx, headY + 2);
+      ctx.lineTo(lx + 4, headY + headH - 2);
       ctx.stroke();
-      ctx.setLineDash([]);
     }
+
+    if(o.hasSpikes){
+      ctx.fillStyle = '#C14A4A';
+      const spikeCount = 5;
+      for(let i = 0; i < spikeCount; i++){
+        const sx = o.x + 8 + i * ((o.w - 16) / (spikeCount - 1));
+        const spikeY = o.isTop ? headY + headH : headY;
+        const dir = o.isTop ? 1 : -1;
+        ctx.beginPath();
+        ctx.moveTo(sx - 3, spikeY);
+        ctx.lineTo(sx, spikeY + dir * 8);
+        ctx.lineTo(sx + 3, spikeY);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+    return;
   }
 
-  /* هالة تحذيرية */
-  if(!o.falling && o.warned){
-    ctx.globalAlpha = 0.3 + Math.sin(G.t * 0.5) * 0.3;
-    const halo = ctx.createRadialGradient(0, 0, 2, 0, 0, 30);
-    halo.addColorStop(0, '#FF4040');
-    halo.addColorStop(1, 'rgba(255,64,64,0)');
-    ctx.fillStyle = halo;
-    ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.fill();
-    ctx.globalAlpha = 1;
+  if(o.isFallingSpike){
+    ctx.save();
+    ctx.translate(o.x + o.w/2, o.y + o.h/2);
+
+    if(!o.falling){
+      const distToPlayer = o.x - P.x;
+      if(o.warned || (distToPlayer < o.triggerDistance + 100 && distToPlayer > 0)){
+        const warnX = o.x + o.w/2;
+        const pulse = 0.4 + Math.sin(G.t * 0.4) * 0.4;
+        ctx.save();
+        ctx.globalAlpha = pulse;
+        ctx.fillStyle = '#FF3030';
+        ctx.beginPath();
+        ctx.ellipse(warnX - (o.x + o.w/2), GROUND_Y - 4, 16, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        ctx.strokeStyle = `rgba(255,80,80,${pulse * 0.6})`;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 6]);
+        ctx.beginPath();
+        ctx.moveTo(0, -o.y + CEILING_H);
+        ctx.lineTo(0, GROUND_Y - o.y - o.h/2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    if(!o.falling && o.warned){
+      ctx.globalAlpha = 0.3 + Math.sin(G.t * 0.5) * 0.3;
+      const halo = ctx.createRadialGradient(0, 0, 2, 0, 0, 30);
+      halo.addColorStop(0, '#FF4040');
+      halo.addColorStop(1, 'rgba(255,64,64,0)');
+      ctx.fillStyle = halo;
+      ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.fillStyle = wall;
+    ctx.beginPath();
+    ctx.moveTo(-o.w/2, -o.h/2);
+    ctx.lineTo( o.w/2, -o.h/2);
+    ctx.lineTo( o.w/2,  o.h/4);
+    ctx.lineTo( 0,      o.h/2);
+    ctx.lineTo(-o.w/2,  o.h/4);
+    ctx.closePath(); ctx.fill();
+
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.beginPath();
+    ctx.moveTo(-o.w/2+3, -o.h/2+3);
+    ctx.lineTo( 0,       -o.h/2+3);
+    ctx.lineTo( 0,       0);
+    ctx.lineTo(-o.w/2+3, 0);
+    ctx.closePath(); ctx.fill();
+
+    ctx.restore();
+    return;
   }
 
-  /* جسم الشوكة */
-  ctx.fillStyle = wall;
-  ctx.beginPath();
-  ctx.moveTo(-o.w/2, -o.h/2);
-  ctx.lineTo( o.w/2, -o.h/2);
-  ctx.lineTo( o.w/2,  o.h/4);
-  ctx.lineTo( 0,      o.h/2);
-  ctx.lineTo(-o.w/2,  o.h/4);
-  ctx.closePath(); ctx.fill();
-
-  ctx.fillStyle = 'rgba(255,255,255,0.3)';
-  ctx.beginPath();
-  ctx.moveTo(-o.w/2+3, -o.h/2+3);
-  ctx.lineTo( 0,       -o.h/2+3);
-  ctx.lineTo( 0,       0);
-  ctx.lineTo(-o.w/2+3, 0);
-  ctx.closePath(); ctx.fill();
-
-  ctx.restore();
-  return;
-}
-
-  /* ============ قضيب دوّار ============ */
   if(o.isRotBar){
     ctx.save();
     ctx.translate(o.cx, o.cy);
     ctx.rotate(o.angle);
 
-    /* الكرة المركزية */
     ctx.fillStyle = dark;
     ctx.beginPath(); ctx.arc(0,0,10,0,Math.PI*2); ctx.fill();
     ctx.fillStyle = accent;
     ctx.beginPath(); ctx.arc(0,0,4,0,Math.PI*2); ctx.fill();
 
-    /* القضيب */
     ctx.fillStyle = wall;
     roundRect(ctx, -o.length/2, -o.thickness/2, o.length, o.thickness, o.thickness/2);
     ctx.fill();
 
-    /* لمعة */
     ctx.fillStyle = 'rgba(255,255,255,0.3)';
     roundRect(ctx, -o.length/2 + 4, -o.thickness/2 + 2, o.length - 8, 3, 1.5);
     ctx.fill();
 
-    /* أسنان خطرة في الأطراف */
     ctx.fillStyle = accent;
     ctx.beginPath(); ctx.arc(-o.length/2 + 4, 0, 6, 0, Math.PI*2); ctx.fill();
     ctx.beginPath(); ctx.arc( o.length/2 - 4, 0, 6, 0, Math.PI*2); ctx.fill();
@@ -5242,12 +6526,10 @@ if(o.isFallingSpike){
     return;
   }
 
-  /* ✅✅✅ أضف هذا — رسم الدوّامة ✅✅✅ */
   if(o.isVortex){
     ctx.save();
     ctx.translate(o.cx, o.cy);
 
-    /* هالة دوّارة */
     for(let ring = 0; ring < 3; ring++){
       const r = o.r * (1 - ring * 0.3);
       const rot = o.angle * (1 + ring * 0.5);
@@ -5262,7 +6544,6 @@ if(o.isFallingSpike){
       ctx.restore();
     }
 
-    /* المركز */
     const grad = ctx.createRadialGradient(0, 0, 2, 0, 0, 16);
     grad.addColorStop(0, '#FFFFFF');
     grad.addColorStop(0.5, o.accent);
@@ -5272,7 +6553,6 @@ if(o.isFallingSpike){
     ctx.arc(0, 0, 14, 0, Math.PI * 2);
     ctx.fill();
 
-    /* شرارات تنجذب */
     for(let i = 0; i < 4; i++){
       const a = o.angle * 2 + i * (Math.PI/2);
       const d = 30 + Math.sin(o.t * 0.15 + i) * 10;
@@ -5287,7 +6567,6 @@ if(o.isFallingSpike){
     return;
   }
 
-  /* ✅✅✅ أضف هذا — رسم الشعاع الكهربائي ✅✅✅ */
   if(o.isLaser){
     o.pulse = (o.pulse || 0) + 1;
     const glow = 0.6 + Math.sin(o.pulse * 0.15) * 0.4;
@@ -5297,7 +6576,6 @@ if(o.isFallingSpike){
 
     if(o.isVertical){
       for(const seg of o.segments){
-        /* هالة */
         const grad = ctx.createLinearGradient(o.x - 15, 0, o.x + o.w + 15, 0);
         grad.addColorStop(0, 'rgba(64,232,255,0)');
         grad.addColorStop(0.5, o.color);
@@ -5305,7 +6583,6 @@ if(o.isFallingSpike){
         ctx.fillStyle = grad;
         ctx.fillRect(o.x - 15, seg.y, o.w + 30, seg.h);
 
-        /* النواة */
         ctx.fillStyle = o.accent;
         ctx.shadowColor = o.color;
         ctx.shadowBlur = 14;
@@ -5313,7 +6590,6 @@ if(o.isFallingSpike){
         ctx.shadowBlur = 0;
       }
     } else {
-      /* شعاع أفقي */
       const grad = ctx.createLinearGradient(0, o.y - 15, 0, o.y + 15);
       grad.addColorStop(0, 'rgba(255,64,160,0)');
       grad.addColorStop(0.5, o.color);
@@ -5331,7 +6607,6 @@ if(o.isFallingSpike){
     return;
   }
 
-  /* ============ العقبات الأرضية العادية (كما كانت) ============ */
   if(o.type === 'spike'){
     const peaks = 3, pw = o.w/peaks;
     ctx.fillStyle = wall;
@@ -5362,12 +6637,365 @@ if(o.isFallingSpike){
     roundRect(ctx, o.x+6, GROUND_Y-8, o.w-12, 4, 2); ctx.fill();
     ctx.globalAlpha = 1;
   }
+    /* ═══════════════ Sky Ring ═══════════════ */
+  if(o.isSkyRing){
+    ctx.save();
+    ctx.translate(o.cx, o.cy);
+    ctx.rotate(o.t * 0.03);
+
+    /* هالة خارجية */
+    const halo = ctx.createRadialGradient(0,0,o.r*0.6, 0,0,o.r*1.3);
+    halo.addColorStop(0, o.glow || o.color);
+    halo.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = halo;
+    ctx.beginPath(); ctx.arc(0,0,o.r*1.3, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 1;
+
+    /* الحلقة */
+    ctx.strokeStyle = o.color;
+    ctx.lineWidth = 8;
+    ctx.shadowColor = o.glow || o.color;
+    ctx.shadowBlur = 20;
+    ctx.beginPath(); ctx.arc(0,0,o.r, 0, Math.PI*2); ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    /* جزيئات صغيرة */
+    for(let i = 0; i < 6; i++){
+      const a = o.t*0.05 + (i/6)*Math.PI*2;
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath();
+      ctx.arc(Math.cos(a)*o.r, Math.sin(a)*o.r, 3, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    ctx.restore();
+    return;
+  }
+
+  /* ═══════════════ Under Spike ═══════════════ */
+  if(o.isUnderSpike){
+    ctx.save();
+    ctx.translate(o.x + o.w/2, o.y + o.h/2);
+    ctx.scale(1, -1);  /* اقلب الشوكة رأساً على عقب */
+
+    ctx.fillStyle = wall;
+    ctx.beginPath();
+    ctx.moveTo(-o.w/2, -o.h/2);
+    ctx.lineTo(0, o.h/2);
+    ctx.lineTo(o.w/2, -o.h/2);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = accent;
+    ctx.beginPath();
+    ctx.moveTo(-o.w/4, -o.h/2);
+    ctx.lineTo(0, o.h/4);
+    ctx.lineTo(o.w/4, -o.h/2);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+    return;
+  }
+
+  /* ═══════════════ Crystal ═══════════════ */
+  if(o.isCrystal){
+    ctx.save();
+    ctx.translate(o.x + o.w/2, o.y + o.h/2);
+    const pulse = 0.8 + Math.sin(o.t * 0.06) * 0.2;
+
+    /* هالة */
+    const halo = ctx.createRadialGradient(0,0,5, 0,0,o.w);
+    halo.addColorStop(0, o.glow || o.accent);
+    halo.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.globalAlpha = 0.6 * pulse;
+    ctx.fillStyle = halo;
+    ctx.beginPath(); ctx.arc(0,0,o.w, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 1;
+
+    /* بلورة سداسية */
+    ctx.fillStyle = o.color;
+    ctx.shadowColor = o.glow || o.accent;
+    ctx.shadowBlur = 15;
+    ctx.beginPath();
+    for(let i = 0; i < 6; i++){
+      const a = (i/6)*Math.PI*2;
+      const r = i%2===0 ? o.w*0.5 : o.w*0.3;
+      const px = Math.cos(a)*r;
+      const py = Math.sin(a)*r;
+      i===0 ? ctx.moveTo(px,py) : ctx.lineTo(px,py);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    /* لمعة داخلية */
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.beginPath(); ctx.arc(-o.w*0.15, -o.h*0.15, o.w*0.12, 0, Math.PI*2); ctx.fill();
+
+    ctx.restore();
+    return;
+  }
+
+  /* ═══════════════ Under Pillar ═══════════════ */
+  if(o.isUnderPillar){
+    ctx.fillStyle = wall;
+    roundRect(ctx, o.x, o.y, o.w, o.h, 8); ctx.fill();
+    ctx.fillStyle = dark;
+    for(let i = 0; i < o.h; i += 22){
+      ctx.globalAlpha = 0.3;
+      ctx.fillRect(o.x + 4, o.y + i, o.w - 8, 3);
+    }
+    ctx.globalAlpha = 1;
+    return;
+  }
+}
+
+function drawUnderObstacle(o){
+  const wall = o.color || '#5E4028';
+  const dark = o.colorDark || '#2A1810';
+  const accent = o.accent || '#8E6A48';
+  
+  /* ═══ صخرة متساقطة ═══ */
+  if(o.isFallingRock){
+    ctx.save();
+    ctx.translate(o.x + o.w/2, o.y + o.h/2);
+    
+    if(!o.falling && o.warned){
+      const pulse = 0.4 + Math.sin(G.t * 0.4) * 0.4;
+      ctx.globalAlpha = pulse;
+      ctx.fillStyle = '#FF3030';
+      ctx.beginPath();
+      ctx.ellipse(0, o.targetY - o.y + 20, 20, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    
+    ctx.globalAlpha = 0.6;
+    const shadowGrad = ctx.createRadialGradient(0, 0, 4, 0, 0, o.w);
+    shadowGrad.addColorStop(0, 'rgba(0,0,0,0.6)');
+    shadowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = shadowGrad;
+    ctx.beginPath();
+    ctx.arc(0, 0, o.w, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    
+    ctx.fillStyle = wall;
+    ctx.beginPath();
+    for(let i = 0; i < 7; i++){
+      const a = (i/7) * Math.PI * 2;
+      const rr = i%2===0 ? o.w*0.5 : o.w*0.42;
+      const px = Math.cos(a) * rr;
+      const py = Math.sin(a) * rr;
+      i===0 ? ctx.moveTo(px,py) : ctx.lineTo(px,py);
+    }
+    ctx.closePath();
+    ctx.fill();
+    
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.beginPath();
+    ctx.arc(-o.w*0.15, -o.h*0.2, o.w*0.15, 0, Math.PI*2);
+    ctx.fill();
+    
+    ctx.restore();
+    return;
+  }
+  
+  /* ═══ أشواك الأعماق ═══ */
+  if(o.isUnderSpike){
+    ctx.save();
+    ctx.translate(o.x + o.w/2, o.y + o.h/2);
+    
+    ctx.fillStyle = wall;
+    ctx.beginPath();
+    ctx.moveTo(-o.w/2, o.h/2);
+    ctx.lineTo(0, -o.h/2);
+    ctx.lineTo(o.w/2, o.h/2);
+    ctx.closePath();
+    ctx.fill();
+    
+    ctx.fillStyle = accent;
+    ctx.beginPath();
+    ctx.moveTo(-o.w/4, o.h/2);
+    ctx.lineTo(0, -o.h/4);
+    ctx.lineTo(o.w/4, o.h/2);
+    ctx.closePath();
+    ctx.fill();
+    
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.beginPath();
+    ctx.moveTo(-o.w*0.15, o.h/2);
+    ctx.lineTo(0, -o.h/4);
+    ctx.lineTo(o.w*0.05, o.h/2);
+    ctx.closePath();
+    ctx.fill();
+    
+    ctx.restore();
+    return;
+  }
+  
+  /* ═══ بركة حمم ═══ */
+  if(o.isLavaPool){
+    ctx.save();
+    const pulse = 0.6 + Math.sin(G.t * 0.08) * 0.4;
+    
+    ctx.globalAlpha = pulse;
+    const glowGrad = ctx.createRadialGradient(o.x + o.w/2, o.y + o.h/2, 5, o.x + o.w/2, o.y + o.h/2, o.w * 0.8);
+    glowGrad.addColorStop(0, o.poolGlow);
+    glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glowGrad;
+    ctx.beginPath();
+    ctx.arc(o.x + o.w/2, o.y + o.h/2, o.w * 0.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    
+    const grad = ctx.createLinearGradient(o.x, o.y, o.x, o.y + o.h);
+    grad.addColorStop(0, o.poolGlow);
+    grad.addColorStop(0.4, o.poolColor);
+    grad.addColorStop(1, dark);
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.ellipse(o.x + o.w/2, o.y + o.h/2, o.w/2, o.h/2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    /* فقاعات */
+    for(let i = 0; i < 4; i++){
+      const bx = o.x + 20 + ((i * 47 + G.t * 1.5) % (o.w - 40));
+      const by = o.y + o.h/2 + Math.sin(G.t * 0.1 + i) * 3;
+      const bs = 2 + Math.sin(G.t * 0.15 + i) * 1;
+      ctx.fillStyle = o.poolGlow;
+      ctx.globalAlpha = 0.7;
+      ctx.beginPath();
+      ctx.arc(bx, by, bs, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+    return;
+  }
+  
+  /* ═══ رمح متحرك ═══ */
+  if(o.isDrill){
+    ctx.save();
+    
+    const headH = 24;
+    const rodW = 30;
+    const bodyY = o.isTop ? o.floorY - 60 : o.floorY;
+    const rodY = o.isTop ? o.floorY - 60 + o.extend : o.floorY - o.extend - 20;
+    const headY = o.isTop ? rodY + 20 : rodY - headH;
+    
+    /* الجسم الثابت */
+    ctx.fillStyle = dark;
+    roundRect(ctx, o.x + (o.w - rodW)/2, bodyY, rodW, 60, 4);
+    ctx.fill();
+    
+    /* العمود */
+    if(o.extend > 0){
+      ctx.fillStyle = '#909AA8';
+      ctx.fillRect(o.x + (o.w - rodW)/2, rodY, rodW, o.extend + 20);
+    }
+    
+    /* الرأس المدبب */
+    ctx.fillStyle = '#C14A4A';
+    ctx.beginPath();
+    if(o.isTop){
+      ctx.moveTo(o.x + o.w/2, headY + headH);
+      ctx.lineTo(o.x + 8, headY);
+      ctx.lineTo(o.x + o.w - 8, headY);
+    } else {
+      ctx.moveTo(o.x + o.w/2, headY);
+      ctx.lineTo(o.x + 8, headY + headH);
+      ctx.lineTo(o.x + o.w - 8, headY + headH);
+    }
+    ctx.closePath();
+    ctx.fill();
+    
+    /* أشواك */
+    ctx.fillStyle = accent;
+    for(let i = 0; i < 3; i++){
+      const sx = o.x + 14 + i * (o.w - 28) / 2;
+      const sy = o.isTop ? headY + headH : headY;
+      const dir = o.isTop ? 1 : -1;
+      ctx.beginPath();
+      ctx.moveTo(sx - 3, sy);
+      ctx.lineTo(sx, sy + dir * 6);
+      ctx.lineTo(sx + 3, sy);
+      ctx.closePath();
+      ctx.fill();
+    }
+    
+    /* توهج */
+    if(o.extend > 10){
+      ctx.globalAlpha = 0.4;
+      const glow = ctx.createRadialGradient(o.x + o.w/2, headY + headH/2, 5, o.x + o.w/2, headY + headH/2, o.w);
+      glow.addColorStop(0, accent);
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(o.x + o.w/2, headY + headH/2, o.w, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    
+    ctx.restore();
+    return;
+  }
+  
+  /* ═══ شبح متحرك ═══ */
+  if(o.isGhost){
+    ctx.save();
+    ctx.translate(o.cx, o.cy);
+    
+    const pulse = 0.85 + Math.sin(G.t * 0.1) * 0.15;
+    
+    /* هالة */
+    const halo = ctx.createRadialGradient(0, 0, 5, 0, 0, o.r * 2);
+    halo.addColorStop(0, o.color);
+    halo.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.globalAlpha = 0.5 * pulse;
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(0, 0, o.r * 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    
+    /* جسم الشبح */
+    ctx.fillStyle = o.color;
+    ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    ctx.arc(0, -o.r * 0.3, o.r, Math.PI, 0);
+    ctx.lineTo(o.r, o.r * 0.6);
+    for(let i = 5; i >= 0; i--){
+      const wx = -o.r + (i / 5) * o.r * 2;
+      const wy = o.r * 0.6 + Math.sin(G.t * 0.15 + i) * 4;
+      ctx.lineTo(wx, wy);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    
+    /* عيون */
+    ctx.fillStyle = '#FF3060';
+    ctx.shadowColor = '#FF3060';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(-o.r * 0.3, -o.r * 0.4, 3, 0, Math.PI * 2);
+    ctx.arc(o.r * 0.3, -o.r * 0.4, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    
+    ctx.restore();
+    return;
+  }
 }
 
 function drawObstacles(){
   for(const o of obstacles){
     if(o.dead) continue;
-    if(o.isWalk) drawWalkObstacle(o);
+    if(o.isUnderObstacle) drawUnderObstacle(o);
+    else if(o.isWalk) drawWalkObstacle(o);
     else drawTunnelObstacle(o);
   }
 }
@@ -5378,12 +7006,10 @@ function drawCoins(){
     const spin = Math.abs(Math.cos(c.t*0.08));
     const rx = c.r * (0.35 + spin*0.65);
 
-    /* ➕ عملات سماوية: نجمة متوهجة */
     if(c.isSkyCoin){
       const pulse = 1 + Math.sin(c.t*0.12)*0.15;
       const rr = c.r * pulse;
 
-      /* هالة */
       const halo = ctx.createRadialGradient(c.x, c.y, 2, c.x, c.y, rr*2.5);
       halo.addColorStop(0, '#FFD700');
       halo.addColorStop(1, 'rgba(255,215,0,0)');
@@ -5392,7 +7018,6 @@ function drawCoins(){
       ctx.beginPath(); ctx.arc(c.x, c.y, rr*2.5, 0, Math.PI*2); ctx.fill();
       ctx.globalAlpha = 1;
 
-      /* نجمة */
       ctx.save();
       ctx.translate(c.x, c.y);
       ctx.rotate(c.t * 0.03);
@@ -5415,7 +7040,6 @@ function drawCoins(){
       continue;
     }
 
-    /* عملة عادية */
     ctx.globalAlpha = 0.25;
     ctx.fillStyle = '#FFE090';
     ctx.beginPath(); ctx.arc(c.x, c.y, c.r*1.7, 0, Math.PI*2); ctx.fill();
@@ -5555,27 +7179,25 @@ function drawOverlayEffects(){
 function draw(){
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.save();
-  
+
   if(G.shake > 0.4){
     ctx.translate((Math.random()-0.5)*G.shake, (Math.random()-0.5)*G.shake);
     G.shake *= 0.87;
   } else G.shake = 0;
 
-  /* ═══════════ الطبقة 1: السماء (ثابتة تماماً) ═══════════ */
   drawSky();
-
-  /* ═══════════ الطبقة 2: السديم (Parallax 0.5-0.7) ═══════════ */
   drawSkyDecor();
-
-  /* ═══════════ الطبقة 3: تلال بعيدة (Parallax 0.15) ═══════════ */
   drawHills();
-
-  /* ═══════════ الطبقة 4: سحاب (Parallax 0.65) ═══════════ */
   drawClouds();
 
-  /* ═══════════ الطبقة 5: العالم (Parallax 1.0) ═══════════ */
   ctx.save();
-  ctx.translate(0, G.camY);
+  /* إزاحة مزدوجة: للأعلى (camY موجب) وللأسفل (camYUnder موجب يصبح -camYUnder) */
+  ctx.translate(0, G.camY - G.camYUnder);
+
+  /* ارسم عالم الأعماق وطبقات الأرض والتضاريس الضخمة */
+  drawUnderworld();
+  drawUnderFloors();
+  drawUnderTerrain();
 
   drawGround();
 
@@ -5592,11 +7214,10 @@ function draw(){
 
   ctx.restore();
 
-  /* ═══════════ الطبقة 6: الواجهة (ثابتة) ═══════════ */
   drawWeather();
   drawBanner();
   drawOverlayEffects();
-  
+
   ctx.restore();
 }
 
@@ -5646,124 +7267,25 @@ function update(){
 }
 
 /* ============================================================
-   ==================== HUD ==================================
-   ============================================================ */
-function updateLevelUI(){
-  const pct = getLevelProgress() * 100;
-  const lv = getLevelIndex() + 1;
-  document.getElementById('level-bar').style.width = pct + '%';
-  document.getElementById('level-num').textContent = 'LVL ' + lv;
-}
-function updateAltitudeUI(){
-  /* الارتفاع الحالي = إزاحة الكاميرا + ارتفاع اللاعب فوق نقطة التصادم */
-  const alt = Math.floor(G.camY / 8);
-  
-  let hud = document.getElementById('altitude-hud');
-  if(!hud){
-    const newHud = document.createElement('div');
-    newHud.id = 'altitude-hud';
-    newHud.className = 'stat-pill altitude';
-    newHud.innerHTML = `
-      <span class="icon">▲</span>
-      <span class="val" id="hud-altitude">0</span>
-      <span class="unit">م</span>
-    `;
-    const runStats = document.querySelector('.run-stats');
-    if(runStats) runStats.appendChild(newHud);
-    hud = newHud;
-  }
-  
-  const val = document.getElementById('hud-altitude');
-  if(val) val.textContent = alt;
-  
-  /* ✅ إخفاء المؤشر عند الأرض */
-  if(hud) hud.style.opacity = alt > 5 ? '1' : '0';
-}
-function updateElevatorIndicator(){
-  const hasElevator = obstacles.some(o => o.isElevator && !o.exhausted && o.x < W && o.x > -100);
-  
-  let indicator = document.getElementById('elevator-indicator');
-  if(!indicator){
-    const el = document.createElement('div');
-    el.id = 'elevator-indicator';
-    el.style.cssText = `
-      position:absolute;
-      right:16px;
-      top:50%;
-      transform:translateY(-50%);
-      padding:10px 14px;
-      border-radius:100px;
-      background:linear-gradient(135deg,#B0F0FF,#80D0F0);
-      color:#1A4080;
-      font-family:'Space Grotesk',sans-serif;
-      font-size:11px;
-      font-weight:700;
-      letter-spacing:2px;
-      box-shadow:0 6px 20px rgba(128,208,240,0.5);
-      z-index:4;
-      pointer-events:none;
-      opacity:0;
-      transition:opacity 0.3s, transform 0.3s;
-    `;
-    el.innerHTML = '↑↑';
-    document.getElementById('wrap').appendChild(el);
-    indicator = el;
-  }
-  
-  if(hasElevator){
-    indicator.style.opacity = '1';
-    indicator.style.transform = 'translateY(-50%) scale(1)';
-    /* نبض */
-    const pulse = 1 + Math.sin(G.t * 0.15) * 0.08;
-    indicator.style.transform = `translateY(-50%) scale(${pulse})`;
-  } else {
-    indicator.style.opacity = '0';
-  }
-}
-function updateCoinsUI(){
-  const unlimited = hasAdminAccess() && Save.data.admin.unlimitedCoins;
-  const home = document.getElementById('home-coins');
-  const shop = document.getElementById('shop-coins');
-  if(home) home.textContent = unlimited ? '' : Save.data.coins;
-  if(shop) shop.textContent = unlimited ? '' : Save.data.coins;
-  const w = document.getElementById('wrap');
-  if(w) w.classList.toggle('unlimited-coins', unlimited);
-}
-
-/* ============================================================
-   ==================== CAMERA ===============================
-   ============================================================ */
-function updateCamera(){
-  /* ✅ عندما يرتفع اللاعب فوق 220px من الأرض، تبدأ الكاميرا بالصعود */
-  const TRIGGER = 220;
-  const playerAlt = GROUND_Y - P.r - P.y;   /* كم فوق الأرض */
-  
-  /* الهدف = كم اللاعب فوق نقطة البداية */
-  const target = Math.max(0, playerAlt - TRIGGER);
-  
-  /* حد أقصى: H * 1.4 لمنع الذهاب بعيداً جداً */
-  G.camTargetY = Math.min(target, H * 1.4);
-  
-  /* تنعيم سلس */
-  G.camY = lerp(G.camY, G.camTargetY, 0.09);
-  
-  /* إذا كان الفرق صغيراً، اقفز مباشرة */
-  if(Math.abs(G.camY - G.camTargetY) < 0.5) G.camY = G.camTargetY;
-}
-
-/* ============================================================
    ==================== Global level =========================
    ============================================================ */
-function getGlobalMeters(){ return Object.values(Save.data.bestMeters).reduce((a,b)=>a+b, 0); }
+function getGlobalMeters(){
+  /* استثنِ MIXED من المجموع (لأنه يجمع أفضل الأنماط الفردية) */
+  const bm = Save.data.bestMeters;
+  return (bm.FLIP||0) + (bm.FLAP||0) + (bm.DRIFT||0) + (bm.WALK||0);
+}
 function getGlobalLevel(){ return levelFromMeters(getGlobalMeters(), GLOBAL_LEVEL_THRESHOLDS); }
 function getModeLevel(mode){ return levelFromMeters(Save.data.bestMeters[mode] || 0, MODE_LEVEL_THRESHOLDS); }
 function updateGlobalLevelUI(){
   const totalM = getGlobalMeters();
   const lv = getGlobalLevel() + 1;
   const prog = levelProgress(totalM, GLOBAL_LEVEL_THRESHOLDS) * 100;
-  document.getElementById('global-lvl-num').textContent = lv;
-  document.getElementById('global-lvl-meters').textContent = Math.floor(totalM) + 'م';
-  document.getElementById('global-lvl-btn').style.setProperty('--p', prog);
+  const lvlNum = document.getElementById('global-lvl-num');
+  const lvlM = document.getElementById('global-lvl-meters');
+  const lvlBtn = document.getElementById('global-lvl-btn');
+  if(lvlNum) lvlNum.textContent = lv;
+  if(lvlM) lvlM.textContent = Math.floor(totalM) + 'م';
+  if(lvlBtn) lvlBtn.style.setProperty('--p', prog);
 }
 
 /* ============================================================
@@ -5771,11 +7293,16 @@ function updateGlobalLevelUI(){
    ============================================================ */
 function hideAllScreens(){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); }
 function showScreen(id){
+  const homeMenu = document.getElementById('home-menu');
+  if(homeMenu) homeMenu.classList.remove('open');
+
   hideAllScreens();
-  document.getElementById('overlay').classList.add('active');
-  document.getElementById(id).classList.add('active');
+  const overlay = document.getElementById('overlay');
+  const screen = document.getElementById(id);
+  if(overlay) overlay.classList.add('active');
+  if(screen) screen.classList.add('active');
 }
-function hideOverlay(){ document.getElementById('overlay').classList.remove('active'); }
+function hideOverlay(){ const o = document.getElementById('overlay'); if(o) o.classList.remove('active'); }
 function setInGame(on){ wrapEl.classList.toggle('in-game', on); }
 
 /* ============================================================
@@ -5835,6 +7362,7 @@ function getMissionData(tier, id){
 
 function buildMissions(tier){
   const list = document.getElementById('quest-list');
+  if(!list) return;
   list.innerHTML = '';
   const active = Save.data.missions[tier] || [];
   if(active.length === 0){
@@ -5995,9 +7523,10 @@ function buildDaily(){
    ============================================================ */
 function buildShop(){
   const grid = document.getElementById('skin-grid');
+  if(!grid) return;
   grid.innerHTML = '';
   getAllSkins().forEach(s=>{
-        const owned = Save.data.ownedSkins.includes(s.id);
+    const owned = Save.data.ownedSkins.includes(s.id);
     const eq = Save.data.currentSkin === s.id;
     const rarity = s.rarity || 'common';
     const el = document.createElement('button');
@@ -6021,7 +7550,7 @@ function buildShop(){
     const previewR = pSize * 0.28;
     pctx.save();
     pctx.translate(pSize/2, pSize/2 + 4);
-    renderCharacter(pctx, previewR, s, { mode: 'FLIP', rot: 0, alpha: 1 });
+    renderCharacter(pctx, previewR, s, { mode: 'FLIP', rot: 0, alpha: 1, skipExtras: true });
     pctx.restore();
     el.appendChild(previewCanvas);
 
@@ -6056,7 +7585,7 @@ function buildShop(){
         Save.save();
         Sfx.tap(); haptic(8);
         buildShop();
-      } else if(hasAdminAccess() && Save.data.admin.unlimitedUnlock || Save.data.coins >= s.price){
+      } else if((hasAdminAccess() && Save.data.admin.unlimitedUnlock) || Save.data.coins >= s.price){
         if(!Save.data.admin.unlimitedUnlock) Save.data.coins -= s.price;
         if(!Save.data.ownedSkins.includes(s.id)) Save.data.ownedSkins.push(s.id);
         Save.data.currentSkin = s.id;
@@ -6085,7 +7614,6 @@ function renderCosPreview(pctx, w, h, cat, item){
   if(cat === 'spark'){
     pctx.fillStyle = '#E07A3F';
     pctx.beginPath(); pctx.arc(w*0.82, h/2, 6, 0, Math.PI*2); pctx.fill();
-
     if(item.id === 'none') return;
 
     const palette = SPARK_PALETTES[item.id];
@@ -6119,40 +7647,6 @@ function renderCosPreview(pctx, w, h, cat, item){
         pctx.beginPath(); pctx.arc(px,py,sz,0,Math.PI*2); pctx.stroke();
       } else if(item.id === 'digital'){
         pctx.fillRect(px-sz/2, py-sz/2, sz, sz);
-      } else if(item.id === 'notes'){
-        pctx.font = `bold ${sz*3}px serif`;
-        pctx.textAlign = 'center'; pctx.textBaseline = 'middle';
-        pctx.fillText(i%2===0?'♪':'♫', px, py);
-      } else if(item.id === 'snow'){
-        pctx.strokeStyle = col; pctx.lineWidth = 1;
-        for(let k=0;k<6;k++){
-          const a = (k/6)*Math.PI*2;
-          pctx.beginPath();
-          pctx.moveTo(px, py);
-          pctx.lineTo(px+Math.cos(a)*sz, py+Math.sin(a)*sz);
-          pctx.stroke();
-        }
-      } else if(item.id === 'leaves' || item.id === 'petals'){
-        pctx.beginPath();
-        pctx.ellipse(px, py, sz*1.4, sz*0.65, i*0.5, 0, Math.PI*2);
-        pctx.fill();
-      } else if(item.id === 'firefly' || item.id === 'gold' || item.id === 'cosmic'){
-        const grad = pctx.createRadialGradient(px,py,0, px,py,sz*2.5);
-        grad.addColorStop(0, col);
-        grad.addColorStop(1, 'rgba(0,0,0,0)');
-        pctx.fillStyle = grad;
-        pctx.beginPath(); pctx.arc(px, py, sz*2.5, 0, Math.PI*2); pctx.fill();
-        pctx.fillStyle = col;
-        pctx.beginPath(); pctx.arc(px, py, sz*0.6, 0, Math.PI*2); pctx.fill();
-      } else if(item.id === 'lightning'){
-        pctx.fillStyle = col;
-        pctx.shadowColor = col; pctx.shadowBlur = 6;
-        pctx.beginPath(); pctx.arc(px, py, sz*0.8, 0, Math.PI*2); pctx.fill();
-        pctx.shadowBlur = 0;
-      } else if(item.id === 'rainbow'){
-        pctx.beginPath();
-        pctx.ellipse(px, py, sz*0.55, sz*1.3, 0, 0, Math.PI*2);
-        pctx.fill();
       } else {
         pctx.beginPath(); pctx.arc(px, py, sz, 0, Math.PI*2); pctx.fill();
       }
@@ -6172,117 +7666,18 @@ function renderCosPreview(pctx, w, h, cat, item){
       else if(item.id==='matrix') col = '#00FF80';
       else if(item.id==='rainbow') col = `hsl(${i*60}, 80%, 60%)`;
       pctx.fillStyle = col;
-      if(item.id === 'bubble'){
-        pctx.strokeStyle = col; pctx.lineWidth = 1.3;
-        pctx.beginPath(); pctx.arc(w*0.15 + i*26, cy, 6 - i*0.6, 0, Math.PI*2); pctx.stroke();
-      } else if(item.id === 'matrix'){
-        pctx.fillRect(w*0.15 + i*26 - 3, cy-3, 6, 6);
-      } else if(item.id === 'sparkle'){
-        const sz = 6 - i*0.6;
-        pctx.beginPath();
-        for(let k=0;k<8;k++){
-          const a = (k/8)*Math.PI*2;
-          const rr = k%2===0 ? sz : sz*0.4;
-          const px = w*0.15 + i*26 + Math.cos(a)*rr;
-          const py = cy + Math.sin(a)*rr;
-          k===0 ? pctx.moveTo(px,py) : pctx.lineTo(px,py);
-        }
-        pctx.closePath(); pctx.fill();
-      } else {
-        pctx.beginPath(); pctx.arc(w*0.15 + i*26, cy, 6 - i*0.6, 0, Math.PI*2); pctx.fill();
-      }
+      pctx.beginPath(); pctx.arc(w*0.15 + i*26, cy, 6 - i*0.6, 0, Math.PI*2); pctx.fill();
     }
     pctx.globalAlpha = 1;
 
-  } else if(cat === 'jump'){
-    if(item.id==='ring'){
-      pctx.strokeStyle = '#E07A3F';
-      pctx.lineWidth = 3;
-      pctx.beginPath(); pctx.arc(cx, cy, 20, 0, Math.PI*2); pctx.stroke();
-    } else if(item.id==='burst'){
-      for(let i=0;i<10;i++){
-        const a = (i/10)*Math.PI*2;
-        pctx.fillStyle = '#FFB060';
-        pctx.beginPath(); pctx.arc(cx+Math.cos(a)*18, cy+Math.sin(a)*18, 3, 0, Math.PI*2); pctx.fill();
-      }
-    } else if(item.id==='star'){
-      pctx.fillStyle = '#FFE060';
-      pctx.beginPath();
-      for(let i=0;i<10;i++){
-        const a = (i/10)*Math.PI*2 - Math.PI/2;
-        const rr = i%2===0 ? 18 : 8;
-        const px = cx+Math.cos(a)*rr, py = cy+Math.sin(a)*rr;
-        i===0 ? pctx.moveTo(px,py) : pctx.lineTo(px,py);
-      }
-      pctx.closePath(); pctx.fill();
-    } else if(item.id==='shockwave'){
-      for(let r=8;r<=26;r+=6){
-        pctx.strokeStyle = `rgba(255,255,255,${1-r/32})`;
-        pctx.lineWidth = 2;
-        pctx.beginPath(); pctx.arc(cx, cy, r, 0, Math.PI*2); pctx.stroke();
-      }
-    } else if(item.id==='spiral'){
-      pctx.strokeStyle = '#E07A3F';
-      pctx.lineWidth = 2;
-      pctx.beginPath();
-      for(let i=0;i<60;i++){
-        const a = i*0.3;
-        const r = 2 + i*0.4;
-        const px = cx + Math.cos(a)*r;
-        const py = cy + Math.sin(a)*r;
-        i===0 ? pctx.moveTo(px,py) : pctx.lineTo(px,py);
-      }
-      pctx.stroke();
-    } else {
-      pctx.fillStyle = '#E07A3F';
-      pctx.beginPath(); pctx.arc(cx, cy, 8, 0, Math.PI*2); pctx.fill();
-    }
-
-  } else if(cat === 'death'){
+  } else if(cat === 'jump' || cat === 'death'){
     pctx.fillStyle = '#E07A3F';
-    if(item.id==='explode'){
-      for(let i=0;i<14;i++){
-        const a = (i/14)*Math.PI*2;
-        pctx.beginPath(); pctx.arc(cx+Math.cos(a)*20, cy+Math.sin(a)*20, 4, 0, Math.PI*2); pctx.fill();
-      }
-    } else if(item.id==='dissolve'){
-      for(let i=0;i<20;i++){
-        pctx.globalAlpha = 0.7 - i*0.03;
-        pctx.beginPath(); pctx.arc(cx + rand(-25,25), cy + rand(-15,15), 2, 0, Math.PI*2); pctx.fill();
-      }
-      pctx.globalAlpha = 1;
-    } else if(item.id==='pixel'){
-      for(let i=0;i<25;i++){ pctx.fillRect(cx + rand(-25,25), cy + rand(-15,15), 4, 4); }
-    } else if(item.id==='shatter'){
-      for(let i=0;i<14;i++){
-        const a = (i/14)*Math.PI*2;
-        const r = 15 + (i%3)*6;
-        pctx.save();
-        pctx.translate(cx+Math.cos(a)*r, cy+Math.sin(a)*r);
-        pctx.rotate(a*2);
-        pctx.beginPath();
-        pctx.moveTo(-4, -3); pctx.lineTo(4, -3); pctx.lineTo(3, 4); pctx.lineTo(-2, 3); pctx.closePath();
-        pctx.fill();
-        pctx.restore();
-      }
-    } else if(item.id==='nova'){
-      for(let r=6;r<=26;r+=5){
-        pctx.globalAlpha = 1 - r/32;
-        pctx.fillStyle = r%2===0 ? '#FFF8C0' : '#FFB060';
-        pctx.beginPath(); pctx.arc(cx, cy, r, 0, Math.PI*2); pctx.fill();
-      }
-      pctx.globalAlpha = 1;
-    } else {
-      pctx.beginPath(); pctx.arc(cx, cy, 12, 0, Math.PI*2); pctx.fill();
-    }
-    } else if(cat === 'aura'){
+    pctx.beginPath(); pctx.arc(cx, cy, 10, 0, Math.PI*2); pctx.fill();
+
+  } else if(cat === 'aura'){
     const fakeR = 16;
-    /* شخصية مصغّرة */
     pctx.save();
     pctx.translate(cx, cy);
-    if(item.id !== 'none'){
-      drawCape(pctx, fakeR, item, 60, 0, 0);
-    }
     pctx.fillStyle = '#E07A3F';
     pctx.beginPath(); pctx.arc(0, 0, fakeR*0.7, 0, Math.PI*2); pctx.fill();
     pctx.fillStyle = '#FFF';
@@ -6293,12 +7688,8 @@ function renderCosPreview(pctx, w, h, cat, item){
     const fakeR = 22;
     pctx.save();
     pctx.translate(cx, cy + 8);
-    /* رأس */
     pctx.fillStyle = '#E0A44C';
     pctx.beginPath(); pctx.arc(0, 0, fakeR*0.75, 0, Math.PI*2); pctx.fill();
-    pctx.fillStyle = '#B07628';
-    pctx.beginPath(); pctx.arc(0, fakeR*0.15, fakeR*0.72, 0.15*Math.PI, 0.85*Math.PI); pctx.fill();
-    /* عيون */
     pctx.fillStyle = '#1A1512';
     pctx.beginPath();
     pctx.arc(-4, -2, 2, 0, Math.PI*2);
@@ -6311,7 +7702,6 @@ function renderCosPreview(pctx, w, h, cat, item){
     const fakeR = 20;
     pctx.save();
     pctx.translate(cx - 8, cy);
-    /* استخدام نسخة مؤقتة من P.cape للمعاينة */
     const savedCape = P.cape;
     P.cape = [];
     for(let i=0;i<10;i++){
@@ -6321,19 +7711,17 @@ function renderCosPreview(pctx, w, h, cat, item){
       drawCape(pctx, fakeR, item, 60, 0, 0);
     }
     P.cape = savedCape;
-    /* شخصية مصغرة */
     pctx.fillStyle = '#E0A44C';
     pctx.beginPath(); pctx.arc(0, 0, fakeR*0.7, 0, Math.PI*2); pctx.fill();
     pctx.fillStyle = '#FFF';
     pctx.beginPath(); pctx.arc(-4, -3, 3, 0, Math.PI*2); pctx.arc(4, -3, 3, 0, Math.PI*2); pctx.fill();
-    pctx.fillStyle = '#1A1512';
-    pctx.beginPath(); pctx.arc(-4, -3, 1.5, 0, Math.PI*2); pctx.arc(4, -3, 1.5, 0, Math.PI*2); pctx.fill();
     pctx.restore();
   }
 }
 
 function buildCosmetics(){
   const grid = document.getElementById('cos-grid');
+  if(!grid) return;
   grid.innerHTML = '';
   const list = getAllCosmetics(currentCosTab);
   if(!list) return;
@@ -6400,7 +7788,7 @@ function buildCosmetics(){
         Save.save();
         Sfx.tap(); haptic(8);
         buildCosmetics();
-      } else if(hasAdminAccess() && Save.data.admin.unlimitedUnlock || Save.data.coins >= item.price){
+      } else if((hasAdminAccess() && Save.data.admin.unlimitedUnlock) || Save.data.coins >= item.price){
         if(!Save.data.admin.unlimitedUnlock) Save.data.coins -= item.price;
         if(!Save.data.cosmetics.owned[currentCosTab].includes(item.id))
           Save.data.cosmetics.owned[currentCosTab].push(item.id);
@@ -6420,46 +7808,11 @@ function buildCosmetics(){
 }
 
 /* ============================================================
-   ==================== ADMIN HELPERS ========================
-   ============================================================ */
-function isAdminUser(){
-  if(!Cloud || !Cloud.user) return false;
-  if(ADMIN_CONFIG.uids.includes(Cloud.user.uid)) return true;
-  /* فحص البريد أيضاً إن وُجد */
-  return false;
-}
-
-function hasAdminAccess(){
-  return Save.data.admin && Save.data.admin.access;
-}
-
-function grantAdminAccess(){
-  Save.data.admin.access = true;
-  Save.save();
-  updateAdminUI();
-}
-
-function revokeAdminAccess(){
-  Save.data.admin.access = false;
-  Save.data.admin.unlimitedCoins = false;
-  Save.data.admin.unlimitedUnlock = false;
-  Save.data.admin.godMode = false;
-  Save.save();
-  updateAdminUI();
-}
-
-function updateAdminUI(){
-  const btn = document.getElementById('admin-btn');
-  if(!btn) return;
-  const should = hasAdminAccess();
-  btn.style.display = should ? 'flex' : 'none';
-}
-
-/* ============================================================
    ==================== Achievements / Stats / Settings ======
    ============================================================ */
 function buildAchievements(){
   const list = document.getElementById('ach-list');
+  if(!list) return;
   list.innerHTML = '';
   ACHIEVEMENTS.forEach(a=>{
     const un = !!Save.data.achievements[a.id];
@@ -6489,6 +7842,7 @@ function updateAchBadge(){
 }
 function buildStats(){
   const list = document.getElementById('stats-list');
+  if(!list) return;
   list.innerHTML = '';
   const s = Save.data.stats;
   const totalM = getGlobalMeters();
@@ -6500,7 +7854,8 @@ function buildStats(){
     { icon:'🏆', name:'أفضل مسافة', val:Math.floor(s.bestMeters) + 'م' },
     { icon:'🔥', name:'أفضل سلسلة', val: (s.bestCombo || 0) },
     { icon:'◆',  name:'مجموع العملات', val:s.totalCoins },
-    { icon:'🏅', name:'نقاط الموسم', val: Save.data.season.points }
+    { icon:'🏅', name:'نقاط الموسم', val: Save.data.season.points },
+    { icon:'◆',  name:'SHIFT Runs', val: (s.shiftRuns || 0) }
   ];
   items.forEach(it=>{
     const el = document.createElement('div');
@@ -6514,8 +7869,213 @@ function buildStats(){
     list.appendChild(el);
   });
 }
+
+/* ============================================================
+   ==================== TITLES & BADGES ======================
+   ============================================================ */
+const TITLES = [
+  { id:'rookie',      name:'مبتدئ',         icon:'🌱', color:'#8B8278', cond: s => s.stats.totalPlays >= 1 },
+  { id:'explorer',    name:'مستكشف',        icon:'🧭', color:'#4A88C8', cond: s => s.stats.totalPlays >= 50 },
+  { id:'veteran',     name:'محارب قديم',    icon:'⚔️', color:'#9A6AC8', cond: s => s.stats.totalPlays >= 200 },
+  { id:'skyWalker',   name:'سالك السماء',   icon:'☁️', color:'#88C8E8', cond: s => (s.bestMeters.WALK||0) >= 1000 },
+  { id:'gravityMaster', name:'سيد الجاذبية', icon:'⇅',  color:'#4A7FA0', cond: s => (s.bestMeters.FLIP||0) >= 2000 },
+  { id:'stormRunner', name:'عدّاء العاصفة', icon:'⛈️', color:'#5A5A80', cond: s => (s.bestMeters.FLAP||0) >= 1500 },
+  { id:'driftKing',   name:'ملك الانسياق',  icon:'✦',  color:'#C98A2E', cond: s => (s.bestMeters.DRIFT||0) >= 1500 },
+  { id:'comboHunter', name:'قنّاص السلاسل', icon:'🔥', color:'#FF6020', cond: s => (s.stats.bestCombo||0) >= 50 },
+  { id:'comboLegend', name:'أسطورة السلاسل',icon:'🌟', color:'#FFD060', cond: s => (s.stats.bestCombo||0) >= 100 },
+  { id:'marathoner',  name:'الماراثوني',    icon:'🏃', color:'#6B9B6B', cond: s => s.stats.totalMeters >= 50000 },
+  { id:'voidSurvivor',name:'ناجي الفراغ',   icon:'👑', color:'#C080FF', cond: s => s.stats.totalMeters >= 100000 },
+  { id:'shifter',     name:'المتحوّل',      icon:'◆',  color:'#A06AD8', cond: s => (s.stats.shiftRuns||0) >= 20 },
+  { id:'collector',   name:'الجامع',        icon:'💎', color:'#E8B34E', cond: s => (s.ownedSkins||[]).length >= 8 },
+  { id:'masterCollector', name:'جامع الكنوز', icon:'👑', color:'#E85838', cond: s => (s.ownedSkins||[]).length >= 14 },
+  { id:'architect',   name:'المعماري',      icon:'🏗️', color:'#4A8040', cond: s => s.stats.totalMeters >= 20000 && s.stats.totalPlays >= 100 }
+];
+
+function getPlayerTitle(saveData){
+  let best = TITLES[0];
+  for(const t of TITLES){
+    try { if(t.cond(saveData)) best = t; } catch(e) {}
+  }
+  return best;
+}
+
+const BADGES = [
+  { id:'p1',   cat:'progression', icon:'🌱', name:'بداية الرحلة',    desc:'العب أول جولة',            cond: s => s.stats.totalPlays >= 1 },
+  { id:'p2',   cat:'progression', icon:'🎯', name:'مثابر',           desc:'العب 100 جولة',            cond: s => s.stats.totalPlays >= 100 },
+  { id:'p3',   cat:'progression', icon:'📏', name:'مبتدئ المسافة',   desc:'اقطع 1000م إجمالاً',        cond: s => s.stats.totalMeters >= 1000 },
+  { id:'p4',   cat:'progression', icon:'📐', name:'متوسط المسافة',   desc:'اقطع 10,000م إجمالاً',      cond: s => s.stats.totalMeters >= 10000 },
+  { id:'p5',   cat:'progression', icon:'🗺️', name:'مسافر',           desc:'اقطع 100,000م إجمالاً',     cond: s => s.stats.totalMeters >= 100000 },
+  { id:'p6',   cat:'progression', icon:'🌍', name:'حول العالم',      desc:'اقطع 1,000,000م إجمالاً',   cond: s => s.stats.totalMeters >= 1000000 },
+  { id:'s1',   cat:'skill', icon:'⭐', name:'دقّة أولى',       desc:'سلسلة 10 بدون خطأ',     cond: s => (s.stats.bestCombo||0) >= 10 },
+  { id:'s2',   cat:'skill', icon:'🌟', name:'دقّة عالية',      desc:'سلسلة 25',              cond: s => (s.stats.bestCombo||0) >= 25 },
+  { id:'s3',   cat:'skill', icon:'💫', name:'سلسلة نارية',     desc:'سلسلة 50',              cond: s => (s.stats.bestCombo||0) >= 50 },
+  { id:'s4',   cat:'skill', icon:'✨', name:'سلسلة أسطورية',   desc:'سلسلة 100',             cond: s => (s.stats.bestCombo||0) >= 100 },
+  { id:'s5',   cat:'skill', icon:'🌠', name:'سلسلة خرافية',    desc:'سلسلة 200',             cond: s => (s.stats.bestCombo||0) >= 200 },
+  { id:'m1',   cat:'mode', icon:'⇅', name:'سيد الجاذبية',   desc:'FLIP: 5000م',     cond: s => (s.bestMeters.FLIP||0) >= 5000 },
+  { id:'m2',   cat:'mode', icon:'▲', name:'سيد التحليق',    desc:'FLAP: 5000م',     cond: s => (s.bestMeters.FLAP||0) >= 5000 },
+  { id:'m3',   cat:'mode', icon:'✦', name:'سيد الانسياق',   desc:'DRIFT: 5000م',    cond: s => (s.bestMeters.DRIFT||0) >= 5000 },
+  { id:'m4',   cat:'mode', icon:'♟', name:'سيد المشي',      desc:'WALK: 5000م',     cond: s => (s.bestMeters.WALK||0) >= 5000 },
+  { id:'sh1',  cat:'shift', icon:'◆', name:'المتحوّل الأول',  desc:'أكمل 5 SHIFT Runs',  cond: s => (s.stats.shiftRuns||0) >= 5 },
+  { id:'sh2',  cat:'shift', icon:'🔮', name:'المتحوّل الخبير', desc:'أكمل 25 SHIFT Runs', cond: s => (s.stats.shiftRuns||0) >= 25 },
+  { id:'sh3',  cat:'shift', icon:'🌀', name:'سيّد التحولات',  desc:'أكمل 100 SHIFT Run', cond: s => (s.stats.shiftRuns||0) >= 100 },
+  { id:'c1',   cat:'collection', icon:'🎨', name:'جامع',       desc:'امتلك 5 أزياء',    cond: s => (s.ownedSkins||[]).length >= 5 },
+  { id:'c2',   cat:'collection', icon:'💎', name:'خبير الأزياء',desc:'امتلك 10 أزياء',   cond: s => (s.ownedSkins||[]).length >= 10 },
+  { id:'x1',   cat:'secret', icon:'❓', name:'???', desc:'سرّي جداً', cond: s => (s.season.points||0) >= 10000 },
+  { id:'x2',   cat:'secret', icon:'❓', name:'???', desc:'سرّي جداً', cond: s => s.coins >= 100000 }
+];
+
+function checkBadges(){
+  const unlocked = [];
+  for(const b of BADGES){
+    if(Save.data.achievements[b.id]) continue;
+    try {
+      if(b.cond(Save.data)) {
+        Save.data.achievements[b.id] = true;
+        unlocked.push(b);
+      }
+    } catch(e) {}
+  }
+  if(unlocked.length){
+    Save.save();
+    unlocked.forEach(b => {
+      addFloat(P.x, P.y - 60, b.icon + ' ' + b.name, '#FFD060', 16);
+    });
+  }
+  return unlocked;
+}
+
+function buildPlayerCard(){
+  const user = Cloud.user;
+  const profile = Cloud.profile;
+  const title = getPlayerTitle(Save.data);
+
+  const nameEl = document.getElementById('pcard-name');
+  const lvlEl = document.getElementById('pcard-level');
+  const titleEl = document.getElementById('pcard-title');
+  const statsEl = document.getElementById('pcard-stats');
+  const badgesEl = document.getElementById('pcard-badges');
+
+  if(nameEl) nameEl.textContent = (profile?.username) || (user?.displayName) || 'لاعب';
+  if(lvlEl) lvlEl.textContent = getGlobalLevel() + 1;
+  if(titleEl){
+    titleEl.textContent = title.icon + ' ' + title.name;
+    titleEl.style.color = title.color;
+  }
+
+  if(statsEl){
+    const s = Save.data.stats;
+    statsEl.innerHTML = `
+      <div class="pstat"><div class="k">أفضل مسافة</div><div class="v">${Math.floor(s.bestMeters||0)}<span>م</span></div></div>
+      <div class="pstat"><div class="k">إجمالي الجولات</div><div class="v">${s.totalPlays||0}</div></div>
+      <div class="pstat"><div class="k">أفضل سلسلة</div><div class="v">x${s.bestCombo||0}</div></div>
+      <div class="pstat"><div class="k">مجموع الأمتار</div><div class="v">${Math.floor(s.totalMeters||0)}<span>م</span></div></div>
+      <div class="pstat"><div class="k">نقاط الموسم</div><div class="v">${Save.data.season.points||0}</div></div>
+      <div class="pstat"><div class="k">SHIFT Runs</div><div class="v">${s.shiftRuns||0}</div></div>
+    `;
+  }
+
+  if(badgesEl){
+    const unlocked = BADGES.filter(b => Save.data.achievements[b.id]);
+    if(unlocked.length === 0){
+      badgesEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-mute);font-size:12px;">لم تفتح شارات بعد</div>';
+    } else {
+      badgesEl.innerHTML = unlocked.map(b => `
+        <div class="badge-chip" style="--bc:${b.cat === 'secret' ? '#C080FF' : '#E8B34E'};">
+          <span class="bc-ic">${b.icon}</span>
+          <span class="bc-nm">${b.name}</span>
+        </div>
+      `).join('');
+    }
+  }
+}
+
+/* ============================================================
+   ==================== EVENTS ===============================
+   ============================================================ */
+const EVENTS = [
+  {
+    id:'volcanoWeek', name:'أسبوع البركان', en:'VOLCANO WEEK',
+    icon:'🌋', color:'#E85838',
+    start:'2024-01-01', end:'2099-12-31',
+    missions:[
+      { id:'ev_v1', icon:'🌋', title:'العب 10 جولات', target:10, key:'plays', reward:200 },
+      { id:'ev_v2', icon:'📏', title:'اقطع 3000م',   target:3000, key:'meters', reward:300 }
+    ]
+  },
+  {
+    id:'skyWeek', name:'أسبوع السماء', en:'SKY WEEK',
+    icon:'☁️', color:'#88C8E8',
+    start:'2024-01-01', end:'2099-12-31',
+    missions:[
+      { id:'ev_s1', icon:'☁️', title:'العب 10 جولات', target:10, key:'plays', reward:200 },
+      { id:'ev_s2', icon:'🏔️', title:'صل لارتفاع 200م', target:200, key:'meters', reward:300 }
+    ]
+  },
+  {
+    id:'gravityWeek', name:'أسبوع الجاذبية', en:'GRAVITY WEEK',
+    icon:'⇅', color:'#4A7FA0',
+    start:'2024-01-01', end:'2099-12-31',
+    missions:[
+      { id:'ev_g1', icon:'⇅', title:'العب FLIP 5 مرات', target:5, key:'plays', reward:250 }
+    ]
+  },
+  {
+    id:'neonWeek', name:'أسبوع النيون', en:'NEON WEEK',
+    icon:'🌈', color:'#FF00D8',
+    start:'2024-01-01', end:'2099-12-31',
+    missions:[
+      { id:'ev_n1', icon:'🌈', title:'اجمع 500 عملة', target:500, key:'coins', reward:400 }
+    ]
+  }
+];
+
+function getActiveEvents(){
+  const now = today();
+  return EVENTS.filter(e => now >= e.start && now <= e.end);
+}
+
+function buildEvents(){
+  const list = document.getElementById('events-list');
+  if(!list) return;
+  const events = getActiveEvents();
+  list.innerHTML = '';
+  events.forEach(ev => {
+    const el = document.createElement('div');
+    el.className = 'event-card';
+    el.style.setProperty('--ec', ev.color);
+    el.innerHTML = `
+      <div class="ev-head">
+        <div class="ev-icon">${ev.icon}</div>
+        <div class="ev-info">
+          <div class="ev-name">${ev.name}</div>
+          <div class="ev-sub">${ev.en}</div>
+        </div>
+      </div>
+      <div class="ev-missions">
+        ${ev.missions.map(m => {
+          const prog = Save.data.missions.progressDaily?.[m.key] || 0;
+          const pct = Math.min(100, (prog / m.target) * 100);
+          return `<div class="ev-mission">
+            <span class="evm-ic">${m.icon}</span>
+            <div class="evm-body">
+              <div class="evm-name">${m.title}</div>
+              <div class="evm-prog"><div style="width:${pct}%"></div></div>
+            </div>
+            <div class="evm-reward">◆${m.reward}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    `;
+    list.appendChild(el);
+  });
+  if(events.length === 0){
+    list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--ink-mute);font-size:13px;">لا توجد أحداث نشطة حالياً</div>';
+  }
+}
+
 function buildSettings(){
   const list = document.getElementById('settings-list');
+  if(!list) return;
   list.innerHTML = '';
   const items = [
     { k:'sound', title:'الأصوات', sub:'SOUND EFFECTS' },
@@ -6548,11 +8108,14 @@ function buildSettings(){
    ==================== Home build ===========================
    ============================================================ */
 function buildHome(){
+  const selectedMode = Save.data.mode || 'FLIP';
   const grid = document.getElementById('mode-grid');
+  if(!grid) return;
   grid.innerHTML = '';
+
   MODES.forEach(m=>{
     const el = document.createElement('button');
-    el.className = 'mode-card' + (m.id===G.mode ? ' sel' : '');
+    el.className = 'mode-card' + (m.id === selectedMode ? ' sel' : '');
     el.style.setProperty('--mc', m.color);
     const best = Save.data.bestMeters[m.id] || 0;
     const lvl = getModeLevel(m.id) + 1;
@@ -6569,7 +8132,6 @@ function buildHome(){
         <span class="mc-lvl">L${lvl}</span>
       </div>`;
     el.addEventListener('click', ()=>{
-      G.mode = m.id;
       Save.data.mode = m.id;
       Save.save();
       Sfx.tap(); haptic(6);
@@ -6578,15 +8140,20 @@ function buildHome(){
     grid.appendChild(el);
   });
 
-  document.getElementById('hero-score').textContent = Save.data.bestMeters[G.mode] || 0;
-  const m = MODES.find(x=>x.id===G.mode);
-  document.getElementById('hero-mode-name').textContent = m ? m.ar : '';
-  document.getElementById('hero-mode-lvl').textContent = 'LVL ' + (getModeLevel(G.mode) + 1);
+  const heroScore = document.getElementById('hero-score');
+  const heroModeName = document.getElementById('hero-mode-name');
+  const heroModeLvl = document.getElementById('hero-mode-lvl');
+  if(heroScore) heroScore.textContent = Save.data.bestMeters[selectedMode] || 0;
+  const m = MODES.find(x=>x.id===selectedMode);
+  if(heroModeName) heroModeName.textContent = m ? m.ar : '';
+  if(heroModeLvl) heroModeLvl.textContent = 'LVL ' + (getModeLevel(selectedMode) + 1);
 
   const skin = currentSkin();
   const heroEl = document.getElementById('hero-avatar');
-  heroEl.style.background = `radial-gradient(circle at 30% 30%, ${mixColor(skin.body,'#FFFFFF',0.3)}, ${skin.body} 55%, ${skin.bodyDark})`;
-  heroEl.style.boxShadow = `inset 0 -10px 0 rgba(0,0,0,.06), 0 0 40px ${skin.accent}55`;
+  if(heroEl){
+    heroEl.style.background = `radial-gradient(circle at 30% 30%, ${mixColor(skin.body,'#FFFFFF',0.3)}, ${skin.body} 55%, ${skin.bodyDark})`;
+    heroEl.style.boxShadow = `inset 0 -10px 0 rgba(0,0,0,.06), 0 0 40px ${skin.accent}55`;
+  }
 
   updateCoinsUI();
   updateAchBadge();
@@ -6594,30 +8161,31 @@ function buildHome(){
 
   ensureMissions();
   const dailyBadge = document.getElementById('daily-badge');
-  if(canClaimDaily()) dailyBadge.style.display = 'flex';
-  else dailyBadge.style.display = 'none';
+  if(dailyBadge){
+    if(canClaimDaily()) dailyBadge.style.display = 'flex';
+    else dailyBadge.style.display = 'none';
+  }
 
   const qBadge = document.getElementById('quest-badge');
-  const hasMissionProgress = ['daily','weekly','monthly'].some(tier =>
-    (Save.data.missions[tier] || []).some(id => {
-      const d = getMissionData(tier, id);
-      return d && !d.done;
-    })
-  );
-  qBadge.style.display = hasMissionProgress ? 'flex' : 'none';
+  if(qBadge){
+    const hasMissionProgress = ['daily','weekly','monthly'].some(tier =>
+      (Save.data.missions[tier] || []).some(id => {
+        const d = getMissionData(tier, id);
+        return d && !d.done;
+      })
+    );
+    qBadge.style.display = hasMissionProgress ? 'flex' : 'none';
+  }
 }
 
 /* ============================================================
-   ==================== SKY ZONE (منطقة السماء) ===============
+   ==================== SKY ZONE =============================
    ============================================================ */
-const SKY_ZONE_Y = () => GROUND_Y - 300; /* حدود منطقة السماء */
-
 function spawnSkyZoneRewards(){
-  /* ✅ ارتفاعات قابلة للوصول (تحت 220px) */
   const count = Math.floor(rand(4, 8));
   const startX = W + 60;
-  const arcHeight = rand(30, 55);           /* ✅ قوس أخف */
-  const baseY = GROUND_Y - rand(120, 170);  /* ✅ نقطة أساس منخفضة */
+  const arcHeight = rand(30, 55);
+  const baseY = GROUND_Y - rand(120, 170);
 
   for(let i = 0; i < count; i++){
     const t = i / (count - 1);
@@ -6630,17 +8198,10 @@ function spawnSkyZoneRewards(){
     });
   }
 
-  /* ✅ جائزة كبرى في متناول اليد */
   if(Math.random() < 0.35){
-    powerups.push({
-      x: startX + count * 45 + 40,
-      y: baseY - arcHeight - 15,   /* ✅ 15 بدل 20 */
-      r: 16,
-      type: POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)],
-      duration: rollPowerupDuration(),
-      t: 0, dead: false,
-      isSkyReward: true
-    });
+/* ✅ جديد */
+const skyPU = makePowerup(W + 40 + w/2 + 50, topY, { r: 16, isSkyReward: true });
+if(skyPU) powerups.push(skyPU);
   } else {
     orbs.push({
       x: startX + count * 45 + 40,
@@ -6653,7 +8214,6 @@ function spawnSkyZoneRewards(){
   }
 }
 
-/* ➕ استدعاء تلقائي عند ارتفاع معين */
 let lastSkySpawn = 0;
 function checkSkyZoneSpawn(){
   const m = getMeters();
@@ -6664,9 +8224,765 @@ function checkSkyZoneSpawn(){
 }
 
 /* ============================================================
+   ==================== SKY REALM SPAWNER ====================
+   ============================================================ */
+function spawnSkyRealmObstacle(){
+  const layer = SKY_REALM.layers[G.skyLayerIdx];
+  const roll = Math.random();
+
+  if(roll < 0.30)      spawnSkyIsland(layer);
+  else if(roll < 0.50) spawnSkyRuinColumn(layer);
+  else if(roll < 0.65) spawnSkyElevator(layer);
+  else if(roll < 0.78) spawnSkyElevatorChain(layer);
+  else if(roll < 0.90) spawnStaircase(layer);
+  else                 spawnSkyRing(layer);
+}
+
+/* جزيرة عائمة */
+function spawnSkyIsland(layer){
+  const w = rand(110, 180);
+  const h = 16;
+  const y = GROUND_Y - rand(300, 700);
+
+  obstacles.push({
+    x: W + 40, w, h, type:'platform',
+    isWalk: true, isPlatform: true,
+    isSkyPlatform: true,
+    skyTier: G.skyLayerIdx + 1,
+    platformType: 'static',
+    y, baseY: y, baseX: W + 40,
+    amp: 0, phase: 0,
+    color: layer.wall, colorDark: layer.wallDark, accent: layer.accent,
+    glow: layer.accent,
+    t: 0, passed: false, dead: false,
+    solid: false, crumbleTimer: 0, crumbled: false, bounceBoost: 0
+  });
+
+  /* كنوز على الجزيرة */
+  const r = Math.random();
+  if(r < 0.25) orbs.push({ x: W + 40 + w/2, y: y - 30, r: 16, t:0, dead:false, color:'#FFD700', isSkyOrb:true, value: 15 });
+  else if(r < 0.60) spawnCoinCluster(W + 40 + w/2, y - 25, Math.floor(rand(4,7)));
+}
+
+/* عمود أطلال قديم */
+function spawnSkyRuinColumn(layer){
+  const w = rand(50, 80);
+  const h = rand(180, 320);
+  const y = GROUND_Y - rand(400, 700);
+  const isWall = Math.random() < 0.5;
+
+  if(isWall){
+    /* جدار عالٍ يقفز اللاعب فوقه */
+    obstacles.push({
+      x: W + 40, w, h, type:'block',
+      isWalk: true,
+      y, baseY: y,
+      t:0, passed:false, dead:false,
+      color: layer.wall, colorDark: layer.wallDark, accent: layer.accent,
+      isSkyRuins: true
+    });
+  } else {
+    /* منصة عمودية للتنقل */
+    obstacles.push({
+      x: W + 40, w: 90, h: 14, type:'platform',
+      isWalk: true, isPlatform: true,
+      isSkyPlatform: true,
+      skyTier: G.skyLayerIdx + 1,
+      platformType: 'static',
+      y, baseY: y, baseX: W + 40,
+      amp: 0, phase: 0,
+      color: layer.wall, colorDark: layer.wallDark, accent: layer.accent,
+      glow: layer.accent,
+      t:0, passed:false, dead:false,
+      solid: false, crumbleTimer: 0, crumbled: false, bounceBoost: 0
+    });
+    spawnCoinCluster(W + 40 + 45, y - 30, 4);
+  }
+}
+
+/* حلقة طاقة كونية */
+function spawnSkyRing(layer){
+  const r = 50;
+  const y = GROUND_Y - rand(350, 600);
+
+  obstacles.push({
+    x: W + 40, w: r*2, h: r*2, type:'skyRing',
+    isWalk: true,
+    isSkyRing: true,
+    isPlatform: false,
+    y, baseY: y,
+    cx: W + 40 + r, cy: y + r, r,
+    angle: 0,
+    t:0, passed:false, dead:false,
+    color: layer.accent, colorDark: layer.wall, accent: layer.accent,
+    glow: layer.accent
+  });
+
+  /* مكافأة داخل الحلقة */
+  orbs.push({ x: W + 40 + r, y: y + r, r: 16, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 20 });
+}
+
+function spawnUnderRealmObstacle(){
+  const layer = UNDER_REALM.layers[G.underLayerIdx];
+  const roll = Math.random();
+  
+  /* ═══ 35% منصات تسلق (بدون خطر) ═══ */
+  if(roll < 0.18){ spawnUnderClimbPlatform(layer); return; }
+  if(roll < 0.26){ spawnUnderWideBridge(layer); return; }
+  if(roll < 0.32){ spawnUnderVerticalColumn(layer); return; }
+  if(roll < 0.38){ spawnUnderCrystalCluster(layer); return; }
+  if(roll < 0.43){ spawnUnderBridgeChain(layer); return; }
+  if(roll < 0.48){ spawnUnderLayerSpecial(layer); return; }
+  
+  /* ═══ 52% عقبات خطرة ═══ */
+  if(roll < 0.56){ spawnUnderSpikeCluster(layer); return; }
+  if(roll < 0.65){ spawnUnderSaw(layer); return; }
+  if(roll < 0.73){ spawnUnderFallingRock(layer); return; }
+  if(roll < 0.81){ spawnUnderLaser(layer); return; }
+  if(roll < 0.89){ spawnUnderLavaPool(layer); return; }
+  if(roll < 0.95){ spawnUnderDrillSpike(layer); return; }
+  
+  /* ═══ 5% أشباح ═══ */
+  spawnUnderGhost(layer);
+}
+
+/* منصة تسلق قياسية */
+function spawnUnderClimbPlatform(layer){
+  const py = P.y;
+  const aboveIdx = Math.max(-1, Math.floor((py - GROUND_Y) / UNDER_FLOOR_SPACING) - 1);
+  const aboveY = getUnderFloorWorldY(aboveIdx);
+  const belowY = getUnderFloorWorldY(aboveIdx + 1);
+  
+  const t = rand(0.35, 0.65);
+  const platformY = lerp(aboveY, belowY, t);
+  
+  const w = rand(80, 140);
+  const h = 14;
+  
+  obstacles.push({
+    x: W + 40, w, h, type: 'platform',
+    isWalk: true, isPlatform: true,
+    isUnderPlatform: true,
+    y: platformY, baseY: platformY, baseX: W + 40,
+    amp: 0, phase: 0,
+    color: '#7BC44C', colorDark: '#3A6E28', accent: '#E0FFA0',
+    glow: '#A0FF80',
+    t: 0, passed: false, dead: false,
+    solid: false, crumbleTimer: 0, crumbled: false, bounceBoost: 0
+  });
+  
+  const r = Math.random();
+  if(r < 0.15) spawnPowerup(W + 40 + w/2, platformY - 35);
+  else if(r < 0.55) spawnCoinCluster(W + 40 + w/2, platformY - 25, Math.floor(rand(3,5)));
+  else if(r < 0.75) orbs.push({ x: W + 40 + w/2, y: platformY - 30, r: 12, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 10 });
+}
+
+/* جسر عريض */
+function spawnUnderWideBridge(layer){
+  const py = P.y;
+  const aboveIdx = Math.max(-1, Math.floor((py - GROUND_Y) / UNDER_FLOOR_SPACING) - 1);
+  const aboveY = getUnderFloorWorldY(aboveIdx);
+  const belowY = getUnderFloorWorldY(aboveIdx + 1);
+  
+  const t = rand(0.4, 0.6);
+  const bridgeY = lerp(aboveY, belowY, t);
+  
+  const w = rand(UNDER_BIG_PLATFORM_MIN, UNDER_BIG_PLATFORM_MAX);
+  const h = 14;
+  
+  obstacles.push({
+    x: W + 40, w, h, type: 'platform',
+    isWalk: true, isPlatform: true,
+    isUnderPlatform: true,
+    y: bridgeY, baseY: bridgeY, baseX: W + 40,
+    amp: 0, phase: 0,
+    color: layer.wall || '#5E4028',
+    colorDark: layer.wallDark || '#2A1810',
+    accent: layer.accent || '#8E6A48',
+    glow: layer.accent || '#8E6A48',
+    t: 0, passed: false, dead: false,
+    solid: false, crumbleTimer: 0, crumbled: false, bounceBoost: 0
+  });
+  
+  /* مكافآت على الجسر */
+  const coinCount = Math.floor(w / 60);
+  spawnCoinCluster(W + 40 + w/2, bridgeY - 30, coinCount);
+  
+  if(Math.random() < 0.4){
+    spawnPowerup(W + 40 + w/2 + 40, bridgeY - 50);
+  }
+  if(Math.random() < 0.5){
+    orbs.push({ x: W + 40 + w/2 - 60, y: bridgeY - 30, r: 12, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 12 });
+  }
+}
+
+/* عمود رأسي بمنصات متعددة */
+function spawnUnderVerticalColumn(layer){
+  const baseY = P.y + H * 0.3;
+  const segments = 3 + Math.floor(Math.random() * 3);
+  
+  for(let i = 0; i < segments; i++){
+    const w = rand(60, 90);
+    const h = 12;
+    const y = baseY - i * 90;
+    const offsetX = i * rand(20, 45);
+    
+    obstacles.push({
+      x: W + 40 + offsetX, w, h, type: 'platform',
+      isWalk: true, isPlatform: true,
+      isUnderPlatform: true,
+      y, baseY: y, baseX: W + 40 + offsetX,
+      amp: 0, phase: 0,
+      color: '#7BC44C', colorDark: '#3A6E28', accent: '#E0FFA0',
+      glow: '#A0FF80',
+      t: 0, passed: false, dead: false,
+      solid: false, crumbleTimer: 0, crumbled: false, bounceBoost: 0
+    });
+    
+    /* عملات بين المنصات */
+    if(i < segments - 1){
+      spawnCoinCluster(W + 40 + offsetX + 45, y - 45, 2);
+    }
+  }
+  
+  /* مكافأة في الأعلى */
+  const topY = baseY - (segments - 1) * 90 - 50;
+  orbs.push({ x: W + 40 + 80, y: topY, r: 14, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 18 });
+}
+
+/* مجموعة بلورات */
+function spawnUnderCrystalCluster(layer){
+  const py = P.y;
+  const count = 3 + Math.floor(Math.random() * 3);
+  const baseY = py + rand(-100, 100);
+  
+  for(let i = 0; i < count; i++){
+    const x = W + 40 + i * rand(70, 110);
+    const y = baseY + rand(-40, 40);
+    const r = rand(20, 34);
+    
+    obstacles.push({
+      x: x - r, w: r*2, h: r*2, type:'crystal',
+      isWalk: true, isCrystal: true,
+      y: y - r, baseY: y - r,
+      cx: x, cy: y, r: r,
+      t: 0, passed: false, dead: false,
+      color: layer.accent || '#FF8060',
+      colorDark: layer.wall || '#5E4028',
+      accent: layer.accent || '#FF8060',
+      glow: layer.accent || '#FF8060'
+    });
+    
+    /* مكافآت داخل البلورات */
+    if(i === 0){
+      orbs.push({ x, y, r: 14, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 15 });
+    }
+  }
+}
+
+/* سلسلة جسور متعددة */
+function spawnUnderBridgeChain(layer){
+  const count = 3 + Math.floor(Math.random() * 3);
+  const baseY = P.y + H * 0.2;
+  
+  for(let i = 0; i < count; i++){
+    const w = rand(120, 200);
+    const h = 12;
+    const y = baseY + i * rand(60, 100) * (Math.random() < 0.5 ? -1 : 1);
+    const x = W + 40 + i * rand(180, 240);
+    
+    obstacles.push({
+      x, w, h, type: 'platform',
+      isWalk: true, isPlatform: true,
+      isUnderPlatform: true,
+      y, baseY: y, baseX: x,
+      amp: 0, phase: 0,
+      color: '#7BC44C', colorDark: '#3A6E28', accent: '#E0FFA0',
+      glow: '#A0FF80',
+      t: 0, passed: false, dead: false,
+      solid: false, crumbleTimer: 0, crumbled: false, bounceBoost: 0
+    });
+    
+    /* مكافآت على الجسر */
+    spawnCoinCluster(x + w/2, y - 25, 3);
+  }
+  
+  /* مكافأة في نهاية السلسلة */
+  const lastX = W + 40 + (count - 1) * 200;
+  const lastY = baseY;
+  spawnPowerup(lastX + 200, lastY - 30);
+}
+
+/* عنصر خاص بالطبقة */
+function spawnUnderLayerSpecial(layer){
+  const layerId = layer.id;
+  
+  if(layerId === 'magma' || layerId === 'core'){
+    /* بركان صغير - منصة مع فتحة حمم */
+    const w = rand(150, 220);
+    const h = 14;
+    const y = P.y + rand(-80, 80);
+    
+    obstacles.push({
+      x: W + 40, w, h, type: 'platform',
+      isWalk: true, isPlatform: true,
+      isUnderPlatform: true,
+      y, baseY: y, baseX: W + 40,
+      amp: 0, phase: 0,
+      color: '#8E2018', colorDark: '#3A0808', accent: '#FF5020',
+      glow: '#FF5020',
+      t: 0, passed: false, dead: false,
+      solid: false, crumbleTimer: 0, crumbled: false, bounceBoost: 0
+    });
+    
+    /* عملات فوق الحمم */
+    spawnCoinCluster(W + 40 + w/2, y - 40, 5);
+    spawnPowerup(W + 40 + w/2, y - 70);
+    
+  } else if(layerId === 'abyss' || layerId === 'void'){
+    /* بوابة فراغ - حلقة مضيئة */
+    const r = 45;
+    const y = P.y + rand(-60, 60);
+    
+    obstacles.push({
+      x: W + 40, w: r*2, h: r*2, type:'skyRing',
+      isWalk: true,
+      isSkyRing: true,
+      isPlatform: false,
+      y, baseY: y,
+      cx: W + 40 + r, cy: y + r, r,
+      angle: 0,
+      t: 0, passed: false, dead: false,
+      color: layer.accent || '#A080FF',
+      colorDark: layer.wall || '#1A0838',
+      accent: layer.accent || '#A080FF',
+      glow: layer.accent || '#A080FF'
+    });
+    
+    orbs.push({ x: W + 40 + r, y: y + r, r: 16, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 20 });
+    
+  } else {
+    /* كهوف: عمود صخري + منصة جانبية */
+    const w = rand(60, 100);
+    const h = 180;
+    const y = P.y + rand(-100, 100);
+    
+    obstacles.push({
+      x: W + 40, w, h, type: 'block',
+      isWalk: true,
+      y, baseY: y,
+      t: 0, passed: false, dead: false,
+      color: layer.wall || '#5E4028',
+      colorDark: layer.wallDark || '#2A1810',
+      accent: layer.accent || '#8E6A48',
+      isUnderPillar: true
+    });
+    
+    /* منصة على الجانب */
+    obstacles.push({
+      x: W + 40 + w + 20, w: 80, h: 12, type: 'platform',
+      isWalk: true, isPlatform: true,
+      isUnderPlatform: true,
+      y: y + 40, baseY: y + 40, baseX: W + 40 + w + 20,
+      amp: 0, phase: 0,
+      color: '#7BC44C', colorDark: '#3A6E28', accent: '#E0FFA0',
+      glow: '#A0FF80',
+      t: 0, passed: false, dead: false,
+      solid: false, crumbleTimer: 0, crumbled: false, bounceBoost: 0
+    });
+    
+    spawnCoinCluster(W + 40 + w + 60, y + 10, 3);
+  }
+}
+
+/* ═══════════════ UNDERGROUND OBSTACLES ═══════════════ */
+
+/* أشواك على سطح الطابق */
+function spawnUnderSpikeCluster(layer){
+  const py = P.y;
+  const aboveIdx = Math.max(-1, Math.floor((py - GROUND_Y) / UNDER_FLOOR_SPACING) - 1);
+  const aboveY = getUnderFloorWorldY(aboveIdx);
+  
+  const count = 2 + Math.floor(Math.random() * 4);
+  const spacing = 42;
+  const startX = W + 60;
+  
+  for(let i = 0; i < count; i++){
+    obstacles.push({
+      x: startX + i * spacing, w: 32, h: 44,
+      type: 'underSpike',
+      isWalk: true, isUnderSpike: true, isUnderObstacle: true,
+      y: aboveY - 44,
+      baseY: aboveY - 44,
+      t: 0, passed: false, dead: false,
+      color: layer.wall, colorDark: layer.wallDark, accent: layer.accent
+    });
+  }
+  
+  /* مكافأة فوق الأشواك */
+  if(Math.random() < 0.5){
+    spawnCoinCluster(startX + (count-1)*spacing/2, aboveY - 90, 4);
+  }
+}
+
+/* منشار على سطح الطابق */
+function spawnUnderSaw(layer){
+  const py = P.y;
+  const aboveIdx = Math.max(-1, Math.floor((py - GROUND_Y) / UNDER_FLOOR_SPACING) - 1);
+  const aboveY = getUnderFloorWorldY(aboveIdx);
+  
+  const r = rand(32, 46);
+  const isMoving = Math.random() < 0.6;
+  
+  obstacles.push({
+    x: W + 40, w: r*2, h: r*2, type:'saw',
+    t:0, passed:false, dead:false,
+    isWalk:true, isSaw:true, isUnderObstacle: true,
+    y: aboveY - r*2,
+    baseY: aboveY - r*2,
+    cx: W + 40 + r,
+    cy: aboveY - r,
+    r: r,
+    angle: 0,
+    angleSpd: rand(0.15, 0.30) * (Math.random() < 0.5 ? 1 : -1),
+    movingY: isMoving,
+    amp: isMoving ? rand(60, 120) : 0,
+    phase: rand(0, Math.PI*2),
+    color:'#B0B8C0', colorDark:'#606870', accent:'#FF6040'
+  });
+  
+  if(Math.random() < 0.4) spawnCoinCluster(W + 40 + r, aboveY - r*2 - 60, 3);
+}
+
+/* صخرة متساقطة من السقف */
+function spawnUnderFallingRock(layer){
+  const py = P.y;
+  const aboveIdx = Math.max(-1, Math.floor((py - GROUND_Y) / UNDER_FLOOR_SPACING) - 1);
+  const aboveY = getUnderFloorWorldY(aboveIdx);
+  const ceilY = getUnderFloorWorldY(aboveIdx - 1);
+  
+  const count = 1 + Math.floor(Math.random() * 3);
+  const spacing = 90;
+  const startX = W + 60;
+  
+  for(let i = 0; i < count; i++){
+    obstacles.push({
+      x: startX + i * spacing, w: 34, h: 34, type:'fallRock',
+      t:0, passed:false, dead:false,
+      isWalk:true, isFallingRock:true, isUnderObstacle: true,
+      y: ceilY + 20, baseY: ceilY + 20,
+      targetY: aboveY - 34,
+      falling: false,
+      warned: false,
+      landed: false,
+      triggerDistance: rand(140, 220),
+      color: layer.wall, colorDark: layer.wallDark, accent: layer.accent
+    });
+  }
+  
+  spawnCoinCluster(startX + (count-1)*spacing/2, aboveY - 100, 3);
+}
+
+/* سياج ليزر عمودي */
+function spawnUnderLaser(layer){
+  const py = P.y;
+  const aboveIdx = Math.max(-1, Math.floor((py - GROUND_Y) / UNDER_FLOOR_SPACING) - 1);
+  const aboveY = getUnderFloorWorldY(aboveIdx);
+  const ceilY = getUnderFloorWorldY(aboveIdx - 1);
+  
+  const isVertical = Math.random() < 0.7;
+  
+  if(isVertical){
+    const gapCount = Math.floor(rand(2, 4));
+    const segments = [];
+    let curY = ceilY + 40;
+    const gapSize = rand(60, 90);
+    
+    for(let i = 0; i < gapCount; i++){
+      const segH = rand(60, 100);
+      segments.push({ y: curY, h: segH });
+      curY += segH + gapSize;
+      if(curY > aboveY - 60) break;
+    }
+    
+    obstacles.push({
+      x: W + 40, w: 12, type:'laser',
+      t:0, passed:false, dead:false,
+      isWalk:true, isLaser:true, isUnderObstacle: true,
+      isVertical: true,
+      segments,
+      pulse: 0,
+      color: layer.accent || '#40E8FF',
+      accent: '#80FFFF',
+      damage: true
+    });
+  } else {
+    obstacles.push({
+      x: W + 40, w: 14, type:'laser',
+      t:0, passed:false, dead:false,
+      isWalk:true, isLaser:true, isUnderObstacle: true,
+      isVertical: false,
+      y: aboveY - rand(80, 140),
+      baseY: aboveY - rand(80, 140),
+      amp: rand(20, 50),
+      phase: rand(0, Math.PI*2),
+      color: layer.accent || '#FF40A0',
+      accent: '#FF80D0',
+      damage: true
+    });
+  }
+}
+
+/* بركة حمم/حمض على الأرض */
+function spawnUnderLavaPool(layer){
+  const py = P.y;
+  const aboveIdx = Math.max(-1, Math.floor((py - GROUND_Y) / UNDER_FLOOR_SPACING) - 1);
+  const aboveY = getUnderFloorWorldY(aboveIdx);
+  
+  const layerId = layer.id;
+  let poolColor = '#FF5020';
+  let poolGlow = '#FFD060';
+  
+  if(layerId === 'caves'){ poolColor = '#40E8D0'; poolGlow = '#80FFE0'; }
+  else if(layerId === 'abyss' || layerId === 'void'){ poolColor = '#A080FF'; poolGlow = '#D0B0FF'; }
+  else if(layerId === 'magma' || layerId === 'core'){ poolColor = '#FF5020'; poolGlow = '#FFD060'; }
+  
+  const w = rand(130, 190);
+  const h = 14;
+  
+  obstacles.push({
+    x: W + 40, w, h, type:'lavaPool',
+    t:0, passed:false, dead:false,
+    isWalk:true, isLavaPool:true, isUnderObstacle: true,
+    y: aboveY - h,
+    baseY: aboveY - h,
+    poolColor,
+    poolGlow,
+    color: poolColor,
+    colorDark: layer.wall,
+    accent: poolGlow
+  });
+  
+  /* مكافأة فوق البركة (تشجيع على المخاطرة) */
+  spawnCoinCluster(W + 40 + w/2, aboveY - 80, 4);
+}
+
+/* رمح يخرج من السقف/الأرض */
+function spawnUnderDrillSpike(layer){
+  const py = P.y;
+  const aboveIdx = Math.max(-1, Math.floor((py - GROUND_Y) / UNDER_FLOOR_SPACING) - 1);
+  const aboveY = getUnderFloorWorldY(aboveIdx);
+  const isTop = Math.random() < 0.5;
+  
+  const w = rand(60, 90);
+  const h = rand(40, 60);
+  
+  obstacles.push({
+    x: W + 40, w, h, type:'drill',
+    t:0, passed:false, dead:false,
+    isWalk:true, isDrill:true, isUnderObstacle: true,
+    isTop,
+    cycle: rand(0, 90),
+    period: rand(70, 130),
+    extendDist: rand(70, 110),
+    extend: 0,
+    hasSpikes: true,
+    floorY: aboveY,
+    color:'#5A6878', colorDark:'#2A3038', accent: layer.accent || '#FFA040'
+  });
+  
+  orbs.push({ x: W + 40 + w/2, y: aboveY - 90, r:12, t:0, dead:false, color:layer.accent, isSkyOrb:true });
+}
+
+/* شبح متحرك */
+function spawnUnderGhost(layer){
+  const py = P.y;
+  const aboveIdx = Math.max(-1, Math.floor((py - GROUND_Y) / UNDER_FLOOR_SPACING) - 1);
+  const aboveY = getUnderFloorWorldY(aboveIdx);
+  const ceilY = getUnderFloorWorldY(aboveIdx - 1);
+  
+  const cy = (aboveY + ceilY) / 2;
+  
+  obstacles.push({
+    x: W + 40, w: 40, h: 40, type:'ghost',
+    t:0, passed:false, dead:false,
+    isWalk:true, isGhost:true, isUnderObstacle: true,
+    y: cy - 20,
+    baseY: cy - 20,
+    cx: W + 60, cy: cy,
+    r: 22,
+    angle: 0,
+    amp: rand(40, 80),
+    phase: rand(0, Math.PI*2),
+    color: layer.accent || '#B8A4C9',
+    colorDark: layer.wall,
+    accent: layer.accent
+  });
+}
+
+/* سلسلة صاعدة للخروج من الأعماق */
+function spawnUnderAscent(layer){
+  const startX = W + 60;
+  let x = startX;
+  let y = GROUND_Y + Math.min(700, -getPlayerAltitude() + 80);
+  const speedScale = getSpeedScale();
+
+  for(let i = 0; i < 6; i++){
+    x += rand(95, 125) * speedScale;
+    y -= rand(85, 115);
+
+    obstacles.push({
+      x, w: 95, h: 14, type: 'platform',
+      isWalk: true, isPlatform: true,
+      isUnderPlatform: true,
+      y, baseY: y, baseX: x,
+      amp: 0, phase: 0,
+      color: '#7BC44C', colorDark: '#3A6E28', accent: '#E0FFA0',
+      glow: '#A0FF80',
+      t: 0, passed: false, dead: false,
+      solid: false, crumbleTimer: 0, crumbled: false, bounceBoost: 0
+    });
+
+    coins.push({
+      x: x + 45, y: y - 30,
+      r: 8, t: 0, dead: false,
+      isSkyCoin: true
+    });
+  }
+
+  /* مكافأة في الأعلى */
+  orbs.push({
+    x: x + 60, y: y - 60, r: 16, t: 0, dead: false,
+    color: '#FFD700', isSkyOrb: true, value: 25
+  });
+
+  Sfx.play(660, 0.3, 'sine', 0.04, 990);
+}
+
+/* منصة أرضية */
+function spawnUnderPlatform(layer){
+  const w = rand(90, 140);
+  const h = 14;
+  const y = GROUND_Y + rand(250, 650);
+
+  obstacles.push({
+    x: W + 40, w, h, type:'platform',
+    isWalk: true, isPlatform: true,
+    isUnderPlatform: true,
+    y, baseY: y, baseX: W + 40,
+    amp: 0, phase: 0,
+    color: layer.wall, colorDark: layer.wallDark, accent: layer.accent,
+    glow: layer.accent,
+    t:0, passed:false, dead:false,
+    solid: false, crumbleTimer: 0, crumbled: false, bounceBoost: 0,
+    /* ✨ منصة سفلية: تصطدم من الأسفل */
+    isBidirectional: true
+  });
+
+  const r = Math.random();
+  if(r < 0.25) orbs.push({ x: W + 40 + w/2, y: y + 30, r: 14, t:0, dead:false, color:'#FFD700', isSkyOrb:true, value: 12 });
+  else spawnCoinCluster(W + 40 + w/2, y + 25, 4);
+}
+
+/* عمود صخري */
+function spawnUnderPillar(layer){
+  const w = rand(40, 70);
+  const h = rand(160, 280);
+  const y = GROUND_Y + rand(300, 550);
+
+  obstacles.push({
+    x: W + 40, w, h, type:'block',
+    isWalk: true,
+    y, baseY: y,
+    t:0, passed:false, dead:false,
+    color: layer.wall, colorDark: layer.wallDark, accent: layer.accent,
+    isUnderPillar: true
+  });
+}
+
+/* أشواك سفلية */
+function spawnUnderSpike(layer){
+  const count = Math.floor(rand(2, 5));
+  const spacing = 70;
+  const startX = W + 40;
+
+  for(let i = 0; i < count; i++){
+    obstacles.push({
+      x: startX + i * spacing, w: 30, h: 40,
+      type: 'underSpike',
+      isWalk: true, isUnderSpike: true,
+      y: GROUND_Y + rand(200, 400),
+      t:0, passed:false, dead:false,
+      color: layer.wall, colorDark: layer.wallDark, accent: layer.accent
+    });
+  }
+}
+
+/* سلسلة منصات تحتية */
+function spawnUnderChain(layer){
+  const count = Math.floor(rand(3, 6));
+  const startX = W + 40;
+  const spacing = rand(130, 180);
+  let y = GROUND_Y + 250;
+
+  for(let i = 0; i < count; i++){
+    y += rand(40, 80);
+    obstacles.push({
+      x: startX + i * spacing, w: rand(70, 100), h: 12,
+      type: 'platform',
+      isWalk: true, isPlatform: true,
+      isUnderPlatform: true,
+      y, baseY: y, baseX: startX + i * spacing,
+      amp: 0, phase: 0,
+      color: layer.wall, colorDark: layer.wallDark, accent: layer.accent,
+      glow: layer.accent,
+      t:0, passed:false, dead:false,
+      solid: false, crumbleTimer: 0, crumbled: false, bounceBoost: 0
+    });
+
+    if(i < count - 1){
+      const midX = startX + i * spacing + spacing/2;
+      const midY = y + 25;
+      spawnCoinCluster(midX, midY, 3);
+    }
+  }
+}
+
+/* بلورة طاقة */
+function spawnUnderCrystal(layer){
+  const x = W + 40;
+  const y = GROUND_Y + rand(250, 600);
+
+  obstacles.push({
+    x, w: 50, h: 60, type:'crystal',
+    isWalk: true, isCrystal: true,
+    y, baseY: y,
+    t:0, passed:false, dead:false,
+    color: layer.accent, colorDark: layer.wall, accent: layer.accent,
+    glow: layer.accent
+  });
+
+  orbs.push({ x: x + 25, y: y + 30, r: 16, t: 0, dead: false, color: layer.accent, isSkyOrb: true, value: 18 });
+}
+
+/* ============================================================
    ==================== Game flow ============================
    ============================================================ */
 function resetRun(){
+  P.r = 13;
+  /* ═══════════════ اختيار النمط أولاً ═══════════════ */
+  G.selectedMode = Save.data.mode || 'FLIP';
+  G.isMixedMode = (G.selectedMode === 'MIXED');
+
+  if(G.isMixedMode){
+    const allModes = ['FLIP','FLAP','DRIFT','WALK'];
+    const startMode = allModes[Math.floor(Math.random() * allModes.length)];
+    G.mode = startMode;
+  } else {
+    G.mode = G.selectedMode;
+  }
+
+  /* ═══════════════ تصفير الحالة ═══════════════ */
   G.dist = 0; G.meters = 0;
   G.orbCount = 0; G.runCoins = 0;
   G.speed = PROGRESSION.speedStart;
@@ -6683,25 +8999,41 @@ function resetRun(){
   G.activePowerups = {};
   G.combo = 0; G.comboTimer = 0; G.comboMax = 0;
   G.extraJumps = 0;
-G.glideActive = false;
-G.rocketActive = false;
-G.megaJumpActive = 0;
-G.wallStickActive = false;
-G.rocketFrames = 0;
-G.rocketMaxAltitude = 0;
-G.maxAltitude = 0;
-G.camY = 0;
-G.camTargetY = 0;
-G.skyDecor = [];
-initSkyDecor();
-lastSkySpawn = 0;
+  G.glideActive = false;
+  G.rocketActive = false;
+  G.megaJumpActive = 0;
+  G.wallStickActive = false;
+  G.rocketFrames = 0;
+  G.rocketMaxAltitude = 0;
+  G.maxAltitude = 0;
+  G.camY = 0;
+  G.camTargetY = 0;
+  G.skyDecor = [];
+    G.realm = REALM.GROUND;
+  G.skyLayerIdx = 0;
+  G.underLayerIdx = 0;
+  G.skyLayersVisited = [];
+  G.underLayersVisited = [];
+  G.realmTransition = 0;
+  G.realmFrom = REALM.GROUND;
+  G.realmTo = REALM.GROUND;
+  G.nextHoleMeters = 450;   /* أول حفرة بعد 450م */
+  G.isDigging = false;
+  G.underDepthPx = 0;
+  G.camYUnder = 0;
+  const ri = document.getElementById('realm-indicator');
+  if(ri) ri.style.opacity = '0';
+  initSkyDecor();
+  lastSkySpawn = 0;
   obstacles = []; orbs = []; coins = []; powerups = [];
   particles = []; floats = []; G.weather = [];
   sparkParticles = [];
   P.trail = [];
   P.vx = 0; P.vy = 0; P.gravityDir = 1; P.rot = 0; P.jumps = 0;
   P.enginePhase = 0; P.legPhase = 0; P.bouncePhase = 0;
-    initCape();
+  P.jumpHeld = false; P.jumpHoldTimer = 0;
+  P.coyoteTimer = 0; P.jumpBufferTimer = 0;
+  initCape();
 
   if(G.mode==='WALK'){ P.y = GROUND_Y-P.r; P.onGround = true; }
   else if(G.mode==='FLIP_WALK'){ P.y = CEILING_H + P.r; P.onGround = true; P.vy = 0; }
@@ -6709,15 +9041,34 @@ lastSkySpawn = 0;
   else { P.y = H/2; P.onGround = false; }
   P.x = G.mode==='DRIFT' ? W*0.3 : P.baseX;
   pointer.x = P.x; pointer.y = P.y;
-  document.getElementById('hud-meters').textContent = '0';
-  document.getElementById('hud-coins').textContent = '0';
-  document.getElementById('combo-pill').style.display = 'none';
+
+  const hudM = document.getElementById('hud-meters');
+  const hudC = document.getElementById('hud-coins');
+  const comboPill = document.getElementById('combo-pill');
+  if(hudM) hudM.textContent = '0';
+  if(hudC) hudC.textContent = '0';
+  if(comboPill) comboPill.style.display = 'none';
+
   updateLevelUI(); updatePowerupsUI(); initClouds();
   const tag = document.getElementById('scene-tag');
-  tag.textContent = SCENES[0].en;
-  tag.classList.remove('show');
-const altHud = document.getElementById('altitude-hud');
-if(altHud) altHud.style.opacity = '0';
+  if(tag){
+    tag.textContent = SCENES[0].en;
+    tag.classList.remove('show');
+  }
+  const altHud = document.getElementById('altitude-hud');
+  if(altHud) altHud.style.opacity = '0';
+
+  /* Shift Gates */
+  G.distSinceGate = 0;
+  G.pendingShift = false;
+  G.shiftGrace = 0;
+  activeSynergies = [];
+
+  /* بانر الافتتاح في MIXED */
+  if(G.isMixedMode){
+    const startAr = MODES.find(m => m.id === G.mode)?.ar || G.mode;
+    showBanner('MIXED RUN', '◆ ' + startAr);
+  }
 }
 
 function startGame(){
@@ -6729,15 +9080,19 @@ function startGame(){
   showBanner('GO','');
   G.banner.timer = 55;
   let txt = '';
-  if(G.mode==='FLIP') txt = 'اضغط لقلب الجاذبية';
+  if(G.isMixedMode){
+    txt = 'النمط المتنوّع — كل ١٢٠م يتغير النمط!';
+  } else if(G.mode==='FLIP') txt = 'اضغط لقلب الجاذبية';
   else if(G.mode==='FLAP') txt = 'اضغط باستمرار للارتفاع';
   else if(G.mode==='DRIFT') txt = 'اسحب إصبعك لتحريك السفينة';
   else if(G.mode==='WALK') txt = 'اضغط للقفز — مزدوجة متاحة';
   else if(G.mode==='FLIP_WALK') txt = 'أنت على السقف! اقفز للأسفل — لا تسقط في العمق!';
   else if(G.mode==='SKY_JUMP') txt = 'قفز تلقائي — اضغط في الهواء لتطير أعلى!';
   const h = document.getElementById('hint');
-  h.textContent = txt;
-  h.classList.add('show');
+  if(h){
+    h.textContent = txt;
+    h.classList.add('show');
+  }
   G.hintTimer = 220;
 }
 
@@ -6747,7 +9102,8 @@ function gameOver(){
   spawnDeathEffect(P.x, P.y, currentSkin().body);
   shake(22); G.flash = 0.6;
 
-  const mode = G.mode;
+  /* ✅ الإصلاح: خزّن النتيجة في النمط المختار (MIXED أو نمط فردي) */
+  const mode = G.selectedMode;
   const meters = getMeters();
   const prev = Save.data.bestMeters[mode] || 0;
   const isNew = meters > prev;
@@ -6795,18 +9151,30 @@ function gameOver(){
     rewardChips.push('🎁 LVL ' + (lvl+1) + ': +' + rw.coins);
   });
 
+  /* تتبع MIXED Runs */
+  if(G.isMixedMode){
+    Save.data.stats.shiftRuns = (Save.data.stats.shiftRuns || 0) + 1;
+  }
+  checkBadges();
+
   Save.save();
   checkAchievements();
 
-  document.getElementById('over-meters').textContent = meters;
-  document.getElementById('over-best').textContent = Save.data.bestMeters[mode] + 'م';
-  document.getElementById('over-coins').textContent = totalEarned;
-  document.getElementById('over-level').textContent = (getModeLevel(mode) + 1);
-  document.getElementById('over-record').classList.toggle('hidden', !isNew);
-  document.getElementById('over-eyebrow').textContent = isNew ? 'NEW RECORD' : 'RUN COMPLETE';
+  const overM = document.getElementById('over-meters');
+  const overB = document.getElementById('over-best');
+  const overC = document.getElementById('over-coins');
+  const overL = document.getElementById('over-level');
+  const overR = document.getElementById('over-record');
+  const overE = document.getElementById('over-eyebrow');
+  if(overM) overM.textContent = meters;
+  if(overB) overB.textContent = Save.data.bestMeters[mode] + 'م';
+  if(overC) overC.textContent = totalEarned;
+  if(overL) overL.textContent = (getModeLevel(mode) + 1);
+  if(overR) overR.classList.toggle('hidden', !isNew);
+  if(overE) overE.textContent = isNew ? 'NEW RECORD' : 'RUN COMPLETE';
 
   const rwDiv = document.getElementById('over-rewards');
-  rwDiv.innerHTML = rewardChips.map(c=>`<div class="over-reward-chip">${c}</div>`).join('');
+  if(rwDiv) rwDiv.innerHTML = rewardChips.map(c=>`<div class="over-reward-chip">${c}</div>`).join('');
 
   updateCoinsUI();
   updateGlobalLevelUI();
@@ -6856,7 +9224,8 @@ function quitToMenu(){
   G.shield = false; G.ghost = 0;
   G.activePowerups = {};
   G.combo = 0; G.comboTimer = 0;
-  document.getElementById('combo-pill').style.display = 'none';
+  const comboPill = document.getElementById('combo-pill');
+  if(comboPill) comboPill.style.display = 'none';
   setInGame(false);
   hideOverlay();
   showScreen('s-home');
@@ -6892,7 +9261,6 @@ const Cloud = {
       return false;
     }
     try {
-      // Avoid double-init
       if (!firebase.apps || firebase.apps.length === 0) {
         this.app = firebase.initializeApp(FIREBASE_CONFIG);
       } else {
@@ -6900,9 +9268,7 @@ const Cloud = {
       }
       this.auth = firebase.auth();
       this.db = firebase.firestore();
-      this.db.enablePersistence({ synchronizeTabs: true }).catch(err => {
-        // silent
-      });
+      this.db.enablePersistence({ synchronizeTabs: true }).catch(err => {});
       this.enabled = true;
       this.ready = true;
       console.log('[Cloud] Firebase initialized');
@@ -6954,18 +9320,8 @@ const Cloud = {
       msg = 'تسجيل الدخول بـ Google غير مُفعّل في Firebase. فعّله من Authentication → Sign-in method';
     } else if (code.includes('network-request-failed')) {
       msg = 'فشل الاتصال بالشبكة، تحقّق من الإنترنت';
-    } else if (code.includes('account-exists-with-different-credential')) {
-      msg = 'هذا البريد مسجّل بمزوّد دخول آخر';
-    } else if (code.includes('user-disabled')) {
-      msg = 'هذا الحساب معطّل من قِبَل المسؤول';
-    } else if (code.includes('too-many-requests')) {
-      msg = 'محاولات كثيرة جداً، انتظر قليلاً ثم حاول مجدداً';
-    } else if (code.includes('internal-error')) {
-      msg = 'خطأ داخلي من Google، حاول مجدداً';
     } else if (code.includes('invalid-api-key')) {
       msg = 'مفتاح Firebase API غير صالح — تحقّق من FIREBASE_CONFIG';
-    } else if (code.includes('app-not-authorized')) {
-      msg = 'التطبيق غير مُصرّح له بهذا المشروع، تحقّق من appId';
     }
     return { ok: false, error: msg, code };
   },
@@ -6995,11 +9351,10 @@ const Cloud = {
           createdAt: firebase.firestore.FieldValue.serverTimestamp(),
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
-        try { await ref.set(this.profile); } catch(e2) { console.warn('[Cloud] profile set failed:', e2); }
+        try { await ref.set(this.profile); } catch(e2) {}
       }
     } catch (e) {
       console.warn('[Cloud] loadProfile failed, using fallback:', e);
-      // Fallback — allow user to continue even if Firestore is not ready
       this.profile = { uid, username: null };
     }
     return this.profile;
@@ -7034,31 +9389,21 @@ const Cloud = {
     const myUid = this.user.uid;
     const nameRef = this.db.collection('usernames').doc(key);
 
-    console.log('[Cloud] Attempting to claim username:', key, 'uid:', myUid);
-
-    // --- Step 1: Check availability (read) ---
     try {
       const snap = await nameRef.get();
       if (snap.exists) {
         const data = snap.data();
         if (data.uid !== myUid) {
-          console.warn('[Cloud] Username taken by another uid');
           return { ok: false, error: 'taken', msg: 'الاسم محجوز' };
         }
       }
     } catch (e) {
-      console.error('[Cloud] Read failed (checking availability):', e);
-      // If read fails, likely Firestore not ready
-      if (e.code === 'permission-denied' || (e.message && e.message.includes('permission'))) {
-        return { ok: false, error: 'permission', msg: 'قواعد Firestore تمنع الوصول (راجع Console)' };
+      if (e.code === 'permission-denied') {
+        return { ok: false, error: 'permission', msg: 'قواعد Firestore تمنع الوصول' };
       }
-      if (e.code === 'unavailable' || (e.message && e.message.includes('offline'))) {
-        return { ok: false, error: 'offline', msg: 'Firestore غير مُفعّل أو غير متصل' };
-      }
-      return { ok: false, error: 'network', msg: 'فشل الاتصال بـ Firestore: ' + (e.message || e.code || 'خطأ غير معروف') };
+      return { ok: false, error: 'network', msg: 'فشل الاتصال بـ Firestore' };
     }
 
-    // --- Step 2: Claim via transaction (atomic) ---
     try {
       await this.db.runTransaction(async (tx) => {
         const snap = await tx.get(nameRef);
@@ -7067,48 +9412,26 @@ const Cloud = {
         }
         tx.set(nameRef, { uid: myUid, username: trimmed, ts: Date.now() });
       });
-      console.log('[Cloud] Username claimed via transaction');
     } catch (e) {
-      // Transaction failed — try simple set as fallback
-      console.warn('[Cloud] Transaction failed, trying fallback:', e);
-
       if (e.message === 'taken') {
         return { ok: false, error: 'taken', msg: 'الاسم محجوز' };
       }
-
-      // Fallback: simple write (still safe enough because we checked above)
       try {
         await nameRef.set({ uid: myUid, username: trimmed, ts: Date.now() });
-        console.log('[Cloud] Username claimed via fallback set');
       } catch (e2) {
-        console.error('[Cloud] Fallback set also failed:', e2);
-        let msg = 'فشل الحفظ';
-        if (e2.code === 'permission-denied') {
-          msg = 'قواعد Firestore تمنع الكتابة. تحقق من Rules في Firebase Console';
-        } else if (e2.code === 'unavailable') {
-          msg = 'Firestore غير مُفعّل أو غير متصل';
-        } else if (e2.message) {
-          msg = 'فشل: ' + e2.message;
-        }
-        return { ok: false, error: 'network', msg };
+        return { ok: false, error: 'network', msg: 'فشل الحفظ' };
       }
     }
 
-    // --- Step 3: Save to player profile ---
     try {
       await this.saveProfile({ username: trimmed });
-      console.log('[Cloud] Profile saved with username');
-    } catch (e) {
-      console.warn('[Cloud] saveProfile failed:', e);
-      // Continue anyway — the username was claimed
-    }
+    } catch (e) {}
 
-    // --- Step 4: Release old username (best effort) ---
     const oldName = this.profile && this.profile.username;
     if (oldName && oldName.toLowerCase() !== key) {
       try {
         await this.db.collection('usernames').doc(oldName.toLowerCase()).delete();
-      } catch (e) { /* ignore */ }
+      } catch (e) {}
     }
 
     return { ok: true, username: trimmed };
@@ -7142,7 +9465,6 @@ const Cloud = {
       }
       return null;
     } catch (e) {
-      console.warn('[Cloud] Pull failed:', e);
       return null;
     }
   },
@@ -7153,25 +9475,6 @@ const Cloud = {
     this.syncTimer = setTimeout(() => this.pushSave(), 1200);
   }
 };
-
-/* ============================================================
-   ==================== Redirect Result Handler ==============
-   ============================================================ */
-async function checkRedirectResult() {
-  if (!Cloud.auth) return;
-  try {
-    const result = await Cloud.auth.getRedirectResult();
-    if (result && result.user) {
-      console.log('[Cloud] Redirect sign-in succeeded');
-      Cloud.user = result.user;
-      await handleSignInResult({ ok: true, user: result.user });
-    }
-  } catch (e) {
-    console.warn('[Cloud] Redirect result error:', e);
-    const err = Cloud._handleAuthError(e);
-    if (err && err.error) showLoginError(err.error);
-  }
-}
 
 /* ============================================================
    ==================== Merge Cloud Save =====================
@@ -7205,11 +9508,10 @@ function mergeSaveData(local, cloud) {
   s.totalCoins  = Math.max(s.totalCoins  || 0, cs.totalCoins  || 0);
   s.bestMeters  = Math.max(s.bestMeters  || 0, cs.bestMeters  || 0);
   s.bestCombo   = Math.max(s.bestCombo   || 0, cs.bestCombo   || 0);
+  s.shiftRuns   = Math.max(s.shiftRuns   || 0, cs.shiftRuns   || 0);
 
   out.season.points = Math.max(local.season.points || 0, (cloud.season && cloud.season.points) || 0);
-
   out.achievements = Object.assign({}, local.achievements, cloud.achievements);
-
   out.claimedGlobalLevels = Array.from(new Set([
     ...(local.claimedGlobalLevels||[]),
     ...(cloud.claimedGlobalLevels||[])
@@ -7286,7 +9588,6 @@ function updateProfileUI() {
   const provider = user ? getProviderLabel(user) : 'محلي';
   const uid = user ? user.uid : 'local';
 
-  // Home mini button
   const mini = document.getElementById('profile-mini-emoji');
   const miniImg = document.getElementById('profile-mini-img');
   if (mini && miniImg) {
@@ -7300,7 +9601,6 @@ function updateProfileUI() {
     }
   }
 
-  // Settings profile card
   const pcName = document.getElementById('pc-name');
   const pcProv = document.getElementById('pc-provider');
   const pcEmoji = document.getElementById('pc-avatar-emoji');
@@ -7334,6 +9634,27 @@ function updateProfileUI() {
 
   const sa = document.getElementById('setup-avatar-emoji');
   if (sa) sa.textContent = displayName.charAt(0).toUpperCase() || '👤';
+
+    /* ═══ تحديث القائمة المنسدلة ═══ */
+  const hmName = document.getElementById('hm-username');
+  const hmSub = document.getElementById('hm-user-sub');
+  const hmEmoji = document.getElementById('hm-avatar-emoji');
+  const hmImg = document.getElementById('hm-avatar-img');
+
+  if(hmName) hmName.textContent = displayName;
+  if(hmSub) hmSub.textContent = user ? (provider + ' · متصل') : 'لاعب محلي';
+
+  if(hmEmoji && hmImg){
+    if(photo){
+      hmEmoji.style.display = 'none';
+      hmImg.src = photo;
+      hmImg.style.display = 'block';
+    } else {
+      hmEmoji.style.display = 'inline';
+      hmEmoji.textContent = displayName.charAt(0).toUpperCase() || '👤';
+      hmImg.style.display = 'none';
+    }
+  }
 }
 
 function updateSyncUI() {
@@ -7372,39 +9693,34 @@ async function handleSignInResult(result) {
 
   const user = result.user;
 
-  // Ensure profile object always exists
   if (!Cloud.profile) Cloud.profile = { uid: user.uid, username: null };
 
   try {
     await Cloud.loadProfile(user.uid);
   } catch(e) {
-    console.warn('loadProfile failed', e);
     Cloud.profile = { uid: user.uid, username: null };
   }
 
-  // Safety: ensure profile is still set after loadProfile
   if (!Cloud.profile) Cloud.profile = { uid: user.uid, username: null };
 
-  // Pre-fill username from Google display name
   if (!Cloud.profile.username && user.displayName) {
     const suggested = user.displayName.replace(/[^A-Za-z0-9_\u0600-\u06FF]/g, '').slice(0, 16) || '';
     if (suggested) {
       const setupInput = document.getElementById('setup-username');
-      if (setupInput) setupInput.value = suggested;
-      // Trigger input event so button enables
-      setupInput.dispatchEvent(new Event('input'));
+      if (setupInput) {
+        setupInput.value = suggested;
+        setupInput.dispatchEvent(new Event('input'));
+      }
     }
   }
 
   if (!Cloud.profile.username) {
-    // New user → ask for username
     showScreen('s-profile-setup');
     setTimeout(() => {
       const inp = document.getElementById('setup-username');
       if (inp) inp.focus();
     }, 300);
   } else {
-    // Returning user → go home
     await mergeAndGoHome();
   }
 }
@@ -7443,11 +9759,7 @@ function validateUsername(name) {
    ==================== Setup Screen Wiring ==================
    ============================================================ */
 function setupAuthWiring() {
-  // ---- Login buttons ----
   const btnG = document.getElementById('login-google');
-  const btnF = document.getElementById('login-facebook');
-  const btnGuest = document.getElementById('login-guest');
-
   if (btnG) btnG.addEventListener('click', async () => {
     showLoginLoading(true);
     const r = await Cloud.signInGoogle();
@@ -7455,21 +9767,6 @@ function setupAuthWiring() {
     handleSignInResult(r);
   });
 
-  if (btnF) btnF.addEventListener('click', async () => {
-    showLoginLoading(true);
-    const r = await Cloud.signInFacebook();
-    showLoginLoading(false);
-    handleSignInResult(r);
-  });
-
-  if (btnGuest) btnGuest.addEventListener('click', async () => {
-    showLoginLoading(true);
-    const r = await Cloud.signInGuest();
-    showLoginLoading(false);
-    handleSignInResult(r);
-  });
-
-  // ---- Profile setup ----
   const setupInput = document.getElementById('setup-username');
   const setupBtn = document.getElementById('setup-confirm');
   const setupStatus = document.getElementById('setup-status');
@@ -7529,33 +9826,27 @@ function setupAuthWiring() {
         setupBtn.textContent = originalText;
 
         if (!r.ok) {
-          // Show detailed error message if available
-          const displayMsg = r.msg || (r.error === 'taken' ? '✗ الاسم محجوز' : '✗ فشل الحفظ، حاول مجدداً');
-          setupStatus.textContent = (r.error === 'taken' ? '✗ ' : '✗ ') + (r.msg || 'فشل الحفظ');
+          const displayMsg = r.msg || 'فشل الحفظ';
+          setupStatus.textContent = '✗ ' + displayMsg;
           setupStatus.className = 'setup-status err';
           setupBtn.disabled = false;
-
-          // Also show a floating error so it's visible
           showLoginError(displayMsg);
           return;
         }
 
-        // Success!
         Sfx.reward(); haptic(20);
         updateProfileUI();
         await mergeAndGoHome();
       } catch (e) {
-        console.error('[Setup] Unexpected error:', e);
         setupBtn.textContent = originalText;
         setupBtn.disabled = false;
-        setupStatus.textContent = '✗ خطأ غير متوقع: ' + (e.message || '');
+        setupStatus.textContent = '✗ خطأ غير متوقع';
         setupStatus.className = 'setup-status err';
         showLoginError('خطأ: ' + (e.message || 'غير معروف'));
       }
     });
   }
 
-  // ---- Change name screen ----
   const changeNameBtn = document.getElementById('change-name-btn');
   if (changeNameBtn) changeNameBtn.addEventListener('click', () => {
     const inp = document.getElementById('change-username');
@@ -7621,7 +9912,6 @@ function setupAuthWiring() {
     });
   }
 
-  // ---- Profile mini button ----
   const miniBtn = document.getElementById('profile-mini');
   if (miniBtn) miniBtn.addEventListener('click', () => {
     showScreen('s-settings');
@@ -7629,7 +9919,6 @@ function setupAuthWiring() {
     Sfx.tap(); haptic(6);
   });
 
-  // ---- Logout ----
   const logoutBtn = document.getElementById('logout-btn');
   if (logoutBtn) logoutBtn.addEventListener('click', async () => {
     if (!confirm('سيتم تسجيل خروجك. تقدمك محفوظ في السحابة.')) return;
@@ -7649,16 +9938,13 @@ function setupAuthListener() {
       Cloud.setState('idle');
       try {
         await Cloud.loadProfile(user.uid);
-      } catch (e) {
-        console.warn('[Cloud] Load profile failed:', e);
-      }
-      /* ➕ فحص صلاحية المشرف */
+      } catch (e) {}
+
       if(isAdminUser()){
         Save.data.admin.access = true;
         Save.save();
       }
       applyAdminEffects();
-
       updateProfileUI();
 
       if (!Cloud.profile || !Cloud.profile.username) {
@@ -7691,14 +9977,610 @@ function setupAuthListener() {
   });
 }
 
-/* ============================================================
-   ==================== Save.save() now queues cloud sync ====
-   ============================================================ */
+/* Override Save.save to queue cloud sync */
 const _origSave = Save.save.bind(Save);
 Save.save = function() {
   _origSave();
   try { Cloud.queueSync(); } catch(e) {}
 };
+
+/* ============================================================
+   ==================== POWERUPS UPGRADE UI =================
+   ============================================================ */
+function buildPowerups(){
+  const list = document.getElementById('powerups-list');
+  if(!list) return;
+  list.innerHTML = '';
+
+  const currentMode = Save.data.mode || 'FLIP';
+
+  POWERUP_LIST.forEach(def => {
+    const lvl = getPowerupLevel(def.id);
+    const maxed = isPowerupMaxed(def.id);
+    const price = getPowerupUpgradePrice(def.id);
+    const secs = def.singleUse ? 'ضربة' : getPowerupDurationSeconds(def.id) + 'ث';
+    const nextSecs = def.singleUse ? 'ضربة' : getPowerupDurationSeconds(def.id) + POWERUP_STEP_SECONDS + 'ث';
+    const available = isPowerupAvailableInMode(def.id, currentMode);
+
+    const card = document.createElement('button');
+    card.className = 'pw-card' + (maxed ? ' maxed' : '') + (available ? '' : ' locked');
+
+    const modeChips = def.modes.map(m => {
+      const md = MODES.find(x => x.id === m);
+      if(!md) return '';
+      const active = m === currentMode ? ' active' : '';
+      return `<span class="pw-mode-chip${active}">${md.icon}</span>`;
+    }).join('');
+
+    card.innerHTML = `
+      <div class="pw-head">
+        <div class="pw-ic" style="background:${def.color}22;color:${def.color};">
+          <span>${def.icon}</span>
+        </div>
+        <div class="pw-info">
+          <div class="pw-name">${def.label}</div>
+          <div class="pw-desc">${def.desc}</div>
+          <div class="pw-modes">${modeChips}</div>
+        </div>
+        <div class="pw-level">
+          <span class="pw-lv-num">${lvl}</span>
+          <span class="pw-lv-max">/${POWERUP_MAX_LEVEL}</span>
+        </div>
+      </div>
+
+      <div class="pw-bar">
+        <div class="pw-bar-fill" style="width:${(lvl / POWERUP_MAX_LEVEL) * 100}%;background:${def.color};"></div>
+      </div>
+
+      <div class="pw-foot">
+        <div class="pw-duration">
+          <span class="pw-dur-k">المدة الحالية</span>
+          <span class="pw-dur-v" style="color:${def.color};">${secs}</span>
+        </div>
+        ${maxed
+          ? `<div class="pw-maxed-badge">✓ مكتمل</div>`
+          : `<div class="pw-upgrade-btn" data-pw="${def.id}">
+              <span class="pw-up-k">تطوير إلى</span>
+              <span class="pw-up-v">${nextSecs}</span>
+              <span class="pw-up-price"><span class="c">◆</span>${price}</span>
+            </div>`
+        }
+      </div>
+    `;
+
+    const upBtn = card.querySelector('.pw-upgrade-btn');
+    if(upBtn){
+      upBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        if(maxed) return;
+        const cost = getPowerupUpgradePrice(def.id);
+        const unlimited = hasAdminAccess() && Save.data.admin.unlimitedUnlock;
+        if(unlimited || Save.data.coins >= cost){
+          if(!unlimited) Save.data.coins -= cost;
+          Save.data.powerupUpgrades[def.id] = getPowerupLevel(def.id) + 1;
+          Save.save();
+          Sfx.reward(); haptic(20);
+          updateCoinsUI();
+          buildPowerups();
+        } else {
+          Sfx.play(220, 0.15, 'sine', 0.05, 180);
+          haptic(20);
+        }
+      });
+    }
+
+    list.appendChild(card);
+  });
+
+  updateCoinsUI();
+}
+
+/* ============================================================
+   ==================== ADMIN HELPERS ========================
+   ============================================================ */
+function isAdminUser(){
+  if(!Cloud || !Cloud.user) return false;
+  if(ADMIN_CONFIG.uids.includes(Cloud.user.uid)) return true;
+  return false;
+}
+
+function hasAdminAccess(){
+  return Save.data.admin && Save.data.admin.access;
+}
+
+function grantAdminAccess(){
+  Save.data.admin.access = true;
+  Save.save();
+  updateAdminUI();
+}
+
+function revokeAdminAccess(){
+  Save.data.admin.access = false;
+  Save.data.admin.unlimitedCoins = false;
+  Save.data.admin.unlimitedUnlock = false;
+  Save.data.admin.godMode = false;
+  Save.save();
+  updateAdminUI();
+}
+
+function updateAdminUI(){
+  const menuAdmin = document.getElementById('menu-admin-btn');
+  if(menuAdmin){
+    menuAdmin.style.display = hasAdminAccess() ? 'flex' : 'none';
+  }
+}
+
+/* ============================================================
+   ==================== ADMIN PANEL LOGIC ====================
+   ============================================================ */
+let currentAdminTab = 'skin';
+let pendingImageData = null;
+
+function buildAdminPanel(){
+  const u = Cloud.user;
+  const heroUser = document.getElementById('admin-hero-user');
+  if(heroUser) heroUser.textContent =
+    u ? (u.email || u.displayName || u.uid.slice(0,12)) : 'غير مسجّل';
+
+  ['unlimitedCoins','unlimitedUnlock','godMode'].forEach(k=>{
+    const sw = document.getElementById('sw-' + k);
+    if(sw) sw.classList.toggle('on', !!Save.data.admin[k]);
+  });
+
+  const coinsVal = document.getElementById('admin-coins-value');
+  if(coinsVal) coinsVal.textContent = Save.data.coins;
+
+  document.querySelectorAll('.act-chip').forEach(c=>{
+    c.classList.toggle('active', c.dataset.act === currentAdminTab);
+  });
+
+  buildAdminContentList();
+}
+
+function buildAdminContentList(){
+  const list = document.getElementById('admin-content-list');
+  if(!list) return;
+  list.innerHTML = '';
+  let items = [];
+  if(currentAdminTab === 'skin') items = Save.data.admin.customSkins || [];
+  else {
+    const key = 'custom' + currentAdminTab.charAt(0).toUpperCase() + currentAdminTab.slice(1);
+    items = Save.data.admin[key] || [];
+  }
+
+  if(items.length === 0){
+    list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-mute);font-size:12px;">لا توجد عناصر مخصصة بعد</div>';
+    return;
+  }
+
+  items.forEach((item, idx)=>{
+    const el = document.createElement('div');
+    el.className = 'admin-content-item';
+    const thumb = item.imageData
+      ? `<img src="${item.imageData}" alt="">`
+      : `<div style="width:100%;height:100%;background:${item.color || '#E07A3F'};display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:800;">${(item.name||'?').charAt(0)}</div>`;
+
+    const src = item.sourceId ? getSource(item.sourceId) : null;
+    const srcInfo = src ? getSourceTypeInfo(src.type) : null;
+    const srcHtml = src
+      ? `<span class="aci-source" style="color:${srcInfo.color};">${srcInfo.icon} ${src.name}</span>`
+      : `<span class="aci-source" style="color:#C14A4A;">⚠ بلا مصدر</span>`;
+
+    el.innerHTML = `
+      <div class="aci-thumb">${thumb}</div>
+      <div class="aci-info">
+        <div class="aci-name">${item.name || 'بدون اسم'} ${srcHtml}</div>
+        <div class="aci-meta">◆ ${item.price} · ${item.rarity || 'common'} · ${item.enabled !== false ? 'ظاهر' : 'مخفي'}</div>
+      </div>
+      <button class="aci-del" data-del="${idx}">🗑</button>
+    `;
+    el.querySelector('[data-del]').addEventListener('click', ()=>{
+      if(!confirm('حذف هذا العنصر نهائياً؟')) return;
+      deleteCustomItem(currentAdminTab, idx);
+    });
+    list.appendChild(el);
+  });
+}
+
+function buildAdminSourcesList(){
+  const list = document.getElementById('admin-sources-list');
+  if(!list) return;
+  list.innerHTML = '';
+  const sources = Save.data.admin.sources || [];
+
+  if(sources.length === 0){
+    list.innerHTML = '<div style="text-align:center;padding:16px;color:var(--ink-mute);font-size:12px;">لا توجد مصادر بعد</div>';
+    return;
+  }
+
+  sources.forEach((src, idx)=>{
+    const info = getSourceTypeInfo(src.type);
+    const el = document.createElement('div');
+    el.className = 'admin-source-item' + (src.active ? '' : ' inactive');
+    el.innerHTML = `
+      <div class="asi-icon" style="background:${info.color}22;color:${info.color};">${info.icon}</div>
+      <div class="asi-info">
+        <div class="asi-name">${src.name}</div>
+        <div class="asi-meta">${src.start} → ${src.end}</div>
+      </div>
+      <div class="asi-toggle ${src.active ? 'on' : ''}" data-toggle-src="${idx}"></div>
+      <button class="asi-del" data-del-src="${idx}">🗑</button>
+    `;
+    el.querySelector('[data-toggle-src]').addEventListener('click', ()=>{
+      Save.data.admin.sources[idx].active = !Save.data.admin.sources[idx].active;
+      Save.save();
+      buildAdminSourcesList();
+      Sfx.tap();
+    });
+    el.querySelector('[data-del-src]').addEventListener('click', ()=>{
+      if(!confirm('حذف هذا المصدر؟')) return;
+      Save.data.admin.sources.splice(idx, 1);
+      Save.save();
+      buildAdminSourcesList();
+      Sfx.tap();
+    });
+    list.appendChild(el);
+  });
+}
+
+function populateSourceSelect(selectedId){
+  const sel = document.getElementById('af-source');
+  if(!sel) return;
+  const sources = Save.data.admin.sources || [];
+  sel.innerHTML = sources.map(s=>{
+    const info = getSourceTypeInfo(s.type);
+    const mark = s.active ? '' : ' (غير نشط)';
+    return `<option value="${s.id}"${s.id===selectedId?' selected':''}>${info.icon} ${s.name}${mark}</option>`;
+  }).join('');
+  if(!sources.length){
+    sel.innerHTML = '<option value="">لا توجد مصادر — أضف مصدراً أولاً</option>';
+  }
+}
+
+async function deleteCustomItem(cat, idx){
+  if(cat === 'skin'){
+    Save.data.admin.customSkins.splice(idx, 1);
+  } else {
+    const key = 'custom' + cat.charAt(0).toUpperCase() + cat.slice(1);
+    Save.data.admin[key].splice(idx, 1);
+  }
+  Save.save();
+  await pushAdminContent();
+  buildAdminContentList();
+  buildAdminSourcesList();
+  Sfx.tap();
+}
+
+async function pushAdminContent(){
+  if(!Cloud.user || !Cloud.db) return { ok:false, msg:'غير متصل بالسحابة' };
+  try {
+    const ref = Cloud.db.collection('admin_content').doc('global');
+    await ref.set({
+      customSkins: Save.data.admin.customSkins || [],
+      customSpark: Save.data.admin.customSpark || [],
+      customTrail: Save.data.admin.customTrail || [],
+      customJump: Save.data.admin.customJump || [],
+      customDeath: Save.data.admin.customDeath || [],
+      customAura: Save.data.admin.customAura || [],
+      customCrown: Save.data.admin.customCrown || [],
+      customCape: Save.data.admin.customCape || [],
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedBy: Cloud.user.uid
+    }, { merge: true });
+    Save.data.admin.lastContentSync = Date.now();
+    Save.save();
+    return { ok:true };
+  } catch(e){
+    console.error('[Admin] push failed:', e);
+    return { ok:false, msg: e.message };
+  }
+}
+
+function compressImage(file, maxSize = 256, quality = 0.85){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = e=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+        if(width > height && width > maxSize){
+          height = Math.round(height * maxSize / width);
+          width = maxSize;
+        } else if(height > maxSize){
+          width = Math.round(width * maxSize / height);
+          height = maxSize;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0,0,width,height);
+        ctx.drawImage(img, 0, 0, width, height);
+        const data = canvas.toDataURL('image/png');
+        resolve(data);
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+const ImageCache = {};
+function getImageEl(dataUrl){
+  if(ImageCache[dataUrl]) return ImageCache[dataUrl];
+  const img = new Image();
+  img.src = dataUrl;
+  ImageCache[dataUrl] = img;
+  return img;
+}
+
+function wireAdminPanel(){
+  const $ = id => document.getElementById(id);
+
+  const adminBtn = $('admin-btn');
+  if(adminBtn) adminBtn.addEventListener('click', ()=>{
+    showScreen('s-admin');
+    buildAdminPanel();
+    Sfx.tap(); haptic(8);
+  });
+
+  const logout = $('admin-logout');
+  if(logout) logout.addEventListener('click', ()=>{
+    if(!confirm('إنهاء صلاحية المشرف؟')) return;
+    revokeAdminAccess();
+    showScreen('s-home');
+    buildHome();
+  });
+
+  document.querySelectorAll('.admin-toggle').forEach(t=>{
+    t.addEventListener('click', ()=>{
+      const k = t.dataset.toggle;
+      Save.data.admin[k] = !Save.data.admin[k];
+      Save.save();
+      const sw = $('sw-' + k);
+      if(sw) sw.classList.toggle('on', Save.data.admin[k]);
+      applyAdminEffects();
+      Sfx.tap(); haptic(6);
+    });
+  });
+
+  document.querySelectorAll('[data-add-coins]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const amount = parseInt(b.dataset.addCoins, 10);
+      Save.data.coins += amount;
+      Save.save();
+      const cv = $('admin-coins-value');
+      if(cv) cv.textContent = Save.data.coins;
+      updateCoinsUI();
+      Sfx.coin(); haptic(10);
+    });
+  });
+
+  const resetCoins = $('admin-reset-coins');
+  if(resetCoins) resetCoins.addEventListener('click', ()=>{
+    if(!confirm('تصفير النقود؟')) return;
+    Save.data.coins = 0;
+    Save.save();
+    const cv = $('admin-coins-value');
+    if(cv) cv.textContent = '0';
+    updateCoinsUI();
+    Sfx.tap();
+  });
+
+  document.querySelectorAll('.act-chip').forEach(c=>{
+    c.addEventListener('click', ()=>{
+      currentAdminTab = c.dataset.act;
+      document.querySelectorAll('.act-chip').forEach(x=>x.classList.toggle('active', x === c));
+      buildAdminContentList();
+      Sfx.tap();
+    });
+  });
+
+  const addBtn = $('admin-add-content');
+  if(addBtn) addBtn.addEventListener('click', ()=>{
+    pendingImageData = null;
+    $('af-name').value = '';
+    $('af-name-en').value = '';
+    $('af-price').value = 500;
+    $('af-rarity').value = 'common';
+    $('af-color').value = '#E07A3F';
+    $('af-color2').value = '#E8B34E';
+    $('af-preview').innerHTML = '<span>لا توجد صورة</span>';
+    $('af-status').textContent = '';
+    $('af-status').className = 'af-status';
+    const labels = { skin:'أزياء', spark:'شرار', trail:'خط سير', jump:'قفز', death:'نهاية', aura:'هالات', crown:'رأسيات', cape:'أوشحة' };
+    $('af-cat-label').textContent = labels[currentAdminTab] || currentAdminTab;
+    populateSourceSelect();
+    $('admin-form').style.display = 'block';
+    $('admin-form').scrollIntoView({ behavior:'smooth', block:'start' });
+  });
+
+  const upBtn = $('af-upload-btn');
+  const fileInput = $('af-file');
+  if(upBtn && fileInput){
+    upBtn.addEventListener('click', ()=> fileInput.click());
+    fileInput.addEventListener('change', async (e)=>{
+      const file = e.target.files[0];
+      if(!file) return;
+      $('af-status').textContent = 'جارٍ المعالجة...';
+      $('af-status').className = 'af-status';
+      try {
+        const data = await compressImage(file, 256, 0.85);
+        pendingImageData = data;
+        $('af-preview').innerHTML = `<img src="${data}" alt="">`;
+        $('af-status').textContent = '✓ الصورة جاهزة';
+        $('af-status').className = 'af-status ok';
+      } catch(err){
+        $('af-status').textContent = '✗ فشل تحميل الصورة';
+        $('af-status').className = 'af-status err';
+      }
+    });
+  }
+
+  const cancel = $('af-cancel');
+  if(cancel) cancel.addEventListener('click', ()=>{
+    $('admin-form').style.display = 'none';
+    pendingImageData = null;
+  });
+
+  const save = $('af-save');
+  if(save) save.addEventListener('click', async ()=>{
+    const name = $('af-name').value.trim();
+    const nameEn = $('af-name-en').value.trim() || name.toUpperCase();
+    const price = parseInt($('af-price').value, 10) || 0;
+    const rarity = $('af-rarity').value;
+    const color = $('af-color').value;
+    const color2 = $('af-color2').value;
+    const sourceId = $('af-source') ? $('af-source').value : '';
+
+    if(!name){ $('af-status').textContent = '✗ الاسم مطلوب'; $('af-status').className = 'af-status err'; return; }
+    if(!pendingImageData){ $('af-status').textContent = '✗ الصورة مطلوبة'; $('af-status').className = 'af-status err'; return; }
+    if(!sourceId){ $('af-status').textContent = '✗ يجب اختيار مصدر'; $('af-status').className = 'af-status err'; return; }
+
+    const id = 'custom_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+
+    const item = {
+      id, name, en: nameEn, price, rarity,
+      color, color2,
+      imageData: pendingImageData,
+      sourceId,
+      enabled: true,
+      isCustom: true,
+      createdAt: Date.now()
+    };
+
+    if(currentAdminTab === 'skin'){
+      Save.data.admin.customSkins.push(item);
+    } else {
+      const key = 'custom' + currentAdminTab.charAt(0).toUpperCase() + currentAdminTab.slice(1);
+      Save.data.admin[key].push(item);
+    }
+
+    $('af-status').textContent = 'جارٍ الحفظ...';
+    $('af-status').className = 'af-status';
+
+    const r = await pushAdminContent();
+    if(r.ok){
+      Save.save();
+      $('af-status').textContent = '✓ تم النشر';
+      $('af-status').className = 'af-status ok';
+      buildAdminContentList();
+      refreshContentEverywhere();
+      setTimeout(()=>{
+        $('admin-form').style.display = 'none';
+        pendingImageData = null;
+      }, 900);
+    } else {
+      Save.save();
+      $('af-status').textContent = '⚠ حُفظ محلياً (' + (r.msg || '') + ')';
+      $('af-status').className = 'af-status err';
+      buildAdminContentList();
+      refreshContentEverywhere();
+    }
+  });
+
+  const loadPlayers = $('admin-load-players');
+  if(loadPlayers) loadPlayers.addEventListener('click', async ()=>{
+    $('admin-players-list').innerHTML = '<div style="padding:12px;text-align:center;color:var(--ink-mute);font-size:12px;">جارٍ التحميل...</div>';
+    try {
+      const snap = await Cloud.db.collection('players').limit(50).get();
+      const list = $('admin-players-list');
+      list.innerHTML = '';
+      if(snap.empty){
+        list.innerHTML = '<div style="padding:12px;text-align:center;color:var(--ink-mute);font-size:12px;">لا يوجد لاعبون</div>';
+        return;
+      }
+      snap.forEach(doc=>{
+        const d = doc.data();
+        const el = document.createElement('div');
+        el.className = 'admin-player-item';
+        const photo = d.photoURL || '';
+        const av = photo ? `<img src="${photo}" alt="">` : '👤';
+        el.innerHTML = `
+          <div class="api-av">${av}</div>
+          <div class="api-info">
+            <div class="api-name">${d.username || d.displayName || 'لاعب'}</div>
+            <div class="api-uid">${doc.id.slice(0,12)}…</div>
+          </div>
+        `;
+        list.appendChild(el);
+      });
+    } catch(e){
+      $('admin-players-list').innerHTML = '<div style="padding:12px;text-align:center;color:#C14A4A;font-size:12px;">فشل التحميل: ' + e.message + '</div>';
+    }
+  });
+
+  let secretBuffer = '';
+  window.addEventListener('keydown', (e)=>{
+    if(e.key.length === 1){
+      secretBuffer += e.key;
+      if(secretBuffer.length > 30) secretBuffer = secretBuffer.slice(-30);
+      if(secretBuffer.endsWith(ADMIN_CONFIG.secretCode)){
+        secretBuffer = '';
+        const code = prompt('أدخل كود المشرف:');
+        if(code === ADMIN_CONFIG.secretCode){
+          grantAdminAccess();
+          alert('✓ تم تفعيل صلاحية المشرف');
+          showScreen('s-admin');
+          buildAdminPanel();
+        } else if(code !== null){
+          alert('✗ كود خاطئ');
+        }
+      }
+    }
+  });
+}
+
+function applyAdminEffects(){
+  if(!Save.data.admin) return;
+  const w = document.getElementById('wrap');
+  if(!w) return;
+  w.classList.toggle('unlimited-coins', !!Save.data.admin.unlimitedCoins);
+  updateCoinsUI();
+  updateGlobalLevelUI();
+}
+
+function refreshContentEverywhere(){
+  try { buildShop(); } catch(e){}
+  try { buildCosmetics(); } catch(e){}
+}
+
+function getAllSkins(){
+  const custom = (Save.data.admin.customSkins || []).filter(s=>s.enabled !== false).map(s=>({
+    id: s.id,
+    ar: s.name,
+    en: s.en || s.name,
+    body: s.color || '#E07A3F',
+    bodyDark: s.color2 || '#A05020',
+    detail: '#1A1512',
+    accent: s.color || '#E07A3F',
+    accessory: 'none',
+    pattern: 'none',
+    price: s.price || 0,
+    rarity: s.rarity || 'common',
+    imageData: s.imageData,
+    isCustom: true
+  }));
+  return [...SKINS, ...custom];
+}
+
+function getAllCosmetics(cat){
+  const base = COSMETICS[cat] || [];
+  const key = 'custom' + cat.charAt(0).toUpperCase() + cat.slice(1);
+  const custom = (Save.data.admin[key] || []).filter(c=>c.enabled !== false).map(c=>({
+    id: c.id,
+    name: c.name,
+    price: c.price || 0,
+    desc: c.en || c.name,
+    color: c.color,
+    color2: c.color2,
+    imageData: c.imageData,
+    isCustom: true
+  }));
+  return [...base, ...custom];
+}
 
 /* ============================================================
    ==================== Wire game buttons ====================
@@ -7737,6 +10619,7 @@ function wireGameButtons() {
     });
   });
 
+  /* ✅ الإصلاح 2: معالج موحد لكل الأزرار data-page */
   document.querySelectorAll('.qa-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const page = btn.dataset.page;
@@ -7756,6 +10639,8 @@ function wireGameButtons() {
       else if(page==='season'){ buildSeason(); showScreen('s-season'); }
       else if(page==='battlepass'){ buildBP(); showScreen('s-battlepass'); }
       else if(page==='daily'){ buildDaily(); showScreen('s-daily'); }
+      else if(page==='powerups'){ buildPowerups(); showScreen('s-powerups'); }
+      else if(page==='events'){ buildEvents(); showScreen('s-events'); }
     });
   });
 
@@ -7803,6 +10688,54 @@ function wireGameButtons() {
   window.addEventListener('keydown', e=>{
     if(['Space','ArrowUp','ArrowDown'].includes(e.code)) e.preventDefault();
   });
+
+    /* ═══════════════ HOME MENU ═══════════════ */
+  const menuBtn = $('menu-btn');
+  const homeMenu = $('home-menu');
+
+  if(menuBtn && homeMenu){
+    const closeMenu = () => {
+      homeMenu.classList.remove('open');
+    };
+
+    menuBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      homeMenu.classList.toggle('open');
+      Sfx.tap(); haptic(6);
+    });
+
+    const backdrop = homeMenu.querySelector('.home-menu-backdrop');
+    if(backdrop) backdrop.addEventListener('click', closeMenu);
+
+    homeMenu.querySelectorAll('.hm-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const action = item.dataset.menu;
+        closeMenu();
+        Sfx.tap(); haptic(6);
+
+        if(action === 'player-card'){
+          buildPlayerCard();
+          showScreen('s-player-card');
+        } else if(action === 'stats'){
+          buildStats();
+          showScreen('s-stats');
+        } else if(action === 'settings'){
+          buildSettings();
+          showScreen('s-settings');
+        } else if(action === 'admin'){
+          showScreen('s-admin');
+          buildAdminPanel();
+        }
+      });
+    });
+
+    /* إغلاق بزر Escape */
+    window.addEventListener('keydown', e => {
+      if(e.code === 'Escape' && homeMenu.classList.contains('open')){
+        closeMenu();
+      }
+    });
+  }
 }
 
 /* Override buildSettings to include profile refresh */
@@ -7813,546 +10746,31 @@ buildSettings = function() {
 };
 
 /* ============================================================
-   ==================== ADMIN PANEL LOGIC ====================
-   ============================================================ */
-let currentAdminTab = 'skin';
-let pendingImageData = null;
-
-function buildAdminPanel(){
-  /* بطاقة المعلومات */
-  const u = Cloud.user;
-  document.getElementById('admin-hero-user').textContent =
-    u ? (u.email || u.displayName || u.uid.slice(0,12)) : 'غير مسجّل';
-
-  /* حالة المفاتيح */
-  ['unlimitedCoins','unlimitedUnlock','godMode'].forEach(k=>{
-    const sw = document.getElementById('sw-' + k);
-    if(sw) sw.classList.toggle('on', !!Save.data.admin[k]);
-  });
-
-  /* النقود */
-  document.getElementById('admin-coins-value').textContent = Save.data.coins;
-
-  /* تبويبات المحتوى */
-  document.querySelectorAll('.act-chip').forEach(c=>{
-    c.classList.toggle('active', c.dataset.act === currentAdminTab);
-  });
-
-  /* قائمة المحتوى */
-  buildAdminContentList();
-}
-
-function buildAdminContentList(){
-  const list = document.getElementById('admin-content-list');
-  list.innerHTML = '';
-  let items = [];
-  if(currentAdminTab === 'skin') items = Save.data.admin.customSkins || [];
-  else {
-    const key = 'custom' + currentAdminTab.charAt(0).toUpperCase() + currentAdminTab.slice(1);
-    items = Save.data.admin[key] || [];
-  }
-
-  if(items.length === 0){
-    list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-mute);font-size:12px;">لا توجد عناصر مخصصة بعد</div>';
-    return;
-  }
-
-  items.forEach((item, idx)=>{
-    const el = document.createElement('div');
-    el.className = 'admin-content-item';
-    const thumb = item.imageData
-      ? `<img src="${item.imageData}" alt="">`
-      : `<div style="width:100%;height:100%;background:${item.color || '#E07A3F'};display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:800;">${(item.name||'?').charAt(0)}</div>`;
-
-    const src = item.sourceId ? getSource(item.sourceId) : null;
-    const srcInfo = src ? getSourceTypeInfo(src.type) : null;
-    const srcHtml = src
-      ? `<span class="aci-source" style="color:${srcInfo.color};">${srcInfo.icon} ${src.name}</span>`
-      : `<span class="aci-source" style="color:#C14A4A;">⚠ بلا مصدر</span>`;
-
-    el.innerHTML = `
-      <div class="aci-thumb">${thumb}</div>
-      <div class="aci-info">
-        <div class="aci-name">${item.name || 'بدون اسم'} ${srcHtml}</div>
-        <div class="aci-meta">◆ ${item.price} · ${item.rarity || 'common'} · ${item.enabled !== false ? 'ظاهر' : 'مخفي'}</div>
-      </div>
-      <button class="aci-del" data-del="${idx}">🗑</button>
-    `;
-    el.querySelector('[data-del]').addEventListener('click', ()=>{
-      if(!confirm('حذف هذا العنصر نهائياً؟')) return;
-      deleteCustomItem(currentAdminTab, idx);
-    });
-    list.appendChild(el);
-  });
-}
-
-/* ============ Build Sources List ============ */
-function buildAdminSourcesList(){
-  const list = document.getElementById('admin-sources-list');
-  if(!list) return;
-  list.innerHTML = '';
-  const sources = Save.data.admin.sources || [];
-
-  if(sources.length === 0){
-    list.innerHTML = '<div style="text-align:center;padding:16px;color:var(--ink-mute);font-size:12px;">لا توجد مصادر بعد</div>';
-    return;
-  }
-
-  sources.forEach((src, idx)=>{
-    const info = getSourceTypeInfo(src.type);
-    const el = document.createElement('div');
-    el.className = 'admin-source-item' + (src.active ? '' : ' inactive');
-    el.innerHTML = `
-      <div class="asi-icon" style="background:${info.color}22;color:${info.color};">${info.icon}</div>
-      <div class="asi-info">
-        <div class="asi-name">${src.name}</div>
-        <div class="asi-meta">${src.start} → ${src.end}</div>
-      </div>
-      <div class="asi-toggle ${src.active ? 'on' : ''}" data-toggle-src="${idx}"></div>
-      <button class="asi-del" data-del-src="${idx}">🗑</button>
-    `;
-    el.querySelector('[data-toggle-src]').addEventListener('click', ()=>{
-      Save.data.admin.sources[idx].active = !Save.data.admin.sources[idx].active;
-      Save.save();
-      buildAdminSourcesList();
-      Sfx.tap();
-    });
-    el.querySelector('[data-del-src]').addEventListener('click', ()=>{
-      if(!confirm('حذف هذا المصدر؟')) return;
-      Save.data.admin.sources.splice(idx, 1);
-      Save.save();
-      buildAdminSourcesList();
-      Sfx.tap();
-    });
-    list.appendChild(el);
-  });
-}
-
-/* ============ Populate source select ============ */
-function populateSourceSelect(selectedId){
-  const sel = document.getElementById('af-source');
-  if(!sel) return;
-  const sources = Save.data.admin.sources || [];
-  sel.innerHTML = sources.map(s=>{
-    const info = getSourceTypeInfo(s.type);
-    const mark = s.active ? '' : ' (غير نشط)';
-    return `<option value="${s.id}"${s.id===selectedId?' selected':''}>${info.icon} ${s.name}${mark}</option>`;
-  }).join('');
-  if(!sources.length){
-    sel.innerHTML = '<option value="">لا توجد مصادر — أضف مصدراً أولاً</option>';
-  }
-}
-
-async function deleteCustomItem(cat, idx){
-  if(cat === 'skin'){
-    Save.data.admin.customSkins.splice(idx, 1);
-    /* احذف أيضاً من ownedSkins إن وُجد */
-    const skinId = Save.data.admin.customSkins[idx]?.id;
-  } else {
-    const key = 'custom' + cat.charAt(0).toUpperCase() + cat.slice(1);
-    Save.data.admin[key].splice(idx, 1);
-  }
-  Save.save();
-  /* احفظ في Firestore */
-  await pushAdminContent();
-  /* قائمة المحتوى والمصادر */
-  buildAdminContentList();
-  buildAdminSourcesList();
-
-  Sfx.tap();
-}
-
-/* ============ Push content to Firestore ============ */
-async function pushAdminContent(){
-  if(!Cloud.user || !Cloud.db) return { ok:false, msg:'غير متصل بالسحابة' };
-  try {
-    const ref = Cloud.db.collection('admin_content').doc('global');
-    await ref.set({
-      customSkins: Save.data.admin.customSkins || [],
-      customSpark: Save.data.admin.customSpark || [],
-      customTrail: Save.data.admin.customTrail || [],
-      customJump: Save.data.admin.customJump || [],
-      customDeath: Save.data.admin.customDeath || [],
-      customAura: Save.data.admin.customAura || [],
-      customCrown: Save.data.admin.customCrown || [],
-      customCape: Save.data.admin.customCape || [],
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      updatedBy: Cloud.user.uid
-    }, { merge: true });
-    Save.data.admin.lastContentSync = Date.now();
-    Save.save();
-    return { ok:true };
-  } catch(e){
-    console.error('[Admin] push failed:', e);
-    return { ok:false, msg: e.message };
-  }
-}
-
-/* ============ Pull content from Firestore ============ */
-async function pullAdminContent(){
-  if(!Cloud.db) return null;
-  try {
-    const ref = Cloud.db.collection('admin_content').doc('global');
-    const snap = await ref.get();
-    if(snap.exists){
-      const d = snap.data();
-      Save.data.admin.customSkins = d.customSkins || [];
-      Save.data.admin.customSpark = d.customSpark || [];
-      Save.data.admin.customTrail = d.customTrail || [];
-      Save.data.admin.customJump  = d.customJump  || [];
-      Save.data.admin.customDeath = d.customDeath || [];
-      Save.data.admin.customAura  = d.customAura  || [];
-      Save.data.admin.customCrown = d.customCrown || [];
-      Save.data.admin.customCape  = d.customCape  || [];
-      Save.save();
-      return d;
-    }
-    return null;
-  } catch(e){
-    console.warn('[Admin] pull failed:', e);
-    return null;
-  }
-}
-
-/* ============ Image compression ============ */
-function compressImage(file, maxSize = 256, quality = 0.85){
-  return new Promise((resolve, reject)=>{
-    const reader = new FileReader();
-    reader.onload = e=>{
-      const img = new Image();
-      img.onload = ()=>{
-        const canvas = document.createElement('canvas');
-        let { width, height } = img;
-        if(width > height && width > maxSize){
-          height = Math.round(height * maxSize / width);
-          width = maxSize;
-        } else if(height > maxSize){
-          width = Math.round(width * maxSize / height);
-          height = maxSize;
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0,0,width,height);
-        ctx.drawImage(img, 0, 0, width, height);
-        /* PNG للحفاظ على الشفافية */
-        const data = canvas.toDataURL('image/png');
-        resolve(data);
-      };
-      img.onerror = reject;
-      img.src = e.target.result;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-/* ============ Image cache for rendering ============ */
-const ImageCache = {};
-function getImageEl(dataUrl){
-  if(ImageCache[dataUrl]) return ImageCache[dataUrl];
-  const img = new Image();
-  img.src = dataUrl;
-  ImageCache[dataUrl] = img;
-  return img;
-}
-
-/* ============ Wire admin panel ============ */
-function wireAdminPanel(){
-  const $ = id => document.getElementById(id);
-
-  /* فتح اللوحة */
-  const adminBtn = $('admin-btn');
-  if(adminBtn) adminBtn.addEventListener('click', ()=>{
-    showScreen('s-admin');
-    buildAdminPanel();
-    Sfx.tap(); haptic(8);
-  });
-
-  /* إنهاء صلاحية المشرف */
-  const logout = $('admin-logout');
-  if(logout) logout.addEventListener('click', ()=>{
-    if(!confirm('إنهاء صلاحية المشرف؟')) return;
-    revokeAdminAccess();
-    showScreen('s-home');
-    buildHome();
-  });
-
-  /* المفاتيح */
-  document.querySelectorAll('.admin-toggle').forEach(t=>{
-    t.addEventListener('click', ()=>{
-      const k = t.dataset.toggle;
-      Save.data.admin[k] = !Save.data.admin[k];
-      Save.save();
-      const sw = $('sw-' + k);
-      if(sw) sw.classList.toggle('on', Save.data.admin[k]);
-      applyAdminEffects();
-      Sfx.tap(); haptic(6);
-    });
-  });
-
-  /* إضافة نقود */
-  document.querySelectorAll('[data-add-coins]').forEach(b=>{
-    b.addEventListener('click', ()=>{
-      const amount = parseInt(b.dataset.addCoins, 10);
-      Save.data.coins += amount;
-      Save.save();
-      $('admin-coins-value').textContent = Save.data.coins;
-      updateCoinsUI();
-      Sfx.coin(); haptic(10);
-    });
-  });
-
-  const resetCoins = $('admin-reset-coins');
-  if(resetCoins) resetCoins.addEventListener('click', ()=>{
-    if(!confirm('تصفير النقود؟')) return;
-    Save.data.coins = 0;
-    Save.save();
-    $('admin-coins-value').textContent = '0';
-    updateCoinsUI();
-    Sfx.tap();
-  });
-
-  /* تبويبات المحتوى */
-  document.querySelectorAll('.act-chip').forEach(c=>{
-    c.addEventListener('click', ()=>{
-      currentAdminTab = c.dataset.act;
-      document.querySelectorAll('.act-chip').forEach(x=>x.classList.toggle('active', x === c));
-      buildAdminContentList();
-      Sfx.tap();
-    });
-  });
-
-  /* فتح نموذج الإضافة */
-  const addBtn = $('admin-add-content');
-  if(addBtn) addBtn.addEventListener('click', ()=>{
-    pendingImageData = null;
-    $('af-name').value = '';
-    $('af-name-en').value = '';
-    $('af-price').value = 500;
-    $('af-rarity').value = 'common';
-    $('af-color').value = '#E07A3F';
-    $('af-color2').value = '#E8B34E';
-    $('af-preview').innerHTML = '<span>لا توجد صورة</span>';
-    $('af-status').textContent = '';
-    $('af-status').className = 'af-status';
-    const labels = { skin:'أزياء', spark:'شرار', trail:'خط سير', jump:'قفز', death:'نهاية', aura:'هالات', crown:'رأسيات', cape:'أوشحة' };
-    $('af-cat-label').textContent = labels[currentAdminTab] || currentAdminTab;
-    /* ➕ ملء قائمة المصادر */
-    populateSourceSelect();
-    $('admin-form').style.display = 'block';
-    $('admin-form').scrollIntoView({ behavior:'smooth', block:'start' });
-  });
-
-  /* زر الصورة */
-  const upBtn = $('af-upload-btn');
-  const fileInput = $('af-file');
-  if(upBtn && fileInput){
-    upBtn.addEventListener('click', ()=> fileInput.click());
-    fileInput.addEventListener('change', async (e)=>{
-      const file = e.target.files[0];
-      if(!file) return;
-      $('af-status').textContent = 'جارٍ المعالجة...';
-      $('af-status').className = 'af-status';
-      try {
-        const data = await compressImage(file, 256, 0.85);
-        pendingImageData = data;
-        $('af-preview').innerHTML = `<img src="${data}" alt="">`;
-        $('af-status').textContent = '✓ الصورة جاهزة';
-        $('af-status').className = 'af-status ok';
-      } catch(err){
-        $('af-status').textContent = '✗ فشل تحميل الصورة';
-        $('af-status').className = 'af-status err';
-      }
-    });
-  }
-
-  /* إلغاء */
-  const cancel = $('af-cancel');
-  if(cancel) cancel.addEventListener('click', ()=>{
-    $('admin-form').style.display = 'none';
-    pendingImageData = null;
-  });
-
-  /* حفظ */
-  const save = $('af-save');
-  if(save) save.addEventListener('click', async ()=>{
-    const name = $('af-name').value.trim();
-    const nameEn = $('af-name-en').value.trim() || name.toUpperCase();
-    const price = parseInt($('af-price').value, 10) || 0;
-    const rarity = $('af-rarity').value;
-    const color = $('af-color').value;
-    const color2 = $('af-color2').value;
-    const sourceId = $('af-source') ? $('af-source').value : '';
-
-    if(!name){ $('af-status').textContent = '✗ الاسم مطلوب'; $('af-status').className = 'af-status err'; return; }
-    if(!pendingImageData){ $('af-status').textContent = '✗ الصورة مطلوبة'; $('af-status').className = 'af-status err'; return; }
-    if(!sourceId){ $('af-status').textContent = '✗ يجب اختيار مصدر'; $('af-status').className = 'af-status err'; return; }
-
-    const id = 'custom_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
-
-    const item = {
-      id, name, en: nameEn, price, rarity,
-      color, color2,
-      imageData: pendingImageData,
-      sourceId,                 /* ➕ المصدر */
-      enabled: true,
-      isCustom: true,
-      createdAt: Date.now()
-    };
-
-    if(currentAdminTab === 'skin'){
-      Save.data.admin.customSkins.push(item);
-    } else {
-      const key = 'custom' + currentAdminTab.charAt(0).toUpperCase() + currentAdminTab.slice(1);
-      Save.data.admin[key].push(item);
-    }
-
-    $('af-status').textContent = 'جارٍ الحفظ...';
-    $('af-status').className = 'af-status';
-
-    const r = await pushAdminContent();
-    if(r.ok){
-      Save.save();
-      $('af-status').textContent = '✓ تم النشر';
-      $('af-status').className = 'af-status ok';
-      buildAdminContentList();
-      refreshContentEverywhere();
-      setTimeout(()=>{
-        $('admin-form').style.display = 'none';
-        pendingImageData = null;
-      }, 900);
-    } else {
-      Save.save(); /* احفظ محلياً على الأقل */
-      $('af-status').textContent = '⚠ حُفظ محلياً (' + (r.msg || '') + ')';
-      $('af-status').className = 'af-status err';
-      buildAdminContentList();
-      refreshContentEverywhere();
-    }
-  });
-
-  /* اللاعبون */
-  const loadPlayers = $('admin-load-players');
-  if(loadPlayers) loadPlayers.addEventListener('click', async ()=>{
-    $('admin-players-list').innerHTML = '<div style="padding:12px;text-align:center;color:var(--ink-mute);font-size:12px;">جارٍ التحميل...</div>';
-    try {
-      const snap = await Cloud.db.collection('players').limit(50).get();
-      const list = $('admin-players-list');
-      list.innerHTML = '';
-      if(snap.empty){
-        list.innerHTML = '<div style="padding:12px;text-align:center;color:var(--ink-mute);font-size:12px;">لا يوجد لاعبون</div>';
-        return;
-      }
-      snap.forEach(doc=>{
-        const d = doc.data();
-        const el = document.createElement('div');
-        el.className = 'admin-player-item';
-        const photo = d.photoURL || '';
-        const av = photo ? `<img src="${photo}" alt="">` : '👤';
-        el.innerHTML = `
-          <div class="api-av">${av}</div>
-          <div class="api-info">
-            <div class="api-name">${d.username || d.displayName || 'لاعب'}</div>
-            <div class="api-uid">${doc.id.slice(0,12)}…</div>
-          </div>
-        `;
-        list.appendChild(el);
-      });
-    } catch(e){
-      $('admin-players-list').innerHTML = '<div style="padding:12px;text-align:center;color:#C14A4A;font-size:12px;">فشل التحميل: ' + e.message + '</div>';
-    }
-  });
-    /* دخول بكود سري */
-  let secretBuffer = '';
-  window.addEventListener('keydown', (e)=>{
-    if(e.key.length === 1){
-      secretBuffer += e.key;
-      if(secretBuffer.length > 30) secretBuffer = secretBuffer.slice(-30);
-      if(secretBuffer.endsWith(ADMIN_CONFIG.secretCode)){
-        secretBuffer = '';
-        const code = prompt('أدخل كود المشرف:');
-        if(code === ADMIN_CONFIG.secretCode){
-          grantAdminAccess();
-          alert('✓ تم تفعيل صلاحية المشرف');
-          showScreen('s-admin');
-          buildAdminPanel();
-        } else if(code !== null){
-          alert('✗ كود خاطئ');
-        }
-      }
-    }
-  });
-}
-
-/* ============ Apply admin effects (unlimited coins etc) ============ */
-function applyAdminEffects(){
-  if(!Save.data.admin) return;
-  const w = document.getElementById('wrap');
-  if(!w) return;
-  w.classList.toggle('unlimited-coins', !!Save.data.admin.unlimitedCoins);
-  /* unfreeze coins at UI */
-  updateCoinsUI();
-  updateGlobalLevelUI();
-}
-
-/* ============ Refresh everything after content change ============ */
-function refreshContentEverywhere(){
-  try { buildShop(); } catch(e){}
-  try { buildCosmetics(); } catch(e){}
-}
-
-/* ============ Get all skins (built-in + custom) ============ */
-function getAllSkins(){
-  const custom = (Save.data.admin.customSkins || []).filter(s=>s.enabled !== false).map(s=>({
-    id: s.id,
-    ar: s.name,
-    en: s.en || s.name,
-    body: s.color || '#E07A3F',
-    bodyDark: s.color2 || '#A05020',
-    detail: '#1A1512',
-    accent: s.color || '#E07A3F',
-    accessory: 'none',
-    pattern: 'none',
-    price: s.price || 0,
-    rarity: s.rarity || 'common',
-    imageData: s.imageData,
-    isCustom: true
-  }));
-  return [...SKINS, ...custom];
-}
-
-/* ============ Get all cosmetics of a category ============ */
-function getAllCosmetics(cat){
-  const base = COSMETICS[cat] || [];
-  const key = 'custom' + cat.charAt(0).toUpperCase() + cat.slice(1);
-  const custom = (Save.data.admin[key] || []).filter(c=>c.enabled !== false).map(c=>({
-    id: c.id,
-    name: c.name,
-    price: c.price || 0,
-    desc: c.en || c.name,
-    color: c.color,
-    color2: c.color2,
-    imageData: c.imageData,
-    isCustom: true
-  }));
-  return [...base, ...custom];
-}
-
-/* ============================================================
    ==================== BOOT =================================
    ============================================================ */
 function boot() {
-  // 1) Core init
   resize();
   G.currentScene = SCENES[0];
   initClouds();
-  G.mode = Save.data.mode || 'FLIP';
-  /* ✅ ترحيل الأوضاع المحذوفة */
-if(G.mode === 'FLIP_WALK' || G.mode === 'SKY_JUMP'){
-  G.mode = 'WALK';
-  Save.data.mode = 'WALK';
-  Save.save();
-}
+
+  /* اختيار النمط */
+  G.selectedMode = Save.data.mode || 'FLIP';
+  G.isMixedMode = (G.selectedMode === 'MIXED');
+
+  /* ترحيل الأنماط القديمة */
+  if(G.selectedMode === 'FLIP_WALK' || G.selectedMode === 'SKY_JUMP'){
+    G.selectedMode = 'WALK';
+    Save.data.mode = 'WALK';
+    Save.save();
+  }
+
+  /* ضبط G.mode للفيزياء */
+  if(G.isMixedMode){
+    G.mode = 'FLIP';   /* يبدأ عشوائياً عند resetRun */
+  } else {
+    G.mode = G.selectedMode;
+  }
+
   ensureMissions();
   buildHome();
   updateCoinsUI();
@@ -8362,14 +10780,13 @@ if(G.mode === 'FLIP_WALK' || G.mode === 'SKY_JUMP'){
   P.x = W * 0.5;
   P.y = H * 0.5;
 
-initSkyDecor();
+  initSkyDecor();
 
-  // 2) Wire game buttons (always)
   wireGameButtons();
   wireAdminPanel();
   applyAdminEffects();
   updateAdminUI();
-  // 3) Try Firebase
+
   let firebaseOk = false;
   try {
     firebaseOk = Cloud.init();
@@ -8379,7 +10796,6 @@ initSkyDecor();
   }
 
   if (!firebaseOk) {
-    // Offline mode: go straight to home
     Cloud.setState('offline');
     updateProfileUI();
     showScreen('s-home');
@@ -8388,20 +10804,17 @@ initSkyDecor();
     return;
   }
 
-  // 4) Firebase ready → wire auth + show login screen
   setupAuthWiring();
   setupAuthListener();
   showScreen('s-login');
   requestAnimationFrame(loop);
 }
 
-/* Launch on DOM ready */
 function launch() {
   try {
     boot();
   } catch (e) {
     console.error('[Boot] Failed:', e);
-    // Fallback: try to at least show home
     try {
       showScreen('s-home');
       requestAnimationFrame(loop);
