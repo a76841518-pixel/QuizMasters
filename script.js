@@ -120,31 +120,72 @@ const LOGIN_REWARDS = [
    ============================================================ */
 const COSMETICS = {
   spark: [
-    { id:'none',      name:'بدون',    price:0,    desc:'لا شرار' },
-    { id:'sparks',    name:'شرار',    price:150,  desc:'جمرات برتقالية' },
-    { id:'bubbles',   name:'فقاعات',  price:250,  desc:'فقاعات تطفو' },
-    { id:'stars',     name:'نجوم',    price:350,  desc:'نجوم صغيرة' },
-    { id:'hearts',    name:'قلوب',    price:450,  desc:'قلوب وردية' },
-    { id:'notes',     name:'نوتات',   price:550,  desc:'رموز موسيقية' },
-    { id:'leaves',    name:'أوراق',   price:600,  desc:'أوراق الخريف' },
-    { id:'petals',    name:'بتلات',   price:700,  desc:'بتلات وردية' },
-    { id:'snow',      name:'ثلج',     price:750,  desc:'ندف ثلجية' },
-    { id:'digital',   name:'رقمي',    price:900,  desc:'بكسلات مضيئة' },
-    { id:'lightning', name:'برق',     price:1100, desc:'شرارات كهربائية' },
-    { id:'firefly',   name:'يراعات',  price:1400, desc:'أضواء متوهجة' },
-    { id:'rainbow',   name:'قوس قزح', price:1800, desc:'مطر ملون' },
-    { id:'cosmic',    name:'كوني',    price:2400, desc:'غبار كوني' },
-    { id:'gold',      name:'ذهبي',    price:3000, desc:'غبار ذهبي فاخر' }
+    { id:'none',      name:'بدون',      price:0,    desc:'لا شرار' },
+    { id:'sparks',    name:'شرار',      price:150,  desc:'جمرات برتقالية' },
+    { id:'bubbles',   name:'فقاعات',    price:250,  desc:'فقاعات تطفو' },
+    { id:'stars',     name:'نجوم',      price:350,  desc:'نجوم صغيرة' },
+    { id:'hearts',    name:'قلوب',      price:450,  desc:'قلوب وردية' },
+    { id:'notes',     name:'نوتات',     price:550,  desc:'رموز موسيقية' },
+    { id:'leaves',    name:'أوراق',     price:600,  desc:'أوراق الخريف' },
+    { id:'petals',    name:'بتلات',     price:700,  desc:'بتلات وردية' },
+    { id:'snow',      name:'ثلج',       price:750,  desc:'ندف ثلجية' },
+    { id:'digital',   name:'رقمي',      price:900,  desc:'بكسلات مضيئة' },
+    { id:'lightning', name:'برق',       price:1100, desc:'شرارات كهربائية' },
+    { id:'firefly',   name:'يراعات',    price:1400, desc:'أضواء متوهجة' },
+    { id:'rainbow',   name:'قوس قزح',   price:1800, desc:'مطر ملون' },
+    { id:'cosmic',    name:'كوني',      price:2400, desc:'غبار كوني' },
+    { id:'gold',      name:'ذهبي',      price:3000, desc:'غبار ذهبي' },
+    /* ═══ جديد ═══ */
+    { id:'runes',     name:'رونية',     price:900,  desc:'رموز غامضة' },
+    { id:'gears',     name:'تروس',      price:850,  desc:'تروس دوّارة' },
+    { id:'plus',      name:'صليب صحي',  price:700,  desc:'صليب أخضر' },
+    { id:'cross',     name:'إكس',       price:650,  desc:'علامات إكس' },
+    { id:'triangles', name:'مثلثات',    price:1000, desc:'مثلثات حادة' },
+    { id:'diamonds',  name:'معينات',    price:1100, desc:'معينات متلألئة' },
+    { id:'moonPhases',name:'أطوار القمر',price:1300,desc:'أقمار متغيّرة' },
+    { id:'arrows',    name:'أسهم',      price:900,  desc:'أسهم طائرة' },
+    { id:'shuriken',  name:'شوريكن',    price:1200, desc:'نجوم النينجا' },
+    { id:'smoke',     name:'دخان',      price:800,  desc:'دوائر دخانية' },
+    { id:'voidOrbs',  name:'كرات فراغ', price:2200, desc:'كرات بنفسجية' },
+    { id:'candy',     name:'حلوى',      price:650,  desc:'حلوى ملونة' },
+    { id:'donuts',    name:'دونات',     price:900,  desc:'دونات صغيرة' },
+    { id:'cherries',  name:'كرز',       price:750,  desc:'كرز أحمر' },
+    { id:'soccerBalls',name:'كرات قدم', price:800,  desc:'كرات بيضاء' },
+    { id:'pixels',    name:'بكسل',      price:950,  desc:'بكسلات بألوان' },
+    { id:'mushrooms', name:'فطر',       price:1000, desc:'فطر مميز' },
+    { id:'feathers',  name:'ريش',       price:850,  desc:'ريش خفيف' },
+    { id:'skulls',    name:'جماجم',     price:1600, desc:'جماجم صغيرة' },
+    { id:'coffee',    name:'قهوة',      price:700,  desc:'حبوب القهوة' },
+    { id:'books',     name:'كتب',       price:900,  desc:'كتب طائرة' },
+    { id:'wrenches',  name:'مفاتيح',    price:850,  desc:'مفاتيح صيانة' },
+    { id:'aurora',    name:'شفق',       price:2800, desc:'شفق قطبي' },
+    { id:'supernova', name:'مستعر',     price:3500, desc:'انفجار نجمي' }
   ],
   trail: [
-    { id:'default', name:'افتراضي', price:0,   desc:'خط سير بسيط' },
-    { id:'sparkle', name:'لمعان',   price:200, desc:'نجوم صغيرة' },
-    { id:'fire',    name:'نار',     price:400, desc:'شرارات نارية' },
-    { id:'ice',     name:'ثلج',     price:400, desc:'بلورات ثلجية' },
-    { id:'rainbow', name:'قوس قزح', price:800, desc:'ألوان متدرجة' },
-    { id:'shadow',  name:'ظل',      price:600, desc:'هالة سوداء' },
-    { id:'bubble',  name:'فقاعي',   price:900, desc:'فقاعات صاعدة' },
-    { id:'matrix',  name:'مصفوفة',  price:1200,desc:'أرقام متلألئة' }
+    { id:'default',   name:'افتراضي',   price:0,   desc:'خط سير بسيط' },
+    { id:'sparkle',   name:'لمعان',     price:200, desc:'نجوم صغيرة' },
+    { id:'fire',      name:'نار',       price:400, desc:'شرارات نارية' },
+    { id:'ice',       name:'ثلج',       price:400, desc:'بلورات ثلجية' },
+    { id:'rainbow',   name:'قوس قزح',   price:800, desc:'ألوان متدرجة' },
+    { id:'shadow',    name:'ظل',        price:600, desc:'هالة سوداء' },
+    { id:'bubble',    name:'فقاعي',     price:900, desc:'فقاعات صاعدة' },
+    { id:'matrix',    name:'مصفوفة',    price:1200,desc:'أرقام متلألئة' },
+    /* ═══ جديد ═══ */
+    { id:'lightningTrail', name:'برق خلفي',  price:1000, desc:'برق يتتبعك' },
+    { id:'petalTrail',     name:'بتلات خلفية',price:700,  desc:'بتلات متطايرة' },
+    { id:'smokeTrail',     name:'دخان',       price:550,  desc:'دخان رمادي' },
+    { id:'toxicTrail',     name:'سام',        price:850,  desc:'مخلفات سامة' },
+    { id:'holyTrail',      name:'مقدس',       price:1500, desc:'آثار مقدسة' },
+    { id:'voidTrail',      name:'فراغ',       price:1800, desc:'ثقب أسود مصغّر' },
+    { id:'neonTrail',      name:'نيون',       price:1400, desc:'خط نيوني' },
+    { id:'auroraTrail',    name:'شفق',        price:2000, desc:'شفق متحرك' },
+    { id:'bloodTrail',     name:'دموي',       price:650,  desc:'قطرات حمراء' },
+    { id:'crystalTrail',   name:'بلوري',      price:1600, desc:'شظايا بلور' },
+    { id:'candyTrail',     name:'حلوى',       price:700,  desc:'حلوى سكرية' },
+    { id:'cosmicTrail',    name:'كوني',       price:2200, desc:'غبار الكون' },
+    { id:'slimeTrail',     name:'سلايم',      price:800,  desc:'مخاط أخضر' },
+    { id:'ghostTrail',     name:'شبح',        price:1100, desc:'آثار شبحية' },
+    { id:'musicTrail',     name:'موسيقي',     price:950,  desc:'نوتات موسيقية' }
   ],
   jump: [
     { id:'default', name:'افتراضي', price:0,   desc:'قفزة عادية' },
@@ -152,15 +193,46 @@ const COSMETICS = {
     { id:'burst',   name:'انفجار',  price:450, desc:'جزيئات متطايرة' },
     { id:'star',    name:'نجمة',    price:600, desc:'نجمة متوسعة' },
     { id:'shockwave',name:'موجة',   price:800, desc:'موجة ارتدادية' },
-    { id:'spiral',  name:'حلزون',   price:1000,desc:'دوامة متوسعة' }
+    { id:'spiral',  name:'حلزون',   price:1000,desc:'دوامة متوسعة' },
+    /* ═══ جديد ═══ */
+    { id:'smokeBomb',   name:'قنبلة دخان', price:400, desc:'دخان كثيف' },
+    { id:'fireRing',    name:'حلقة نارية', price:650, desc:'حلقة من النار' },
+    { id:'iceBurst',    name:'انفجار ثلجي',price:650, desc:'شظايا جليد' },
+    { id:'shadowBurst', name:'انفجار ظلي', price:750, desc:'موجة داكنة' },
+    { id:'holyBurst',   name:'انفجار مقدس',price:900, desc:'نور متصاعد' },
+    { id:'voidBurst',   name:'فراغ',       price:1200,desc:'فتحة فراغ' },
+    { id:'lightningSmash',name:'صاعقة',    price:900, desc:'ضربة برق' },
+    { id:'starBurst',   name:'انفجار نجمي',price:1300,desc:'مستعر مصغّر' },
+    { id:'waterSplash', name:'رشّة ماء',   price:500, desc:'قطرات ماء' },
+    { id:'flowerBurst', name:'انفجار زهور',price:800, desc:'زهور متطايرة' },
+    { id:'leafBurst',   name:'انفجار أوراق',price:600,desc:'أوراق متطايرة' },
+    { id:'bubbleBurst', name:'فقاعات',     price:550, desc:'فقاعات منفجرة' },
+    { id:'heartBurst',  name:'قلوب',       price:700, desc:'قلوب متطايرة' },
+    { id:'gearBurst',   name:'تروس',       price:850, desc:'تروس متطايرة' },
+    { id:'cosmicBurst', name:'كوني',       price:1500,desc:'انفجار كوني' },
+    { id:'holyRing',    name:'حلقة مقدسة', price:1600,desc:'حلقة نورانية' },
+    { id:'abyssBurst',  name:'هاوية',      price:1800,desc:'انفجار هاوية' }
   ],
   death: [
-    { id:'default', name:'افتراضي', price:0,   desc:'جزيئات بسيطة' },
-    { id:'explode', name:'انفجار',  price:300, desc:'انفجار كبير' },
-    { id:'dissolve',name:'تلاشي',   price:500, desc:'تلاشي ناعم' },
-    { id:'pixel',   name:'بكسل',    price:700, desc:'تفكك بكسلي' },
-    { id:'shatter', name:'تحطم',    price:900, desc:'شظايا زجاجية' },
-    { id:'nova',    name:'مستعر',   price:1200,desc:'انفجار نجمي' }
+    { id:'default',  name:'افتراضي', price:0,   desc:'جزيئات بسيطة' },
+    { id:'explode',  name:'انفجار',  price:300, desc:'انفجار كبير' },
+    { id:'dissolve', name:'تلاشي',   price:500, desc:'تلاشي ناعم' },
+    { id:'pixel',    name:'بكسل',    price:700, desc:'تفكك بكسلي' },
+    { id:'shatter',  name:'تحطم',    price:900, desc:'شظايا زجاجية' },
+    { id:'nova',     name:'مستعر',   price:1200,desc:'انفجار نجمي' },
+    /* ═══ جديد ═══ */
+    { id:'implode',     name:'انطواء',      price:600, desc:'انطواء داخلي' },
+    { id:'flash',       name:'وميض',        price:550, desc:'وميض ساطع' },
+    { id:'vortexDeath', name:'دوّامة',      price:1100,desc:'دوّامة تسحبك' },
+    { id:'holyAscend',  name:'صعود مقدس',   price:1500,desc:'نور يصعد بك' },
+    { id:'blackHole',   name:'ثقب أسود',    price:1800,desc:'ثقب أسود مصغّر' },
+    { id:'fireworks',   name:'ألعاب نارية', price:1300,desc:'ألعاب نارية' },
+    { id:'soulRise',    name:'صعود الروح',  price:1400,desc:'روح تصعد' },
+    { id:'shatterIce',  name:'تحطم ثلجي',   price:1000,desc:'شظايا جليد' },
+    { id:'neonBurst',   name:'نيون',        price:900, desc:'انفجار نيوني' },
+    { id:'cosmicVoid',  name:'فراغ كوني',   price:2200,desc:'اختفاء كوني' },
+    { id:'starScatter', name:'تناثر نجوم',  price:1600,desc:'نجوم متطايرة' },
+    { id:'petalFall',   name:'تساقط بتلات', price:800, desc:'بتلات تتساقط' }
   ],
   aura: [
     { id:'none',      name:'بدون',      price:0,    desc:'لا هالة' },
@@ -173,7 +245,24 @@ const COSMETICS = {
     { id:'holy',      name:'نور',       price:1200, desc:'هالة مقدسة' },
     { id:'void',      name:'فراغ',      price:1800, desc:'طاقة بنفسجية' },
     { id:'rainbow',   name:'قوس قزح',   price:2200, desc:'تدرج ملون دوّار' },
-    { id:'galaxy',    name:'مجرّة',     price:3000, desc:'نجوم وغيوم' }
+    { id:'galaxy',    name:'مجرّة',     price:3000, desc:'نجوم وغيوم' },
+    /* ═══ جديد ═══ */
+    { id:'toxic',     name:'سام',       price:700,  desc:'هالة سامة' },
+    { id:'earth',     name:'أرضي',      price:600,  desc:'جزيئات ترابية' },
+    { id:'water',     name:'مائي',      price:800,  desc:'قطرات ماء دوّارة' },
+    { id:'wind',      name:'رياح',      price:750,  desc:'دوّامات هوائية' },
+    { id:'blood',     name:'دموي',      price:950,  desc:'طاقة دموية' },
+    { id:'nature',    name:'طبيعة',     price:850,  desc:'أوراق وزهور' },
+    { id:'smokeAura', name:'دخاني',     price:650,  desc:'دخان يلتف' },
+    { id:'electricBlue',name:'كهربائي', price:1000, desc:'برق أزرق' },
+    { id:'pixelAura', name:'بكسلي',     price:900,  desc:'بكسلات دوّارة' },
+    { id:'runes',     name:'روني',      price:1400, desc:'رموز قديمة دوّارة' },
+    { id:'music',     name:'موسيقي',    price:1100, desc:'نوتات دوّارة' },
+    { id:'candyAura', name:'حلوى',      price:800,  desc:'حلوى تطفو' },
+    { id:'cosmicAura',name:'كوني',      price:2600, desc:'غيوم كونية' },
+    { id:'divine',    name:'إلهي',      price:3500, desc:'أشعة إلهية' },
+    { id:'phantom',   name:'شبحاني',    price:1600, desc:'ظلال متحركة' },
+    { id:'prisma',    name:'منشوري',    price:2800, desc:'ألوان منشورية' }
   ],
   crown: [
     { id:'none',    name:'بدون',      price:0,    desc:'لا غطاء للرأس' },
@@ -198,7 +287,33 @@ const COSMETICS = {
     { id:'wizard',  name:'قبعة ساحر', price:900,  desc:'قبعة سحرية' },
     { id:'viking',  name:'خوذة فايكنغ', price:1200, desc:'خوذة محارب' },
     { id:'deerHorns', name:'قرون غزال', price:650, desc:'قرون متفرعة' },
-    { id:'singleHorn', name:'قرن وحيد', price:550, desc:'قرن وسط الرأس' }
+    { id:'singleHorn', name:'قرن وحيد', price:550, desc:'قرن وسط الرأس' },
+    /* ═══ جديد ═══ */
+    { id:'pirate',       name:'قبعة قرصان',   price:900,  desc:'قبعة القراصنة' },
+    { id:'wreath',       name:'إكليل زهور',   price:700,  desc:'إكليل من الزهور' },
+    { id:'haloBroken',   name:'هالة مكسورة',  price:1300, desc:'هالة مكسورة' },
+    { id:'spikeCrown',   name:'تاج الأشواك',  price:1100, desc:'تاج مسيحي' },
+    { id:'topHat',       name:'قبعة رسمية',   price:800,  desc:'قبعة سوداء أنيقة' },
+    { id:'graduationCap',name:'قبعة تخرج',    price:750,  desc:'قبعة تخرج' },
+    { id:'jesterHat',    name:'قبعة مهرج',    price:850,  desc:'قبعة ملونة بأجراس' },
+    { id:'chefHat',      name:'قبعة طاهي',    price:600,  desc:'قبعة الطاهي' },
+    { id:'propeller',    name:'قبعة مروحية',  price:950,  desc:'قبعة مع مروحة' },
+    { id:'bunnyEars',    name:'آذان أرنب',    price:700,  desc:'آذان أرنب' },
+    { id:'catEars',      name:'آذان قطة',     price:700,  desc:'آذان قطة' },
+    { id:'devilHorns',   name:'قرون الشيطان', price:1000, desc:'قرون حمراء' },
+    { id:'pumpkinHead',  name:'رأس يقطين',    price:1400, desc:'يقطينة على الرأس' },
+    { id:'crownSkull',   name:'تاج الجماجم',  price:2000, desc:'تاج بجماجم' },
+    { id:'angelRing',    name:'حلقة ملاك',    price:1600, desc:'حلقة نور' },
+    { id:'cyberVisor',   name:'نظارة سايبر',  price:1300, desc:'نظارة سيبرانية' },
+    { id:'gasMask',      name:'كمامة غاز',    price:1100, desc:'كمامة غاز' },
+    { id:'lightBulb',    name:'مصباح',        price:600,  desc:'مصباح متوهج' },
+    { id:'mushroomCap',  name:'قبعة فطر',     price:750,  desc:'قبعة فطر' },
+    { id:'sunhat',       name:'قبعة شمسية',   price:650,  desc:'قبعة صيفية' },
+    { id:'sombrero',     name:'سومبريرو',     price:850,  desc:'قبعة مكسيكية' },
+    { id:'crownFireworks',name:'تاج الألعاب النارية',price:2200, desc:'تاج متفجر' },
+    { id:'crownDivine',  name:'تاج إلهي',     price:4000, desc:'تاج الأساطير الأعلى' },
+    { id:'crownCosmic',  name:'تاج كوني',     price:3000, desc:'تاج المجرّة' },
+    { id:'crownPrisma',  name:'تاج منشوري',   price:3500, desc:'تاج بألوان قوس قزح' }
   ],
   cape: [
     { id:'none',        name:'بدون',         price:0,    desc:'لا وشاح' },
@@ -210,7 +325,26 @@ const COSMETICS = {
     { id:'cape_royal',  name:'عباءة ملكية',  price:1500, desc:'عباءة ملوك' },
     { id:'cape_shadow', name:'عباءة الظل',   price:1800, desc:'ظل يتبعك' },
     { id:'cape_rainbow',name:'عباءة قوس قزح',price:2200, desc:'ألوان متحركة' },
-    { id:'cape_galaxy', name:'عباءة مجرّة',  price:3000, desc:'نجوم متلألئة' }
+    { id:'cape_galaxy', name:'عباءة مجرّة',  price:3000, desc:'نجوم متلألئة' },
+    /* ═══ جديد ═══ */
+    { id:'cape_fire',    name:'عباءة النار',  price:1600, desc:'لهب مستمر' },
+    { id:'cape_ice',     name:'عباءة الجليد', price:1600, desc:'بلورات ثلجية' },
+    { id:'cape_wind',    name:'عباءة الريح',  price:1400, desc:'دوّامات هوائية' },
+    { id:'cape_water',   name:'عباءة الماء',  price:1500, desc:'موج يتدفق' },
+    { id:'cape_leaf',    name:'عباءة الأوراق',price:1200, desc:'أوراق متطايرة' },
+    { id:'cape_neon',    name:'عباءة نيونية', price:1900, desc:'خطوط نيون' },
+    { id:'cape_toxic',   name:'عباءة سامة',   price:1300, desc:'سائل أخضر' },
+    { id:'cape_blood',   name:'عباءة دموية',  price:1500, desc:'قطرات حمراء' },
+    { id:'cape_holy',    name:'عباءة مقدسة',  price:2500, desc:'نور ذهبي' },
+    { id:'cape_void',    name:'عباءة الفراغ', price:2800, desc:'امتصاص ضوء' },
+    { id:'cape_crystal', name:'عباءة البلور', price:2100, desc:'شظايا بلورية' },
+    { id:'cape_butterfly',name:'أجنحة الفراشة',price:1700, desc:'أجنحة ناعمة' },
+    { id:'cape_dragon',  name:'أجنحة التنين', price:3200, desc:'أجنحة تنّين' },
+    { id:'cape_angel',   name:'أجنحة الملاك', price:3500, desc:'أجنحة ريشية' },
+    { id:'cape_demon',   name:'أجنحة الشيطان',price:3500, desc:'أجنحة جلدية' },
+    { id:'cape_cosmic',  name:'عباءة كونية',  price:4000, desc:'مجرة مصغّرة' },
+    { id:'cape_prismatic',name:'عباءة منشورية',price:5000, desc:'ألوان قوس قزح حيّة' },
+    { id:'cape_god',     name:'عباءة الإله',  price:8000, desc:'عباءة الأساطير' }
   ]
 };
 
@@ -218,20 +352,63 @@ const COSMETICS = {
    ==================== Skins ================================
    ============================================================ */
 const SKINS = [
+  /* ═══ الأساسيات ═══ */
   { id:'cream', ar:'كريمي', en:'CREAM', body:'#F5EFE6', bodyDark:'#D9CBBA', detail:'#1A1512', accent:'#FFB060', accessory:'none', pattern:'none', price:0, rarity:'common' },
+
+  /* ═══ COLOR SERIES ═══ */
   { id:'amber', ar:'عنبري', en:'AMBER', body:'#E0A44C', bodyDark:'#B07628', detail:'#1A1512', accent:'#FFD080', accessory:'horns', pattern:'none', price:150, rarity:'common' },
+  { id:'crimson', ar:'قرمزي', en:'CRIMSON', body:'#D83838', bodyDark:'#901818', detail:'#1A1512', accent:'#FF8888', accessory:'none', pattern:'none', price:200, rarity:'common' },
+  { id:'emerald', ar:'زمردي', en:'EMERALD', body:'#2FA850', bodyDark:'#186828', detail:'#0A2810', accent:'#7FFFA0', accessory:'none', pattern:'none', price:250, rarity:'common' },
+  { id:'sapphire', ar:'ياقوتي', en:'SAPPHIRE', body:'#2848D8', bodyDark:'#102878', detail:'#F0F8FF', accent:'#88A8FF', accessory:'none', pattern:'none', price:250, rarity:'common' },
+  { id:'amethyst', ar:'أرجواني', en:'AMETHYST', body:'#8858C8', bodyDark:'#503898', detail:'#F0E0FF', accent:'#D8B0FF', accessory:'none', pattern:'none', price:300, rarity:'common' },
+  { id:'copper', ar:'نحاسي', en:'COPPER', body:'#C87848', bodyDark:'#8A4828', detail:'#1A1512', accent:'#FFB888', accessory:'none', pattern:'none', price:300, rarity:'common' },
+  { id:'pearl', ar:'لؤلؤي', en:'PEARL', body:'#F8F0E8', bodyDark:'#C8B8A8', detail:'#3A2828', accent:'#FFD0E0', accessory:'none', pattern:'none', price:350, rarity:'common' },
   { id:'slate', ar:'حجري', en:'SLATE', body:'#5A6270', bodyDark:'#3A4048', detail:'#F5EFE6', accent:'#9AACBC', accessory:'none', pattern:'spots', price:300, rarity:'common' },
+
+  /* ═══ RARE — PATTERNS ═══ */
   { id:'rose', ar:'وردي', en:'ROSE', body:'#E89BA8', bodyDark:'#C06878', detail:'#1A1512', accent:'#FFDCE4', accessory:'wings', pattern:'none', price:500, rarity:'rare' },
   { id:'sage', ar:'زيتوني', en:'SAGE', body:'#7BA47B', bodyDark:'#4E7A4E', detail:'#1A1512', accent:'#D8F0A8', accessory:'leaf', pattern:'none', price:750, rarity:'rare' },
   { id:'sky', ar:'سماوي', en:'SKY', body:'#88C8E8', bodyDark:'#4E90B8', detail:'#1A1512', accent:'#FFFFFF', accessory:'cloud', pattern:'none', price:1000, rarity:'rare' },
+  { id:'camo', ar:'تمويه', en:'CAMO', body:'#7A8A5A', bodyDark:'#4A5A38', detail:'#1A1512', accent:'#A8B888', accessory:'none', pattern:'camo', price:850, rarity:'rare' },
+  { id:'zebra', ar:'حمار وحشي', en:'ZEBRA', body:'#F5EFE6', bodyDark:'#C8C0B0', detail:'#1A1512', accent:'#1A1512', accessory:'none', pattern:'stripes', price:900, rarity:'rare' },
+  { id:'tiger', ar:'نمر', en:'TIGER', body:'#F0A830', bodyDark:'#A87828', detail:'#1A1512', accent:'#FFD080', accessory:'none', pattern:'tiger', price:1100, rarity:'rare' },
+  { id:'checker', ar:'مربعات', en:'CHECKER', body:'#F5EFE6', bodyDark:'#C8C0B0', detail:'#1A1512', accent:'#1A1512', accessory:'none', pattern:'checker', price:1000, rarity:'rare' },
+  { id:'honeycomb', ar:'عسل النحل', en:'HONEYCOMB', body:'#E8B34E', bodyDark:'#A87828', detail:'#3A2010', accent:'#FFE090', accessory:'none', pattern:'hex', price:1200, rarity:'rare' },
+  { id:'circuit', ar:'إلكتروني', en:'CIRCUIT', body:'#1A2828', bodyDark:'#0A1010', detail:'#00FF80', accent:'#00FF80', accessory:'antenna', pattern:'circuit', glow:true, glowColor:'#00FF80', price:1300, rarity:'rare' },
+  { id:'pastel', ar:'باستيل', en:'PASTEL', body:'#FFD8E8', bodyDark:'#E8B8C8', detail:'#5A3040', accent:'#FFC0A0', accessory:'flowerCrown', pattern:'gradient', price:1400, rarity:'rare' },
+
+  /* ═══ EPIC ═══ */
   { id:'ink', ar:'حِبري', en:'INK', body:'#2A2622', bodyDark:'#100E0C', detail:'#E8D0FF', accent:'#A080FF', accessory:'spikes', pattern:'none', glow:true, glowColor:'#6A50B0', price:1500, rarity:'epic' },
   { id:'gold', ar:'ذهبي', en:'GOLD', body:'#E8B34E', bodyDark:'#B08028', detail:'#1A1512', accent:'#FFF4C0', accessory:'halo', pattern:'none', sparkle:true, price:2000, rarity:'epic' },
-  { id:'lava', ar:'بركاني', en:'LAVA', body:'#E85838', bodyDark:'#A03018', detail:'#1A1512', accent:'#FFD060', accessory:'horns', pattern:'stripes', glow:true, glowColor:'#FF5020', price:3000, rarity:'epic' },
+  { id:'lava', ar:'بركاني', en:'LAVA', body:'#E85838', bodyDark:'#A03018', detail:'#1A1512', accent:'#FFD060', accessory:'horns', pattern:'lavaCracks', glow:true, glowColor:'#FF5020', price:3000, rarity:'epic' },
+  { id:'ice', ar:'جليدي', en:'ICE', body:'#A8E0F0', bodyDark:'#5898C8', detail:'#1A2838', accent:'#FFFFFF', accessory:'crystalShards', pattern:'crystalPattern', glow:true, glowColor:'#80D8FF', price:2200, rarity:'epic' },
+  { id:'dragon', ar:'التنين', en:'DRAGON', body:'#3A8040', bodyDark:'#1A4820', detail:'#F0E0A0', accent:'#E85020', accessory:'dragonHorns', pattern:'scales', price:2800, rarity:'epic' },
+  { id:'demon', ar:'الشيطان', en:'DEMON', body:'#8A2020', bodyDark:'#4A0808', detail:'#FFE0A0', accent:'#FF8020', accessory:'demonHorns', pattern:'none', glow:true, glowColor:'#FF3030', price:3200, rarity:'epic' },
+  { id:'angel', ar:'الملاك', en:'ANGEL', body:'#FFF8E8', bodyDark:'#E8D8B8', detail:'#C88040', accent:'#FFE890', accessory:'angelWings', pattern:'none', glow:true, glowColor:'#FFF8C0', sparkle:true, price:3500, rarity:'epic' },
+  { id:'ninja', ar:'النينجا', en:'NINJA', body:'#1A1A28', bodyDark:'#0A0A18', detail:'#E83040', accent:'#FF5060', accessory:'ninjaMask', pattern:'none', price:2400, rarity:'epic' },
+  { id:'astronaut', ar:'رائد الفضاء', en:'ASTRONAUT', body:'#F0F0F8', bodyDark:'#C0C0D0', detail:'#4080C0', accent:'#FFC040', accessory:'helmet', pattern:'none', price:2600, rarity:'epic' },
+  { id:'cyber', ar:'سايبر', en:'CYBER', body:'#0A0A28', bodyDark:'#050515', detail:'#00FFFF', accent:'#FF00D8', accessory:'visor', pattern:'circuit', glow:true, glowColor:'#00FFFF', price:3400, rarity:'epic' },
+  { id:'cactus', ar:'الصبار', en:'CACTUS', body:'#4A8040', bodyDark:'#2A4820', detail:'#F0E0A0', accent:'#E8A0C0', accessory:'flowerCrown', pattern:'none', price:2000, rarity:'epic' },
+  { id:'mushroom', ar:'الفطر', en:'MUSHROOM', body:'#E85040', bodyDark:'#A02820', detail:'#FFF8E0', accent:'#FFFFFF', accessory:'mushroomCap', pattern:'spots', price:2200, rarity:'epic' },
+  { id:'pumpkin', ar:'اليقطين', en:'PUMPKIN', body:'#E88820', bodyDark:'#A05010', detail:'#3A1808', accent:'#FFD060', accessory:'pumpkinStem', pattern:'none', price:2400, rarity:'epic' },
+
+  /* ═══ LEGEND ═══ */
   { id:'neon', ar:'نيون', en:'NEON', body:'#00E8D8', bodyDark:'#007870', detail:'#0A2828', accent:'#FF00A8', accessory:'star', pattern:'none', glow:true, glowColor:'#00E8D8', price:4000, rarity:'legend' },
   { id:'rainbow', ar:'قوس قزح', en:'RAINBOW', body:'#FF6088', bodyDark:'#A03060', detail:'#1A1512', accent:'#FFE060', accessory:'rainbow', pattern:'rainbow', rainbow:true, price:6000, rarity:'legend' },
   { id:'ghost', ar:'شبح', en:'GHOST', body:'#F0F0FF', bodyDark:'#B8B8D8', detail:'#4A4060', accent:'#FFFFFF', accessory:'none', pattern:'none', transparent:true, ghostly:true, price:8000, rarity:'legend' },
-  { id:'void', ar:'الفراغ', en:'VOID', body:'#1A0A2A', bodyDark:'#0A0414', detail:'#FF80FF', accent:'#C080FF', accessory:'star', pattern:'none', glow:true, glowColor:'#A040FF', price:12000, rarity:'mythic' },
-  { id:'sun', ar:'الشمس', en:'SUN', body:'#FFE060', bodyDark:'#E8A020', detail:'#5A2010', accent:'#FFFFFF', accessory:'halo', pattern:'none', glow:true, glowColor:'#FFD040', sparkle:true, price:15000, rarity:'mythic' }
+  { id:'galaxy', ar:'المجرة', en:'GALAXY', body:'#3A1878', bodyDark:'#180438', detail:'#FFC0FF', accent:'#C080FF', accessory:'star', pattern:'galaxyPattern', glow:true, glowColor:'#8040D0', sparkle:true, price:7500, rarity:'legend' },
+  { id:'holographic', ar:'هولوجرافي', en:'HOLO', body:'#C0E8FF', bodyDark:'#80A8D8', detail:'#FFFFFF', accent:'#FFC0E8', accessory:'none', pattern:'holo', rainbow:true, glow:true, glowColor:'#A0E8FF', sparkle:true, price:9000, rarity:'legend' },
+  { id:'phoenix', ar:'العنقاء', en:'PHOENIX', body:'#E85020', bodyDark:'#A01808', detail:'#FFE090', accent:'#FFD060', accessory:'phoenixWings', pattern:'firePattern', glow:true, glowColor:'#FF8040', sparkle:true, price:10000, rarity:'legend' },
+  { id:'storm', ar:'العاصفة', en:'STORM', body:'#5A6878', bodyDark:'#2A3038', detail:'#A0E0FF', accent:'#FFE060', accessory:'lightningBolts', pattern:'clouds', glow:true, glowColor:'#80D0FF', price:8500, rarity:'legend' },
+  { id:'shadow', ar:'الظل', en:'SHADOW', body:'#1A0A20', bodyDark:'#08020A', detail:'#A060A0', accent:'#8040A0', accessory:'shadowWisps', pattern:'voidPattern', transparent:true, glow:true, glowColor:'#6020A0', price:11000, rarity:'legend' },
+
+  /* ═══ MYTHIC ═══ */
+  { id:'void', ar:'الفراغ', en:'VOID', body:'#1A0A2A', bodyDark:'#0A0414', detail:'#FF80FF', accent:'#C080FF', accessory:'star', pattern:'voidPattern', glow:true, glowColor:'#A040FF', price:12000, rarity:'mythic' },
+  { id:'sun', ar:'الشمس', en:'SUN', body:'#FFE060', bodyDark:'#E8A020', detail:'#5A2010', accent:'#FFFFFF', accessory:'halo', pattern:'none', glow:true, glowColor:'#FFD040', sparkle:true, price:15000, rarity:'mythic' },
+  { id:'moon', ar:'القمر', en:'MOON', body:'#E8E8F0', bodyDark:'#A8A8B8', detail:'#3A3A50', accent:'#FFF8D0', accessory:'moonCrown', pattern:'craters', glow:true, glowColor:'#F0F0FF', sparkle:true, price:14000, rarity:'mythic' },
+  { id:'cosmic', ar:'الكوني', en:'COSMIC', body:'#0A0420', bodyDark:'#050010', detail:'#FFFFFF', accent:'#FFD060', accessory:'star', pattern:'starfield', glow:true, glowColor:'#A060FF', sparkle:true, price:18000, rarity:'mythic' },
+  { id:'god', ar:'الإلهي', en:'DIVINE', body:'#FFF8E0', bodyDark:'#FFD060', detail:'#A06020', accent:'#FFFFFF', accessory:'divineCrown', pattern:'holyPattern', glow:true, glowColor:'#FFF8C0', sparkle:true, price:25000, rarity:'mythic' },
+  { id:'prismatic', ar:'المنشوري', en:'PRISMATIC', body:'#FF80C0', bodyDark:'#A04080', detail:'#FFFFFF', accent:'#80FFFF', accessory:'crystalCrown', pattern:'prismatic', rainbow:true, glow:true, glowColor:'#FF80FF', sparkle:true, price:30000, rarity:'mythic' }
 ];
 
 const RARITY_LABELS = {
@@ -262,74 +439,74 @@ const POWERUP_DEFS = {
   magnet: {
     id:'magnet', icon:'◉', color:'#C99AC9', label:'مغناطيس',
     desc:'يجذب العملات والكرات نحوك تلقائياً',
-    modes:['FLIP','FLAP','DRIFT','WALK'],
+    modes:['FLIP','FLAP','DRIFT','WALK','ASCEND'],
     basePrice:150, priceStep:75
   },
   double: {
     id:'double', icon:'×2', color:'#E4B853', label:'مضاعف',
     desc:'يضاعف قيمة كل ما تجمعه',
-    modes:['FLIP','FLAP','DRIFT','WALK'],
+    modes:['FLIP','FLAP','DRIFT','WALK','ASCEND'],
     basePrice:200, priceStep:100
   },
   shield: {
     id:'shield', icon:'◈', color:'#7BC4B0', label:'درع',
     desc:'يحميك من ضربة واحدة',
-    modes:['FLIP','FLAP','DRIFT','WALK'],
+    modes:['FLIP','FLAP','DRIFT','WALK','ASCEND'],
     basePrice:250, priceStep:150,
     singleUse:true
   },
   ghost: {
     id:'ghost', icon:'◯', color:'#B8A4C9', label:'شبح',
     desc:'يمر بك عبر العقبات دون ضرر',
-    modes:['FLIP','FLAP','DRIFT','WALK'],
+    modes:['FLIP','FLAP','DRIFT','WALK','ASCEND'],
     basePrice:300, priceStep:150
   },
   slow: {
     id:'slow', icon:'◔', color:'#8FB8D8', label:'تبطيء',
     desc:'يبطئ سرعة العالم مؤقتاً',
-    modes:['FLIP','FLAP','DRIFT'],
+    modes:['FLIP','FLAP','DRIFT','ASCEND'],
     basePrice:180, priceStep:90
   },
   shrink: {
     id:'shrink', icon:'◐', color:'#4A88C8', label:'تصغير',
     desc:'يصغّر حجم اللاعب لتفادي العقبات',
-    modes:['FLIP','FLAP','DRIFT'],
+    modes:['FLIP','FLAP','DRIFT','ASCEND'],
     basePrice:300, priceStep:150
   },
   timeWarp: {
     id:'timeWarp', icon:'⏱', color:'#9A6AC8', label:'تشويه الزمن',
     desc:'يبطئ الزمن بشكل كبير جداً',
-    modes:['FLIP','FLAP','DRIFT'],
+    modes:['FLIP','FLAP','DRIFT','ASCEND'],
     basePrice:350, priceStep:175
   },
   extraJump: {
     id:'extraJump', icon:'↑↑', color:'#4CAF50', label:'قفزات إضافية',
     desc:'يمنحك قفزتين إضافيتين',
-    modes:['WALK'],
+    modes:['WALK','ASCEND'],
     basePrice:220, priceStep:110
   },
   glide: {
     id:'glide', icon:'🪂', color:'#87CEEB', label:'انزلاق',
     desc:'ينزلق بك في الهواء عند الإمساك',
-    modes:['WALK'],
+    modes:['WALK','ASCEND'],
     basePrice:280, priceStep:140
   },
   rocket: {
     id:'rocket', icon:'🚀', color:'#FF6B35', label:'صاروخ',
     desc:'يطير بك للأعلى بسرعة عالية',
-    modes:['WALK'],
+    modes:['WALK','ASCEND'],
     basePrice:400, priceStep:200
   },
   megaJump: {
     id:'megaJump', icon:'⚡', color:'#FFD700', label:'قفزة خارقة',
     desc:'قفزة عالية جداً تتجاوز العقبات',
-    modes:['WALK'],
+    modes:['WALK','ASCEND'],
     basePrice:380, priceStep:190
   },
   wallStick: {
     id:'wallStick', icon:'🧲', color:'#8B4513', label:'التصاق',
     desc:'يتيح الالتصاق بالجدران مؤقتاً',
-    modes:['WALK'],
+    modes:['WALK','ASCEND'],
     basePrice:320, priceStep:160
   }
 };
@@ -727,7 +904,64 @@ const SCENES = [
     hillFar:'#4E1A20', hillMid:'#3A1018', hillNear:'#2A0A12',
     ground:'#1A0608', groundDark:'#0A0204', accent:'#FF5020', wall:'#3A1018', wallDark:'#1A0608',
     cloud:'#5A2028', moon:'#FF8060', moonGlow:'#FF5020', moonAmount:1, starAmount:0.5,
-    weather:'ash', weatherRate:0.7, lightning:true })
+    weather:'ash', weatherRate:0.7, lightning:true }),
+    mkScene({ id:'aurora', en:'AURORA', ar:'الشفق القطبي', sky:'#0A1828', skyBot:'#1A3848',
+  hillFar:'#1A3838', hillMid:'#0A2828', hillNear:'#041818',
+  ground:'#021010', groundDark:'#010808', accent:'#40FFB0', wall:'#041818', wallDark:'#021010',
+  cloud:'#1A3030', moon:'#C0FFE0', moonGlow:'#40FFB0', moonAmount:0.8, starAmount:0.9,
+  weather:'sparkle', weatherRate:0.5 }),
+mkScene({ id:'jungle', en:'JUNGLE', ar:'الأدغال', sky:'#3A5A2A', skyBot:'#1A3818',
+  hillFar:'#2A4A1A', hillMid:'#1A3810', hillNear:'#0A2008',
+  ground:'#0A1A08', groundDark:'#040C04', accent:'#A8E84C', wall:'#0A2008', wallDark:'#040C04',
+  cloud:'#2A4A28', sun:'#C8E080', sunGlow:'#E0F0A0', weather:'leaves', weatherRate:0.7, wind:0.3 }),
+mkScene({ id:'glacier', en:'GLACIER', ar:'النهر الجليدي', sky:'#C8E0F0', skyBot:'#8AB8D8',
+  hillFar:'#A8C8E0', hillMid:'#7AA8C8', hillNear:'#4A7898',
+  ground:'#2A5070', groundDark:'#183040', accent:'#FFFFFF', wall:'#4A7898', wallDark:'#2A5070',
+  cloud:'#FFFFFF', sun:'#FFFFFF', sunGlow:'#E0F0FF', weather:'snow', weatherRate:0.8 }),
+mkScene({ id:'swamp', en:'SWAMP', ar:'المستنقع', sky:'#4A5A3A', skyBot:'#2A3820',
+  hillFar:'#3A4A28', hillMid:'#2A3820', hillNear:'#1A2810',
+  ground:'#182008', groundDark:'#080C04', accent:'#A0C040', wall:'#1A2810', wallDark:'#080C04',
+  cloud:'#5A6A48', sun:'#C0D060', sunGlow:'#E0F080', weather:'bubbles', weatherRate:0.6 }),
+mkScene({ id:'beach', en:'BEACH', ar:'الشاطئ', sky:'#88D8F0', skyBot:'#FFE8C0',
+  hillFar:'#F0D8A8', hillMid:'#D8B888', hillNear:'#A88858',
+  ground:'#E8C890', groundDark:'#A07848', accent:'#FF6050', wall:'#A88858', wallDark:'#786038',
+  cloud:'#FFFFFF', sun:'#FFE890', sunGlow:'#FFF8C0', weather:'pollen', weatherRate:0.4 }),
+mkScene({ id:'mountain', en:'MOUNTAIN', ar:'الجبل', sky:'#B8D0E8', skyBot:'#F0E8D8',
+  hillFar:'#A0B0C0', hillMid:'#7080A0', hillNear:'#404858',
+  ground:'#303840', groundDark:'#181C20', accent:'#FFFFFF', wall:'#404858', wallDark:'#303840',
+  cloud:'#FFFFFF', sun:'#FFF8E0', sunGlow:'#FFFFFF', weather:'snow', weatherRate:0.5 }),
+mkScene({ id:'bloom', en:'BLOOM', ar:'الإزهار', sky:'#FCE8F0', skyBot:'#F0C8D8',
+  hillFar:'#F0C0D8', hillMid:'#D8A0B8', hillNear:'#A87890',
+  ground:'#805868', groundDark:'#503038', accent:'#FFE080', wall:'#A87890', wallDark:'#805868',
+  cloud:'#FFFFFF', sun:'#FFE8D0', sunGlow:'#FFF0E8', weather:'petal', weatherRate:0.8 }),
+mkScene({ id:'thunder', en:'THUNDER', ar:'الرعد', sky:'#2A1A3A', skyBot:'#4A3A5A',
+  hillFar:'#3A2A4A', hillMid:'#2A1A3A', hillNear:'#1A0A2A',
+  ground:'#0A0418', groundDark:'#040210', accent:'#C0A0FF', wall:'#1A0A2A', wallDark:'#0A0418',
+  cloud:'#4A3A5A', moon:'#E0D0F0', moonGlow:'#C0A0FF', moonAmount:0.6, starAmount:0.4,
+  weather:'rain', weatherRate:1.2, lightning:true, wind:0.5 }),
+mkScene({ id:'ember', en:'EMBER', ar:'الجمر', sky:'#3A1A10', skyBot:'#6A2A18',
+  hillFar:'#4A2418', hillMid:'#3A1810', hillNear:'#2A0E08',
+  ground:'#1A0804', groundDark:'#080201', accent:'#FF8040', wall:'#2A0E08', wallDark:'#1A0804',
+  cloud:'#5A3020', moon:'#FFA060', moonGlow:'#FF6030', moonAmount:0.5, starAmount:0.3,
+  weather:'ember', weatherRate:1.0 }),
+mkScene({ id:'starfall', en:'STARFALL', ar:'الشهاب', sky:'#08041A', skyBot:'#1A1038',
+  hillFar:'#2A1848', hillMid:'#180830', hillNear:'#0A0420',
+  ground:'#040210', groundDark:'#020008', accent:'#FFE0A0', wall:'#0A0420', wallDark:'#040210',
+  cloud:'#2A1A4E', moon:'#FFF0C0', moonGlow:'#FFE0A0', moonAmount:1, starAmount:1,
+  weather:'starfield', weatherRate:0.6 }),
+mkScene({ id:'nebula', en:'NEBULA', ar:'السديم', sky:'#1A0838', skyBot:'#4A1878',
+  hillFar:'#4A2080', hillMid:'#2A1058', hillNear:'#180438',
+  ground:'#0A0220', groundDark:'#040010', accent:'#FF80E0', wall:'#180438', wallDark:'#0A0220',
+  cloud:'#3A1060', moon:'#FFD0F0', moonGlow:'#FF80E0', moonAmount:1, starAmount:1,
+  weather:'starfield', weatherRate:0.5 }),
+mkScene({ id:'prism', en:'PRISM', ar:'الموشور', sky:'#FFE0F0', skyBot:'#E0C0FF',
+  hillFar:'#C0A0FF', hillMid:'#A080E0', hillNear:'#8060C0',
+  ground:'#5030A0', groundDark:'#301860', accent:'#FFE060', wall:'#8060C0', wallDark:'#5030A0',
+  cloud:'#FFFFFF', sun:'#FFE8B0', sunGlow:'#FFF8D8', weather:'sparkle', weatherRate:0.6 }),
+mkScene({ id:'crystalcave', en:'CRYSTAL CAVE', ar:'الكهف البلوري', sky:'#A0D0E8', skyBot:'#6040A8',
+  hillFar:'#8060C8', hillMid:'#6040A8', hillNear:'#402878',
+  ground:'#201850', groundDark:'#100828', accent:'#E0D0FF', wall:'#402878', wallDark:'#201850',
+  cloud:'#C0A0E8', sun:'#E0D0FF', sunGlow:'#F0E0FF', weather:'sparkle', weatherRate:0.7 })
 ];
 
 function blendScene(a,b,t){
@@ -755,6 +989,7 @@ const MODES = [
   { id:'FLAP',   ar:'التحليق',      en:'THRUST', icon:'▲', color:'#8E6AA8', desc:'اضغط للارتفاع' },
   { id:'DRIFT',  ar:'الانسياق',     en:'DRIFT',  icon:'✦', color:'#C98A2E', desc:'اسحب بحرية' },
   { id:'WALK',   ar:'المشي والقفز', en:'RUN',    icon:'♟', color:'#4A8040', desc:'اقفز فوق العقبات' },
+  { id:'ASCEND', ar:'الصعود',       en:'ASCEND', icon:'↑', color:'#5A8FD8', desc:'اقفز بين المنصات نحو الفضاء' },
   { id:'MIXED',  ar:'المتنوّع',     en:'MIXED',  icon:'◆', color:'#A06AD8', desc:'تحوّل عشوائي بين الأنماط' }
 ];
 
@@ -994,21 +1229,43 @@ function drawSynergiesUI(){
    ============================================================ */
 const PIXELS_PER_METER = 25;
 const PROGRESSION = {
-  rampMeters: 3200, speedStart: 1.6, speedMax: 7.2,
-  gapStart: 360, gapMin: 175, spawnStart: 400, spawnMin: 185,
+  rampMeters: 3200,
+  speedStart: 1.6,
+  speedMax: 6.5,
+  /* ✅ بعد الوصول لـ speedMax، تستمر الزيادة لوغاريتمياً بلا حدود */
+  speedLogScale: 1.5,
+  gapStart: 380, gapMin: 200,
+  spawnStart: 480, spawnMin: 240,
   spikeUnlock: 60, tallUnlock: 200, wobbleUnlock: 350, wobbleMaxMeters: 1200,
   levels: [0, 40, 120, 250, 450, 750, 1150, 1700, 2500, 3600, 5000, 7000]
+  /* ✅ بعد آخر قيمة، تُولَّد المستويات بصيغة أسّية لا نهائية */
 };
 
-function getMeters(){ return Math.floor(G.dist / PIXELS_PER_METER); }
+function getMeters(){
+  /* في ASCEND: الارتفاع الحقيقي للاعب فوق نقطة البداية */
+  if(G.mode === 'ASCEND'){
+    return Math.max(0, Math.floor((GROUND_Y - P.y) / PIXELS_PER_METER));
+  }
+  return Math.floor(G.dist / PIXELS_PER_METER);
+}
 function getProgression(){
   const m = getMeters();
   const t = Math.min(m / PROGRESSION.rampMeters, 1);
   const eased = 1 - Math.pow(1 - t, 1.8);
   const wobbleT = clamp((m - PROGRESSION.wobbleUnlock) / (PROGRESSION.wobbleMaxMeters - PROGRESSION.wobbleUnlock), 0, 1);
+
+  /* ✅ السرعة: تصل إلى speedMax عند rampMeters، ثم تستمر بالنمو اللوغاريتمي */
+  let speed;
+  if(m <= PROGRESSION.rampMeters){
+    speed = lerp(PROGRESSION.speedStart, PROGRESSION.speedMax, eased);
+  } else {
+    const extraM = m - PROGRESSION.rampMeters;
+    speed = PROGRESSION.speedMax + Math.log2(1 + extraM / 1000) * PROGRESSION.speedLogScale;
+  }
+
   return {
     t, eased,
-    speed: lerp(PROGRESSION.speedStart, PROGRESSION.speedMax, eased),
+    speed,
     gap: lerp(PROGRESSION.gapStart, PROGRESSION.gapMin, eased),
     spawnDist: lerp(PROGRESSION.spawnStart, PROGRESSION.spawnMin, eased),
     wobble: wobbleT * 0.65,
@@ -1020,12 +1277,43 @@ function getSpeedScale(){
   const ratio = G.speed / PROGRESSION.speedStart;
   return Math.pow(clamp(ratio, 1, 4.5), 0.65);
 }
-function getLevelIndex(){ return levelFromMeters(getMeters(), PROGRESSION.levels); }
+/* ✅ العتبة اللانهائية للمستوى (بعد آخر قيمة مُعرّفة) */
+function getLevelThreshold(idx){
+  const arr = PROGRESSION.levels;
+  if(idx < arr.length) return arr[idx];
+  const lastVal = arr[arr.length - 1];
+  const n = idx - arr.length + 1;
+  /* نمو أسّي: كل مستوى يحتاج ~1.5x أكثر من الذي قبله */
+  return Math.floor(lastVal + 3000 * (Math.pow(1.5, n) - 1));
+}
+
+function getLevelIndex(){
+  const m = getMeters();
+  const arr = PROGRESSION.levels;
+
+  /* المرحلة الأولى: مستويات مُعرّفة مسبقاً */
+  let idx = 0;
+  for(let i = 0; i < arr.length; i++){
+    if(m >= arr[i]) idx = i;
+    else break;
+  }
+
+  /* المرحلة الثانية: مستويات لا نهائية (صيغة عكسية سريعة) */
+  if(idx >= arr.length - 1 && m >= arr[arr.length - 1]){
+    const lastVal = arr[arr.length - 1];
+    const extraM = m - lastVal;
+    const n = Math.floor(Math.log(extraM / 3000 + 1) / Math.log(1.5));
+    idx = arr.length - 1 + n;
+  }
+
+  return idx;
+}
+
 function getLevelProgress(){
   const m = getMeters();
   const lv = getLevelIndex();
-  const cur = PROGRESSION.levels[lv];
-  const next = PROGRESSION.levels[lv+1] ?? (cur + 800);
+  const cur = getLevelThreshold(lv);
+  const next = getLevelThreshold(lv + 1);
   return clamp((m - cur) / (next - cur), 0, 1);
 }
 
@@ -1102,11 +1390,17 @@ const G = {
   realmTo: REALM.GROUND,
 
 nextHoleMeters: 450,
+spawnCdMul: 1,   /* مضاعف المسافة بين العقبات */
 
   /* ═══════════════ Underground ═══════════════ */
   isDigging: false,         /* هل يمكن تجاوز مستوى الأرض */
   underDepthPx: 0,          /* عمق اللاعب تحت الأرض */
-  camYUnder: 0              /* إزاحة الكاميرا للأسفل */
+  camYUnder: 0,              /* إزاحة الكاميرا للأسفل */
+
+  /* ═══════════════ ASCEND ═══════════════ */
+  ascendHighestY: 0,
+  ascendLastJumpTap: 0,
+  ascendJumpCooldown: 0,   /* ← جديد: منع القفز المتكرر */
 };
 
 const P = {
@@ -1131,27 +1425,85 @@ try{ pointer.hasHover = window.matchMedia('(hover:hover)').matches; }catch(e){}
 /* ============================================================
    ==================== Scene transitions ====================
    ============================================================ */
-const SCENE_THRESHOLDS = [0, 60, 140, 240, 360, 500, 660, 850, 1070, 1320, 1600, 1920, 2280, 2680, 3120, 3620, 4180, 4800];
 const SCENE_BLEND_FRAMES = 360;
 
-function updateSceneTransition(){
-  const m = getMeters();
-  let target = 0;
-  for(let i=0;i<SCENE_THRESHOLDS.length;i++){ if(m >= SCENE_THRESHOLDS[i]) target = i; }
-  target = target % SCENES.length;
-
-  if(!G.sceneActive && target !== G.sceneIdx){
-    G.sceneActive = true;
-    G.sceneFrom = G.sceneIdx;
-    G.sceneTo = target;
-    G.sceneT = 0;
-    const ns = SCENES[target];
-    showBanner(ns.en, ns.ar);
-    Sfx.level();
-    const tag = document.getElementById('scene-tag');
-    tag.textContent = ns.en;
-    tag.classList.add('show');
+/* ✅ توليد ديناميكي لعتبات المشاهد (المسافات تتصاعد تدريجياً) */
+const SCENE_THRESHOLDS = (() => {
+  const arr = [];
+  let acc = 0;
+  let delta = 60;
+  for(let i = 0; i < SCENES.length; i++){
+    arr.push(acc);
+    acc += delta;
+    delta = Math.min(500, delta + 20);
   }
+  return arr;
+})();
+
+/* ✅ حالة التبديل العشوائي بعد استنفاد كل المشاهد */
+let sceneRandomMode = false;
+let nextRandomSwitchMeters = 0;
+const RANDOM_SCENE_INTERVAL = 500;   /* كل 500 متر يتغير المشهد عشوائياً */
+
+function updateSceneTransition(){
+  /* ASCEND يستخدم سماء مبنية على الارتفاع */
+  if(G.mode === 'ASCEND'){
+    G.currentScene = SCENES[0];
+    return;
+  }
+
+  const m = getMeters();
+  const arr = SCENE_THRESHOLDS;
+  const maxThreshold = arr[arr.length - 1];
+
+  /* ═══════════════ وضع التبديل العشوائي (بعد آخر مشهد) ═══════════════ */
+  if(m >= maxThreshold){
+    if(!sceneRandomMode){
+      sceneRandomMode = true;
+      nextRandomSwitchMeters = m + RANDOM_SCENE_INTERVAL;
+    }
+
+    if(!G.sceneActive && m >= nextRandomSwitchMeters){
+      nextRandomSwitchMeters = m + RANDOM_SCENE_INTERVAL;
+
+      /* اختر مشهداً عشوائياً مختلفاً عن الحالي */
+      let newIdx;
+      let safety = 0;
+      do {
+        newIdx = Math.floor(Math.random() * SCENES.length);
+        safety++;
+      } while(newIdx === G.sceneIdx && safety < 20);
+
+      G.sceneActive = true;
+      G.sceneFrom = G.sceneIdx;
+      G.sceneTo = newIdx;
+      G.sceneT = 0;
+      const ns = SCENES[newIdx];
+      showBanner(ns.en, ns.ar);
+      Sfx.level();
+    }
+  }
+  /* ═══════════════ وضع التبديل التتابعي (المشاهد الأولى) ═══════════════ */
+  else {
+    sceneRandomMode = false;
+
+    let target = 0;
+    for(let i = 0; i < arr.length; i++){
+      if(m >= arr[i]) target = i;
+    }
+
+    if(!G.sceneActive && target !== G.sceneIdx){
+      G.sceneActive = true;
+      G.sceneFrom = G.sceneIdx;
+      G.sceneTo = target;
+      G.sceneT = 0;
+      const ns = SCENES[target];
+      showBanner(ns.en, ns.ar);
+      Sfx.level();
+    }
+  }
+
+  /* ═══════════════ معالجة الانتقال الناعم (مشترك بين الوضعين) ═══════════════ */
   if(G.sceneActive){
     G.sceneT += 1/SCENE_BLEND_FRAMES;
     if(G.sceneT >= 1){
@@ -1159,7 +1511,6 @@ function updateSceneTransition(){
       G.sceneIdx = G.sceneTo;
       G.sceneActive = false;
       G.currentScene = SCENES[G.sceneIdx];
-      setTimeout(()=>document.getElementById('scene-tag').classList.remove('show'), 1400);
     } else {
       G.currentScene = blendScene(SCENES[G.sceneFrom], SCENES[G.sceneTo], ease(G.sceneT));
     }
@@ -1189,32 +1540,110 @@ function dust(x,y,color,count=6,dir=-1){
 }
 function spawnJumpEffect(x,y,color){
   const cos = currentJump();
-  if(cos.id==='ring'){
+  const id = cos.id;
+
+  if(id==='ring'){
     for(let i=0;i<8;i++){
       const a=(i/8)*Math.PI*2;
       particles.push({x,y,vx:Math.cos(a)*4,vy:Math.sin(a)*4,life:1,decay:0.035,color,size:3});
     }
-  } else if(cos.id==='burst'){
+  } else if(id==='burst' || id==='shadowBurst'){
+    const col = id==='shadowBurst' ? '#2A1A30' : color;
     for(let i=0;i<12;i++){
       const a=Math.random()*Math.PI*2;
       const s=rand(2,5);
-      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,decay:0.025,color,size:rand(2.5,4)});
+      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,decay:0.025,color:col,size:rand(2.5,4)});
     }
-  } else if(cos.id==='star'){
+  } else if(id==='star' || id==='starBurst'){
     for(let i=0;i<10;i++){
       const a=(i/10)*Math.PI*2;
       particles.push({x,y,vx:Math.cos(a)*rand(3,6),vy:Math.sin(a)*rand(3,6),life:1,decay:0.03,color,size:rand(3,5)});
     }
-  } else if(cos.id==='shockwave'){
+    if(id==='starBurst'){
+      for(let i=0;i<16;i++){
+        const a=Math.random()*Math.PI*2;
+        const s=rand(4,8);
+        particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.2,decay:0.022,color:'#FFF8C0',size:rand(2,4)});
+      }
+    }
+  } else if(id==='shockwave' || id==='fireRing' || id==='holyRing'){
+    const col = id==='fireRing' ? '#FF6020' : id==='holyRing' ? '#FFF8C0' : '#FFFFFF';
     for(let i=0;i<16;i++){
       const a=(i/16)*Math.PI*2;
-      particles.push({x,y,vx:Math.cos(a)*5,vy:Math.sin(a)*5,life:1.2,decay:0.02,color:'#FFFFFF',size:4});
+      particles.push({x,y,vx:Math.cos(a)*5,vy:Math.sin(a)*5,life:1.2,decay:0.02,color:col,size:4});
     }
-  } else if(cos.id==='spiral'){
+  } else if(id==='spiral' || id==='vortex'){
     for(let i=0;i<20;i++){
       const a=(i/20)*Math.PI*4;
       const s=1 + i*0.25;
       particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.4,decay:0.018,color,size:rand(2,4)});
+    }
+  } else if(id==='smokeBomb' || id==='smoke'){
+    for(let i=0;i<14;i++){
+      const a=Math.random()*Math.PI*2;
+      const s=rand(1,3);
+      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.6,decay:0.014,color:'#9098A0',size:rand(4,7)});
+    }
+  } else if(id==='iceBurst'){
+    for(let i=0;i<14;i++){
+      const a=Math.random()*Math.PI*2;
+      const s=rand(2,5);
+      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.1,decay:0.025,color:'#A0E0FF',size:rand(3,5)});
+    }
+  } else if(id==='holyBurst'){
+    for(let i=0;i<18;i++){
+      const a=Math.random()*Math.PI*2;
+      const s=rand(1,4);
+      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s - 1,life:1.4,decay:0.02,color:'#FFF8C0',size:rand(2.5,4.5)});
+    }
+  } else if(id==='voidBurst' || id==='abyssBurst' || id==='cosmicBurst'){
+    const col = id==='abyssBurst' ? '#2A0848' : id==='cosmicBurst' ? '#C080FF' : '#6020A0';
+    for(let i=0;i<20;i++){
+      const a=Math.random()*Math.PI*2;
+      const s=rand(3,7);
+      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.4,decay:0.018,color:col,size:rand(3,5)});
+    }
+  } else if(id==='lightningSmash'){
+    for(let i=0;i<12;i++){
+      const a=(i/12)*Math.PI*2;
+      particles.push({x,y,vx:Math.cos(a)*6,vy:Math.sin(a)*6,life:1,decay:0.028,color:'#A0E0FF',size:rand(3,5)});
+    }
+  } else if(id==='waterSplash'){
+    for(let i=0;i<15;i++){
+      const a=-Math.PI + Math.random()*Math.PI;
+      const s=rand(3,6);
+      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s - 2,life:1,decay:0.03,color:'#88D8FF',size:rand(2.5,4.5)});
+    }
+  } else if(id==='flowerBurst'){
+    for(let i=0;i<15;i++){
+      const a=Math.random()*Math.PI*2;
+      const s=rand(2,5);
+      const cols = ['#FF80A0','#FFE060','#FFA0C0','#FFFFFF'];
+      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.2,decay:0.024,color:cols[i%4],size:rand(3,5)});
+    }
+  } else if(id==='leafBurst'){
+    for(let i=0;i<14;i++){
+      const a=Math.random()*Math.PI*2;
+      const s=rand(2,5);
+      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.2,decay:0.024,color:'#7BC44C',size:rand(2.5,4.5)});
+    }
+  } else if(id==='bubbleBurst'){
+    for(let i=0;i<15;i++){
+      const a=Math.random()*Math.PI*2;
+      const s=rand(1,4);
+      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.3,decay:0.02,color:'#A8D8E8',size:rand(3,5)});
+    }
+  } else if(id==='heartBurst'){
+    for(let i=0;i<12;i++){
+      const a=Math.random()*Math.PI*2;
+      const s=rand(2,5);
+      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.3,decay:0.022,color:'#FF6080',size:rand(3,5)});
+    }
+  } else if(id==='gearBurst'){
+    for(let i=0;i<10;i++){
+      const a=Math.random()*Math.PI*2;
+      const s=rand(2,5);
+      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.2,decay:0.024,color:'#C0C8D8',size:rand(3,5)});
     }
   } else {
     dust(x,y,color,6);
@@ -1222,31 +1651,108 @@ function spawnJumpEffect(x,y,color){
 }
 function spawnDeathEffect(x,y,color){
   const cos = currentDeath();
-  if(cos.id==='explode'){
+  const id = cos.id;
+
+  if(id==='explode'){
     burst(x,y,color,40,10);
     burst(x,y,'#FF8860',20,12);
-  } else if(cos.id==='dissolve'){
+  } else if(id==='dissolve'){
     for(let i=0;i<40;i++){
       const a=Math.random()*Math.PI*2;
       const s=Math.random()*3;
       particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-0.5,life:1,decay:0.012,color,size:rand(2,4)});
     }
-  } else if(cos.id==='pixel'){
+  } else if(id==='pixel'){
     for(let i=0;i<50;i++){
       particles.push({x:x+rand(-15,15), y:y+rand(-15,15),vx:rand(-2,2), vy:rand(-3,-0.5),life:1, decay:0.018, color, size:4});
     }
-  } else if(cos.id==='shatter'){
+  } else if(id==='shatter' || id==='shatterIce'){
+    const col = id==='shatterIce' ? '#A0E0FF' : mixColor(color,'#FFFFFF',0.4);
     for(let i=0;i<45;i++){
       const a = Math.random()*Math.PI*2;
       const s = rand(4,9);
-      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.3, decay:0.018, color: mixColor(color,'#FFFFFF',0.4), size: rand(3,6)});
+      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.3, decay:0.018, color: col, size: rand(3,6)});
     }
-  } else if(cos.id==='nova'){
+  } else if(id==='nova'){
     for(let i=0;i<60;i++){
       const a=Math.random()*Math.PI*2;
       const s=rand(3,11);
       particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.5,decay:0.014,
         color: i%3===0?'#FFF8C0': (i%3===1?'#FFB060':color), size:rand(3,6)});
+    }
+  } else if(id==='implode'){
+    for(let i=0;i<50;i++){
+      const a=Math.random()*Math.PI*2;
+      const d=rand(40,120);
+      particles.push({x:x+Math.cos(a)*d, y:y+Math.sin(a)*d,
+        vx:-Math.cos(a)*6, vy:-Math.sin(a)*6, life:1, decay:0.02, color, size:rand(2,4)});
+    }
+  } else if(id==='flash'){
+    for(let i=0;i<30;i++){
+      const a=Math.random()*Math.PI*2;
+      const s=rand(6,12);
+      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:0.6,decay:0.04,color:'#FFFFFF',size:rand(3,6)});
+    }
+    G.flash = 0.8;
+  } else if(id==='vortexDeath'){
+    for(let i=0;i<50;i++){
+      const a=(i/50)*Math.PI*8;
+      const s=1 + i*0.2;
+      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.6,decay:0.014,color,size:rand(2,5)});
+    }
+  } else if(id==='holyAscend'){
+    for(let i=0;i<50;i++){
+      const a=Math.random()*Math.PI*2;
+      const s=rand(1,3);
+      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s - 3,life:1.8,decay:0.012,color:'#FFF8C0',size:rand(3,6)});
+    }
+  } else if(id==='blackHole'){
+    for(let i=0;i<80;i++){
+      const a=Math.random()*Math.PI*2;
+      const d=rand(60,160);
+      particles.push({x:x+Math.cos(a)*d, y:y+Math.sin(a)*d,
+        vx:-Math.cos(a)*9, vy:-Math.sin(a)*9, life:1.4, decay:0.016, color:'#1A0A2A', size:rand(3,7)});
+    }
+  } else if(id==='fireworks'){
+    const cols = ['#FF4040','#FFD040','#40FF60','#4080FF','#FF40C0'];
+    for(let c=0;c<5;c++){
+      const baseA = (c/5)*Math.PI*2;
+      for(let i=0;i<15;i++){
+        const a = baseA + (i/15)*Math.PI*2;
+        const s=rand(5,10);
+        particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.4,decay:0.016,color:cols[c],size:rand(2,4)});
+      }
+    }
+  } else if(id==='soulRise'){
+    for(let i=0;i<40;i++){
+      const a=Math.random()*Math.PI*2;
+      const s=rand(0.5,2);
+      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s - 2.5,life:2,decay:0.01,color:'#C0D0FF',size:rand(2,5)});
+    }
+  } else if(id==='neonBurst'){
+    for(let i=0;i<40;i++){
+      const a=Math.random()*Math.PI*2;
+      const s=rand(4,10);
+      const cols = ['#00FFD8','#FF00A8','#FFD000'];
+      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.2,decay:0.018,color:cols[i%3],size:rand(3,6)});
+    }
+  } else if(id==='cosmicVoid'){
+    for(let i=0;i<70;i++){
+      const a=Math.random()*Math.PI*2;
+      const s=rand(3,14);
+      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.8,decay:0.012,color: i%3===0?'#C080FF':(i%3===1?'#6020A0':'#FFFFFF'), size:rand(3,6)});
+    }
+  } else if(id==='starScatter'){
+    for(let i=0;i<55;i++){
+      const a=Math.random()*Math.PI*2;
+      const s=rand(3,11);
+      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.5,decay:0.014,color:'#FFF4C0',size:rand(3,6)});
+    }
+  } else if(id==='petalFall'){
+    for(let i=0;i<45;i++){
+      const a=Math.random()*Math.PI*2;
+      const s=rand(1,4);
+      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s + 1.5,life:2,decay:0.012,color:'#FFC0D8',size:rand(3,5)});
     }
   } else {
     burst(x,y,color,30,7);
@@ -1273,7 +1779,32 @@ const SPARK_PALETTES = {
   firefly:   { colors:['#F5D77E','#FFE090','#E8B34E','#FFF0B0'], size:[1.5,3] },
   rainbow:   { colors:['#FF6088','#FFA84C','#FFE24C','#4CE0A8','#4CA8FF','#A86AFF'], size:[2,4] },
   cosmic:    { colors:['#A080FF','#8060D0','#D0B0FF','#FFC0FF','#60A0FF'], size:[2,4.5] },
-  gold:      { colors:['#E8B34E','#FFF4C0','#FFD060','#FFE8A0'], size:[2,4.5] }
+  gold:      { colors:['#E8B34E','#FFF4C0','#FFD060','#FFE8A0'], size:[2,4.5] },
+  /* ═══ جديد ═══ */
+  runes:      { colors:['#8060E0','#6040C0','#A080FF','#E0D0FF'], size:[2.5,4] },
+  gears:      { colors:['#C8C8D8','#9098A8','#E8E8F0','#5A6270'], size:[2.5,4] },
+  plus:       { colors:['#40E860','#20C040','#80FFA0','#008020'], size:[3,5] },
+  cross:      { colors:['#E8E8E8','#C0C0C0','#FFFFFF','#A0A0A0'], size:[2.5,4] },
+  triangles:  { colors:['#FF8040','#FFC060','#FFA020','#FFD080'], size:[2.5,4.5] },
+  diamonds:   { colors:['#80E8FF','#40A8D0','#C0F0FF','#2090B8'], size:[2.5,4.5] },
+  moonPhases: { colors:['#FFF4D0','#F0E0A0','#FFFFFF','#E0D080'], size:[2.5,4] },
+  arrows:     { colors:['#FF4040','#FF8080','#FF2020','#FFB0B0'], size:[2.5,4] },
+  shuriken:   { colors:['#808898','#C0C8D8','#E8E8F0','#5A6270'], size:[2.5,4.5] },
+  smoke:      { colors:['#808088','#606068','#A0A0A8','#404048'], size:[3,5.5] },
+  voidOrbs:   { colors:['#6020A0','#A040FF','#4020A0','#C080FF'], size:[2.5,4.5] },
+  candy:      { colors:['#FF60A0','#FFB040','#60E0FF','#A0FF60'], size:[2.5,4.5] },
+  donuts:     { colors:['#FFB0C0','#FFD0A0','#A08060','#FFE0E0'], size:[2.5,4.5] },
+  cherries:   { colors:['#E82040','#C01030','#FF4060','#A00820'], size:[2.5,4] },
+  soccerBalls:{ colors:['#FFFFFF','#E8E8E8','#D0D0D0','#F8F8F8'], size:[2.5,4] },
+  pixels:     { colors:['#FF00FF','#00FFFF','#FFFF00','#FF0000'], size:[3,5] },
+  mushrooms:  { colors:['#E85040','#C03020','#FF7060','#A02020'], size:[2.5,4] },
+  feathers:   { colors:['#FFFFFF','#E8E8F0','#D0D0E0','#F0F0FF'], size:[2.5,4.5] },
+  skulls:     { colors:['#F0E8E0','#D0C8C0','#FFFFFF','#B0A8A0'], size:[2.5,4] },
+  coffee:     { colors:['#6A4830','#8A6848','#4A2818','#A08868'], size:[2.5,4] },
+  books:      { colors:['#C04040','#4060C0','#40C060','#C0A040'], size:[2.5,4.5] },
+  wrenches:   { colors:['#C0C8D8','#9098A8','#E8E8F0','#5A6270'], size:[2.5,4] },
+  aurora:     { colors:['#40FFB0','#4080FF','#C080FF','#40E0FF'], size:[3,5] },
+  supernova:  { colors:['#FFFFFF','#FFE060','#FF8040','#FF4040'], size:[3,6] }
 };
 
 function spawnSpark(){
@@ -1760,15 +2291,11 @@ function spawnCoinCluster(cx, cy, count){
     coins.push({ x: cx + i*spacing, y: cy + Math.sin(t*Math.PI)*12 - 6, r: 8, t:0, dead:false });
   }
 }
-function spawnPowerup(cx, cy){
-  const base = POWERUP_TYPES[Math.floor(Math.random()*POWERUP_TYPES.length)];
-  const duration = base.id === 'shield' ? 1 : rollPowerupDuration();
-  /* ✅ جديد */
-const skyPU = makePowerup(W + 40 + w/2 + 50, topY, { r: 16, isSkyReward: true });
-if(skyPU) powerups.push(skyPU);
-}
 
 function spawnObstacle(){
+  /* ═══ ASCEND له مولّد خاص ═══ */
+  if(G.mode === 'ASCEND') return;
+
   if(G.mode !== 'WALK'){
     spawnTunnelObstacle();
     return;
@@ -1808,58 +2335,416 @@ function spawnTunnelObstacle(){
   else if(r < 0.90){ spawnCoinCluster(W+50+30, cy); }
 }
 
+/* ═══════════════════════════════════════════════════════
+   ============ ASCEND BIOMES (العوالم البيئية) ============
+   ═══════════════════════════════════════════════════════ */
+const ASCEND_BIOMES = [
+  {
+    id: 'earth', name: 'EARTH', ar: 'الأرض', icon: '🌍',
+    from: 0, to: 500,
+    skyTop: '#87CEEB', skyBot: '#FFE4B5',
+    fog: 'rgba(200,180,140,0.08)',
+    accent: '#8B6914',
+    palette: [
+      { body:'#8B6914', top:'#6B9B37', edge:'#4A6B1E' },
+      { body:'#6B4E2A', top:'#7B5E3A', edge:'#4A3420' },
+      { body:'#888888', top:'#AAAAAA', edge:'#555555' }
+    ],
+    weather: 'petal', weatherRate: 0.25,
+    gravity: 1.0
+  },
+  {
+    id: 'forest', name: 'FOREST', ar: 'الغابة', icon: '🌲',
+    from: 500, to: 1500,
+    skyTop: '#2D5016', skyBot: '#7CB342',
+    fog: 'rgba(40,80,30,0.15)',
+    accent: '#6BBF4C',
+    palette: [
+      { body:'#5D4037', top:'#6BBF4C', edge:'#3E2723' },
+      { body:'#4E342E', top:'#81C784', edge:'#2E1E1A' },
+      { body:'#3E2723', top:'#A5D6A7', edge:'#1B100D' }
+    ],
+    weather: 'leaves', weatherRate: 0.5,
+    gravity: 1.0
+  },
+  {
+    id: 'clouds', name: 'CLOUD KINGDOM', ar: 'مملكة السحاب', icon: '☁️',
+    from: 1500, to: 3000,
+    skyTop: '#7EC8E3', skyBot: '#E0F7FF',
+    fog: 'rgba(220,240,255,0.2)',
+    accent: '#FFFFFF',
+    palette: [
+      { body:'#E8F4FF', top:'#FFFFFF', edge:'#A8C8E8' },
+      { body:'#D0E8F8', top:'#F0F8FF', edge:'#88A8C8' },
+      { body:'#B8DCF0', top:'#E0F0FF', edge:'#6890B0' }
+    ],
+    weather: 'snow', weatherRate: 0.4,
+    gravity: 0.95
+  },
+  {
+    id: 'storm', name: 'STORM', ar: 'العاصفة', icon: '⚡',
+    from: 3000, to: 5000,
+    skyTop: '#2A2A40', skyBot: '#5A5A70',
+    fog: 'rgba(60,60,90,0.25)',
+    accent: '#FFE060',
+    palette: [
+      { body:'#5A6878', top:'#909AA8', edge:'#2A3038' },
+      { body:'#4A5568', top:'#7A8598', edge:'#202530' },
+      { body:'#3A4048', top:'#5A6068', edge:'#1A1E22' }
+    ],
+    weather: 'rain', weatherRate: 1.0,
+    gravity: 1.05,
+    lightning: true,
+    wind: 0.4
+  },
+  {
+    id: 'aurora', name: 'AURORA', ar: 'الشفق القطبي', icon: '❄️',
+    from: 5000, to: 8000,
+    skyTop: '#0F1430', skyBot: '#6A48A8',
+    fog: 'rgba(150,120,220,0.15)',
+    accent: '#E0D0FF',
+    palette: [
+      { body:'#5A3A9A', top:'#C080FF', edge:'#2A1850' },
+      { body:'#4A2A80', top:'#A060E0', edge:'#200A40' },
+      { body:'#3A1868', top:'#8040C0', edge:'#180430' }
+    ],
+    weather: 'sparkle', weatherRate: 0.6,
+    gravity: 0.92
+  },
+  {
+    id: 'space', name: 'SPACE', ar: 'الفضاء', icon: '💫',
+    from: 8000, to: 12000,
+    skyTop: '#000000', skyBot: '#1A0838',
+    fog: 'rgba(80,40,160,0.08)',
+    accent: '#C080FF',
+    palette: [
+      { body:'#4A4048', top:'#8A8088', edge:'#1A1518' },
+      { body:'#3A3038', top:'#6A6068', edge:'#100A10' },
+      { body:'#5A5058', top:'#AAA0A8', edge:'#2A2028' }
+    ],
+    weather: 'starfield', weatherRate: 0.5,
+    gravity: 0.85
+  },
+  {
+    id: 'cosmos', name: 'COSMOS', ar: 'الكون', icon: '🌌',
+    from: 12000, to: 99999,
+    skyTop: '#000000', skyBot: '#0A0420',
+    fog: 'rgba(100,60,180,0.1)',
+    accent: '#FFD060',
+    palette: [
+      { body:'#6A40D0', top:'#C080FF', edge:'#200860' },
+      { body:'#4A20A0', top:'#A060E0', edge:'#150440' },
+      { body:'#3A1880', top:'#8040C0', edge:'#0A0220' }
+    ],
+    weather: 'starfield', weatherRate: 0.7,
+    gravity: 0.8
+  }
+];
+
+function getAscendBiome(altitudeMeters){
+  for(let i = ASCEND_BIOMES.length - 1; i >= 0; i--){
+    if(altitudeMeters >= ASCEND_BIOMES[i].from) return ASCEND_BIOMES[i];
+  }
+  return ASCEND_BIOMES[0];
+}
+
+function getAscendBiomeIndex(altitudeMeters){
+  for(let i = ASCEND_BIOMES.length - 1; i >= 0; i--){
+    if(altitudeMeters >= ASCEND_BIOMES[i].from) return i;
+  }
+  return 0;
+}
+
+/* ============================================================
+   ==================== ASCEND BARRIER =======================
+   ============================================================ */
+function spawnAscendBarrier(){
+  const barrierH = 220;          /* كان 260 */
+  const gapH = 150;              /* كان 130 */
+  const gapLocalY = rand(30, barrierH - gapH - 30);
+  const s = G.currentScene;
+
+  obstacles.push({
+    y: -barrierH,
+    h: barrierH,
+    x: 0, w: W,
+    gapLocalY,
+    gap: gapH,
+    type: 'ascendBarrier',
+    isAscend: true,
+    isWalk: true,                /* ✅ الإصلاح: كان false */
+    t: 0, passed: false, dead: false,
+    color: s.wall,
+    colorDark: s.wallDark,
+    accent: s.accent
+  });
+
+  /* ═══ مكافأة داخل الفتحة (تشجيع المخاطرة) ═══ */
+  if(Math.random() < 0.45){
+    const rx = rand(70, W - 70);
+    const ry = -barrierH + gapLocalY + gapH / 2;
+
+    if(Math.random() < 0.55){
+      const cc = 2 + Math.floor(Math.random() * 3);
+      for(let i = 0; i < cc; i++){
+        coins.push({
+          x: rx, y: ry + (i - cc/2) * 26,
+          r: 8, t: 0, dead: false
+        });
+      }
+    } else if(Math.random() < 0.85){
+      orbs.push({
+        x: rx, y: ry, r: 12,
+        t: 0, dead: false, color: s.accent
+      });
+    } else {
+      const pu = makePowerup(rx, ry);
+      if(pu) powerups.push(pu);
+    }
+  }
+}
+
+/* ============================================================
+   ==================== SKY BRIDGE SYSTEM ====================
+   ============================================================ */
+
+/* ① المدرج الطويل — منصة واحدة عريضة جداً للجري عليها */
+function spawnSkyRunway(){
+  const m = getMeters();
+  /* العرض ينمو مع المسافة: 380 بكسل → 900 بكسل */
+  const w = 380 + Math.min(520, m * 0.06);
+  const y = GROUND_Y - rand(110, 180);
+
+  obstacles.push({
+    x: W + 40, w, h: 14,
+    type: 'platform',
+    isWalk: true, isPlatform: true,
+    isSkyBridge: true,
+    isRunway: true,
+    platformType: 'static',
+    y, baseY: y, baseX: W + 40,
+    amp: 0, phase: 0,
+    color: '#80C0E8', colorDark: '#4080B0', accent: '#C0E0FF', glow: '#80D0FF',
+    t: 0, passed: false, dead: false,
+    solid: false, crumbleTimer: 0, crumbled: false, bounceBoost: 0
+  });
+
+  /* خط طويل من العملات */
+  const coinCount = Math.floor(w / 42);
+  for(let i = 0; i < coinCount; i++){
+    coins.push({
+      x: W + 70 + i * 42,
+      y: y - 25,
+      r: 8, t: 0, dead: false
+    });
+  }
+
+  /* كرة طاقة في النهاية */
+  orbs.push({
+    x: W + 40 + w - 30, y: y - 32,
+    r: 14, t: 0, dead: false,
+    color: '#FFD700', isSkyOrb: true, value: 12
+  });
+
+  /* تعزيز في المنتصف أحياناً */
+  if(Math.random() < 0.35){
+    spawnPowerup(W + 40 + w/2, y - 55);
+  }
+}
+
+/* ② سلسلة جسور — طوابق متراصة عمودياً للصعود */
+function spawnSkyBridgeChain(){
+  const m = getMeters();
+
+  /* ─────── عدد الطوابق المسموح حسب المسافة ─────── */
+  let maxFloor = 2;
+  if(m >= 500)  maxFloor = 3;
+  if(m >= 1000) maxFloor = 4;
+  if(m >= 2000) maxFloor = 5;
+  if(m >= 3500) maxFloor = 6;
+  if(m >= 6000) maxFloor = 7;
+  if(m >= 10000) maxFloor = 8;   /* ← يصل للسماء (900px) */
+
+  const floorCount = 2 + Math.floor(Math.random() * (maxFloor - 1));
+
+  /* ─────── المسافات ─────── */
+  const baseY      = GROUND_Y - rand(120, 160);
+  const floorGap   = rand(100, 125);       /* فرق Y بين كل طابق */
+  const speedScale = getSpeedScale();
+  const spacingX   = 150 * speedScale;     /* فرق X بين الطوابق */
+
+  for(let f = 0; f < floorCount; f++){
+    const y = baseY - f * floorGap;
+    const w = rand(180, 260) + Math.min(140, f * 20);
+
+    obstacles.push({
+      x: W + 40 + f * spacingX,
+      w, h: 14,
+      type: 'platform',
+      isWalk: true, isPlatform: true,
+      isSkyBridge: true,
+      floorIndex: f,
+      totalFloors: floorCount,
+      platformType: 'static',
+      y, baseY: y, baseX: W + 40 + f * spacingX,
+      amp: 0, phase: 0,
+      color: '#A0D0F0', colorDark: '#5080B0', accent: '#E0F4FF', glow: '#80D0FF',
+      t: 0, passed: false, dead: false,
+      solid: false, crumbleTimer: 0, crumbled: false, bounceBoost: 0
+    });
+
+    /* مكافآت على كل طابق */
+    spawnCoinCluster(W + 40 + f * spacingX + w/2, y - 25, 4 + Math.min(4, f));
+
+    /* الطابق الأخير: كرة طاقة + تعزيز محتمل */
+    if(f === floorCount - 1){
+      orbs.push({
+        x: W + 40 + f * spacingX + w/2, y: y - 40,
+        r: 16, t: 0, dead: false,
+        color: '#FFD700', isSkyOrb: true, value: 20
+      });
+
+      if(Math.random() < 0.5){
+        spawnPowerup(W + 40 + f * spacingX + w/2, y - 70);
+      }
+    }
+  }
+
+  showBanner('↑ SKY BRIDGE', floorCount + ' طوابق');
+  Sfx.play(660, 0.3, 'sine', 0.04, 990);
+}
+
+/* ③ مدينة السماء — جزر متعددة بنفس المستوى */
+function spawnSkyCity(){
+  const m = getMeters();
+  const baseY = GROUND_Y - rand(220, 320);
+  const speedScale = getSpeedScale();
+  const blockCount = 2 + Math.floor(Math.random() * 3);
+  const spacingX = 140 * speedScale;
+
+  for(let i = 0; i < blockCount; i++){
+    const w = rand(200, 320);
+    const yJitter = i === 0 ? 0 : rand(-30, 30);
+    const y = baseY + yJitter;
+
+    obstacles.push({
+      x: W + 40 + i * spacingX,
+      w, h: 14,
+      type: 'platform',
+      isWalk: true, isPlatform: true,
+      isSkyBridge: true,
+      isCityBlock: true,
+      platformType: 'static',
+      y, baseY: y, baseX: W + 40 + i * spacingX,
+      amp: 0, phase: 0,
+      color: '#C090E8', colorDark: '#6040A8', accent: '#E8D0FF', glow: '#D080FF',
+      t: 0, passed: false, dead: false,
+      solid: false, crumbleTimer: 0, crumbled: false, bounceBoost: 0
+    });
+
+    spawnCoinCluster(W + 40 + i * spacingX + w/2, y - 25, 5);
+
+    /* تعزيز على الجزيرة الوسطى أحياناً */
+    if(i === Math.floor(blockCount/2) && Math.random() < 0.4){
+      spawnPowerup(W + 40 + i * spacingX + w/2, y - 55);
+    }
+  }
+
+  /* مكافأة كبرى على الحافة الأخيرة */
+  if(Math.random() < 0.6){
+    const lastX = W + 40 + (blockCount - 1) * spacingX;
+    orbs.push({
+      x: lastX + 160, y: baseY - 40,
+      r: 18, t: 0, dead: false,
+      color: '#FFD700', isSkyOrb: true, value: 25
+    });
+  }
+
+  showBanner('☁ SKY CITY', 'مدينة السماء');
+}
+
 function spawnWalkObstacle(){
   const prog = getProgression();
   const s = G.currentScene;
   const m = getMeters();
   const roll = Math.random();
 
-  /* توليد حفر بشكل دوري للسماح بالنزول */
+  /* ═══ حفر دورية (للدخول للأعماق) ═══ */
   if(G.realm === REALM.GROUND && m >= G.nextHoleMeters){
     G.nextHoleMeters = m + rand(400, 800);
     spawnGroundHole();
     return;
   }
 
+  /* ═══════════════════════════════════════════════════
+     ═══ 1) الجسور السماوية — الأولوية من 200م ═══
+     ═══════════════════════════════════════════════════ */
+  if(m >= 200 && G.realm === REALM.GROUND){
+    let bridgeChance = 0.15;
+    if(m >= 500)  bridgeChance = 0.22;
+    if(m >= 1200) bridgeChance = 0.30;
+    if(m >= 2500) bridgeChance = 0.38;
+    if(m >= 5000) bridgeChance = 0.45;
+
+    if(roll < bridgeChance){
+      const subRoll = Math.random();
+
+      if(subRoll < 0.40)      spawnSkyRunway();       /* مدرج طويل */
+      else if(subRoll < 0.80) spawnSkyBridgeChain();  /* سلسلة طوابق */
+      else                    spawnSkyCity();         /* مدينة سماء */
+
+      /* مسافة إضافية بعد كل مجموعة جسور */
+      G.spawnCdMul = 1.8 + Math.random() * 0.6;
+      return;
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════
+     ═══ 2) المشهد الأرضي العادي ═══
+     ═══════════════════════════════════════════════════ */
+
   if(m < 200){
-    if(roll < 0.40)      spawnGroundObstacle(prog, s);
-    else if(roll < 0.62) spawnPlatform(prog, s);
-    else if(roll < 0.78) spawnSpring(prog, s);
-    else if(roll < 0.92) spawnStaircase(prog, s);
-    else if(roll < 0.97) spawnPlatformChain(prog, s);
-    else                 spawnSkyElevator(prog, s);
+    if(roll < 0.35)      spawnGroundObstacle(prog, s);
+    else if(roll < 0.55) spawnPlatform(prog, s);
+    else if(roll < 0.72) spawnSpring(prog, s);
+    else if(roll < 0.85) spawnPlatformChain(prog, s);
+    else if(roll < 0.95) spawnSkyElevator(prog, s);
+    else                 spawnStaircase(prog, s);
     return;
   }
 
   if(m < 800){
-    if(roll < 0.18)      spawnGroundObstacle(prog, s);
-    else if(roll < 0.32) spawnPlatform(prog, s);
-    else if(roll < 0.42) spawnPlatformChain(prog, s);
-    else if(roll < 0.50) spawnSpring(prog, s);
-    else if(roll < 0.58) spawnSaw(prog, s);
-    else if(roll < 0.64) spawnPiston(prog, s);
-    else if(roll < 0.70) spawnFallingSpike(prog, s);
-    else if(roll < 0.74) spawnRotatingBar(prog, s);
-    else if(roll < 0.88) spawnStaircase(prog, s);
-    else if(roll < 0.95) spawnSkyPlatform(prog, s);
-    else if(roll < 0.98) spawnSkyElevator(prog, s);
-    else                 spawnLaserFence(prog, s);
+    if(roll < 0.15)      spawnGroundObstacle(prog, s);
+    else if(roll < 0.28) spawnPlatform(prog, s);
+    else if(roll < 0.36) spawnPlatformChain(prog, s);
+    else if(roll < 0.44) spawnSpring(prog, s);
+    else if(roll < 0.50) spawnSaw(prog, s);
+    else if(roll < 0.56) spawnPiston(prog, s);
+    else if(roll < 0.62) spawnFallingSpike(prog, s);
+    else if(roll < 0.66) spawnRotatingBar(prog, s);
+    else if(roll < 0.76) spawnStaircase(prog, s);
+    else if(roll < 0.84) spawnSkyPlatform(prog, s);
+    else if(roll < 0.90) spawnSkyElevator(prog, s);
+    else if(roll < 0.95) spawnLaserFence(prog, s);
+    else                 spawnVortex(prog, s);
     return;
   }
 
-  if(roll < 0.10)      spawnGroundObstacle(prog, s);
-  else if(roll < 0.18) spawnPlatform(prog, s);
-  else if(roll < 0.26) spawnPlatformChain(prog, s);
-  else if(roll < 0.33) spawnSpring(prog, s);
-  else if(roll < 0.40) spawnSaw(prog, s);
-  else if(roll < 0.46) spawnPiston(prog, s);
-  else if(roll < 0.52) spawnFallingSpike(prog, s);
-  else if(roll < 0.56) spawnRotatingBar(prog, s);
-  else if(roll < 0.60) spawnSkyPlatform(prog, s);
-  else if(roll < 0.86) spawnStaircase(prog, s);
-  else if(roll < 0.94) spawnLaserFence(prog, s);
-  else if(roll < 0.98) spawnSkyElevator(prog, s);
-  else                 spawnVortex(prog, s);
+  /* ═══ مسافات متقدمة — عقبات أقل، جسور أكثر ═══ */
+  if(roll < 0.08)      spawnGroundObstacle(prog, s);
+  else if(roll < 0.14) spawnPlatform(prog, s);
+  else if(roll < 0.20) spawnPlatformChain(prog, s);
+  else if(roll < 0.26) spawnSpring(prog, s);
+  else if(roll < 0.32) spawnSaw(prog, s);
+  else if(roll < 0.37) spawnPiston(prog, s);
+  else if(roll < 0.42) spawnFallingSpike(prog, s);
+  else if(roll < 0.45) spawnRotatingBar(prog, s);
+  else if(roll < 0.50) spawnSkyPlatform(prog, s);
+  else if(roll < 0.62) spawnStaircase(prog, s);
+  else if(roll < 0.72) spawnLaserFence(prog, s);
+  else if(roll < 0.80) spawnSkyElevator(prog, s);
+  else if(roll < 0.88) spawnVortex(prog, s);
+  else                 spawnSkyElevatorChain(prog, s);
 }
 
 function spawnGroundObstacle(prog, s){
@@ -1979,6 +2864,7 @@ function spawnSkyElevator(prog, s){
   const maxRise = rand(300, 700);
   const startY = GROUND_Y - rand(90, 150);
 
+  /* ═══ المصعد نفسه ═══ */
   obstacles.push({
     x: W + 40, w, h, type:'platform',
     isWalk: true, isPlatform: true,
@@ -2003,28 +2889,40 @@ function spawnSkyElevator(prog, s){
     bounceBoost: 0
   });
 
+  /* ═══ أعلى نقطة يصل إليها المصعد ═══ */
   const topY = startY - maxRise - 30;
+  const elevatorCenterX = W + 40 + w/2;
 
+  /* ═══ سلسلة العملات على طول الصعود ═══ */
   const coinCount = Math.floor(maxRise / 60);
   for(let i = 1; i <= coinCount; i++){
     if(Math.random() < 0.7){
       coins.push({
-        x: W + 40 + w/2 + rand(-30, 30),
+        x: elevatorCenterX + rand(-30, 30),
         y: startY - i * 60,
         r: 8, t: 0, dead: false
       });
     }
   }
 
+  /* ═══ كرة الطاقة في القمة ═══ */
   orbs.push({
-    x: W + 40 + w/2, y: topY, r: 16, t: 0, dead: false,
-    color: '#FFD700', isSkyOrb: true, value: 15
+    x: elevatorCenterX,
+    y: topY,
+    r: 16, t: 0, dead: false,
+    color: '#FFD700',
+    isSkyOrb: true,
+    value: 15
   });
 
+  /* ═══ مكافأة إضافية (تعزيز) أحياناً ═══ */
   if(Math.random() < 0.3){
-/* ✅ جديد */
-const skyPU = makePowerup(W + 40 + w/2 + 50, topY, { r: 16, isSkyReward: true });
-if(skyPU) powerups.push(skyPU);
+    const skyPU = makePowerup(
+      elevatorCenterX + 50,
+      topY,
+      { r: 16, isSkyReward: true }
+    );
+    if(skyPU) powerups.push(skyPU);
   }
 
   Sfx.play(660, 0.3, 'sine', 0.04, 1320);
@@ -2162,9 +3060,9 @@ function spawnStaircase(prog, s){
   const startX = W + 60;
   const startY = GROUND_Y - 100;
 
-const speedScale = getSpeedScale();
-const stepX = (isLong ? rand(85, 115) : rand(75, 105)) * speedScale;
-const stepY = isLong ? rand(60, 85)   : rand(55, 75);
+  const speedScale = getSpeedScale();
+  const stepX = (isLong ? rand(85, 115) : rand(75, 105)) * speedScale;
+  const stepY = isLong ? rand(60, 85) : rand(55, 75);
 
   const colors = [
     { color:'#80C0E8', dark:'#4080B0', accent:'#C0E0FF', glow:'#80D0FF' },
@@ -2176,10 +3074,12 @@ const stepY = isLong ? rand(60, 85)   : rand(55, 75);
 
   let currentX = startX;
   let currentY = startY;
+  let lastWidth = 90;   /* ✅ نتذكّر آخر عرض لاستخدامه في المكافأة العلوية */
 
   for(let i = 0; i < count; i++){
     const w = isLong ? rand(70, 90) - i * 1.2 : rand(75, 100) - i * 2;
     const h = 12;
+    lastWidth = w;   /* ✅ خزّن العرض */
 
     currentX += i === 0 ? 0 : stepX;
     currentY -= stepY;
@@ -2227,22 +3127,25 @@ const stepY = isLong ? rand(60, 85)   : rand(55, 75);
     }
   }
 
+  /* ═══ المكافأة العلوية بعد آخر منصة ═══ */
   const topX = currentX + stepX + 20;
   const topY = currentY - 50;
+  const topCenterX = topX + lastWidth / 2;   /* ✅ استخدم آخر عرض */
 
   if(isLong){
     orbs.push({ x: topX, y: topY, r: 18, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 20 });
     orbs.push({ x: topX + 55, y: topY, r: 16, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 15 });
     orbs.push({ x: topX - 55, y: topY, r: 16, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 15 });
-/* ✅ جديد */
-const skyPU = makePowerup(W + 40 + w/2 + 50, topY, { r: 16, isSkyReward: true });
-if(skyPU) powerups.push(skyPU);
+
+    /* ✅ تعزيز اختياري في القمة */
+    const stairPU = makePowerup(topCenterX, topY - 60, { r: 18, isSkyReward: true });
+    if(stairPU) powerups.push(stairPU);
   } else {
     const rewardRoll = Math.random();
     if(rewardRoll < 0.35){
-/* ✅ جديد */
-const skyPU = makePowerup(W + 40 + w/2 + 50, topY, { r: 16, isSkyReward: true });
-if(skyPU) powerups.push(skyPU);
+      /* ✅ تعزيز في القمة */
+      const stairPU = makePowerup(topCenterX, topY, { r: 16, isSkyReward: true });
+      if(stairPU) powerups.push(stairPU);
     } else if(rewardRoll < 0.75){
       orbs.push({
         x: topX, y: topY, r: 16, t: 0, dead: false,
@@ -2478,11 +3381,130 @@ function circleCircle(x1,y1,r1,x2,y2,r2){
 function hitObstacle(o){
   if(G.ghost > 0) return false;
   if(o.isShiftGate) return false;
-  if(o.isGroundHole) return false;   /* ⬅️ الحفرة غير قاتلة */
+  if(o.isGroundHole) return false;
   const pr = P.r * 0.72;
+
+  /* ═══ ASCEND: تصادم العائق الأفقي ذي الفتحة ═══ */
+  if(o.isAscend){
+    const gapTop = o.y + o.gapLocalY;
+    const gapBot = gapTop + o.gap;
+    /* الجزء الأعلى من العائق */
+    if(circleRect(P.x, P.y, pr, o.x, o.y, o.w, Math.max(0, gapTop - o.y))) return true;
+    /* الجزء الأسفل من العائق */
+    if(circleRect(P.x, P.y, pr, o.x, gapBot, o.w, Math.max(0, o.y + o.h - gapBot))) return true;
+    return false;
+  }
 
   if(o.isWalk){
     if(o.isCeiling){ return circleRect(P.x,P.y,pr, o.x, -10, o.w, o.h + 10); }
+
+  /* ═══ منصات ASCEND المخصصة ═══ */
+  if(o.isAscendPlatform && o.ascendType){
+    if(o.crumbled) return;
+
+    /* phantom: تعتيم */
+    let alpha = 1;
+    if(o.ascendType === 'phantom'){
+      const t = (G.t + o.phantomPhase * 100) % o.phantomPeriod;
+      if(t < o.phantomPeriod * 0.4){
+        alpha = 0.15;
+      } else if(t < o.phantomPeriod * 0.5){
+        alpha = lerp(0.15, 1, (t - o.phantomPeriod * 0.4) / (o.phantomPeriod * 0.1));
+      }
+    }
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    /* عمود تحتي (جمالي) */
+    if(o.hasPillar){
+      ctx.fillStyle = o.colorDark;
+      ctx.globalAlpha = alpha * 0.55;
+      const pw = o.w * 0.35;
+      const px = o.x + (o.w - pw) / 2;
+      ctx.beginPath();
+      ctx.moveTo(px, o.y + o.h);
+      ctx.lineTo(px + pw, o.y + o.h);
+      ctx.lineTo(px + pw * 0.7, o.y + o.h + o.pillarH);
+      ctx.lineTo(px + pw * 0.3, o.y + o.h + o.pillarH);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = alpha;
+    }
+
+    /* الظل */
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+    roundRect(ctx, o.x + 3, o.y + 5, o.w, o.h, 7);
+    ctx.fill();
+
+    /* الجسم */
+    ctx.fillStyle = o.color;
+    roundRect(ctx, o.x, o.y, o.w, o.h, 7);
+    ctx.fill();
+
+    /* الحافة العلوية */
+    ctx.fillStyle = o.topColor || o.color;
+    roundRect(ctx, o.x + 2, o.y + 2, o.w - 4, 5, 3);
+    ctx.fill();
+
+    /* الحافة السفلية الداكنة */
+    ctx.fillStyle = o.colorDark;
+    roundRect(ctx, o.x + 2, o.y + o.h - 4, o.w - 4, 3, 2);
+    ctx.fill();
+
+    /* لمعة بيئية */
+    ctx.globalAlpha = alpha * 0.3;
+    ctx.fillStyle = o.accent;
+    ctx.beginPath();
+    ctx.arc(o.x + o.w / 2, o.y + 1, o.w * 0.35, 0, Math.PI, true);
+    ctx.fill();
+
+    /* منصة نابضة: نقاط مضيئة */
+    if(o.ascendType === 'bouncy'){
+      ctx.globalAlpha = alpha * (0.6 + Math.sin(G.t * 0.15) * 0.3);
+      ctx.fillStyle = '#FFF8C0';
+      for(let i = 0; i < 3; i++){
+        const px = o.x + o.w * (0.25 + i * 0.25);
+        const py = o.y - 3;
+        ctx.beginPath();
+        ctx.arc(px, py, 2.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    /* منصة هشة: تشققات */
+    if(o.ascendType === 'crumble' && o.crumbleTimer > 0){
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+      ctx.lineWidth = 1.5;
+      for(let i = 0; i < 3; i++){
+        const cx = o.x + o.w * (0.25 + i * 0.25);
+        ctx.beginPath();
+        ctx.moveTo(cx, o.y + 2);
+        ctx.lineTo(cx + 4, o.y + o.h - 2);
+        ctx.stroke();
+      }
+      /* وميض تحذير */
+      const warn = 0.5 + Math.sin(G.t * 0.4) * 0.5;
+      ctx.globalAlpha = alpha * warn * 0.4;
+      ctx.fillStyle = '#FF5050';
+      ctx.fillRect(o.x, o.y, o.w, o.h);
+    }
+
+    /* جزيرة راحة: هالة ذهبية */
+    if(o.isRest){
+      ctx.globalAlpha = alpha * 0.4;
+      const pulse = 0.5 + Math.sin(G.t * 0.08) * 0.5;
+      const grad = ctx.createRadialGradient(o.x + o.w/2, o.y + o.h/2, 5, o.x + o.w/2, o.y + o.h/2, o.w);
+      grad.addColorStop(0, '#FFD700');
+      grad.addColorStop(1, 'rgba(255,215,0,0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(o.x - o.w*0.3, o.y - o.w*0.3, o.w*1.6, o.w*1.6);
+    }
+
+    ctx.restore();
+    return;
+  }
 
 if(o.isPlatform){
   /* المنصات ليست قاتلة — الالتقاط من الأعلى فقط */
@@ -2509,9 +3531,18 @@ if(o.isPlatform){
 /* ============================================================
    ==================== Input ================================
    ============================================================ */
-function handleTap(){
-  if(G.state!=='PLAYING') return;
+function handleTap(cx, cy){
+  if(G.state !== 'PLAYING') return;
   Sfx.init();
+
+  /* ═══════════════ ASCEND — قفز اتجاهي ═══════════════ */
+  if(G.mode === 'ASCEND'){
+    const x = (cx !== undefined) ? cx : pointer.x;
+    const y = (cy !== undefined) ? cy : pointer.y;
+    handleAscendTap(x, y);
+    return;
+  }
+
   if(G.mode === 'WALK' || G.mode === 'SKY_JUMP'){
     for(const o of obstacles){
       if(o.isElevator) o.isCarryingPlayer = false;
@@ -2575,11 +3606,116 @@ function handleTap(){
     }
   }
 }
-canvas.addEventListener('mousedown', e=>{ e.preventDefault(); handleTap(); });
-canvas.addEventListener('touchstart', e=>{ e.preventDefault(); handleTap(); }, {passive:false});
+/* ═══════════════ ASCEND 3-WAY JUMP ═══════════════ */
+/* ═══════════════ ASCEND 3-WAY JUMP (مناطق الشاشة) ═══════════════ */
+function handleAscendTap(cx, cy){
+  /* لو ما فيه إحداثيات (زر كيبورد) — قفزة عادية للأعلى */
+  if(cx === undefined || cy === undefined){
+    ascendJumpUp();
+    return;
+  }
+
+  /* تقسيم الشاشة إلى 3 مناطق أفقية */
+  const leftZone  = W * 0.33;
+  const rightZone = W * 0.67;
+
+  if(cx < leftZone){
+    /* الثلث الأيسر → قفزة يسار */
+    ascendJumpLeft();
+  } else if(cx > rightZone){
+    /* الثلث الأيمن → قفزة يمين */
+    ascendJumpRight();
+  } else {
+    /* الثلث الأوسط → قفزة للأعلى */
+    ascendJumpUp();
+  }
+}
+
+function ascendCanJump(){
+  if(G.ascendJumpCooldown > 0) return false;
+  return P.onGround || P.coyoteTimer > 0 || P.jumps < 2;
+}
+
+function ascendJumpUp(){
+  if(!ascendCanJump()) return;
+  G.ascendJumpCooldown = 6;
+
+  P.vy = -14.5;
+  P.vx *= 0.35;
+  P.onGround = false;
+  P.coyoteTimer = 0;
+  P.jumps++;
+
+  spawnJumpEffect(P.x, P.y + P.r, G.currentScene.accent);
+  Sfx.tap(); haptic(6);
+}
+
+function ascendJumpLeft(){
+  if(!ascendCanJump()) return;
+  G.ascendJumpCooldown = 6;
+
+  P.vy = -12;
+  P.vx = -9;
+  P.onGround = false;
+  P.coyoteTimer = 0;
+  P.jumps++;
+
+  spawnJumpEffect(P.x, P.y + P.r, G.currentScene.accent);
+  Sfx.tap(); haptic(6);
+}
+
+function ascendJumpRight(){
+  if(!ascendCanJump()) return;
+  G.ascendJumpCooldown = 6;
+
+  P.vy = -12;
+  P.vx = 9;
+  P.onGround = false;
+  P.coyoteTimer = 0;
+  P.jumps++;
+
+  spawnJumpEffect(P.x, P.y + P.r, G.currentScene.accent);
+  Sfx.tap(); haptic(6);
+}
+canvas.addEventListener('mousedown', e=>{
+  e.preventDefault();
+  const r = canvas.getBoundingClientRect();
+  handleTap(e.clientX - r.left, e.clientY - r.top);
+});
+canvas.addEventListener('touchstart', e=>{
+  e.preventDefault();
+  const r = canvas.getBoundingClientRect();
+  const t = e.touches[0];
+  handleTap(t.clientX - r.left, t.clientY - r.top);
+}, {passive:false});
 window.addEventListener('keydown', e=>{
-  if(e.code==='Space'||e.code==='ArrowUp'){ e.preventDefault(); handleTap(); }
-  if(e.code==='Escape' && G.state==='PLAYING') pauseGame();
+  /* ═══════════════ أسهم الكيبورد لنمط ASCEND ═══════════════ */
+  if(G.mode === 'ASCEND' && G.state === 'PLAYING'){
+    if(e.code === 'ArrowLeft'){
+      e.preventDefault();
+      ascendJumpLeft();
+      return;
+    }
+    if(e.code === 'ArrowRight'){
+      e.preventDefault();
+      ascendJumpRight();
+      return;
+    }
+    if(e.code === 'ArrowUp' || e.code === 'Space' || e.code === 'KeyW'){
+      e.preventDefault();
+      ascendJumpUp();
+      return;
+    }
+    if(e.code === 'Escape'){ pauseGame(); return; }
+    return;   /* لا شيء آخر في ASCEND */
+  }
+
+  /* ═══════════════ باقي الأنماط (كما قبل) ═══════════════ */
+  if(e.code === 'Space' || e.code === 'ArrowUp'){
+    e.preventDefault();
+    handleTap();
+  }
+  if(e.code === 'Escape' && G.state === 'PLAYING') pauseGame();
 });
 function setPointer(e){
   const r = canvas.getBoundingClientRect();
@@ -2699,80 +3835,139 @@ function updatePowerupsUI(){
 }
 
 /* ============================================================
-   ==================== HUD ==================================
+   ==================== HUD موحّد ============================
    ============================================================ */
+
+/* ─────────────────────────────────────────────────────────────
+   الشريط السياقي: يدمج Scene + Realm + Biome في عنصر واحد
+   ───────────────────────────────────────────────────────────── */
+let _lastContextKey = '';
+
+function updateContextBanner(){
+  const el = document.getElementById('context-banner');
+  if(!el) return;
+
+  let icon = '', text = '', sub = '', color = '#FFFFFF';
+
+  if(G.mode === 'ASCEND'){
+    const altM  = getMeters();
+    const biome = getAscendBiome(altM);
+    icon  = biome.icon;
+    text  = biome.name;
+    sub   = biome.ar;
+    color = biome.accent;
+
+  } else if(G.realm === REALM.SKY){
+    const layer = SKY_REALM.layers[G.skyLayerIdx];
+    icon  = '☁';
+    text  = 'SKY ' + (G.skyLayerIdx + 1);
+    sub   = layer.ar;
+    color = '#88C8E8';
+
+  } else if(G.realm === REALM.UNDERGROUND){
+    const layer = UNDER_REALM.layers[G.underLayerIdx];
+    icon  = '⛏';
+    text  = 'DEPTH ' + (G.underLayerIdx + 1);
+    sub   = layer.ar;
+    color = '#FF8060';
+
+} else if(G.isMixedMode){
+  const md = MODES.find(m => m.id === G.mode);
+  icon  = md.icon;
+  text  = 'SHIFT · ' + md.en;
+  sub   = md.ar;
+  color = MODE_COLORS[G.mode] || '#A06AD8';
+
+  } else {
+    /* الأرض: اسم المشهد */
+    const scene = G.currentScene;
+    icon  = '🌍';
+    text  = scene.en;
+    sub   = scene.ar;
+    color = scene.accent || '#E07A3F';
+  }
+
+  const key = text + '|' + sub;
+  if(key !== _lastContextKey){
+    _lastContextKey = key;
+    el.classList.add('pop');
+    clearTimeout(el._popTimer);
+    el._popTimer = setTimeout(() => el.classList.remove('pop'), 400);
+  }
+
+  el.innerHTML =
+    `<span class="ctx-ic">${icon}</span>` +
+    `<span class="ctx-text">${text}</span>` +
+    `<span class="ctx-divider">·</span>` +
+    `<span class="ctx-sub">${sub}</span>`;
+  el.style.setProperty('--ctx', color);
+  el.classList.add('show');
+}
+
+/* ─────────────────────────────────────────────────────────────
+   مقياس الارتفاع العمودي
+   يظهر في WALK فقط عندما يبتعد اللاعب عن مستوى الأرض
+   ───────────────────────────────────────────────────────────── */
+const GAUGE_RANGE = { min: -160, max: 60 };  /* بالمتر */
+
+function updateAltitudeGauge(){
+  const gauge = document.getElementById('altitude-gauge');
+  if(!gauge) return;
+
+  /* إخفاء في الأنماط غير الأرضية وفي ASCEND */
+  if(G.mode !== 'WALK'){
+    gauge.classList.remove('show');
+    return;
+  }
+
+  const altM = getPlayerAltitude() / PIXELS_PER_METER;
+
+  /* إخفاء عندما نكون قريبين جداً من 0 */
+  if(Math.abs(altM) < 3){
+    gauge.classList.remove('show');
+    return;
+  }
+
+  gauge.classList.add('show');
+
+  /* حساب موضع المؤشر (0 = أسفل، 1 = أعلى) */
+  const t = clamp((altM - GAUGE_RANGE.min) / (GAUGE_RANGE.max - GAUGE_RANGE.min), 0, 1);
+  const marker = document.getElementById('gauge-marker');
+  if(marker) marker.style.bottom = (t * 100) + '%';
+
+  /* قراءة الارتفاع */
+  const valEl = document.getElementById('gauge-val');
+  if(valEl){
+    const rounded = Math.round(altM);
+    valEl.textContent = (rounded > 0 ? '+' : '') + rounded;
+  }
+
+  /* لون مؤشر حسب المنطقة */
+  const readout = document.getElementById('gauge-readout');
+  if(readout){
+    let col = '#FFFFFF';
+    if(altM >= 20) col = '#A8D8FF';
+    else if(altM <= -20) col = '#FF8060';
+    readout.style.borderColor = col + '80';
+    readout.style.boxShadow = `0 4px 14px rgba(0,0,0,.25), 0 0 0 1px ${col}40`;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   نداء موحّد من حلقة اللعب
+   ───────────────────────────────────────────────────────────── */
+function updateHudOverlays(){
+  updateContextBanner();
+  updateAltitudeGauge();
+}
+
 function updateLevelUI(){
   const pct = getLevelProgress() * 100;
-  const lv = getLevelIndex() + 1;
+  const lv  = getLevelIndex() + 1;
   const bar = document.getElementById('level-bar');
   const num = document.getElementById('level-num');
   if(bar) bar.style.width = pct + '%';
-  if(num) num.textContent = 'LVL ' + lv;
-}
-
-/* ✅ الإصلاح 4: نسخة واحدة فقط من updateAltitudeUI */
-function updateAltitudeUI(){
-  const alt = Math.floor(G.camY / 8);
-
-  let hud = document.getElementById('altitude-hud');
-  if(!hud){
-    const newHud = document.createElement('div');
-    newHud.id = 'altitude-hud';
-    newHud.className = 'stat-pill altitude';
-    newHud.innerHTML = `
-      <span class="icon">▲</span>
-      <span class="val" id="hud-altitude">0</span>
-      <span class="unit">م</span>
-    `;
-    const runStats = document.querySelector('.run-stats');
-    if(runStats) runStats.appendChild(newHud);
-    hud = newHud;
-  }
-
-  const val = document.getElementById('hud-altitude');
-  if(val) val.textContent = alt;
-
-  if(hud) hud.style.opacity = alt > 5 ? '1' : '0';
-}
-
-function updateElevatorIndicator(){
-  const hasElevator = obstacles.some(o => o.isElevator && !o.exhausted && o.x < W && o.x > -100);
-
-  let indicator = document.getElementById('elevator-indicator');
-  if(!indicator){
-    const el = document.createElement('div');
-    el.id = 'elevator-indicator';
-    el.style.cssText = `
-      position:absolute;
-      right:16px;
-      top:50%;
-      transform:translateY(-50%);
-      padding:10px 14px;
-      border-radius:100px;
-      background:linear-gradient(135deg,#B0F0FF,#80D0F0);
-      color:#1A4080;
-      font-family:'Space Grotesk',sans-serif;
-      font-size:11px;
-      font-weight:700;
-      letter-spacing:2px;
-      box-shadow:0 6px 20px rgba(128,208,240,0.5);
-      z-index:4;
-      pointer-events:none;
-      opacity:0;
-      transition:opacity 0.3s, transform 0.3s;
-    `;
-    el.innerHTML = '↑↑';
-    wrapEl.appendChild(el);
-    indicator = el;
-  }
-
-  if(hasElevator){
-    indicator.style.opacity = '1';
-    const pulse = 1 + Math.sin(G.t * 0.15) * 0.08;
-    indicator.style.transform = `translateY(-50%) scale(${pulse})`;
-  } else {
-    indicator.style.opacity = '0';
-  }
+  if(num) num.textContent = lv;
 }
 
 function updateCoinsUI(){
@@ -2789,6 +3984,12 @@ function updateCoinsUI(){
    ==================== CAMERA (مطوّرة) ======================
    ============================================================ */
 function updateCamera(){
+  if(G.mode === 'ASCEND'){
+    G.camY = 0;
+    G.camTargetY = 0;
+    G.camYUnder = 0;
+    return;
+  }
   if(G.mode !== 'WALK') return;
 
   const alt = getPlayerAltitude();
@@ -2821,71 +4022,69 @@ function updateCamera(){
   if(Math.abs(G.camYUnder - underTarget) < 0.5) G.camYUnder = underTarget;
 }
 
-/* ⬇️ أضف هنا ⬇️ */
-function updateRealmUI(){
-  const el = document.getElementById('realm-indicator');
-  if(!el){
-    const newEl = document.createElement('div');
-    newEl.id = 'realm-indicator';
-    newEl.style.cssText = `
-      position:absolute;
-      top:64px;left:50%;transform:translateX(-50%);
-      padding:6px 14px;border-radius:100px;
-      background:rgba(0,0,0,0.65);backdrop-filter:blur(8px);
-      color:#fff;font-family:'Space Grotesk',sans-serif;
-      font-size:10px;font-weight:700;letter-spacing:2px;
-      z-index:4;pointer-events:none;
-      opacity:0;transition:opacity .4s, background .4s;
-      border:1px solid rgba(255,255,255,.15);
-    `;
-    wrapEl.appendChild(newEl);
-  }
-
-  const indicator = document.getElementById('realm-indicator');
-  if(!indicator) return;
-
-  if(G.mode !== 'WALK' || G.realm === REALM.GROUND){
-    indicator.style.opacity = '0';
-    return;
-  }
-
-  if(G.realm === REALM.SKY){
-    const layer = SKY_REALM.layers[G.skyLayerIdx];
-    indicator.textContent = '☁ SKY ' + (G.skyLayerIdx + 1) + ' · ' + layer.name;
-    indicator.style.background = 'rgba(50, 90, 140, 0.75)';
-    indicator.style.borderColor = 'rgba(168, 216, 255, 0.5)';
-  } else {
-    const layer = UNDER_REALM.layers[G.underLayerIdx];
-    indicator.textContent = '⛏ DEPTH ' + (G.underLayerIdx + 1) + ' · ' + layer.name;
-    indicator.style.background = 'rgba(80, 30, 20, 0.75)';
-    indicator.style.borderColor = 'rgba(255, 128, 96, 0.5)';
-  }
-  indicator.style.opacity = '1';
-}
-
 /* ============================================================
    ==================== REALM HELPERS ========================
    ============================================================ */
 
-/* حساب إزاحة اللاعب عن مستوى الأرض (موجب = فوق، سالب = تحت) */
+/* ─────────────────────────────────────────────────────────────
+   حساب إزاحة اللاعب عن مستوى الأرض
+   موجب = اللاعب فوق الأرض | سالب = اللاعب تحت الأرض
+   ───────────────────────────────────────────────────────────── */
 function getPlayerAltitude(){
-  return (GROUND_Y - P.r) - P.y;  /* فوق الأرض = موجب */
+  return (GROUND_Y - P.r) - P.y;
 }
 
-/* تحديد الطبقة في السماء حسب الارتفاع */
+/* ─────────────────────────────────────────────────────────────
+   تحديد طبقة السماء حسب الارتفاع
+   يُعيد الفهرس (0 = أدنى طبقة)
+   ───────────────────────────────────────────────────────────── */
 function getSkyLayer(altitude){
-  for(let i = SKY_REALM.layers.length - 1; i >= 0; i--){
-    if(altitude >= SKY_REALM.layers[i].from) return i;
+  const layers = SKY_REALM.layers;
+  for(let i = layers.length - 1; i >= 0; i--){
+    if(altitude >= layers[i].from) return i;
   }
   return 0;
 }
 
-/* تحديد الطبقة تحت الأرض حسب العمق */
+/* ─────────────────────────────────────────────────────────────
+   تحديد طبقة الأعماق حسب العمق
+   يُعيد الفهرس (0 = أدنى طبقة)
+   ───────────────────────────────────────────────────────────── */
 function getUnderLayer(depth){
-  for(let i = UNDER_REALM.layers.length - 1; i >= 0; i--){
-    if(depth >= UNDER_REALM.layers[i].from) return i;
+  const layers = UNDER_REALM.layers;
+  for(let i = layers.length - 1; i >= 0; i--){
+    if(depth >= layers[i].from) return i;
   }
   return 0;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   دوال مساعدة إضافية (اختيارية لكن مفيدة)
+   ───────────────────────────────────────────────────────────── */
+
+/* هل اللاعب في عالم السماء؟ */
+function isInSkyRealm(){
+  return G.realm === REALM.SKY;
+}
+
+/* هل اللاعب في عالم الأعماق؟ */
+function isInUnderRealm(){
+  return G.realm === REALM.UNDERGROUND;
+}
+
+/* الحصول على بيانات الطبقة الحالية في السماء */
+function getCurrentSkyLayer(){
+  return SKY_REALM.layers[G.skyLayerIdx] || SKY_REALM.layers[0];
+}
+
+/* الحصول على بيانات الطبقة الحالية في الأعماق */
+function getCurrentUnderLayer(){
+  return UNDER_REALM.layers[G.underLayerIdx] || UNDER_REALM.layers[0];
+}
+
+/* الحصول على ارتفاع اللاعب بالنسبة للشاشة (0-1) */
+function getPlayerScreenRatio(){
+  return clamp(P.y / H, 0, 1);
 }
 
 /* ═══════════════ UNDER FLOORS SYSTEM ═══════════════ */
@@ -3074,9 +4273,11 @@ function performShift(targetMode){
   const oldMode = G.mode;
   G.mode = targetMode;
 
-  /* ✅ الإصلاح: نستخدم dead flag بدلاً من splice لتجنّب إفساد حلقة التحديث */
+  /* ✅ نظّف كل العقبات القادمة (حتى تلك على الشاشة) لمنع التداخل */
   for(const o of obstacles){
-    if(o.x > W && !o.isShiftGate) o.dead = true;
+    if(o.isShiftGate) continue;
+    /* احذف كل عقبة لم تتجاوز اللاعب بعد */
+    if(o.x + o.w > P.x - 40) o.dead = true;
   }
 
   G.shiftGrace = 90;
@@ -3139,18 +4340,23 @@ function updateGameplay(){
   updateCombo();
   checkRealmTransition();
 
-  /* ✅ الإصلاح 9: حدّث السرعة أولاً، ثم افحص بوابة Shift */
-  const targetSpeed = prog.speed * (s.speed || 1);
-
-  /* ✅✅✅ تأثير التبطيء + تشويه الزمن ✅✅✅ */
+  /* ═══════════════ السرعة ═══════════════ */
+let targetSpeed;
+if(G.mode === 'ASCEND'){
+  /* تبدأ 1.5 وتتزايد ببطء حتى 8.5 خلال 4000px */
+  targetSpeed = 1.5 + Math.min(7.0, G.dist / 4000);
+} else {
+  targetSpeed = prog.speed * (s.speed || 1);
+}
+  /* تأثير التبطيء + تشويه الزمن */
   let slowMul = 1;
   if(G.activePowerups.slow)     slowMul *= 0.55;
   if(G.activePowerups.timeWarp) slowMul *= 0.35;
 
-  G.speed = lerp(G.speed, targetSpeed*slowMul, 0.035);
+  G.speed = lerp(G.speed, targetSpeed * slowMul, 0.035);
   G.dist += G.speed;
 
-  /* ✅✅✅ تصغير حجم اللاعب ✅✅✅ */
+  /* تصغير حجم اللاعب */
   if(G.activePowerups.shrink){
     P.r = lerp(P.r, 8, 0.15);
   } else if(P.r < 13){
@@ -3169,12 +4375,11 @@ function updateGameplay(){
   updateWeather();
 
   if(G.mode === 'WALK') checkSkyZoneSpawn();
-  if(G.mode === 'WALK') updateCamera();
-  /* ✅ الإصلاح 8: عودة الكاميرا تدريجياً عند مغادرة WALK */
-  else if(G.camY > 0.5){
-    G.camTargetY = 0;
-    G.camY = lerp(G.camY, 0, 0.08);
-  }
+if(G.mode === 'WALK') updateCamera();
+else if(G.mode !== 'ASCEND' && G.camY > 0.5){   // ✅ استثناء ASCEND
+  G.camTargetY = 0;
+  G.camY = lerp(G.camY, 0, 0.08);
+}
 
   const lv = getLevelIndex();
   if(lv > G.lastLevel){
@@ -3203,17 +4408,23 @@ function updateGameplay(){
   P.bouncePhase += 0.2;
   updateCapePhysics();
 
+  /* ═══════════════════════════════════════════════════════
+     ═══════════════ فيزياء اللاعب حسب النمط ═══════════════
+     ═══════════════════════════════════════════════════════ */
+
   if(G.mode==='FLIP'){
     P.vy += 0.22 * P.gravityDir;
     P.vy = clamp(P.vy,-8,8);
     P.y += P.vy;
     P.rot = Math.atan2(P.vy,10) * P.gravityDir;
     P.x = P.baseX;
+
   } else if(G.mode==='FLAP'){
     P.vy += 0.22; P.vy = clamp(P.vy,-6,5);
     P.y += P.vy;
     P.rot = clamp(P.vy*0.08,-0.5,0.85);
     P.x = P.baseX;
+
   } else if(G.mode==='DRIFT'){
     const ctrl = pointer.down || pointer.hasHover;
     if(ctrl){
@@ -3224,7 +4435,156 @@ function updateGameplay(){
     P.vx = clamp(P.vx,-10,10); P.vy = clamp(P.vy,-10,10);
     P.x += P.vx; P.y += P.vy;
     P.rot = Math.atan2(P.vy, Math.max(2,P.vx));
-  } else if(G.mode==='WALK'){
+
+} else if(G.mode === 'ASCEND'){
+  /* ═══════════════ ASCEND PHYSICS (مُحسّن) ═══════════════ */
+  const biome = getAscendBiome(getMeters());
+
+  /* Jump cooldown */
+  if(G.ascendJumpCooldown > 0) G.ascendJumpCooldown--;
+
+  /* Coyote time */
+  if(P.onGround){ P.coyoteTimer = 8; }
+  else if(P.coyoteTimer > 0){ P.coyoteTimer--; }
+
+  /* Jump buffer */
+  if(P.jumpBufferTimer > 0){
+    if(P.onGround || P.coyoteTimer > 0){
+      ascendJumpUp();
+      P.jumpBufferTimer = 0;
+    } else {
+      P.jumpBufferTimer--;
+    }
+  }
+
+  /* ═══ جاذبية (لا تُطبَّق عند الوقوف) ═══ */
+  if(!P.onGround){
+    P.vy += 0.55;
+    P.vy = Math.min(P.vy, 20);
+  }
+
+  /* ═══ احتكاك أفقي ═══ */
+  if(P.onGround){
+    P.vx *= 0.85;
+    if(Math.abs(P.vx) < 0.1) P.vx = 0;
+  } else {
+    P.vx *= 0.93;
+    if(Math.abs(P.vx) < 0.05) P.vx = 0;
+  }
+
+  /* ═══ الحركة ═══ */
+  P.x += P.vx;
+  P.y += P.vy;
+
+  /* حدود جانبية صلبة */
+  if(P.x - P.r < 0){ P.x = P.r; P.vx = 0; }
+  if(P.x + P.r > W){ P.x = W - P.r; P.vx = 0; }
+
+  /* ═══ كشف الهبوط ═══ */
+  const wasOnGroundAscend = P.onGround;
+  P.onGround = false;
+
+  if(P.vy >= 0){
+    for(const o of obstacles){
+      if(!o.isPlatform || o.dead || o.crumbled) continue;
+
+      /* منصات phantom: قد تكون مخفية */
+      if(o.ascendType === 'phantom'){
+        const t = (G.t + o.phantomPhase * 100) % o.phantomPeriod;
+        if(t < o.phantomPeriod * 0.4) continue; // مخفية حالياً
+      }
+
+      const pxLeft   = P.x - P.r * 0.75;
+      const pxRight  = P.x + P.r * 0.75;
+      const pyBottom = P.y + P.r;
+      const oTop     = o.y;
+
+      /* الهبوط من الأعلى فقط */
+      if(pxRight > o.x + 3 && pxLeft < o.x + o.w - 3){
+        const prevBottom = pyBottom - P.vy;
+
+        /* تسامح أكبر لمنع الاهتزاز */
+        if(prevBottom <= oTop + 10 && pyBottom >= oTop - 2){
+          P.y = oTop - P.r;
+
+          /* ═══ منصة نابضة ═══ */
+          if(o.bounceBoost){
+            P.vy = o.bounceBoost;
+            P.onGround = false;
+            P.jumps = 0;
+
+            spawnJumpEffect(P.x, oTop, o.topColor || o.accent);
+            for(let i = 0; i < 14; i++){
+              const a = (i / 14) * Math.PI * 2;
+              particles.push({ x: P.x, y: oTop,
+                vx: Math.cos(a) * rand(3, 6), vy: Math.sin(a) * rand(2, 5) - 3,
+                life: 1, decay: 0.028, color: '#FFE090', size: rand(2, 4) });
+            }
+            Sfx.play(560, 0.18, 'sine', 0.06, 1200);
+            haptic(12); shake(4);
+          } else {
+            /* ═══ منصة عادية: ثبات تام ═══ */
+            P.vy = 0;
+            P.vx *= 0.3;
+            P.onGround = true;
+            P.jumps = 0;
+
+            if(!wasOnGroundAscend){
+              spawnJumpEffect(P.x, oTop, o.topColor || o.accent);
+              Sfx.bounce(); haptic(4);
+            }
+
+            /* بدء تفكك المنصة الهشة */
+            if(o.platformType === 'crumble' && o.crumbleTimer === 0){
+              o.crumbleTimer = 55;
+            }
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  /* ═══ منصات phantom تتلاشى (تُظهر تحذير قبل الاختفاء) ═══ */
+  for(const o of obstacles){
+    if(o.ascendType !== 'phantom' || o.dead) continue;
+    const t = (G.t + o.phantomPhase * 100) % o.phantomPeriod;
+    /* نطاق 0-40% مخفية، 40-100% ظاهرة */
+  }
+
+  /* ═══ الكاميرا: اللاعب دائماً عند 40% من الشاشة (يُرى أكثر فوقه) ═══ */
+  const CAM_ANCHOR = 0.42;
+  const targetCamY = H * CAM_ANCHOR - P.y;
+  G.camTargetY = Math.max(G.camTargetY, targetCamY);
+  G.camY = lerp(G.camY, G.camTargetY, 0.14);
+
+  /* ═══ الموت عند السقوط ═══ */
+  const screenY = P.y + G.camY;
+  if(screenY > H + 60){
+    return gameOver();
+  }
+
+  /* ═══ الدوران حسب الحركة الأفقية ═══ */
+  P.rot = clamp(P.vx * 0.035, -0.35, 0.35);
+
+  /* ═══ أنيميشن الأرجل ═══ */
+  P.legPhase += P.onGround ? 0.3 : 0.08;
+  P.walkAnim += P.onGround ? 0.2 : 0.08;
+
+  /* ═══ أثر في الهواء ═══ */
+  if(!P.onGround && G.t % 3 === 0){
+    P.trail.push({ x: P.x, y: P.y });
+    if(P.trail.length > 8) P.trail.shift();
+  } else if(P.trail.length){
+    P.trail.shift();
+  }
+
+  /* ═══ توليد المنصات فوق ═══ */
+  updateAscendSpawner();
+
+  /* ═══ تنظيف المنصات البعيدة ═══ */
+  cleanupAscendPlatforms();
+} else if(G.mode==='WALK'){
     if(P.onGround){ P.coyoteTimer = 8; }
     else if(P.coyoteTimer > 0){ P.coyoteTimer--; }
     if(P.jumpBufferTimer > 0) P.jumpBufferTimer--;
@@ -3365,64 +4725,63 @@ function updateGameplay(){
       }
     }
 
-  /* ============ الأرض وطبقات الأعماق ============ */
-  if(!landedOnPlatform){
-    const feetY = P.y + P.r;
-    const prevFeetY = feetY - P.vy;
-    const canPassGround = isPlayerOverHole();
-    
-    /* ═══ سطح الأرض ═══ */
-    if(!canPassGround && prevFeetY <= GROUND_Y && feetY >= GROUND_Y){
-      if(!wasOnGround){
-        spawnJumpEffect(P.x, GROUND_Y, s.groundDark);
-        Sfx.bounce(); haptic(4);
-      }
-      P.y = GROUND_Y - P.r;
-      P.vy = 0;
-      P.onGround = true;
-      P.jumps = 0;
+    /* ============ الأرض وطبقات الأعماق ============ */
+    if(!landedOnPlatform){
+      const feetY = P.y + P.r;
+      const prevFeetY = feetY - P.vy;
+      const canPassGround = isPlayerOverHole();
 
-      if(P.jumpBufferTimer > 0){
-        P.vy = -12.5;
-        P.onGround = false;
-        P.jumps = 1;
-        P.jumpHeld = true;
-        P.jumpHoldTimer = 0;
-        P.jumpBufferTimer = 0;
-        spawnJumpEffect(P.x, P.y + P.r, s.accent);
-        Sfx.tap(); haptic(8);
-      }
-    }
-    /* ═══ طبقات الأعماق ═══ */
-    else {
-      const underHit = checkUnderFloorCollision();
-      if(underHit){
-        P.y = underHit.floorY - P.r;
+      /* سطح الأرض */
+      if(!canPassGround && prevFeetY <= GROUND_Y && feetY >= GROUND_Y){
+        if(!wasOnGround){
+          spawnJumpEffect(P.x, GROUND_Y, s.groundDark);
+          Sfx.bounce(); haptic(4);
+        }
+        P.y = GROUND_Y - P.r;
         P.vy = 0;
         P.onGround = true;
         P.jumps = 0;
-        landedOnPlatform = { isUnderFloor: true, y: underHit.floorY };
-        
-        if(!wasOnGround){
-          spawnJumpEffect(P.x, underHit.floorY, s.accent);
-          Sfx.bounce(); haptic(4);
-          dust(P.x, underHit.floorY, s.groundDark, 6, -1);
+
+        if(P.jumpBufferTimer > 0){
+          P.vy = -12.5;
+          P.onGround = false;
+          P.jumps = 1;
+          P.jumpHeld = true;
+          P.jumpHoldTimer = 0;
+          P.jumpBufferTimer = 0;
+          spawnJumpEffect(P.x, P.y + P.r, s.accent);
+          Sfx.tap(); haptic(8);
         }
-      } else {
-        P.onGround = false;
+      }
+      /* طبقات الأعماق */
+      else {
+        const underHit = checkUnderFloorCollision();
+        if(underHit){
+          P.y = underHit.floorY - P.r;
+          P.vy = 0;
+          P.onGround = true;
+          P.jumps = 0;
+          landedOnPlatform = { isUnderFloor: true, y: underHit.floorY };
+
+          if(!wasOnGround){
+            spawnJumpEffect(P.x, underHit.floorY, s.accent);
+            Sfx.bounce(); haptic(4);
+            dust(P.x, underHit.floorY, s.groundDark, 6, -1);
+          }
+        } else {
+          P.onGround = false;
+        }
       }
     }
-  }
 
-  /* ✅ منع السقوط اللانهائي في UNDERGROUND */
-  if(G.realm === REALM.UNDERGROUND && P.y > GROUND_Y + 3500){
-    /* حد أقصى للعمق — ارتد للأعلى */
-    P.y = GROUND_Y + 3500;
-    P.vy = -15;
-    addFloat(P.x, P.y - 40, 'MAX DEPTH', '#FF8060', 16);
-    Sfx.play(120, 0.4, 'sine', 0.06, 60);
-    shake(10);
-  }
+    /* منع السقوط اللانهائي في UNDERGROUND */
+    if(G.realm === REALM.UNDERGROUND && P.y > GROUND_Y + 3500){
+      P.y = GROUND_Y + 3500;
+      P.vy = -15;
+      addFloat(P.x, P.y - 40, 'MAX DEPTH', '#FF8060', 16);
+      Sfx.play(120, 0.4, 'sine', 0.06, 60);
+      shake(10);
+    }
 
     P.x = P.baseX; P.rot = 0;
     P.legPhase += P.onGround ? 0.55 : 0.15;
@@ -3435,6 +4794,7 @@ function updateGameplay(){
         life:0.7, decay:0.032, color:s.groundDark, size:rand(1.5,2.8)
       });
     }
+
   } else if(G.mode==='FLIP_WALK'){
     P.vy -= 0.68; P.vy = clamp(P.vy,-20,22);
     P.y += P.vy;
@@ -3452,6 +4812,7 @@ function updateGameplay(){
     }
     if(P.y + P.r >= GROUND_Y - 2){ return gameOver(); }
     if(P.y + P.r > GROUND_Y - 4) P.y = GROUND_Y - 4 - P.r;
+
   } else if(G.mode==='SKY_JUMP'){
     P.vy += 0.55; P.vy = clamp(P.vy, -20, 22);
     P.y += P.vy;
@@ -3476,6 +4837,10 @@ function updateGameplay(){
     P.legPhase += P.onGround ? 0.3 : 0.05;
   }
 
+  /* ═══════════════════════════════════════════════════════
+     ═══════════════ حدود إضافية حسب النمط ═══════════════
+     ═══════════════════════════════════════════════════════ */
+
   if(G.mode==='DRIFT'){
     if(P.x<P.r){ P.x=P.r; P.vx=Math.abs(P.vx)*0.3; }
     if(P.x>W*0.75){ P.x=W*0.75; P.vx=-Math.abs(P.vx)*0.3; }
@@ -3487,28 +4852,36 @@ function updateGameplay(){
     // handled
   } else if(G.mode==='SKY_JUMP'){
     // handled
+  } else if(G.mode==='ASCEND'){
+    // handled in ASCEND physics block
   } else {
     if(P.y-P.r<0){ P.y=P.r; P.vy=0; }
     if(P.y+P.r>GROUND_Y){ P.y=GROUND_Y-P.r; P.vy=0; }
   }
 
+  /* ═══════════════ أثر الحركة ═══════════════ */
   if((G.mode==='FLIP'||G.mode==='FLAP'||G.mode==='DRIFT') && G.t%2===0){
     P.trail.push({x:P.x,y:P.y});
     if(P.trail.length>14) P.trail.shift();
   } else if(P.trail.length) P.trail.shift();
 
-  G.spawnCd -= G.speed;
-  if(G.spawnCd <= 0){
-    spawnObstacle();
-    const realmMul = (G.realm === REALM.UNDERGROUND) ? 1.15 : 1.0;
-    const modeMul = (G.mode==='WALK') ? 1.35
-                  : (G.mode==='FLIP_WALK') ? 1.45
-                  : (G.mode==='SKY_JUMP') ? 1.5
-                  : 1.0;
-    G.spawnCd = prog.spawnDist * modeMul * realmMul * rand(0.92, 1.12);
+  /* ═══════════════ توليد العقبات (كل الأنماط عدا ASCEND) ═══════════════ */
+  if(G.mode !== 'ASCEND'){
+G.spawnCd -= G.speed;
+if(G.spawnCd <= 0){
+  spawnObstacle();
+  const realmMul = (G.realm === REALM.UNDERGROUND) ? 1.15 : 1.0;
+  const modeMul = (G.mode==='WALK') ? 1.30
+                : (G.mode==='FLIP_WALK') ? 1.40
+                : (G.mode==='SKY_JUMP') ? 1.45
+                : 1.25;
+  const cdMul = G.spawnCdMul || 1;
+  G.spawnCd = prog.spawnDist * modeMul * realmMul * cdMul * rand(0.95, 1.08);
+  G.spawnCdMul = 1;   /* إعادة الضبط */
+}
   }
 
-  /* تحديث حركات العقبات الخاصة */
+  /* ═══════════════ تحديث حركات العقبات الخاصة ═══════════════ */
   for(const o of obstacles){
     if(o.dead) continue;
 
@@ -3589,7 +4962,6 @@ function updateGameplay(){
       o.y = o.baseY + Math.sin(o.t * 0.04 + o.phase) * o.amp;
     }
 
-        /* ═══ صخرة متساقطة ═══ */
     if(o.isFallingRock){
       if(!o.falling){
         const distToPlayer = o.x - P.x;
@@ -3615,8 +4987,7 @@ function updateGameplay(){
         }
       }
     }
-    
-    /* ═══ رمح متحرك ═══ */
+
     if(o.isDrill){
       o.cycle++;
       const cyclePos = (o.cycle % o.period) / o.period;
@@ -3625,8 +4996,7 @@ function updateGameplay(){
       else if(cyclePos < 0.55)  o.extend = o.extendDist * (1 - (cyclePos - 0.4) / 0.15);
       else                      o.extend = 0;
     }
-    
-    /* ═══ شبح متحرك ═══ */
+
     if(o.isGhost){
       o.angle += o.speed;
       o.cy = o.baseY + 20 + Math.sin(o.t * 0.03 + o.phase) * o.amp;
@@ -3711,25 +5081,42 @@ function updateGameplay(){
     }
   }
 
+  /* ═══════════════ حلقة تحديث العقبات الرئيسية ═══════════════ */
   for(let i=obstacles.length-1;i>=0;i--){
     const o = obstacles[i];
     if(o.dead){ obstacles.splice(i,1); continue; }
-    o.t++; o.x -= G.speed;
+    o.t++;
+
+    /* ASCEND: العقبات ثابتة في العالم — اللاعب يصعد فعلياً */
+    if(G.mode !== 'ASCEND'){
+      o.x -= G.speed;
+    }
+    /* في ASCEND لا نحرك أي عقبة — العالم ساكن */
+
     if(!o.isWalk && o.amp > 0.5){
       o.gapY = o.baseGapY + Math.sin(o.t*0.016+o.phase)*o.amp;
       o.gapY = clamp(o.gapY, 70+o.gap/2, GROUND_Y-70-o.gap/2);
     }
 
-    /* ✅ الإصلاح 1: معالجة موحدة لعبور بوابة Shift والعقبات العادية */
-    if(!o.passed && o.x + o.w < P.x){
-      o.passed = true;
-      if(o.isShiftGate){
-        performShift(o.targetMode);
-      } else {
+    /* ═══════════════ كشف العبور (Pass Detection) ═══════════════ */
+    if(!o.passed){
+      /* ✅ ASCEND: العبور عندما يتجاوز الحاجز اللاعب (يصبح تحته) */
+      if(o.isAscend && o.y > P.y + 40){
+        o.passed = true;
         onPass(o);
+      }
+      /* باقي الأنماط: العبور عندما يتجاوز اللاعب العقبة أفقياً */
+      else if(!o.isAscend && o.x + o.w < P.x){
+        o.passed = true;
+        if(o.isShiftGate){
+          performShift(o.targetMode);
+        } else {
+          onPass(o);
+        }
       }
     }
 
+    /* ═══════════════ كشف التصادم ═══════════════ */
     let hit = hitObstacle(o);
 
     if(!hit && o.isWalk){
@@ -3770,6 +5157,7 @@ function updateGameplay(){
         const rodH = o.extend;
         if(circleRect(P.x, P.y, pr, rodX, rodY, rodW, rodH)) hit = true;
       }
+
       if(o.isLaser){
         if(o.isVertical){
           for(const seg of o.segments){
@@ -3781,30 +5169,24 @@ function updateGameplay(){
           if(circleRect(P.x, P.y, pr, o.x, o.y - 3, o.w, 6)) hit = true;
         }
       }
-      
-      /* ═══ عقبات الأعماق ═══ */
+
       if(o.isUnderSpike){
         if(circleRect(P.x, P.y, pr, o.x, o.y, o.w, o.h)) hit = true;
       }
-      
-      if(o.isSaw){
-        const dx = P.x - o.cx, dy = P.y - o.cy;
-        if(dx*dx + dy*dy < (o.r + pr) * (o.r + pr)) hit = true;
-      }
-      
+
       if(o.isFallingRock && o.falling){
         if(circleRect(P.x, P.y, pr, o.x, o.y, o.w, o.h)) hit = true;
       }
-      
+
       if(o.isLavaPool){
         if(circleRect(P.x, P.y, pr, o.x, o.y - 4, o.w, o.h + 8)) hit = true;
       }
-      
+
       if(o.isDrill && o.extend > 4){
         const headY = o.isTop ? o.floorY + o.extend - 60 : o.floorY - o.extend;
         if(circleRect(P.x, P.y, pr, o.x + 4, headY, o.w - 8, 60)) hit = true;
       }
-      
+
       if(o.isGhost){
         const dx = P.x - o.cx, dy = P.y - o.cy;
         if(dx*dx + dy*dy < (o.r + pr) * (o.r + pr)) hit = true;
@@ -3823,9 +5205,12 @@ function updateGameplay(){
         updatePowerupsUI();
       } else { return gameOver(); }
     }
-    if(o.x+o.w < -70) obstacles.splice(i,1);
+
+    /* حذف العقبات التي تجاوزت الشاشة يساراً */
+    if(!o.isAscend && o.x + o.w < -70) obstacles.splice(i,1);
   }
 
+  /* ═══════════════ العملات ═══════════════ */
   const magnetOn = G.activePowerups.magnet !== undefined;
   const doubleOn = G.activePowerups.double !== undefined;
   const coinMul = doubleOn ? 2 : 1;
@@ -3833,7 +5218,11 @@ function updateGameplay(){
   for(let i=coins.length-1;i>=0;i--){
     const c = coins[i];
     if(c.dead){ coins.splice(i,1); continue; }
-    c.x -= G.speed; c.t++;
+
+    if(G.mode === 'ASCEND') c.y += G.speed;
+    else c.x -= G.speed;
+    c.t++;
+
     if(magnetOn){
       const dx = P.x - c.x, dy = P.y - c.y;
       const d = Math.hypot(dx,dy) || 1;
@@ -3855,13 +5244,23 @@ function updateGameplay(){
         addFloat(c.x, c.y, '+' + gain, '#C98A2E', 11);
       }
     }
-    if(c.x < -60) coins.splice(i,1);
+
+    if(G.mode === 'ASCEND'){
+      if(c.y > H + 60) coins.splice(i,1);
+    } else {
+      if(c.x < -60) coins.splice(i,1);
+    }
   }
 
+  /* ═══════════════ كرات الطاقة ═══════════════ */
   for(let i=orbs.length-1;i>=0;i--){
     const ob = orbs[i];
     if(ob.dead){ orbs.splice(i,1); continue; }
-    ob.x -= G.speed; ob.t++;
+
+    if(G.mode === 'ASCEND') ob.y += G.speed;
+    else ob.x -= G.speed;
+    ob.t++;
+
     if(magnetOn){
       const dx = P.x - ob.x, dy = P.y - ob.y;
       const d = Math.hypot(dx,dy) || 1;
@@ -3870,13 +5269,23 @@ function updateGameplay(){
     if(circleCircle(P.x,P.y,P.r+4, ob.x,ob.y,ob.r)){
       ob.dead = true; collectOrb(ob);
     }
-    if(ob.x < -60) orbs.splice(i,1);
+
+    if(G.mode === 'ASCEND'){
+      if(ob.y > H + 60) orbs.splice(i,1);
+    } else {
+      if(ob.x < -60) orbs.splice(i,1);
+    }
   }
 
+  /* ═══════════════ التعزيزات ═══════════════ */
   for(let i=powerups.length-1;i>=0;i--){
     const p = powerups[i];
     if(p.dead){ powerups.splice(i,1); continue; }
-    p.x -= G.speed; p.t++;
+
+    if(G.mode === 'ASCEND') p.y += G.speed;
+    else p.x -= G.speed;
+    p.t++;
+
     if(magnetOn){
       const dx = P.x - p.x, dy = P.y - p.y;
       const d = Math.hypot(dx,dy) || 1;
@@ -3886,9 +5295,15 @@ function updateGameplay(){
       p.dead = true;
       collectPowerup(p);
     }
-    if(p.x < -60) powerups.splice(i,1);
+
+    if(G.mode === 'ASCEND'){
+      if(p.y > H + 60) powerups.splice(i,1);
+    } else {
+      if(p.x < -60) powerups.splice(i,1);
+    }
   }
 
+  /* ═══════════════ مكافأة كل 300 متر ═══════════════ */
   const ms = Math.floor(getMeters()/300);
   if(ms > G.lastMilestone && ms > 0){
     G.lastMilestone = ms;
@@ -3909,14 +5324,13 @@ function updateGameplay(){
     if(G.hintTimer === 0) document.getElementById('hint').classList.remove('show');
   }
 
+  /* ═══════════════ تحديث HUD ═══════════════ */
   if(G.t%3===0){
     const hudM = document.getElementById('hud-meters');
     const hudC = document.getElementById('hud-coins');
     if(hudM) hudM.textContent = getMeters();
     if(hudC) hudC.textContent = G.runCoins;
-    updateAltitudeUI();
-    updateElevatorIndicator();
-    updateRealmUI();
+updateHudOverlays();
   }
 }
 
@@ -3998,13 +5412,13 @@ function updateCapePhysics(){
 
 function drawCape(c, r, cape, t, ox, oy){
   if(cape.id === 'none' || !P.cape) return;
-  ox = ox || 0;
-  oy = oy || 0;
+  ox = ox || 0; oy = oy || 0;
   const kind = cape.id;
   const segs = P.cape;
 
   const isScarf = kind.startsWith('scarf');
-  const baseW = isScarf ? r * 0.5 : r * 0.95;
+  const isWing = kind.startsWith('cape_') && ['cape_butterfly','cape_dragon','cape_angel','cape_demon'].includes(kind);
+  const baseW = isScarf ? r * 0.5 : isWing ? r * 1.4 : r * 0.95;
 
   let col1 = '#E04040', col2 = '#A02030';
   if(kind === 'scarf_red'){ col1='#E84848'; col2='#A02030'; }
@@ -4013,23 +5427,67 @@ function drawCape(c, r, cape, t, ox, oy){
   else if(kind === 'cape_hero'){ col1='#C03030'; col2='#801818'; }
   else if(kind === 'cape_dark'){ col1='#2A1A30'; col2='#100810'; }
   else if(kind === 'cape_royal'){ col1='#5A30A0'; col2='#301860'; }
+  else if(kind === 'cape_fire'){ col1='#FF8040'; col2='#8A2008'; }
+  else if(kind === 'cape_ice'){ col1='#A0E0FF'; col2='#4080C0'; }
+  else if(kind === 'cape_wind'){ col1='#E8F4FF'; col2='#88B0D0'; }
+  else if(kind === 'cape_water'){ col1='#40A8E0'; col2='#104060'; }
+  else if(kind === 'cape_leaf'){ col1='#7BC44C'; col2='#2A5020'; }
+  else if(kind === 'cape_neon'){ col1='#00FFD8'; col2='#006090'; }
+  else if(kind === 'cape_toxic'){ col1='#80FF40'; col2='#206020'; }
+  else if(kind === 'cape_blood'){ col1='#C03030'; col2='#5A0808'; }
+  else if(kind === 'cape_holy'){ col1='#FFF8C0'; col2='#E8B34E'; }
+  else if(kind === 'cape_void'){ col1='#301050'; col2='#08000A'; }
+  else if(kind === 'cape_crystal'){ col1='#A0D8FF'; col2='#4060A0'; }
 
   c.save();
 
-  if(kind === 'cape_rainbow'){
+  if(isWing){
+    /* ═══ أجنحة ═══ */
+    const flap = Math.sin(t*0.12) * 0.15;
+    const wingType = kind.replace('cape_','');
+
+    for(const side of [-1, 1]){
+      c.save();
+      c.translate(side * r * 0.7, 0);
+      c.rotate(side * (0.3 + flap));
+      const wc = wingType === 'angel' ? '#FFF8E0' :
+                 wingType === 'dragon' ? '#3A8040' :
+                 wingType === 'demon' ? '#3A0820' :
+                 /* butterfly */ '#FF80C0';
+      c.fillStyle = wc;
+      c.shadowColor = wc; c.shadowBlur = 6;
+      for(let i=0;i<4;i++){
+        const sz = r * (1.1 - i*0.15);
+        c.beginPath();
+        c.ellipse(side * i * r * 0.2, i*r*0.1, sz, r*0.28, side*0.2, 0, Math.PI*2);
+        c.fill();
+      }
+      c.shadowBlur = 0;
+      if(wingType === 'butterfly'){
+        c.fillStyle = 'rgba(255,255,255,0.6)';
+        for(let i=0;i<3;i++){
+          c.beginPath();
+          c.arc(side * (i*r*0.3), i*r*0.1, r*0.13, 0, Math.PI*2);
+          c.fill();
+        }
+      }
+      c.restore();
+    }
+  }
+  else if(kind === 'cape_rainbow'){
     for(let i=0;i<segs.length;i++){
       const p = i/segs.length;
       const hue = (t*4 + i*28) % 360;
       const sz = baseW * (1 - p * 0.55);
       c.fillStyle = `hsl(${hue}, 80%, 58%)`;
-      c.shadowColor = `hsl(${hue}, 80%, 58%)`;
-      c.shadowBlur = 8;
+      c.shadowColor = c.fillStyle; c.shadowBlur = 8;
       c.beginPath();
       c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.5, 0, Math.PI*2);
       c.fill();
     }
     c.shadowBlur = 0;
-  } else if(kind === 'cape_shadow'){
+  }
+  else if(kind === 'cape_shadow'){
     for(let i=segs.length - 1; i >= 0; i--){
       const p = i/segs.length;
       const alpha = 0.85 * (1 - p * 0.85);
@@ -4039,7 +5497,8 @@ function drawCape(c, r, cape, t, ox, oy){
       c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.5, 0, Math.PI*2);
       c.fill();
     }
-  } else if(kind === 'cape_galaxy'){
+  }
+  else if(kind === 'cape_galaxy'){
     for(let i=segs.length - 1; i >= 0; i--){
       const p = i/segs.length;
       const sz = baseW * (1 - p * 0.5);
@@ -4049,18 +5508,195 @@ function drawCape(c, r, cape, t, ox, oy){
       c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.5, 0, Math.PI*2);
       c.fill();
     }
+    for(let i=0;i<segs.length;i+=2){
+      const twinkle = 0.5 + Math.sin(t * 0.12 + i) * 0.5;
+      c.fillStyle = '#FFFFFF';
+      c.globalAlpha = twinkle * 0.85;
+      c.beginPath();
+      c.arc(segs[i].x - ox + Math.sin(t*0.1 + i*2)*3, segs[i].y - oy + Math.cos(t*0.1 + i*2)*3, 1.3, 0, Math.PI*2);
+      c.fill();
+    }
+    c.globalAlpha = 1;
+  }
+  else if(kind === 'cape_cosmic'){
+    for(let i=segs.length - 1; i >= 0; i--){
+      const p = i/segs.length;
+      const hue = (t*2 + p*120) % 360;
+      c.fillStyle = `hsla(${hue}, 70%, ${30 - p*15}%, ${0.9 - p*0.4})`;
+      c.beginPath();
+      const sz = baseW * (1 - p * 0.6);
+      c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.55, 0, Math.PI*2);
+      c.fill();
+    }
     for(let i=0;i<segs.length;i++){
-      if(i % 2 === 0){
-        const twinkle = 0.5 + Math.sin(t * 0.12 + i) * 0.5;
-        c.fillStyle = '#FFFFFF';
-        c.globalAlpha = twinkle * 0.85;
+      if(i%2===0){
+        const col = `hsl(${(t*4 + i*40)%360}, 80%, 65%)`;
+        c.fillStyle = col;
+        c.shadowColor = col; c.shadowBlur = 10;
         c.beginPath();
-        c.arc(segs[i].x - ox + Math.sin(t*0.1 + i*2) * 3, segs[i].y - oy + Math.cos(t*0.1 + i*2) * 3, 1.3, 0, Math.PI*2);
+        c.arc(segs[i].x - ox, segs[i].y - oy, r*0.13, 0, Math.PI*2);
         c.fill();
       }
     }
+    c.shadowBlur = 0;
+  }
+  else if(kind === 'cape_prismatic'){
+    for(let i=segs.length - 1; i >= 0; i--){
+      const p = i/segs.length;
+      const hue = (t*8 + i*40) % 360;
+      c.fillStyle = `hsl(${hue}, 85%, 60%)`;
+      c.shadowColor = c.fillStyle; c.shadowBlur = 8;
+      const sz = baseW * (1 - p * 0.55);
+      c.beginPath();
+      c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.5, 0, Math.PI*2);
+      c.fill();
+    }
+    c.shadowBlur = 0;
+  }
+  else if(kind === 'cape_god'){
+    for(let i=segs.length - 1; i >= 0; i--){
+      const p = i/segs.length;
+      const pl = 0.7 + Math.sin(t*0.12 + i*0.3)*0.3;
+      c.fillStyle = `rgba(255,248,192,${(0.9 - p*0.6) * pl})`;
+      c.shadowColor = '#FFE060'; c.shadowBlur = 12*pl;
+      const sz = baseW * (1 - p * 0.55);
+      c.beginPath();
+      c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.55, 0, Math.PI*2);
+      c.fill();
+    }
+    c.shadowBlur = 0;
+  }
+  else if(kind === 'cape_fire'){
+    for(let i=segs.length - 1; i >= 0; i--){
+      const p = i/segs.length;
+      const hue = 40 - p*30;
+      const sz = baseW * (1 - p * 0.55);
+      const grad = c.createRadialGradient(segs[i].x - ox, segs[i].y - oy, 0, segs[i].x - ox, segs[i].y - oy, sz*0.7);
+      grad.addColorStop(0, `hsl(${hue}, 100%, 75%)`);
+      grad.addColorStop(0.6, `hsl(${hue-15}, 100%, 55%)`);
+      grad.addColorStop(1, 'rgba(200,60,10,0)');
+      c.fillStyle = grad;
+      c.beginPath();
+      c.arc(segs[i].x - ox, segs[i].y - oy, sz*0.7, 0, Math.PI*2);
+      c.fill();
+    }
+  }
+  else if(kind === 'cape_ice' || kind === 'cape_crystal'){
+    for(let i=segs.length - 1; i >= 0; i--){
+      const p = i/segs.length;
+      const sz = baseW * (1 - p * 0.55);
+      c.fillStyle = i < 3 ? '#E0F4FF' : mixColor('#A0D8FF', '#4060A0', p);
+      c.shadowColor = '#80D8FF'; c.shadowBlur = 6;
+      c.beginPath();
+      c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.5, 0, Math.PI*2);
+      c.fill();
+    }
+    c.shadowBlur = 0;
+    for(let i=0;i<segs.length;i+=3){
+      c.strokeStyle = 'rgba(255,255,255,0.6)'; c.lineWidth = 1;
+      c.beginPath();
+      c.arc(segs[i].x - ox, segs[i].y - oy, r*0.2, 0, Math.PI*2);
+      c.stroke();
+    }
+  }
+  else if(kind === 'cape_wind'){
+    for(let i=segs.length - 1; i >= 0; i--){
+      const p = i/segs.length;
+      const sz = baseW * (1 - p * 0.5);
+      c.strokeStyle = `rgba(220,240,255,${0.7 - p*0.5})`;
+      c.lineWidth = 2;
+      c.beginPath();
+      c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.5, 0, Math.PI*2);
+      c.stroke();
+    }
+  }
+  else if(kind === 'cape_water'){
+    for(let i=segs.length - 1; i >= 0; i--){
+      const p = i/segs.length;
+      const sz = baseW * (1 - p * 0.5);
+      const grad = c.createRadialGradient(segs[i].x - ox, segs[i].y - oy, 0, segs[i].x - ox, segs[i].y - oy, sz*0.7);
+      grad.addColorStop(0, '#80E0FF');
+      grad.addColorStop(0.7, '#2080C0');
+      grad.addColorStop(1, 'rgba(20,60,90,0)');
+      c.fillStyle = grad;
+      c.beginPath(); c.arc(segs[i].x - ox, segs[i].y - oy, sz*0.7, 0, Math.PI*2); c.fill();
+    }
+  }
+  else if(kind === 'cape_neon'){
+    for(let i=segs.length - 1; i >= 0; i--){
+      const p = i/segs.length;
+      const sz = baseW * (1 - p * 0.5);
+      c.fillStyle = '#0A2828';
+      c.beginPath();
+      c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.5, 0, Math.PI*2);
+      c.fill();
+      const col = `hsl(${(t*6 + i*50)%360}, 100%, 60%)`;
+      c.strokeStyle = col; c.lineWidth = 2;
+      c.shadowColor = col; c.shadowBlur = 8;
+      c.beginPath();
+      c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.5, 0, Math.PI*2);
+      c.stroke();
+    }
+    c.shadowBlur = 0;
+  }
+  else if(kind === 'cape_leaf'){
+    for(let i=segs.length - 1; i >= 0; i--){
+      const p = i/segs.length;
+      const sz = baseW * (1 - p * 0.5);
+      c.fillStyle = ['#7BC44C','#5EA041','#A8E84C'][i%3];
+      c.beginPath();
+      c.ellipse(segs[i].x - ox, segs[i].y - oy, sz*0.7, sz*0.4, i*0.3, 0, Math.PI*2);
+      c.fill();
+    }
+  }
+  else if(kind === 'cape_toxic' || kind === 'cape_blood'){
+    const core = kind === 'cape_blood' ? '#C03030' : '#80FF40';
+    for(let i=segs.length - 1; i >= 0; i--){
+      const p = i/segs.length;
+      const sz = baseW * (1 - p * 0.5);
+      c.fillStyle = i < 3 ? core : mixColor(core, '#200808', p);
+      c.beginPath();
+      c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.5, 0, Math.PI*2);
+      c.fill();
+    }
+    for(let i=2;i<segs.length;i+=3){
+      c.fillStyle = core;
+      c.globalAlpha = 0.6;
+      c.beginPath();
+      c.arc(segs[i].x - ox, segs[i].y - oy + r*0.2 + Math.sin(t*0.15+i)*2, r*0.08, 0, Math.PI*2);
+      c.fill();
+    }
     c.globalAlpha = 1;
-  } else {
+  }
+  else if(kind === 'cape_holy'){
+    for(let i=segs.length - 1; i >= 0; i--){
+      const p = i/segs.length;
+      const pl = 0.7 + Math.sin(t*0.1 + i*0.3)*0.3;
+      c.fillStyle = `rgba(255,248,192,${(0.9 - p*0.7)*pl})`;
+      c.shadowColor = '#FFE060'; c.shadowBlur = 8;
+      const sz = baseW * (1 - p * 0.55);
+      c.beginPath(); c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.55, 0, Math.PI*2); c.fill();
+    }
+    c.shadowBlur = 0;
+  }
+  else if(kind === 'cape_void'){
+    for(let i=segs.length - 1; i >= 0; i--){
+      const p = i/segs.length;
+      const sz = baseW * (1 - p * 0.55);
+      c.fillStyle = `rgba(10,0,20,${0.95 - p*0.5})`;
+      c.beginPath(); c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.55, 0, Math.PI*2); c.fill();
+    }
+    /* حافة بنفسجية متوهجة */
+    c.strokeStyle = 'rgba(160,64,255,0.7)'; c.lineWidth = 2;
+    c.shadowColor = '#A040FF'; c.shadowBlur = 12;
+    c.beginPath();
+    c.moveTo(segs[0].x - ox, segs[0].y - oy);
+    for(let i=1;i<segs.length;i++) c.lineTo(segs[i].x - ox, segs[i].y - oy);
+    c.stroke();
+    c.shadowBlur = 0;
+  }
+  else {
+    /* افتراضي: عباءة/وشاح عادية */
     for(let i=segs.length - 1; i >= 0; i--){
       const p = i/segs.length;
       const sz = baseW * (1 - p * 0.55);
@@ -4094,15 +5730,19 @@ function drawAura(c, r, aura, t){
   const pulse = 1 + Math.sin(t * 0.08) * 0.1;
   const aur = r * 2.3 * pulse;
 
-  if(kind === 'amber' || kind === 'cyan' || kind === 'holy' || kind === 'void'){
-    const palettes = {
-      amber: { c1:'#FFB060', c2:'#FF8020', c3:'#FFE090' },
-      cyan:  { c1:'#80E8F0', c2:'#40A0C0', c3:'#E0FFFF' },
-      holy:  { c1:'#FFF8D0', c2:'#FFD060', c3:'#FFFFFF' },
-      void:  { c1:'#C080FF', c2:'#6020A0', c3:'#FFC0FF' }
-    };
-    const p = palettes[kind];
+  const basic = {
+    amber: { c1:'#FFB060', c2:'#FF8020', c3:'#FFE090' },
+    cyan:  { c1:'#80E8F0', c2:'#40A0C0', c3:'#E0FFFF' },
+    holy:  { c1:'#FFF8D0', c2:'#FFD060', c3:'#FFFFFF' },
+    void:  { c1:'#C080FF', c2:'#6020A0', c3:'#FFC0FF' },
+    toxic: { c1:'#80FF40', c2:'#20A020', c3:'#C0FF80' },
+    blood: { c1:'#FF4040', c2:'#8A0808', c3:'#FFB0B0' },
+    electricBlue: { c1:'#60C0FF', c2:'#2060C0', c3:'#C0E8FF' },
+    divine: { c1:'#FFF8C0', c2:'#FFD040', c3:'#FFFFFF' }
+  };
 
+  if(basic[kind]){
+    const p = basic[kind];
     const grad = c.createRadialGradient(0,0,r*0.7, 0,0,aur);
     grad.addColorStop(0, 'rgba(0,0,0,0)');
     grad.addColorStop(0.45, p.c1);
@@ -4113,9 +5753,7 @@ function drawAura(c, r, aura, t){
     c.beginPath(); c.arc(0,0,aur,0,Math.PI*2); c.fill();
     c.globalAlpha = 1;
 
-    c.strokeStyle = p.c3;
-    c.lineWidth = 2.2;
-    c.globalAlpha = 0.7;
+    c.strokeStyle = p.c3; c.lineWidth = 2.2; c.globalAlpha = 0.7;
     c.beginPath();
     c.arc(0, 0, aur*0.85, t*0.025, t*0.025 + Math.PI*1.55);
     c.stroke();
@@ -4128,79 +5766,63 @@ function drawAura(c, r, aura, t){
     for(let i=0;i<4;i++){
       const a = t*0.03 + (i/4)*Math.PI*2;
       const dist = aur * 0.9;
-      c.fillStyle = p.c3;
-      c.globalAlpha = 0.7;
+      c.fillStyle = p.c3; c.globalAlpha = 0.7;
       c.beginPath();
       c.arc(Math.cos(a)*dist, Math.sin(a)*dist, 2.2, 0, Math.PI*2);
       c.fill();
     }
     c.globalAlpha = 1;
-
-  } else if(kind === 'fire'){
+  }
+  else if(kind === 'fire'){
     for(let i=0;i<10;i++){
       const a = t*0.05 + (i/10)*Math.PI*2;
       const dist = r * 1.85 + Math.sin(t*0.12 + i) * 3;
-      const px = Math.cos(a) * dist;
-      const py = Math.sin(a) * dist;
+      const px = Math.cos(a) * dist, py = Math.sin(a) * dist;
       const sz = 4.5 + Math.sin(t*0.15 + i) * 1.6;
       const grad = c.createRadialGradient(px, py, 0, px, py, sz*2.2);
-      grad.addColorStop(0, '#FFF8C0');
-      grad.addColorStop(0.4, '#FFB060');
-      grad.addColorStop(1, 'rgba(232,88,56,0)');
+      grad.addColorStop(0, '#FFF8C0'); grad.addColorStop(0.4, '#FFB060'); grad.addColorStop(1, 'rgba(232,88,56,0)');
       c.fillStyle = grad;
       c.beginPath(); c.arc(px, py, sz*2.2, 0, Math.PI*2); c.fill();
     }
-
-  } else if(kind === 'ice'){
+  }
+  else if(kind === 'ice'){
     for(let i=0;i<8;i++){
       const a = t*0.035 + (i/8)*Math.PI*2;
       const dist = r * 1.95;
-      const px = Math.cos(a) * dist;
-      const py = Math.sin(a) * dist;
-      c.save();
-      c.translate(px, py);
-      c.rotate(a + t*0.04);
+      const px = Math.cos(a) * dist, py = Math.sin(a) * dist;
+      c.save(); c.translate(px, py); c.rotate(a + t*0.04);
       c.fillStyle = 'rgba(160,224,248,0.9)';
-      c.shadowColor = '#A0E0F8';
-      c.shadowBlur = 6;
+      c.shadowColor = '#A0E0F8'; c.shadowBlur = 6;
       for(let k=0;k<3;k++){
         const ak = (k/3)*Math.PI*2;
-        c.beginPath();
-        c.ellipse(0, 0, r*0.16, r*0.035, ak, 0, Math.PI*2);
-        c.fill();
+        c.beginPath(); c.ellipse(0, 0, r*0.16, r*0.035, ak, 0, Math.PI*2); c.fill();
       }
       c.restore();
     }
     c.shadowBlur = 0;
-
-  } else if(kind === 'lightning'){
+  }
+  else if(kind === 'lightning'){
     for(let i=0;i<7;i++){
       const a = t*0.08 + (i/7)*Math.PI*2;
       const dist = r * 2.05;
-      const px = Math.cos(a) * dist;
-      const py = Math.sin(a) * dist;
-      c.strokeStyle = '#A0E0FF';
-      c.lineWidth = 1.6;
-      c.shadowColor = '#80D0FF';
-      c.shadowBlur = 10;
+      const px = Math.cos(a) * dist, py = Math.sin(a) * dist;
+      c.strokeStyle = '#A0E0FF'; c.lineWidth = 1.6;
+      c.shadowColor = '#80D0FF'; c.shadowBlur = 10;
       c.beginPath();
       c.moveTo(px * 0.55, py * 0.55);
-      const midX = px * 0.55 + (Math.random()-0.5) * 10;
-      const midY = py * 0.55 + (Math.random()-0.5) * 10;
-      c.lineTo(midX, midY);
+      c.lineTo(px*0.55 + (Math.random()-0.5)*10, py*0.55 + (Math.random()-0.5)*10);
       c.lineTo(px, py);
       c.stroke();
     }
     c.shadowBlur = 0;
-
-  } else if(kind === 'shadow'){
+  }
+  else if(kind === 'shadow' || kind === 'phantom'){
     const grad = c.createRadialGradient(0,0,r*0.5, 0,0,aur);
     grad.addColorStop(0, 'rgba(80,40,90,0.42)');
     grad.addColorStop(0.55, 'rgba(40,20,60,0.3)');
     grad.addColorStop(1, 'rgba(0,0,0,0)');
     c.fillStyle = grad;
     c.beginPath(); c.arc(0,0,aur,0,Math.PI*2); c.fill();
-
     for(let i=0;i<4;i++){
       const a = t*0.04 + (i/4)*Math.PI*2;
       const dist = r*1.6 + Math.sin(t*0.1 + i)*4;
@@ -4209,51 +5831,135 @@ function drawAura(c, r, aura, t){
       c.ellipse(Math.cos(a)*dist, Math.sin(a)*dist, r*0.45, r*0.16, a, 0, Math.PI*2);
       c.fill();
     }
-
-  } else if(kind === 'rainbow'){
+  }
+  else if(kind === 'rainbow' || kind === 'prisma'){
     const hue = (t*3) % 360;
-
     const grad = c.createRadialGradient(0,0,r*0.7, 0,0,aur);
     grad.addColorStop(0, 'rgba(0,0,0,0)');
     grad.addColorStop(0.5, `hsla(${hue}, 85%, 65%, 0.6)`);
     grad.addColorStop(1, 'rgba(0,0,0,0)');
     c.fillStyle = grad;
     c.beginPath(); c.arc(0,0,aur,0,Math.PI*2); c.fill();
-
     for(let i=0;i<8;i++){
       const a = t*0.06 + (i/8)*Math.PI*2;
       const dist = r * 1.85;
       const col = `hsl(${(hue + i*45) % 360}, 85%, 65%)`;
       c.fillStyle = col;
-      c.shadowColor = col;
-      c.shadowBlur = 12;
+      c.shadowColor = col; c.shadowBlur = 12;
       c.beginPath();
       c.arc(Math.cos(a)*dist, Math.sin(a)*dist, 3.5, 0, Math.PI*2);
       c.fill();
     }
     c.shadowBlur = 0;
-
-  } else if(kind === 'galaxy'){
+  }
+  else if(kind === 'galaxy' || kind === 'cosmicAura'){
     const grad = c.createRadialGradient(0,0,r*0.5, 0,0,aur*1.15);
     grad.addColorStop(0, 'rgba(80,40,160,0.38)');
     grad.addColorStop(0.6, 'rgba(40,20,80,0.22)');
     grad.addColorStop(1, 'rgba(0,0,0,0)');
     c.fillStyle = grad;
     c.beginPath(); c.arc(0,0,aur*1.15,0,Math.PI*2); c.fill();
-
     for(let i=0;i<18;i++){
       const a = (i * 1.7 + t*0.012) % (Math.PI*2);
       const dist = r * (1.4 + (i % 5) * 0.18);
-      const px = Math.cos(a) * dist;
-      const py = Math.sin(a) * dist;
+      const px = Math.cos(a) * dist, py = Math.sin(a) * dist;
       const twinkle = 0.5 + Math.sin(t*0.18 + i) * 0.5;
       c.fillStyle = i % 3 === 0 ? '#FFD0FF' : '#FFFFFF';
       c.globalAlpha = twinkle * 0.85;
-      c.beginPath();
-      c.arc(px, py, 1.2 + twinkle*1.8, 0, Math.PI*2);
-      c.fill();
+      c.beginPath(); c.arc(px, py, 1.2 + twinkle*1.8, 0, Math.PI*2); c.fill();
     }
     c.globalAlpha = 1;
+  }
+  else if(kind === 'earth'){
+    for(let i=0;i<8;i++){
+      const a = (i/8)*Math.PI*2 + t*0.02;
+      const dist = r * 1.9;
+      c.fillStyle = ['#A07840','#7A5020','#604018','#8A6838'][i%4];
+      c.beginPath();
+      c.arc(Math.cos(a)*dist, Math.sin(a)*dist + Math.sin(t*0.1+i)*3, r*0.12, 0, Math.PI*2);
+      c.fill();
+    }
+  }
+  else if(kind === 'water'){
+    for(let i=0;i<6;i++){
+      const a = t*0.04 + (i/6)*Math.PI*2;
+      const dist = r*1.85;
+      c.fillStyle = 'rgba(120,200,255,0.75)';
+      c.beginPath();
+      c.ellipse(Math.cos(a)*dist, Math.sin(a)*dist, r*0.12, r*0.18, a, 0, Math.PI*2);
+      c.fill();
+    }
+  }
+  else if(kind === 'wind'){
+    for(let i=0;i<5;i++){
+      const a = t*0.08 + (i/5)*Math.PI*2;
+      const dist = r*1.9;
+      c.strokeStyle = 'rgba(200,230,255,0.7)'; c.lineWidth = 1.5;
+      c.beginPath();
+      c.arc(0, 0, dist, a, a + 0.5);
+      c.stroke();
+    }
+  }
+  else if(kind === 'nature'){
+    for(let i=0;i<7;i++){
+      const a = t*0.03 + (i/7)*Math.PI*2;
+      const dist = r*1.85;
+      c.fillStyle = ['#7BC44C','#5EA041','#FF80A0','#FFE060'][i%4];
+      c.beginPath();
+      c.ellipse(Math.cos(a)*dist, Math.sin(a)*dist, r*0.15, r*0.08, a, 0, Math.PI*2);
+      c.fill();
+    }
+  }
+  else if(kind === 'smokeAura'){
+    for(let i=0;i<5;i++){
+      const a = t*0.04 + (i/5)*Math.PI*2;
+      const dist = r*1.9;
+      c.fillStyle = `rgba(120,120,130,${0.4 + Math.sin(t*0.1+i)*0.2})`;
+      c.beginPath();
+      c.arc(Math.cos(a)*dist, Math.sin(a)*dist - Math.sin(t*0.1+i)*5, r*0.28, 0, Math.PI*2);
+      c.fill();
+    }
+  }
+  else if(kind === 'pixelAura'){
+    for(let i=0;i<10;i++){
+      const a = (i/10)*Math.PI*2 + t*0.02;
+      const dist = r*1.9;
+      c.fillStyle = ['#FF00FF','#00FFFF','#FFFF00','#FF0000'][i%4];
+      c.fillRect(Math.cos(a)*dist - r*0.1, Math.sin(a)*dist - r*0.1, r*0.2, r*0.2);
+    }
+  }
+  else if(kind === 'runes'){
+    const chars = ['ᚠ','ᚢ','ᚦ','ᚨ','ᚱ','ᚲ','ᚷ','ᚹ'];
+    c.font = `bold ${r*0.5}px sans-serif`;
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    for(let i=0;i<6;i++){
+      const a = t*0.04 + (i/6)*Math.PI*2;
+      const dist = r*1.9;
+      c.fillStyle = `hsl(${(t*3 + i*40)%360}, 80%, 65%)`;
+      c.shadowColor = c.fillStyle; c.shadowBlur = 8;
+      c.fillText(chars[i%chars.length], Math.cos(a)*dist, Math.sin(a)*dist);
+    }
+    c.shadowBlur = 0;
+  }
+  else if(kind === 'music'){
+    c.font = `bold ${r*0.5}px sans-serif`;
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    for(let i=0;i<5;i++){
+      const a = t*0.05 + (i/5)*Math.PI*2;
+      const dist = r*1.9;
+      c.fillStyle = ['#A080FF','#FF80A0','#80FFB0','#FFE060'][i%4];
+      c.fillText(i%2===0?'♪':'♫', Math.cos(a)*dist, Math.sin(a)*dist);
+    }
+  }
+  else if(kind === 'candyAura'){
+    for(let i=0;i<8;i++){
+      const a = t*0.05 + (i/8)*Math.PI*2;
+      const dist = r*1.9;
+      c.fillStyle = ['#FF60A0','#FFB040','#60E0FF','#A0FF60'][i%4];
+      c.beginPath();
+      c.ellipse(Math.cos(a)*dist, Math.sin(a)*dist, r*0.13, r*0.09, a, 0, Math.PI*2);
+      c.fill();
+    }
   }
 }
 
@@ -4713,11 +6419,637 @@ function drawCrown(c, r, crown, t){
       c.stroke();
     }
   }
+    else if(kind === 'pirate'){
+    c.fillStyle = '#1A1A28';
+    c.beginPath();
+    c.moveTo(-r*0.75, cy + r*0.2);
+    c.quadraticCurveTo(0, cy - r*0.7, r*0.75, cy + r*0.2);
+    c.lineTo(r*0.7, cy + r*0.35);
+    c.lineTo(-r*0.7, cy + r*0.35);
+    c.closePath(); c.fill();
+    c.fillStyle = '#FFFFFF';
+    c.beginPath(); c.arc(0, cy - r*0.15, r*0.15, 0, Math.PI*2); c.fill();
+    c.fillStyle = '#1A1A28';
+    c.beginPath();
+    c.arc(-r*0.06, cy - r*0.15, r*0.04, 0, Math.PI*2);
+    c.arc(r*0.06, cy - r*0.15, r*0.04, 0, Math.PI*2);
+    c.fill();
+    c.strokeStyle = '#1A1A28'; c.lineWidth = 1.5;
+    c.beginPath();
+    c.moveTo(-r*0.14, cy - r*0.08); c.lineTo(r*0.14, cy - r*0.22);
+    c.stroke();
+  }
+  else if(kind === 'wreath'){
+    c.strokeStyle = '#5EA041'; c.lineWidth = r*0.15;
+    c.beginPath();
+    c.arc(0, cy, r*0.7, Math.PI*1.1, Math.PI*1.9);
+    c.stroke();
+    const cols = ['#FF80A0','#FFB040','#FFE060','#C080FF'];
+    for(let i=0;i<5;i++){
+      const a = Math.PI*1.15 + (i/4)*Math.PI*0.7;
+      const px = Math.cos(a)*r*0.7, py = cy + Math.sin(a)*r*0.7;
+      c.fillStyle = cols[i%cols.length];
+      c.beginPath(); c.arc(px, py, r*0.11, 0, Math.PI*2); c.fill();
+      c.fillStyle = '#FFE060';
+      c.beginPath(); c.arc(px, py, r*0.04, 0, Math.PI*2); c.fill();
+    }
+  }
+  else if(kind === 'haloBroken'){
+    c.strokeStyle = '#FFE060'; c.lineWidth = r*0.1;
+    c.shadowColor = '#FFE060'; c.shadowBlur = 8;
+    c.beginPath();
+    c.arc(-r*0.15, cy - r*0.1, r*0.55, Math.PI*1.1, Math.PI*1.75);
+    c.stroke();
+    c.beginPath();
+    c.arc(r*0.15, cy - r*0.1, r*0.55, Math.PI*1.25, Math.PI*1.9);
+    c.stroke();
+    c.shadowBlur = 0;
+  }
+  else if(kind === 'spikeCrown'){
+    c.fillStyle = '#5A4030';
+    c.beginPath();
+    c.ellipse(0, cy + r*0.25, r*0.7, r*0.18, 0, 0, Math.PI*2);
+    c.fill();
+    c.fillStyle = '#4A3020';
+    for(let i=0;i<6;i++){
+      const a = (i/6)*Math.PI*2;
+      const px = Math.cos(a)*r*0.55;
+      c.beginPath();
+      c.moveTo(px - r*0.08, cy + r*0.15);
+      c.lineTo(px, cy + r*0.15 - r*0.5);
+      c.lineTo(px + r*0.08, cy + r*0.15);
+      c.closePath(); c.fill();
+    }
+  }
+  else if(kind === 'topHat'){
+    c.fillStyle = '#0A0A0A';
+    c.fillRect(-r*0.6, cy - r*0.5, r*1.2, r*0.8);
+    c.fillStyle = '#1A1A1A';
+    c.beginPath();
+    c.ellipse(0, cy + r*0.25, r*0.9, r*0.15, 0, 0, Math.PI*2);
+    c.fill();
+    c.fillStyle = '#C03030';
+    c.fillRect(-r*0.6, cy + r*0.05, r*1.2, r*0.1);
+  }
+  else if(kind === 'graduationCap'){
+    c.fillStyle = '#1A1A28';
+    c.beginPath();
+    c.moveTo(-r*0.75, cy + r*0.15);
+    c.lineTo(0, cy - r*0.15);
+    c.lineTo(r*0.75, cy + r*0.15);
+    c.lineTo(0, cy + r*0.45);
+    c.closePath(); c.fill();
+    c.fillStyle = '#FFD060';
+    c.fillRect(-r*0.15, cy + r*0.25, r*0.3, r*0.5);
+    c.beginPath(); c.arc(0, cy + r*0.75, r*0.1, 0, Math.PI*2); c.fill();
+  }
+  else if(kind === 'jesterHat'){
+    const cols = ['#FF6088','#FFB04C','#FFE24C','#4CE0A8','#4CA8FF'];
+    for(let i=0;i<3;i++){
+      const a = -0.5 + i*0.5;
+      c.fillStyle = cols[i];
+      c.beginPath();
+      c.moveTo(-r*0.5, cy + r*0.2);
+      c.quadraticCurveTo(Math.cos(a)*r*0.8 - r*0.3, cy - r*0.9, Math.cos(a)*r*0.5, cy - r*1.1);
+      c.quadraticCurveTo(Math.cos(a)*r*0.6, cy - r*0.5, r*0.5, cy + r*0.2);
+      c.closePath(); c.fill();
+      c.fillStyle = '#FFE060';
+      c.beginPath(); c.arc(Math.cos(a)*r*0.5, cy - r*1.1, r*0.1, 0, Math.PI*2); c.fill();
+    }
+  }
+  else if(kind === 'chefHat'){
+    c.fillStyle = '#FFFFFF';
+    c.beginPath();
+    c.arc(0, cy - r*0.3, r*0.6, Math.PI, Math.PI*2);
+    c.fill();
+    c.fillRect(-r*0.6, cy - r*0.3, r*1.2, r*0.6);
+    c.fillStyle = 'rgba(200,200,200,0.3)';
+    c.fillRect(-r*0.6, cy + r*0.15, r*1.2, r*0.1);
+  }
+  else if(kind === 'propeller'){
+    c.fillStyle = '#2A5A90';
+    c.beginPath();
+    c.arc(0, cy + r*0.15, r*0.75, Math.PI, Math.PI*2);
+    c.fill();
+    c.fillStyle = '#1A3A60';
+    c.fillRect(-r*0.75, cy + r*0.15, r*1.5, r*0.1);
+    c.strokeStyle = '#909090'; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(0, cy - r*0.6); c.lineTo(0, cy - r*0.9); c.stroke();
+    const rot = t*0.15;
+    c.strokeStyle = '#E84040'; c.lineWidth = r*0.1;
+    c.beginPath();
+    c.moveTo(-Math.cos(rot)*r*0.5, cy - r*0.9 - Math.sin(rot)*r*0.15);
+    c.lineTo(Math.cos(rot)*r*0.5, cy - r*0.9 + Math.sin(rot)*r*0.15);
+    c.stroke();
+  }
+  else if(kind === 'bunnyEars'){
+    c.fillStyle = '#F0E0E8';
+    for(const side of [-1, 1]){
+      c.beginPath();
+      c.ellipse(side*r*0.35, cy - r*0.8, r*0.18, r*0.6, side*0.15, 0, Math.PI*2);
+      c.fill();
+      c.fillStyle = '#FFB0C0';
+      c.beginPath();
+      c.ellipse(side*r*0.35, cy - r*0.8, r*0.08, r*0.45, side*0.15, 0, Math.PI*2);
+      c.fill();
+      c.fillStyle = '#F0E0E8';
+    }
+  }
+  else if(kind === 'catEars'){
+    for(const side of [-1, 1]){
+      c.fillStyle = '#2A2020';
+      c.beginPath();
+      c.moveTo(side*r*0.2, cy + r*0.2);
+      c.lineTo(side*r*0.45, cy - r*0.8);
+      c.lineTo(side*r*0.75, cy + r*0.2);
+      c.closePath(); c.fill();
+      c.fillStyle = '#FF8080';
+      c.beginPath();
+      c.moveTo(side*r*0.35, cy + r*0.05);
+      c.lineTo(side*r*0.45, cy - r*0.55);
+      c.lineTo(side*r*0.6, cy + r*0.05);
+      c.closePath(); c.fill();
+    }
+  }
+  else if(kind === 'devilHorns'){
+    c.fillStyle = '#C02020';
+    c.shadowColor = '#FF4040'; c.shadowBlur = 6;
+    for(const side of [-1, 1]){
+      c.beginPath();
+      c.moveTo(side*r*0.4, cy + r*0.2);
+      c.quadraticCurveTo(side*r*0.9, cy - r*0.5, side*r*0.6, cy - r*1.1);
+      c.quadraticCurveTo(side*r*0.55, cy - r*0.4, side*r*0.2, cy + r*0.1);
+      c.closePath(); c.fill();
+    }
+    c.shadowBlur = 0;
+  }
+  else if(kind === 'pumpkinHead'){
+    c.fillStyle = '#E88820';
+    c.beginPath();
+    c.ellipse(0, cy - r*0.2, r*0.7, r*0.6, 0, 0, Math.PI*2);
+    c.fill();
+    c.strokeStyle = '#A05010'; c.lineWidth = 1.5;
+    for(let i=-2;i<=2;i++){
+      c.beginPath();
+      c.moveTo(i*r*0.2, cy - r*0.75);
+      c.quadraticCurveTo(i*r*0.25, cy - r*0.2, i*r*0.2, cy + r*0.35);
+      c.stroke();
+    }
+    c.fillStyle = '#1A0808';
+    c.beginPath();
+    c.moveTo(-r*0.3, cy - r*0.35); c.lineTo(-r*0.1, cy - r*0.1); c.lineTo(-r*0.35, cy - r*0.1); c.closePath(); c.fill();
+    c.beginPath();
+    c.moveTo(r*0.3, cy - r*0.35); c.lineTo(r*0.1, cy - r*0.1); c.lineTo(r*0.35, cy - r*0.1); c.closePath(); c.fill();
+    c.beginPath();
+    c.moveTo(-r*0.3, cy + r*0.05); c.lineTo(-r*0.15, cy + r*0.15); c.lineTo(0, cy + r*0.05);
+    c.lineTo(r*0.15, cy + r*0.15); c.lineTo(r*0.3, cy + r*0.05);
+    c.lineTo(r*0.2, cy + r*0.2); c.lineTo(-r*0.2, cy + r*0.2);
+    c.closePath(); c.fill();
+  }
+  else if(kind === 'crownSkull'){
+    c.fillStyle = '#1A0808';
+    for(const side of [-1, 1]){
+      c.beginPath();
+      c.moveTo(side*r*0.7, cy + r*0.3); c.lineTo(side*r*0.75, cy - r*0.4);
+      c.lineTo(side*r*0.5, cy + r*0.1); c.closePath(); c.fill();
+    }
+    c.fillStyle = '#F0E8E0';
+    for(let i=-1;i<=1;i++){
+      const px = i*r*0.35;
+      c.beginPath();
+      c.arc(px, cy - r*0.2, r*0.16, 0, Math.PI*2);
+      c.fill();
+      c.fillStyle = '#1A0A0A';
+      c.beginPath();
+      c.arc(px - r*0.05, cy - r*0.22, r*0.045, 0, Math.PI*2);
+      c.arc(px + r*0.05, cy - r*0.22, r*0.045, 0, Math.PI*2);
+      c.fill();
+      c.fillStyle = '#F0E8E0';
+    }
+  }
+  else if(kind === 'angelRing'){
+    const pl = 0.6 + Math.sin(t*0.1)*0.4;
+    c.strokeStyle = `rgba(255,248,192,${pl})`;
+    c.lineWidth = r*0.18;
+    c.shadowColor = '#FFF8C0'; c.shadowBlur = 15*pl;
+    c.beginPath();
+    c.ellipse(0, cy - r*0.1, r*0.65, r*0.22, 0, 0, Math.PI*2);
+    c.stroke();
+    c.shadowBlur = 0;
+    for(let i=0;i<3;i++){
+      const a = t*0.05 + (i/3)*Math.PI*2;
+      c.fillStyle = '#FFFFFF';
+      c.shadowColor = '#FFF8C0'; c.shadowBlur = 10;
+      c.beginPath();
+      c.arc(Math.cos(a)*r*0.65, cy - r*0.1 + Math.sin(a)*r*0.22, r*0.08, 0, Math.PI*2);
+      c.fill();
+    }
+    c.shadowBlur = 0;
+  }
+  else if(kind === 'cyberVisor'){
+    c.fillStyle = 'rgba(10,20,40,0.9)';
+    c.strokeStyle = '#00FFFF'; c.lineWidth = 2;
+    c.shadowColor = '#00FFFF'; c.shadowBlur = 10;
+    c.beginPath();
+    c.ellipse(0, cy + r*0.15, r*0.85, r*0.3, 0, 0, Math.PI*2);
+    c.fill(); c.stroke();
+    c.shadowBlur = 0;
+    const scan = ((t*4)%100)/100;
+    c.strokeStyle = `rgba(0,255,255,${0.7})`; c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(-r*0.7, cy + r*0.15 - r*0.15 + scan*r*0.3);
+    c.lineTo(r*0.7, cy + r*0.15 - r*0.15 + scan*r*0.3);
+    c.stroke();
+  }
+  else if(kind === 'gasMask'){
+    c.fillStyle = '#4A5A40';
+    c.beginPath();
+    c.ellipse(0, cy + r*0.1, r*0.7, r*0.55, 0, 0, Math.PI*2);
+    c.fill();
+    c.fillStyle = '#2A3020';
+    c.beginPath();
+    c.arc(-r*0.3, cy + r*0.05, r*0.18, 0, Math.PI*2);
+    c.arc(r*0.3, cy + r*0.05, r*0.18, 0, Math.PI*2);
+    c.fill();
+    c.fillStyle = '#FF6020';
+    c.beginPath();
+    c.arc(-r*0.3, cy + r*0.05, r*0.08, 0, Math.PI*2);
+    c.arc(r*0.3, cy + r*0.05, r*0.08, 0, Math.PI*2);
+    c.fill();
+    c.fillStyle = '#3A4030';
+    c.fillRect(-r*0.2, cy + r*0.4, r*0.4, r*0.25);
+  }
+  else if(kind === 'lightBulb'){
+    c.fillStyle = 'rgba(255,240,160,0.95)';
+    c.shadowColor = '#FFE060'; c.shadowBlur = 15 + Math.sin(t*0.15)*8;
+    c.beginPath();
+    c.arc(0, cy - r*0.4, r*0.4, 0, Math.PI*2);
+    c.fill();
+    c.shadowBlur = 0;
+    c.fillStyle = '#9098A0';
+    c.fillRect(-r*0.15, cy - r*0.05, r*0.3, r*0.2);
+    c.fillStyle = '#5A6270';
+    for(let i=0;i<3;i++){
+      c.fillRect(-r*0.15, cy + i*r*0.05, r*0.3, r*0.03);
+    }
+  }
+  else if(kind === 'mushroomCap'){
+    c.fillStyle = '#E85040';
+    c.beginPath();
+    c.arc(0, cy + r*0.1, r*0.75, Math.PI, Math.PI*2);
+    c.fill();
+    c.fillStyle = '#FFFFFF';
+    for(let i=0;i<5;i++){
+      const px = -r*0.5 + i*r*0.25;
+      const py = cy - r*0.1 + Math.sin(i*1.3)*r*0.1;
+      c.beginPath(); c.arc(px, py, r*0.07, 0, Math.PI*2); c.fill();
+    }
+    c.fillStyle = '#F0E8D0';
+    c.fillRect(-r*0.15, cy + r*0.1, r*0.3, r*0.6);
+  }
+  else if(kind === 'sunhat'){
+    c.fillStyle = '#FFE090';
+    c.beginPath();
+    c.ellipse(0, cy + r*0.15, r*1.0, r*0.18, 0, 0, Math.PI*2);
+    c.fill();
+    c.beginPath();
+    c.arc(0, cy + r*0.1, r*0.55, Math.PI, Math.PI*2);
+    c.fill();
+    c.fillStyle = '#FF4080';
+    c.fillRect(-r*0.55, cy + r*0.02, r*1.1, r*0.1);
+  }
+  else if(kind === 'sombrero'){
+    c.fillStyle = '#C8A040';
+    c.beginPath();
+    c.ellipse(0, cy + r*0.2, r*1.1, r*0.2, 0, 0, Math.PI*2);
+    c.fill();
+    c.beginPath();
+    c.moveTo(-r*0.6, cy + r*0.2);
+    c.quadraticCurveTo(0, cy - r*0.6, r*0.6, cy + r*0.2);
+    c.closePath(); c.fill();
+    c.fillStyle = '#8A3010';
+    c.fillRect(-r*0.6, cy + r*0.05, r*1.2, r*0.1);
+  }
+  else if(kind === 'crownFireworks'){
+    c.fillStyle = '#E8B34E';
+    c.beginPath();
+    c.moveTo(-r*0.7, cy + r*0.25); c.lineTo(-r*0.7, cy - r*0.1);
+    c.lineTo(-r*0.35, cy - r*0.6); c.lineTo(0, cy - r*0.15);
+    c.lineTo(r*0.35, cy - r*0.6); c.lineTo(r*0.7, cy - r*0.1);
+    c.lineTo(r*0.7, cy + r*0.25); c.closePath(); c.fill();
+    for(let i=0;i<5;i++){
+      const a = t*0.15 + (i/5)*Math.PI*2;
+      const px = Math.cos(a)*r*0.6;
+      const py = cy - r*0.4 + Math.sin(a)*r*0.3;
+      c.fillStyle = `hsl(${(t*8 + i*72)%360}, 90%, 65%)`;
+      c.shadowColor = c.fillStyle; c.shadowBlur = 8;
+      c.beginPath(); c.arc(px, py, r*0.1, 0, Math.PI*2); c.fill();
+    }
+    c.shadowBlur = 0;
+  }
+  else if(kind === 'crownDivine'){
+    const pl = 0.7 + Math.sin(t*0.1)*0.3;
+    c.fillStyle = '#FFF4C0';
+    c.shadowColor = '#FFE060'; c.shadowBlur = 15*pl;
+    c.beginPath();
+    c.moveTo(-r*0.75, cy + r*0.3); c.lineTo(-r*0.75, cy - r*0.15);
+    c.lineTo(-r*0.45, cy - r*0.05); c.lineTo(-r*0.3, cy - r*0.7);
+    c.lineTo(0, cy - r*0.85); c.lineTo(r*0.3, cy - r*0.7);
+    c.lineTo(r*0.45, cy - r*0.05); c.lineTo(r*0.75, cy - r*0.15);
+    c.lineTo(r*0.75, cy + r*0.3); c.closePath(); c.fill();
+    c.shadowBlur = 0;
+    for(let i=0;i<5;i++){
+      const px = -r*0.5 + i*r*0.25;
+      c.fillStyle = ['#FF4060','#4080FF','#40FF80','#FFD040','#FF80C0'][i];
+      c.beginPath(); c.arc(px, cy - r*0.05, r*0.06, 0, Math.PI*2); c.fill();
+    }
+  }
+  else if(kind === 'crownCosmic'){
+    for(let i=0;i<7;i++){
+      const a = -Math.PI*0.9 + (i/6)*Math.PI*0.8;
+      const px = Math.cos(a)*r*0.7;
+      const py = cy + Math.sin(a)*r*0.5;
+      c.fillStyle = `hsl(${(t*3 + i*50)%360}, 80%, 55%)`;
+      c.shadowColor = c.fillStyle; c.shadowBlur = 10;
+      c.beginPath();
+      c.moveTo(px - r*0.1, py);
+      c.lineTo(px, py - r*0.4);
+      c.lineTo(px + r*0.1, py);
+      c.closePath(); c.fill();
+    }
+    c.shadowBlur = 0;
+    c.strokeStyle = '#FFFFFF'; c.lineWidth = 1;
+    c.beginPath(); c.arc(0, cy, r*0.5, 0, Math.PI*2); c.stroke();
+  }
+  else if(kind === 'crownPrisma'){
+    c.save();
+    c.translate(0, cy);
+    for(let i=0;i<6;i++){
+      const a = (i/6)*Math.PI*2 + t*0.02;
+      const hue = (t*8 + i*60)%360;
+      c.fillStyle = `hsl(${hue},85%,65%)`;
+      c.shadowColor = c.fillStyle; c.shadowBlur = 12;
+      c.beginPath();
+      c.moveTo(Math.cos(a - 0.3)*r*0.8, Math.sin(a - 0.3)*r*0.6);
+      c.lineTo(Math.cos(a)*r*0.55, Math.sin(a)*r*0.9 - r*0.3);
+      c.lineTo(Math.cos(a + 0.3)*r*0.8, Math.sin(a + 0.3)*r*0.6);
+      c.closePath(); c.fill();
+    }
+    c.shadowBlur = 0;
+    c.restore();
+  }
 }
 
 /* ============================================================
    ==================== Character drawing ====================
    ============================================================ */
+   function drawSkinPattern(c, r, pattern){
+  if(!pattern || pattern === 'none') return;
+  c.save();
+  c.beginPath(); c.arc(0, 0, r-1, 0, Math.PI*2); c.clip();
+
+  if(pattern === 'spots'){
+    c.fillStyle = 'rgba(0,0,0,0.14)';
+    const spots = [[-r*0.5,-r*0.3,r*0.18],[r*0.55,-r*0.5,r*0.14],[-r*0.25,r*0.55,r*0.16],[r*0.35,r*0.35,r*0.12],[r*0.05,-r*0.75,r*0.11]];
+    for(const [sx,sy,sr] of spots){ c.beginPath(); c.arc(sx,sy,sr,0,Math.PI*2); c.fill(); }
+  }
+  else if(pattern === 'stripes'){
+    c.strokeStyle = 'rgba(0,0,0,0.5)'; c.lineWidth = r*0.18;
+    for(let i=-2;i<=2;i++){
+      c.beginPath(); c.moveTo(-r*1.3, i*r*0.4 + r*0.2); c.lineTo(r*1.3, i*r*0.4 - r*0.2); c.stroke();
+    }
+  }
+  else if(pattern === 'tiger'){
+    c.strokeStyle = 'rgba(0,0,0,0.6)'; c.lineWidth = r*0.12;
+    for(let i=-2;i<=2;i++){
+      c.beginPath(); c.moveTo(-r*1.3, i*r*0.4); c.lineTo(r*1.3, i*r*0.4); c.stroke();
+      c.beginPath(); c.moveTo(-r*1.3, i*r*0.4 + r*0.15); c.lineTo(r*0.5, i*r*0.4 - r*0.05); c.stroke();
+    }
+  }
+  else if(pattern === 'checker'){
+    const size = r*0.4;
+    for(let y=-r;y<r;y+=size){
+      for(let x=-r;x<r;x+=size){
+        const ix = Math.floor(x/size), iy = Math.floor(y/size);
+        if((ix+iy)%2===0){
+          c.fillStyle = 'rgba(0,0,0,0.35)';
+          c.fillRect(x,y,size,size);
+        }
+      }
+    }
+  }
+  else if(pattern === 'hex'){
+    c.strokeStyle = 'rgba(0,0,0,0.35)'; c.lineWidth = 1.2;
+    const sz = r*0.28;
+    for(let y=-r;y<r+sz;y+=sz*1.7){
+      for(let x=-r;x<r+sz;x+=sz*1.7){
+        c.beginPath();
+        for(let k=0;k<6;k++){
+          const a=(k/6)*Math.PI*2;
+          const px=x+Math.cos(a)*sz, py=y+Math.sin(a)*sz;
+          k===0?c.moveTo(px,py):c.lineTo(px,py);
+        }
+        c.closePath(); c.stroke();
+      }
+    }
+  }
+  else if(pattern === 'camo'){
+    c.fillStyle = 'rgba(0,0,0,0.28)';
+    const blobs = [[-r*0.5,-r*0.3,r*0.35],[r*0.4,r*0.2,r*0.3],[-r*0.3,r*0.5,r*0.28],[r*0.5,-r*0.4,r*0.32]];
+    for(const [bx,by,br] of blobs){ c.beginPath(); c.arc(bx,by,br,0,Math.PI*2); c.fill(); }
+  }
+  else if(pattern === 'circuit'){
+    c.strokeStyle = 'rgba(0,255,128,0.7)'; c.lineWidth = r*0.08;
+    c.beginPath();
+    c.moveTo(-r, -r*0.4); c.lineTo(-r*0.4,-r*0.4); c.lineTo(-r*0.4, r*0.3); c.lineTo(r*0.4, r*0.3); c.lineTo(r*0.4, -r*0.4); c.lineTo(r, -r*0.4);
+    c.moveTo(0, -r); c.lineTo(0, -r*0.6); c.moveTo(-r*0.6, r*0.7); c.lineTo(r*0.6, r*0.7);
+    c.stroke();
+    c.fillStyle = '#00FF80';
+    for(const [px,py] of [[-r*0.4,r*0.3],[r*0.4,r*0.3],[0,-r*0.6]]){
+      c.beginPath(); c.arc(px,py,r*0.11,0,Math.PI*2); c.fill();
+    }
+  }
+  else if(pattern === 'gradient'){
+    const g = c.createLinearGradient(-r,-r,r,r);
+    g.addColorStop(0,'rgba(255,200,220,0.6)');
+    g.addColorStop(1,'rgba(200,220,255,0.4)');
+    c.fillStyle = g; c.fillRect(-r,-r,r*2,r*2);
+  }
+  else if(pattern === 'lavaCracks'){
+    c.strokeStyle = 'rgba(255,80,20,0.85)'; c.lineWidth = r*0.08;
+    c.shadowColor = '#FF5020'; c.shadowBlur = 6;
+    const cracks = [
+      [[-r*0.8,-r*0.3],[-r*0.4,0],[-r*0.6,r*0.4],[-r*0.2,r*0.8]],
+      [[r*0.3,-r*0.9],[r*0.5,-r*0.3],[r*0.8,r*0.1]],
+      [[-r*0.1,r*0.3],[r*0.3,r*0.5],[r*0.1,r*0.9]]
+    ];
+    for(const crack of cracks){
+      c.beginPath();
+      crack.forEach(([px,py],i)=> i===0?c.moveTo(px,py):c.lineTo(px,py));
+      c.stroke();
+    }
+    c.shadowBlur = 0;
+  }
+  else if(pattern === 'crystalPattern'){
+    c.strokeStyle = 'rgba(255,255,255,0.5)'; c.lineWidth = 1;
+    for(let i=0;i<6;i++){
+      const a=(i/6)*Math.PI*2;
+      c.beginPath();
+      c.moveTo(0,0);
+      c.lineTo(Math.cos(a)*r*0.9, Math.sin(a)*r*0.9);
+      c.stroke();
+    }
+    c.beginPath();
+    for(let k=0;k<6;k++){
+      const a=(k/6)*Math.PI*2;
+      const px=Math.cos(a)*r*0.7, py=Math.sin(a)*r*0.7;
+      k===0?c.moveTo(px,py):c.lineTo(px,py);
+    }
+    c.closePath(); c.stroke();
+  }
+  else if(pattern === 'scales'){
+    c.strokeStyle = 'rgba(0,0,0,0.3)'; c.lineWidth = 1.2;
+    const sw = r*0.35;
+    for(let y=-r;y<r;y+=sw*0.7){
+      for(let x=-r;x<r;x+=sw){
+        const offset = (Math.floor(y/(sw*0.7))%2) * sw*0.5;
+        c.beginPath();
+        c.arc(x+offset, y, sw*0.5, Math.PI, 0);
+        c.stroke();
+      }
+    }
+  }
+  else if(pattern === 'galaxyPattern'){
+    const g = c.createRadialGradient(0,0,0,0,0,r);
+    g.addColorStop(0,'rgba(255,200,255,0.6)');
+    g.addColorStop(0.5,'rgba(160,80,200,0.4)');
+    g.addColorStop(1,'rgba(60,20,120,0.8)');
+    c.fillStyle = g; c.fillRect(-r,-r,r*2,r*2);
+    c.fillStyle = '#FFFFFF';
+    for(let i=0;i<12;i++){
+      const a=Math.random()*Math.PI*2;
+      const d=rand(r*0.2,r*0.9);
+      c.globalAlpha = rand(0.5,1);
+      c.beginPath(); c.arc(Math.cos(a)*d, Math.sin(a)*d, rand(0.8,1.8), 0, Math.PI*2); c.fill();
+    }
+    c.globalAlpha = 1;
+  }
+  else if(pattern === 'holo'){
+    const g = c.createLinearGradient(-r, -r, r, r);
+    g.addColorStop(0,'rgba(255,180,255,0.6)');
+    g.addColorStop(0.33,'rgba(180,255,255,0.5)');
+    g.addColorStop(0.66,'rgba(255,255,180,0.5)');
+    g.addColorStop(1,'rgba(180,180,255,0.6)');
+    c.fillStyle = g; c.fillRect(-r,-r,r*2,r*2);
+  }
+  else if(pattern === 'firePattern'){
+    const g = c.createRadialGradient(0,r*0.3,0,0,r*0.3,r*1.1);
+    g.addColorStop(0,'rgba(255,240,150,0.9)');
+    g.addColorStop(0.5,'rgba(255,120,40,0.6)');
+    g.addColorStop(1,'rgba(200,40,10,0)');
+    c.fillStyle = g; c.fillRect(-r,-r,r*2,r*2);
+  }
+  else if(pattern === 'clouds'){
+    c.fillStyle = 'rgba(255,255,255,0.35)';
+    const blobs = [[-r*0.5,-r*0.4,r*0.3],[0,-r*0.55,r*0.35],[r*0.5,-r*0.4,r*0.3],[-r*0.3,r*0.3,r*0.28],[r*0.4,r*0.4,r*0.3]];
+    for(const [bx,by,br] of blobs){ c.beginPath(); c.arc(bx,by,br,0,Math.PI*2); c.fill(); }
+  }
+  else if(pattern === 'voidPattern'){
+    const g = c.createRadialGradient(0,0,r*0.2,0,0,r);
+    g.addColorStop(0,'rgba(160,64,255,0.7)');
+    g.addColorStop(0.5,'rgba(80,20,140,0.6)');
+    g.addColorStop(1,'rgba(20,0,40,0.95)');
+    c.fillStyle = g; c.fillRect(-r,-r,r*2,r*2);
+  }
+  else if(pattern === 'craters'){
+    c.fillStyle = 'rgba(120,120,140,0.4)';
+    const cr = [[-r*0.4,-r*0.3,r*0.2],[r*0.35,r*0.15,r*0.22],[-r*0.2,r*0.5,r*0.16],[r*0.45,-r*0.5,r*0.13]];
+    for(const [cx,cy,crr] of cr){ c.beginPath(); c.arc(cx,cy,crr,0,Math.PI*2); c.fill(); }
+  }
+  else if(pattern === 'starfield'){
+    c.fillStyle = '#FFFFFF';
+    for(let i=0;i<20;i++){
+      const a=Math.random()*Math.PI*2;
+      const d=rand(r*0.1,r*0.95);
+      c.globalAlpha = rand(0.3,1);
+      const sz = rand(0.6,1.6);
+      c.beginPath(); c.arc(Math.cos(a)*d, Math.sin(a)*d, sz, 0, Math.PI*2); c.fill();
+    }
+    c.globalAlpha = 1;
+  }
+  else if(pattern === 'holyPattern'){
+    const g = c.createRadialGradient(0,0,0,0,0,r);
+    g.addColorStop(0,'rgba(255,255,200,0.9)');
+    g.addColorStop(1,'rgba(255,200,80,0.5)');
+    c.fillStyle = g; c.fillRect(-r,-r,r*2,r*2);
+  }
+  else if(pattern === 'prismatic'){
+    const g = c.createConicGradient ? c.createConicGradient(G.t*0.02, 0, 0) :
+      c.createLinearGradient(-r,-r,r,r);
+    if(g.addColorStop){
+      g.addColorStop(0,   'rgba(255,80,80,0.5)');
+      g.addColorStop(0.17,'rgba(255,180,80,0.5)');
+      g.addColorStop(0.33,'rgba(255,240,80,0.5)');
+      g.addColorStop(0.5, 'rgba(80,255,120,0.5)');
+      g.addColorStop(0.66,'rgba(80,180,255,0.5)');
+      g.addColorStop(0.83,'rgba(180,80,255,0.5)');
+      g.addColorStop(1,   'rgba(255,80,80,0.5)');
+    }
+    c.fillStyle = g; c.fillRect(-r,-r,r*2,r*2);
+  }
+  else if(pattern === 'rainbow'){
+    const g = c.createLinearGradient(-r,-r,r,r);
+    g.addColorStop(0,'rgba(255,80,140,0.4)');
+    g.addColorStop(0.25,'rgba(255,180,80,0.4)');
+    g.addColorStop(0.5,'rgba(255,240,80,0.4)');
+    g.addColorStop(0.75,'rgba(80,220,160,0.4)');
+    g.addColorStop(1,'rgba(80,160,255,0.4)');
+    c.fillStyle = g; c.fillRect(-r,-r,r*2,r*2);
+  }
+  c.restore();
+}
+
+function drawCharacterBody(c, r, skin, t){
+  if(skin.imageData){
+    const img = getImageEl(skin.imageData);
+    if(img.complete && img.naturalWidth > 0){
+      const size = r * 2.4;
+      c.drawImage(img, -size/2, -size/2, size, size);
+      return;
+    } else {
+      c.fillStyle = skin.body;
+      c.beginPath(); c.arc(0,0,r,0,Math.PI*2); c.fill();
+      return;
+    }
+  }
+
+  const rainbow = skin.rainbow;
+  c.fillStyle = 'rgba(0,0,0,0.12)';
+  c.beginPath(); c.arc(0, 1.5, r + 0.8, 0, Math.PI*2); c.fill();
+
+  if(rainbow && !skin.pattern || skin.pattern === 'none'){
+    const g = c.createLinearGradient(-r, -r, r, r);
+    g.addColorStop(0, '#FF6088'); g.addColorStop(0.25, '#FFB04C');
+    g.addColorStop(0.5, '#FFE24C'); g.addColorStop(0.75, '#4CE0A8'); g.addColorStop(1, '#4CA8FF');
+    c.fillStyle = g;
+  } else {
+    const g = c.createRadialGradient(-r*0.35, -r*0.4, r*0.15, 0, 0, r*1.1);
+    g.addColorStop(0, mixColor(skin.body, '#FFFFFF', 0.35));
+    g.addColorStop(0.55, skin.body);
+    g.addColorStop(1, skin.bodyDark);
+    c.fillStyle = g;
+  }
+  c.beginPath(); c.arc(0, 0, r, 0, Math.PI*2); c.fill();
+
+  c.fillStyle = 'rgba(0,0,0,0.08)';
+  c.beginPath(); c.arc(0, r*0.15, r*0.98, 0.15*Math.PI, 0.85*Math.PI); c.fill();
+
+  drawSkinPattern(c, r, skin.pattern);
+
+  c.fillStyle = 'rgba(255,255,255,0.42)';
+  c.beginPath(); c.ellipse(-r*0.32, -r*0.42, r*0.32, r*0.2, -0.6, 0, Math.PI*2); c.fill();
+}
+
 function drawCharacterBody(c, r, skin, t){
   if(skin.imageData){
     const img = getImageEl(skin.imageData);
@@ -4807,20 +7139,29 @@ function drawCharacterAccessory(c, r, skin, t){
   const kind = skin.accessory;
   if(kind === 'none') return;
 
-  if(kind === 'horns'){
-    c.fillStyle = skin.detail;
+  if(kind === 'horns' || kind === 'demonHorns' || kind === 'dragonHorns'){
+    const col = kind === 'demonHorns' ? '#1A0808' : kind === 'dragonHorns' ? '#E8D0A0' : skin.detail;
+    c.fillStyle = col;
+    const hh = kind === 'dragonHorns' ? 1.7 : 1.35;
     c.beginPath();
-    c.moveTo(-r*0.45, -r*0.85); c.lineTo(-r*0.55, -r*1.35); c.lineTo(-r*0.2, -r*0.95); c.closePath(); c.fill();
+    c.moveTo(-r*0.45, -r*0.85); c.lineTo(-r*0.55, -r*hh); c.lineTo(-r*0.2, -r*0.95); c.closePath(); c.fill();
     c.beginPath();
-    c.moveTo(r*0.45, -r*0.85); c.lineTo(r*0.55, -r*1.35); c.lineTo(r*0.2, -r*0.95); c.closePath(); c.fill();
-  } else if(kind === 'leaf'){
+    c.moveTo(r*0.45, -r*0.85); c.lineTo(r*0.55, -r*hh); c.lineTo(r*0.2, -r*0.95); c.closePath(); c.fill();
+    if(kind === 'dragonHorns'){
+      c.strokeStyle = col; c.lineWidth = r*0.12; c.lineCap='round';
+      c.beginPath(); c.moveTo(-r*0.55,-r*hh); c.quadraticCurveTo(-r*0.9,-r*1.9,-r*0.7,-r*2.2); c.stroke();
+      c.beginPath(); c.moveTo(r*0.55,-r*hh); c.quadraticCurveTo(r*0.9,-r*1.9,r*0.7,-r*2.2); c.stroke();
+    }
+  }
+  else if(kind === 'leaf'){
     c.strokeStyle = '#3A6E28'; c.lineWidth = r*0.09;
     c.beginPath(); c.moveTo(0, -r*0.95); c.lineTo(r*0.1, -r*1.2); c.stroke();
     c.fillStyle = '#6BBF4C';
     c.beginPath(); c.ellipse(r*0.2, -r*1.25, r*0.35, r*0.18, -0.5, 0, Math.PI*2); c.fill();
     c.fillStyle = 'rgba(255,255,255,0.35)';
     c.beginPath(); c.ellipse(r*0.15, -r*1.3, r*0.16, r*0.06, -0.5, 0, Math.PI*2); c.fill();
-  } else if(kind === 'cloud'){
+  }
+  else if(kind === 'cloud'){
     c.fillStyle = '#FFFFFF';
     c.beginPath();
     c.arc(-r*0.15, -r*1.15, r*0.22, 0, Math.PI*2);
@@ -4828,9 +7169,8 @@ function drawCharacterAccessory(c, r, skin, t){
     c.arc( r*0.4, -r*1.05, r*0.2, 0, Math.PI*2);
     c.arc(-r*0.4, -r*1.0, r*0.18, 0, Math.PI*2);
     c.fill();
-    c.fillStyle = 'rgba(200,220,240,0.5)';
-    c.beginPath(); c.arc(-r*0.15, -r*1.1, r*0.14, 0, Math.PI*2); c.fill();
-  } else if(kind === 'spikes'){
+  }
+  else if(kind === 'spikes'){
     c.fillStyle = skin.accent;
     const spikes = 7;
     for(let i=0;i<spikes;i++){
@@ -4840,16 +7180,17 @@ function drawCharacterAccessory(c, r, skin, t){
       const px = Math.cos(a + 0.22)*r*0.95, py = Math.sin(a + 0.22)*r*0.95;
       c.beginPath(); c.moveTo(bx, by); c.lineTo(tipX, tipY); c.lineTo(px, py); c.closePath(); c.fill();
     }
-  } else if(kind === 'halo'){
+  }
+  else if(kind === 'halo'){
     c.save();
-    c.translate(0, -r*1.35);
-    c.rotate(t*0.02);
+    c.translate(0, -r*1.35); c.rotate(t*0.02);
     c.strokeStyle = '#FFF4C0'; c.lineWidth = r*0.13;
     c.beginPath(); c.ellipse(0, 0, r*0.7, r*0.22, 0, 0, Math.PI*2); c.stroke();
     c.strokeStyle = '#E8B34E'; c.lineWidth = r*0.06;
     c.beginPath(); c.ellipse(0, 0, r*0.7, r*0.22, 0, 0, Math.PI*2); c.stroke();
     c.restore();
-  } else if(kind === 'star'){
+  }
+  else if(kind === 'star'){
     c.save();
     c.translate(0, -r*1.4); c.rotate(t*0.05);
     c.fillStyle = skin.accent;
@@ -4864,7 +7205,8 @@ function drawCharacterAccessory(c, r, skin, t){
     c.closePath(); c.fill();
     c.shadowBlur = 0;
     c.restore();
-  } else if(kind === 'rainbow'){
+  }
+  else if(kind === 'rainbow'){
     c.save();
     c.lineWidth = r*0.16; c.lineCap = 'round';
     const colors = ['#FF6088','#FFA84C','#FFE24C','#4CE0A8','#4CA8FF','#A86AFF'];
@@ -4873,20 +7215,217 @@ function drawCharacterAccessory(c, r, skin, t){
       c.beginPath(); c.arc(0, 0, r*1.15 - i*(r*0.16), Math.PI*1.15, Math.PI*1.85); c.stroke();
     }
     c.restore();
-  } else if(kind === 'wings'){
+  }
+  else if(kind === 'wings'){
     const flap = Math.sin(t*0.18)*0.15;
     c.save(); c.translate(-r*1.05, -r*0.05); c.rotate(-0.5 + flap);
     c.fillStyle = skin.accent;
     c.beginPath(); c.ellipse(0, 0, r*0.55, r*0.22, 0, 0, Math.PI*2); c.fill();
-    c.fillStyle = 'rgba(255,255,255,0.4)';
-    c.beginPath(); c.ellipse(-r*0.1, -r*0.05, r*0.25, r*0.08, 0, 0, Math.PI*2); c.fill();
     c.restore();
     c.save(); c.translate(r*1.05, -r*0.05); c.rotate(0.5 - flap);
     c.fillStyle = skin.accent;
     c.beginPath(); c.ellipse(0, 0, r*0.55, r*0.22, 0, 0, Math.PI*2); c.fill();
-    c.fillStyle = 'rgba(255,255,255,0.4)';
-    c.beginPath(); c.ellipse(r*0.1, -r*0.05, r*0.25, r*0.08, 0, 0, Math.PI*2); c.fill();
     c.restore();
+  }
+  else if(kind === 'angelWings' || kind === 'phoenixWings' || kind === 'dragonWings' || kind === 'demonWings'){
+    const flap = Math.sin(t*0.15)*0.2;
+    const isAngel = kind === 'angelWings';
+    const isPhoenix = kind === 'phoenixWings';
+    const isDemon = kind === 'demonWings';
+    const featherCol = isAngel ? '#FFF8E0' : isPhoenix ? '#FF8040' : isDemon ? '#8A2020' : '#3A8040';
+    for(const side of [-1, 1]){
+      c.save();
+      c.translate(side*r*0.85, -r*0.15);
+      c.rotate(side * (0.4 - flap*0.3));
+      c.fillStyle = featherCol;
+      c.shadowColor = isPhoenix ? '#FF5020' : featherCol;
+      c.shadowBlur = isPhoenix ? 10 : 0;
+      for(let i=0;i<4;i++){
+        const size = r * (0.7 - i*0.1);
+        const yy = -r*0.3 + i*r*0.15;
+        c.beginPath();
+        c.ellipse(side * r*0.3, yy, size, r*0.15, side*0.3, 0, Math.PI*2);
+        c.fill();
+      }
+      c.shadowBlur = 0;
+      c.restore();
+    }
+  }
+  else if(kind === 'shadowWisps'){
+    for(let i=0;i<5;i++){
+      const a = t*0.06 + (i/5)*Math.PI*2;
+      const dist = r*1.3;
+      c.fillStyle = `rgba(60,20,90,${0.4 + Math.sin(t*0.1+i)*0.3})`;
+      c.beginPath();
+      c.ellipse(Math.cos(a)*dist, Math.sin(a)*dist + Math.sin(t*0.08+i)*4,
+                r*0.35, r*0.15, a, 0, Math.PI*2);
+      c.fill();
+    }
+  }
+  else if(kind === 'lightningBolts'){
+    for(let i=0;i<3;i++){
+      const a = t*0.1 + (i/3)*Math.PI*2;
+      const sx = Math.cos(a)*r*1.4, sy = Math.sin(a)*r*1.4 - r*0.5;
+      c.strokeStyle = '#FFE060'; c.lineWidth = 2;
+      c.shadowColor = '#FFE060'; c.shadowBlur = 10;
+      c.beginPath();
+      c.moveTo(sx, sy);
+      c.lineTo(sx + rand(-6,6), sy + 8);
+      c.lineTo(sx + rand(-4,4), sy + 16);
+      c.stroke();
+    }
+    c.shadowBlur = 0;
+  }
+  else if(kind === 'antenna'){
+    c.strokeStyle = skin.detail; c.lineWidth = r*0.1; c.lineCap = 'round';
+    c.beginPath();
+    c.moveTo(0, -r*0.9);
+    c.quadraticCurveTo(-r*0.2, -r*1.4, r*0.1, -r*1.6);
+    c.stroke();
+    c.fillStyle = '#00FF80';
+    c.shadowColor = '#00FF80'; c.shadowBlur = 10;
+    c.beginPath(); c.arc(r*0.1, -r*1.6, r*0.16, 0, Math.PI*2); c.fill();
+    c.shadowBlur = 0;
+    const pulse = 0.5 + Math.sin(t*0.15)*0.5;
+    c.globalAlpha = pulse;
+    c.beginPath(); c.arc(r*0.1, -r*1.6, r*0.25, 0, Math.PI*2); c.fill();
+    c.globalAlpha = 1;
+  }
+  else if(kind === 'crystalShards'){
+    for(let i=0;i<5;i++){
+      const a = -Math.PI*0.85 + (i/4)*Math.PI*0.7;
+      const bx = Math.cos(a)*r*0.95, by = Math.sin(a)*r*0.95;
+      const h = r * (0.4 + Math.random()*0.3);
+      c.save();
+      c.translate(bx, by); c.rotate(a + Math.PI/2);
+      c.fillStyle = '#A0E0FF';
+      c.shadowColor = '#80D8FF'; c.shadowBlur = 8;
+      c.beginPath();
+      c.moveTo(-r*0.08, 0); c.lineTo(0, -h); c.lineTo(r*0.08, 0);
+      c.closePath(); c.fill();
+      c.restore();
+    }
+    c.shadowBlur = 0;
+  }
+  else if(kind === 'ninjaMask'){
+    c.fillStyle = '#0A0A18';
+    c.beginPath();
+    c.ellipse(0, -r*0.05, r*1.02, r*0.45, 0, 0, Math.PI*2);
+    c.fill();
+    c.fillStyle = '#E83040';
+    c.beginPath();
+    c.ellipse(-r*0.3, -r*0.1, r*0.2, r*0.06, 0, 0, Math.PI*2);
+    c.ellipse(r*0.3, -r*0.1, r*0.2, r*0.06, 0, 0, Math.PI*2);
+    c.fill();
+  }
+  else if(kind === 'helmet'){
+    c.fillStyle = 'rgba(200,220,240,0.4)';
+    c.strokeStyle = '#A0B8D0'; c.lineWidth = 2;
+    c.beginPath();
+    c.arc(0, -r*0.1, r*1.15, Math.PI*1.1, Math.PI*1.9);
+    c.arc(0, r*0.4, r*1.15, Math.PI*0.05, Math.PI*0.95, true);
+    c.closePath();
+    c.fill(); c.stroke();
+    c.fillStyle = 'rgba(255,255,255,0.5)';
+    c.beginPath();
+    c.ellipse(-r*0.4, -r*0.4, r*0.2, r*0.1, -0.5, 0, Math.PI*2);
+    c.fill();
+  }
+  else if(kind === 'visor'){
+    c.fillStyle = 'rgba(0,20,40,0.9)';
+    c.strokeStyle = '#00FFFF'; c.lineWidth = 1.5;
+    c.shadowColor = '#00FFFF'; c.shadowBlur = 10;
+    c.beginPath();
+    c.ellipse(0, -r*0.12, r*0.85, r*0.28, 0, 0, Math.PI*2);
+    c.fill(); c.stroke();
+    c.shadowBlur = 0;
+    const scan = ((t*3)%100)/100;
+    c.strokeStyle = 'rgba(0,255,255,0.7)'; c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(-r*0.7, -r*0.12 + scan*r*0.4);
+    c.lineTo(r*0.7, -r*0.12 + scan*r*0.4);
+    c.stroke();
+  }
+  else if(kind === 'flowerCrown'){
+    const cols = ['#FF80A0','#FFB040','#FFE060','#C080FF','#80C0FF'];
+    for(let i=0;i<6;i++){
+      const a = -Math.PI*0.9 + (i/5)*Math.PI*0.8;
+      const px = Math.cos(a)*r*0.9;
+      const py = Math.sin(a)*r*0.9 - r*0.3;
+      c.fillStyle = cols[i % cols.length];
+      for(let k=0;k<5;k++){
+        const ak = (k/5)*Math.PI*2;
+        c.beginPath();
+        c.ellipse(px + Math.cos(ak)*r*0.1, py + Math.sin(ak)*r*0.1, r*0.09, r*0.05, ak, 0, Math.PI*2);
+        c.fill();
+      }
+      c.fillStyle = '#FFE060';
+      c.beginPath(); c.arc(px, py, r*0.06, 0, Math.PI*2); c.fill();
+    }
+  }
+  else if(kind === 'mushroomCap'){
+    c.fillStyle = '#E85040';
+    c.beginPath();
+    c.arc(0, -r*0.9, r*0.75, Math.PI, Math.PI*2);
+    c.fill();
+    c.fillStyle = '#FFFFFF';
+    for(let i=0;i<5;i++){
+      const px = -r*0.5 + i*r*0.25;
+      const py = -r*1.0 + Math.sin(i*1.3)*r*0.12;
+      c.beginPath(); c.arc(px, py, r*0.06, 0, Math.PI*2); c.fill();
+    }
+    c.fillStyle = '#F0E8D0';
+    c.fillRect(-r*0.12, -r*0.9, r*0.24, r*0.6);
+  }
+  else if(kind === 'pumpkinStem'){
+    c.strokeStyle = '#3A6E28'; c.lineWidth = r*0.15; c.lineCap='round';
+    c.beginPath();
+    c.moveTo(0, -r*0.9);
+    c.quadraticCurveTo(r*0.1, -r*1.25, r*0.25, -r*1.35);
+    c.stroke();
+    c.fillStyle = '#7BC44C';
+    c.beginPath(); c.ellipse(r*0.35, -r*1.3, r*0.15, r*0.08, -0.6, 0, Math.PI*2); c.fill();
+  }
+  else if(kind === 'moonCrown'){
+    c.fillStyle = '#FFF8D0';
+    c.shadowColor = '#F0F0FF'; c.shadowBlur = 10;
+    c.beginPath();
+    c.arc(0, -r*1.15, r*0.35, 0, Math.PI*2);
+    c.fill();
+    c.fillStyle = 'rgba(200,200,220,0.5)';
+    c.beginPath();
+    c.arc(r*0.05, -r*1.2, r*0.4, -0.3, 0.3, false);
+    c.fill();
+    c.shadowBlur = 0;
+  }
+  else if(kind === 'divineCrown'){
+    const pl = 0.7 + Math.sin(t*0.12)*0.3;
+    c.strokeStyle = '#FFF4C0'; c.lineWidth = r*0.15;
+    c.shadowColor = '#FFE060'; c.shadowBlur = 15*pl;
+    c.beginPath(); c.ellipse(0, -r*1.2, r*0.85, r*0.28, 0, 0, Math.PI*2); c.stroke();
+    c.shadowBlur = 0;
+    for(let i=0;i<3;i++){
+      const a = -Math.PI/2 + (i-1)*0.4;
+      const px = Math.cos(a)*r*0.85, py = -r*1.2 + Math.sin(a)*r*0.28;
+      c.fillStyle = '#FFFFFF';
+      c.shadowColor = '#FFF8C0'; c.shadowBlur = 12*pl;
+      c.beginPath(); c.arc(px, py, r*0.13, 0, Math.PI*2); c.fill();
+    }
+    c.shadowBlur = 0;
+  }
+  else if(kind === 'crystalCrown'){
+    for(let i=0;i<5;i++){
+      const px = -r*0.6 + i*r*0.3;
+      const h = r*(0.5 + Math.sin(i*1.3)*0.2);
+      c.fillStyle = `hsl(${(t*3 + i*40)%360},80%,65%)`;
+      c.shadowColor = c.fillStyle; c.shadowBlur = 10;
+      c.beginPath();
+      c.moveTo(px - r*0.08, -r*0.9);
+      c.lineTo(px, -r*0.9 - h);
+      c.lineTo(px + r*0.08, -r*0.9);
+      c.closePath(); c.fill();
+    }
+    c.shadowBlur = 0;
   }
 }
 
@@ -5090,10 +7629,12 @@ function drawPlayer(){
     ctx.globalAlpha = 1;
   }
 
-  if(G.mode === 'WALK'){
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
-    ctx.beginPath(); ctx.ellipse(P.x, GROUND_Y + 4, r*1.05, 4, 0, 0, Math.PI*2); ctx.fill();
-  } else if(G.mode === 'FLIP_WALK'){
+if(G.mode === 'WALK'){
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.beginPath(); ctx.ellipse(P.x, GROUND_Y + 4, r*1.05, 4, 0, 0, Math.PI*2); ctx.fill();
+}
+/* ASCEND: لا ظل أرضي — اللاعب حر في الفضاء */
+ else if(G.mode === 'FLIP_WALK'){
     ctx.fillStyle = 'rgba(0,0,0,0.2)';
     ctx.beginPath(); ctx.ellipse(P.x, CEILING_H, r*1.05, 4, 0, 0, Math.PI*2); ctx.fill();
   } else if(G.mode === 'SKY_JUMP'){
@@ -5136,10 +7677,90 @@ function drawPlayer(){
 }
 
 /* ============================================================
+   ==================== ASCEND SKY HELPERS ===================
+   ============================================================ */
+function getAscendSkyColors(){
+  const alt = getMeters();   /* "الأمتار" = الارتفاع */
+  let skyTop, skyBot, starAlpha = 0;
+
+  if(alt < 300){
+    const t = alt / 300;
+    skyTop = mixColor('#A8D8FF', '#7CB8E8', t);
+    skyBot = mixColor('#E0F0FF', '#A8D8F0', t);
+  } else if(alt < 1000){
+    const t = (alt - 300) / 700;
+    skyTop = mixColor('#7CB8E8', '#4A78C8', t);
+    skyBot = mixColor('#A8D8F0', '#7098D8', t);
+    starAlpha = t * 0.15;
+  } else if(alt < 2500){
+    const t = (alt - 1000) / 1500;
+    skyTop = mixColor('#4A78C8', '#1A2A5A', t);
+    skyBot = mixColor('#7098D8', '#3A4A7A', t);
+    starAlpha = 0.15 + t * 0.35;
+  } else if(alt < 5000){
+    const t = (alt - 2500) / 2500;
+    skyTop = mixColor('#1A2A5A', '#060418', t);
+    skyBot = mixColor('#3A4A7A', '#100830', t);
+    starAlpha = 0.5 + t * 0.3;
+  } else {
+    const t = Math.min(1, (alt - 5000) / 3000);
+    skyTop = mixColor('#060418', '#000000', t);
+    skyBot = mixColor('#100830', '#050018', t);
+    starAlpha = 0.8 + t * 0.2;
+  }
+
+  return { skyTop, skyBot, starAlpha };
+}
+
+/* ============================================================
    ==================== Scenery ==============================
    ============================================================ */
 function drawSky(){
   const s = G.currentScene;
+
+  /* ═══════════════ ASCEND: سماء تتدرج مع الارتفاع ═══════════════ */
+  if(G.mode === 'ASCEND'){
+    const altM = getMeters();
+    const biome = getAscendBiome(altM);
+
+    /* ═══ خلفية متدرجة حسب العالم ═══ */
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, biome.skyTop);
+    g.addColorStop(1, biome.skyBot);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    /* ═══ ضباب بيئي ═══ */
+    if(biome.fog){
+      ctx.fillStyle = biome.fog;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    /* ═══ نجوم تتلألأ في العوالم العلوية ═══ */
+    if(altM > 3000){
+      const starBoost = clamp((altM - 3000) / 5000, 0, 1);
+      const parallax = (G.camY * 0.15) % (H * 2);
+      for(const st of G.stars){
+        const twinkle = 0.5 + 0.5 * Math.sin(G.t * 0.02 + st.p);
+        ctx.globalAlpha = st.a * starBoost * twinkle;
+        ctx.fillStyle = '#FFFFFF';
+        const sy = ((st.y + parallax) % (H * 1.6)) - H * 0.3;
+        ctx.beginPath();
+        ctx.arc(st.x, sy, st.s * 0.9, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    /* ═══ برق في العاصفة ═══ */
+    if(biome.lightning && Math.random() < 0.005){
+      ctx.fillStyle = 'rgba(255,255,200,0.35)';
+      ctx.fillRect(0, 0, W, H);
+      Sfx.play(80, 0.3, 'sine', 0.05, 40);
+    }
+
+    return;
+  }
 
   /* ═══ تحت الأرض: املأ الشاشة بلون خلفية الأعماق ═══ */
   if(G.realm === REALM.UNDERGROUND || G.camYUnder > 20){
@@ -5247,6 +7868,7 @@ function drawSky(){
 function drawHills(){
   const s = G.currentScene;
   const hillsFade = clamp(1 - G.camY / 500, 0, 1);
+    if(G.mode === 'ASCEND') return;
   if(hillsFade <= 0.01) return;
   if(G.realm === REALM.UNDERGROUND || G.realm === REALM.SKY) return;
   if(G.camYUnder > 20) return;   /* ⬅️ أضف هذا السطر */
@@ -5748,9 +8370,48 @@ function drawUnderFloors(){
 
 function drawClouds(){
   const s = G.currentScene;
+
+  /* ═══════════════ ASCEND MODE: السحب تتحرك لأسفل (اللاعب يصعد) ═══════════════ */
+  if(G.mode === 'ASCEND'){
+    const alt = getMeters();
+    /* تختفي السحب تدريجياً كلما ارتفعنا */
+    const cloudFade = clamp(1 - alt / 2000, 0, 1);
+    if(cloudFade <= 0.01) return;
+
+    for(const c of clouds){
+      /* السحب تتحرك لأسفل = إحساس بالصعود */
+      c.y += c.v * G.speed * 0.7;
+      /* انحراف أفقي بطيء */
+      c.x -= 0.15;
+
+      /* إعادة تعيين من الأعلى */
+      if(c.y > H + 100){
+        c.y = -150;
+        c.x = rand(0, W);
+      }
+      if(c.x < -140 * c.s){
+        c.x = W + 100 * c.s;
+      }
+
+      const w = 60 * c.s, h = 22 * c.s;
+      const alpha = c.a * cloudFade * 0.8;
+
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = s.cloud;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, h*0.9, 0, Math.PI*2);
+      ctx.arc(c.x+w*0.35, c.y-h*0.3, h*1.1, 0, Math.PI*2);
+      ctx.arc(c.x+w*0.7, c.y, h*0.85, 0, Math.PI*2);
+      ctx.arc(c.x+w*0.35, c.y+h*0.15, h*0.9, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    return;
+  }
+
   const altN = G.camY / 900;
   if(G.realm === REALM.UNDERGROUND || G.realm === REALM.SKY) return;
-  if(G.camYUnder > 20) return;   /* ⬅️ أضف هذا السطر */
+  if(G.camYUnder > 20) return;
   let cloudAlpha;
   if(altN < 0.5){
     cloudAlpha = 1.0 + altN * 1.0;
@@ -5900,15 +8561,22 @@ function drawSkyDecor(){
 function drawGround(){
   const s = G.currentScene;
 
-  /* ═══ في السماء: الأرض مخفية، والخلفية بلون طبقة السماء ═══ */
+  /* ═══ ASCEND: لا نرسم أرضية ثابتة — الأرض عبارة عن منصة ═══ */
+  if(G.mode === 'ASCEND') return;
+
+  /* ═══════════════════════════════════════════════════════
+     ═══════════════ SKY REALM: الأرض مخفية ═══════════════
+     ═══════════════════════════════════════════════════════ */
   if(G.realm === REALM.SKY){
     const layer = SKY_REALM.layers[G.skyLayerIdx];
     ctx.fillStyle = layer.wallDark;
-    ctx.fillRect(0, GROUND_Y, W, H);   /* ملء الشاشة بأكملها */
+    ctx.fillRect(0, GROUND_Y, W, H);
     return;
   }
 
-  /* ═══ تحت الأرض: ارسم فقط حافة الحفر ═══ */
+  /* ═══════════════════════════════════════════════════════
+     ═══════════════ UNDERGROUND: حافة الحفر فقط ═══════════
+     ═══════════════════════════════════════════════════════ */
   if(G.realm === REALM.UNDERGROUND || G.camYUnder > 20){
     ctx.fillStyle = s.ground;
     ctx.fillRect(0, GROUND_Y - 20, W, 20);
@@ -5917,6 +8585,9 @@ function drawGround(){
     return;
   }
 
+  /* ═══════════════════════════════════════════════════════
+     ═══════════════ FLIP_WALK: أرضية الجحيم الحمراء ═══════
+     ═══════════════════════════════════════════════════════ */
   if(G.mode === 'FLIP_WALK'){
     ctx.fillStyle = s.groundDark;
     ctx.fillRect(0,GROUND_Y,W,GROUND_H);
@@ -5971,12 +8642,17 @@ function drawGround(){
     return;
   }
 
+  /* ═══════════════════════════════════════════════════════
+     ═══════════════ SKY_JUMP: أرضية سحابية ═══════════════
+     ═══════════════════════════════════════════════════════ */
   if(G.mode === 'SKY_JUMP'){
     for(const sh of G.cloudShadows){
       sh.x -= sh.v * G.speed * 0.25;
       if(sh.x < -sh.w*2) sh.x = W+sh.w;
       ctx.fillStyle = 'rgba(0,0,0,0.08)';
-      ctx.beginPath(); ctx.ellipse(sh.x, GROUND_Y+GROUND_H*0.5, sh.w, GROUND_H*0.35, 0, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(sh.x, GROUND_Y+GROUND_H*0.5, sh.w, GROUND_H*0.35, 0, 0, Math.PI*2);
+      ctx.fill();
     }
     ctx.fillStyle = s.ground;
     ctx.fillRect(0,GROUND_Y,W,GROUND_H);
@@ -6015,11 +8691,16 @@ function drawGround(){
     return;
   }
 
+  /* ═══════════════════════════════════════════════════════
+     ═══════════════ DEFAULT: الأرضية العادية ═══════════════
+     ═══════════════════════════════════════════════════════ */
   for(const sh of G.cloudShadows){
     sh.x -= sh.v * G.speed * 0.25;
     if(sh.x < -sh.w*2) sh.x = W+sh.w;
     ctx.fillStyle = 'rgba(0,0,0,0.08)';
-    ctx.beginPath(); ctx.ellipse(sh.x, GROUND_Y+GROUND_H*0.5, sh.w, GROUND_H*0.35, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(sh.x, GROUND_Y+GROUND_H*0.5, sh.w, GROUND_H*0.35, 0, 0, Math.PI*2);
+    ctx.fill();
   }
   ctx.fillStyle = s.ground;
   ctx.fillRect(0,GROUND_Y,W,GROUND_H);
@@ -6126,47 +8807,149 @@ function drawShiftGate(o){
 
 function drawWalkObstacle(o){
   const wall = o.color, dark = o.colorDark, accent = o.accent;
+
   if(o.isShiftGate){ drawShiftGate(o); return; }
 
-if(o.isGroundHole){
-  /* حفرة سوداء في الأرض */
-  const grad = ctx.createLinearGradient(0, GROUND_Y - 4, 0, H);
-  grad.addColorStop(0, '#000000');
-  grad.addColorStop(0.4, 'rgba(0,0,0,0.92)');
-  grad.addColorStop(1, 'rgba(10,4,4,0.75)');
-  ctx.fillStyle = grad;
-  ctx.fillRect(o.x, GROUND_Y - 4, o.w, GROUND_H + 30);
+  /* ═══════════════ ASCEND BARRIER (العائق الأفقي بفتحة) ═══════════════ */
+  if(o.isAscend){
+    const topH = o.gapLocalY;
+    const gapTop = o.y + topH;
+    const gapBot = gapTop + o.gap;
+    const botH = o.h - topH - o.gap;
 
-  /* حواف صخرية */
-  ctx.fillStyle = o.color || '#6A4838';
-  ctx.beginPath();
-  ctx.moveTo(o.x - 4, GROUND_Y - 4);
-  ctx.lineTo(o.x + 12, GROUND_Y + 12);
-  ctx.lineTo(o.x + 6, GROUND_Y - 6);
-  ctx.closePath();
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(o.x + o.w + 4, GROUND_Y - 4);
-  ctx.lineTo(o.x + o.w - 12, GROUND_Y + 12);
-  ctx.lineTo(o.x + o.w - 6, GROUND_Y - 6);
-  ctx.closePath();
-  ctx.fill();
+    /* ─── الجزء الأعلى ─── */
+    if(topH > 0){
+      /* الجسم الرئيسي */
+      ctx.fillStyle = wall;
+      ctx.fillRect(o.x, o.y, o.w, topH);
 
-  /* سهم ▼ نابض */
-  const pulse = 0.55 + Math.sin(G.t * 0.12) * 0.35;
-  ctx.globalAlpha = pulse;
-  ctx.fillStyle = '#FF8060';
-  ctx.shadowColor = '#FF8060';
-  ctx.shadowBlur = 15;
-  ctx.font = 'bold 26px "Space Grotesk", sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('▼', o.x + o.w/2, GROUND_Y - 40 + Math.sin(G.t*0.1)*4);
-  ctx.shadowBlur = 0;
-  ctx.globalAlpha = 1;
-  return;
-}
+      /* تدرج داكن في المنتصف */
+      const tg = ctx.createLinearGradient(0, o.y, 0, gapTop);
+      tg.addColorStop(0, 'rgba(0,0,0,0.25)');
+      tg.addColorStop(0.5, 'rgba(0,0,0,0)');
+      tg.addColorStop(1, 'rgba(0,0,0,0.35)');
+      ctx.fillStyle = tg;
+      ctx.fillRect(o.x, o.y, o.w, topH);
 
+      /* الحواف */
+      ctx.fillStyle = 'rgba(255,255,255,0.2)';
+      ctx.fillRect(o.x, o.y, o.w, 3);
+
+      ctx.fillStyle = dark;
+      ctx.fillRect(o.x, gapTop - 6, o.w, 6);
+
+      /* خطوط زخرفية رأسية */
+      ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+      ctx.lineWidth = 1;
+      for(let x = 30; x < o.w; x += 70){
+        ctx.beginPath();
+        ctx.moveTo(x, o.y + 8);
+        ctx.lineTo(x, gapTop - 8);
+        ctx.stroke();
+      }
+    }
+
+    /* ─── الجزء الأسفل ─── */
+    if(botH > 0){
+      ctx.fillStyle = wall;
+      ctx.fillRect(o.x, gapBot, o.w, botH);
+
+      const bg = ctx.createLinearGradient(0, gapBot, 0, o.y + o.h);
+      bg.addColorStop(0, 'rgba(0,0,0,0.35)');
+      bg.addColorStop(0.5, 'rgba(0,0,0,0)');
+      bg.addColorStop(1, 'rgba(0,0,0,0.25)');
+      ctx.fillStyle = bg;
+      ctx.fillRect(o.x, gapBot, o.w, botH);
+
+      ctx.fillStyle = dark;
+      ctx.fillRect(o.x, gapBot, o.w, 6);
+
+      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      ctx.fillRect(o.x, o.y + o.h - 3, o.w, 3);
+
+      ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+      for(let x = 30; x < o.w; x += 70){
+        ctx.beginPath();
+        ctx.moveTo(x, gapBot + 8);
+        ctx.lineTo(x, o.y + o.h - 8);
+        ctx.stroke();
+      }
+    }
+
+    /* ─── توهج حول الفتحة ─── */
+    const pulse = 0.4 + Math.sin(G.t * 0.09 + o.t * 0.04) * 0.25;
+    ctx.save();
+    ctx.globalAlpha = pulse;
+
+    const glowTop = ctx.createLinearGradient(0, gapTop - 25, 0, gapTop + 5);
+    glowTop.addColorStop(0, 'rgba(0,0,0,0)');
+    glowTop.addColorStop(1, accent);
+    ctx.fillStyle = glowTop;
+    ctx.fillRect(0, gapTop - 25, W, 30);
+
+    const glowBot = ctx.createLinearGradient(0, gapBot + 25, 0, gapBot - 5);
+    glowBot.addColorStop(0, 'rgba(0,0,0,0)');
+    glowBot.addColorStop(1, accent);
+    ctx.fillStyle = glowBot;
+    ctx.fillRect(0, gapBot - 5, W, 30);
+    ctx.restore();
+
+    /* ─── سهم إرشادي في مركز الفتحة ─── */
+    ctx.save();
+    ctx.globalAlpha = 0.55 + Math.sin(G.t * 0.12) * 0.25;
+    ctx.fillStyle = accent;
+    ctx.shadowColor = accent;
+    ctx.shadowBlur = 12;
+    ctx.font = 'bold 18px "Space Grotesk", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⇣', W / 2, gapTop + o.gap / 2);
+    ctx.restore();
+
+    return;
+  }
+
+  /* ═══════════════ GROUND HOLE ═══════════════ */
+  if(o.isGroundHole){
+    /* حفرة سوداء في الأرض */
+    const grad = ctx.createLinearGradient(0, GROUND_Y - 4, 0, H);
+    grad.addColorStop(0, '#000000');
+    grad.addColorStop(0.4, 'rgba(0,0,0,0.92)');
+    grad.addColorStop(1, 'rgba(10,4,4,0.75)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(o.x, GROUND_Y - 4, o.w, GROUND_H + 30);
+
+    /* حواف صخرية */
+    ctx.fillStyle = o.color || '#6A4838';
+    ctx.beginPath();
+    ctx.moveTo(o.x - 4, GROUND_Y - 4);
+    ctx.lineTo(o.x + 12, GROUND_Y + 12);
+    ctx.lineTo(o.x + 6, GROUND_Y - 6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(o.x + o.w + 4, GROUND_Y - 4);
+    ctx.lineTo(o.x + o.w - 12, GROUND_Y + 12);
+    ctx.lineTo(o.x + o.w - 6, GROUND_Y - 6);
+    ctx.closePath();
+    ctx.fill();
+
+    /* سهم ▼ نابض */
+    const pulse = 0.55 + Math.sin(G.t * 0.12) * 0.35;
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle = '#FF8060';
+    ctx.shadowColor = '#FF8060';
+    ctx.shadowBlur = 15;
+    ctx.font = 'bold 26px "Space Grotesk", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('▼', o.x + o.w/2, GROUND_Y - 40 + Math.sin(G.t*0.1)*4);
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+    return;
+  }
+
+  /* ═══════════════ PLATFORM ═══════════════ */
   if(o.isPlatform){
     if(o.crumbled) return;
 
@@ -6319,6 +9102,7 @@ if(o.isGroundHole){
     return;
   }
 
+  /* ═══════════════ SPRING ═══════════════ */
   if(o.isSpring){
     const baseY = GROUND_Y;
     const compress = Math.max(0, Math.sin(G.t*0.1) * 3);
@@ -6352,6 +9136,7 @@ if(o.isGroundHole){
     return;
   }
 
+  /* ═══════════════ SAW ═══════════════ */
   if(o.isSaw){
     ctx.save();
     ctx.translate(o.cx, o.cy);
@@ -6388,6 +9173,7 @@ if(o.isGroundHole){
     return;
   }
 
+  /* ═══════════════ PISTON ═══════════════ */
   if(o.isPiston){
     const headH = 16;
     const bodyY = o.isTop ? 0 : GROUND_Y - o.h;
@@ -6441,6 +9227,7 @@ if(o.isGroundHole){
     return;
   }
 
+  /* ═══════════════ FALLING SPIKE ═══════════════ */
   if(o.isFallingSpike){
     ctx.save();
     ctx.translate(o.x + o.w/2, o.y + o.h/2);
@@ -6500,6 +9287,7 @@ if(o.isGroundHole){
     return;
   }
 
+  /* ═══════════════ ROTATING BAR ═══════════════ */
   if(o.isRotBar){
     ctx.save();
     ctx.translate(o.cx, o.cy);
@@ -6526,6 +9314,7 @@ if(o.isGroundHole){
     return;
   }
 
+  /* ═══════════════ VORTEX ═══════════════ */
   if(o.isVortex){
     ctx.save();
     ctx.translate(o.cx, o.cy);
@@ -6567,6 +9356,7 @@ if(o.isGroundHole){
     return;
   }
 
+  /* ═══════════════ LASER ═══════════════ */
   if(o.isLaser){
     o.pulse = (o.pulse || 0) + 1;
     const glow = 0.6 + Math.sin(o.pulse * 0.15) * 0.4;
@@ -6607,37 +9397,7 @@ if(o.isGroundHole){
     return;
   }
 
-  if(o.type === 'spike'){
-    const peaks = 3, pw = o.w/peaks;
-    ctx.fillStyle = wall;
-    ctx.beginPath();
-    for(let i=0;i<peaks;i++){
-      const px = o.x + i*pw;
-      ctx.moveTo(px, GROUND_Y);
-      ctx.lineTo(px+pw/2, GROUND_Y - o.h);
-      ctx.lineTo(px+pw, GROUND_Y);
-    }
-    ctx.closePath(); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.25)';
-    for(let i=0;i<peaks;i++){
-      const px = o.x + i*pw;
-      ctx.beginPath();
-      ctx.moveTo(px+pw*0.25, GROUND_Y);
-      ctx.lineTo(px+pw/2, GROUND_Y - o.h);
-      ctx.lineTo(px+pw*0.75, GROUND_Y);
-      ctx.closePath(); ctx.fill();
-    }
-  } else {
-    ctx.fillStyle = wall;
-    roundRect(ctx, o.x, GROUND_Y - o.h, o.w, o.h, 12); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.22)';
-    roundRect(ctx, o.x+6, GROUND_Y-o.h+6, o.w-12, 5, 3); ctx.fill();
-    ctx.fillStyle = accent;
-    ctx.globalAlpha = 0.8;
-    roundRect(ctx, o.x+6, GROUND_Y-8, o.w-12, 4, 2); ctx.fill();
-    ctx.globalAlpha = 1;
-  }
-    /* ═══════════════ Sky Ring ═══════════════ */
+  /* ═══════════════ SKY RING ═══════════════ */
   if(o.isSkyRing){
     ctx.save();
     ctx.translate(o.cx, o.cy);
@@ -6673,11 +9433,11 @@ if(o.isGroundHole){
     return;
   }
 
-  /* ═══════════════ Under Spike ═══════════════ */
+  /* ═══════════════ UNDER SPIKE ═══════════════ */
   if(o.isUnderSpike){
     ctx.save();
     ctx.translate(o.x + o.w/2, o.y + o.h/2);
-    ctx.scale(1, -1);  /* اقلب الشوكة رأساً على عقب */
+    ctx.scale(1, -1);
 
     ctx.fillStyle = wall;
     ctx.beginPath();
@@ -6699,7 +9459,7 @@ if(o.isGroundHole){
     return;
   }
 
-  /* ═══════════════ Crystal ═══════════════ */
+  /* ═══════════════ CRYSTAL ═══════════════ */
   if(o.isCrystal){
     ctx.save();
     ctx.translate(o.x + o.w/2, o.y + o.h/2);
@@ -6738,7 +9498,7 @@ if(o.isGroundHole){
     return;
   }
 
-  /* ═══════════════ Under Pillar ═══════════════ */
+  /* ═══════════════ UNDER PILLAR ═══════════════ */
   if(o.isUnderPillar){
     ctx.fillStyle = wall;
     roundRect(ctx, o.x, o.y, o.w, o.h, 8); ctx.fill();
@@ -6749,6 +9509,38 @@ if(o.isGroundHole){
     }
     ctx.globalAlpha = 1;
     return;
+  }
+
+  /* ═══════════════ SPIKE / BLOCK (الافتراضي) ═══════════════ */
+  if(o.type === 'spike'){
+    const peaks = 3, pw = o.w/peaks;
+    ctx.fillStyle = wall;
+    ctx.beginPath();
+    for(let i=0;i<peaks;i++){
+      const px = o.x + i*pw;
+      ctx.moveTo(px, GROUND_Y);
+      ctx.lineTo(px+pw/2, GROUND_Y - o.h);
+      ctx.lineTo(px+pw, GROUND_Y);
+    }
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    for(let i=0;i<peaks;i++){
+      const px = o.x + i*pw;
+      ctx.beginPath();
+      ctx.moveTo(px+pw*0.25, GROUND_Y);
+      ctx.lineTo(px+pw/2, GROUND_Y - o.h);
+      ctx.lineTo(px+pw*0.75, GROUND_Y);
+      ctx.closePath(); ctx.fill();
+    }
+  } else {
+    ctx.fillStyle = wall;
+    roundRect(ctx, o.x, GROUND_Y - o.h, o.w, o.h, 12); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.22)';
+    roundRect(ctx, o.x+6, GROUND_Y-o.h+6, o.w-12, 5, 3); ctx.fill();
+    ctx.fillStyle = accent;
+    ctx.globalAlpha = 0.8;
+    roundRect(ctx, o.x+6, GROUND_Y-8, o.w-12, 4, 2); ctx.fill();
+    ctx.globalAlpha = 1;
   }
 }
 
@@ -8187,25 +10979,32 @@ function spawnSkyZoneRewards(){
   const arcHeight = rand(30, 55);
   const baseY = GROUND_Y - rand(120, 170);
 
+  /* ═══ قوس العملات ═══ */
   for(let i = 0; i < count; i++){
     const t = i / (count - 1);
     const x = startX + i * 45;
     const y = baseY - Math.sin(t * Math.PI) * arcHeight;
     coins.push({
-      x, y, r: 10, t:0, dead:false,
+      x, y, r: 10, t: 0, dead: false,
       isSkyCoin: true,
       skyValue: 5
     });
   }
 
+  /* ═══ نقطة نهاية القوس ═══ */
+  const endX = startX + count * 45 + 40;
+  const endY = baseY - arcHeight - 15;
+
+  /* ═══ مكافأة في النهاية ═══ */
   if(Math.random() < 0.35){
-/* ✅ جديد */
-const skyPU = makePowerup(W + 40 + w/2 + 50, topY, { r: 16, isSkyReward: true });
-if(skyPU) powerups.push(skyPU);
+    /* ✅ تعزيز */
+    const zonePU = makePowerup(endX, endY, { r: 16, isSkyReward: true });
+    if(zonePU) powerups.push(zonePU);
   } else {
+    /* ✅ كرة طاقة */
     orbs.push({
-      x: startX + count * 45 + 40,
-      y: baseY - arcHeight - 15,
+      x: endX,
+      y: endY,
       r: 16, t: 0, dead: false,
       color: '#FFD700',
       isSkyOrb: true,
@@ -8223,19 +11022,290 @@ function checkSkyZoneSpawn(){
   }
 }
 
-/* ============================================================
-   ==================== SKY REALM SPAWNER ====================
-   ============================================================ */
+/* ═══════════════════════════════════════════════════════
+   SKY REALM SPAWNERS — FIXED (نسبية إلى اللاعب)
+   ═══════════════════════════════════════════════════════ */
+
 function spawnSkyRealmObstacle(){
   const layer = SKY_REALM.layers[G.skyLayerIdx];
   const roll = Math.random();
 
-  if(roll < 0.30)      spawnSkyIsland(layer);
+  if(roll < 0.35)      spawnSkyIsland(layer);
   else if(roll < 0.50) spawnSkyRuinColumn(layer);
-  else if(roll < 0.65) spawnSkyElevator(layer);
-  else if(roll < 0.78) spawnSkyElevatorChain(layer);
-  else if(roll < 0.90) spawnStaircase(layer);
+  else if(roll < 0.62) spawnSkyElevator(layer);
+  else if(roll < 0.72) spawnSkyElevatorChain(layer);
+  else if(roll < 0.92) spawnStaircase(getProgression(), G.currentScene);
   else                 spawnSkyRing(layer);
+}
+
+/* جزيرة عائمة — 90 إلى 260 بكسل فوق اللاعب (مدى قفزة مزدوجة) */
+function spawnSkyIsland(layer){
+  const w = rand(120, 190);
+  const h = 16;
+  const y = P.y - rand(90, 260);
+
+  obstacles.push({
+    x: W + 40, w, h, type:'platform',
+    isWalk: true, isPlatform: true,
+    isSkyPlatform: true,
+    skyTier: G.skyLayerIdx + 1,
+    platformType: 'static',
+    y, baseY: y, baseX: W + 40,
+    amp: 0, phase: 0,
+    color: layer.wall, colorDark: layer.wallDark, accent: layer.accent,
+    glow: layer.accent,
+    t: 0, passed: false, dead: false,
+    solid: false, crumbleTimer: 0, crumbled: false, bounceBoost: 0
+  });
+
+  const r = Math.random();
+  if(r < 0.25) orbs.push({ x: W + 40 + w/2, y: y - 30, r: 16, t:0, dead:false, color:'#FFD700', isSkyOrb:true, value: 15 });
+  else if(r < 0.65) spawnCoinCluster(W + 40 + w/2, y - 25, Math.floor(rand(4,7)));
+}
+
+/* عمود أطلال */
+function spawnSkyRuinColumn(layer){
+  const w = rand(50, 80);
+  const h = rand(120, 220);
+  const y = P.y - rand(120, 260);
+  const isWall = Math.random() < 0.5;
+
+  if(isWall){
+    obstacles.push({
+      x: W + 40, w, h, type:'block',
+      isWalk: true,
+      y, baseY: y,
+      t:0, passed:false, dead:false,
+      color: layer.wall, colorDark: layer.wallDark, accent: layer.accent,
+      isSkyRuins: true
+    });
+  } else {
+    obstacles.push({
+      x: W + 40, w: 90, h: 14, type:'platform',
+      isWalk: true, isPlatform: true,
+      isSkyPlatform: true,
+      skyTier: G.skyLayerIdx + 1,
+      platformType: 'static',
+      y, baseY: y, baseX: W + 40,
+      amp: 0, phase: 0,
+      color: layer.wall, colorDark: layer.wallDark, accent: layer.accent,
+      glow: layer.accent,
+      t:0, passed:false, dead:false,
+      solid: false, crumbleTimer: 0, crumbled: false, bounceBoost: 0
+    });
+    spawnCoinCluster(W + 40 + 45, y - 30, 4);
+  }
+}
+
+/* حلقة كونية */
+function spawnSkyRing(layer){
+  const r = 50;
+  const y = P.y - rand(140, 280);
+
+  obstacles.push({
+    x: W + 40, w: r*2, h: r*2, type:'skyRing',
+    isWalk: true,
+    isSkyRing: true,
+    isPlatform: false,
+    y, baseY: y,
+    cx: W + 40 + r, cy: y + r, r,
+    angle: 0,
+    t:0, passed:false, dead:false,
+    color: layer.accent, colorDark: layer.wall, accent: layer.accent,
+    glow: layer.accent
+  });
+
+  orbs.push({ x: W + 40 + r, y: y + r, r: 16, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 20 });
+}
+
+/* مصعد سماوي — نسبي للاعب */
+function spawnSkyElevator(layer){
+  const w = 110;
+  const h = 16;
+  const maxRise = rand(280, 500);
+  const startY = P.y - rand(70, 120);
+
+  obstacles.push({
+    x: W + 40, w, h, type:'platform',
+    isWalk: true, isPlatform: true,
+    isElevator: true,
+    isSingleElevator: true,
+    platformType: 'static',
+    y: startY, baseY: startY, baseX: W + 40,
+    riseSpeed: rand(1.4, 2.0),
+    maxRise: maxRise,
+    risen: 0,
+    isCarryingPlayer: false,
+    exhausted: false,
+    warmupTimer: 0,
+    color: '#B8E8F0', colorDark: '#5090A0', accent: '#E0FFFF',
+    glow: '#80E8FF',
+    isSkyPlatform: true,
+    skyTier: 3,
+    amp: 0, phase: 0,
+    t: 0, passed: false, dead: false,
+    solid: false, crumbleTimer: 0, crumbled: false, bounceBoost: 0
+  });
+
+  const topY = startY - maxRise - 30;
+  const cx = W + 40 + w/2;
+
+  const coinCount = Math.floor(maxRise / 60);
+  for(let i = 1; i <= coinCount; i++){
+    if(Math.random() < 0.7){
+      coins.push({ x: cx + rand(-30, 30), y: startY - i * 60, r: 8, t: 0, dead: false });
+    }
+  }
+  orbs.push({ x: cx, y: topY, r: 16, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 15 });
+
+  if(Math.random() < 0.35){
+    const skyPU = makePowerup(cx + 50, topY, { r: 16, isSkyReward: true });
+    if(skyPU) powerups.push(skyPU);
+  }
+}
+
+/* سلسلة مصاعد سماوية */
+function spawnSkyElevatorChain(layer){
+  const count = Math.floor(rand(3, 5));
+  const startX = W + 60;
+  const spacing = rand(180, 240);
+  const baseRise = 200;
+
+  let baseY = P.y - 80;
+
+  for(let i = 0; i < count; i++){
+    const w = 100 - i * 5;
+    const h = 14;
+
+    obstacles.push({
+      x: startX + i * spacing, w, h,
+      type:'platform',
+      isWalk: true, isPlatform: true,
+      isElevator: true,
+      isChainElevator: true,
+      chainIndex: i,
+      platformType: 'static',
+      y: baseY, baseY: baseY, baseX: startX + i * spacing,
+      riseSpeed: 1.5 + i * 0.15,
+      maxRise: baseRise + i * 60,
+      risen: 0,
+      isCarryingPlayer: false,
+      exhausted: false,
+      warmupTimer: 0,
+      color: i === count-1 ? '#FFD060' : (i % 2 === 0 ? '#B8E8F0' : '#C0A0E8'),
+      colorDark: i === count-1 ? '#A07028' : (i % 2 === 0 ? '#5090A0' : '#6040A8'),
+      accent: i === count-1 ? '#FFF4C0' : '#E0FFFF',
+      glow: i === count-1 ? '#FFE080' : '#80E8FF',
+      isSkyPlatform: true,
+      skyTier: 3 + i,
+      amp: 0, phase: 0,
+      t: 0, passed: false, dead: false,
+      solid: false, crumbleTimer: 0, crumbled: false, bounceBoost: 0
+    });
+
+    baseY -= 60;
+  }
+
+  const endX = startX + (count - 1) * spacing + 200;
+  const topY = baseY - baseRise - (count - 1) * 60 - 80;
+
+  orbs.push({ x: endX, y: topY, r: 18, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 25 });
+  orbs.push({ x: endX + 60, y: topY, r: 18, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 25 });
+
+  const skyPU = makePowerup(endX + 120, topY, { r: 16, isSkyReward: true });
+  if(skyPU) powerups.push(skyPU);
+}
+
+/* درج — نسبي للاعب دائماً */
+function spawnStaircase(prog, s){
+  const count = Math.floor(rand(4, 14));
+  const isLong = count >= 9;
+  const startX = W + 60;
+  const startY = P.y - 40;   // ✅ نقطة البداية فوق اللاعب
+
+  const speedScale = getSpeedScale();
+  const stepX = (isLong ? rand(85, 115) : rand(75, 105)) * speedScale;
+  const stepY = isLong ? rand(60, 85) : rand(55, 75);
+
+  const colors = [
+    { color:'#80C0E8', dark:'#4080B0', accent:'#C0E0FF', glow:'#80D0FF' },
+    { color:'#80D0A8', dark:'#408068', accent:'#C0FFE0', glow:'#80FFD0' },
+    { color:'#B080E8', dark:'#6040A8', accent:'#E0C0FF', glow:'#D080FF' },
+    { color:'#E8B34E', dark:'#A07028', accent:'#FFF4C0', glow:'#FFD060' },
+    { color:'#FF80C0', dark:'#A03060', accent:'#FFD0E8', glow:'#FFA0D8' }
+  ];
+
+  let currentX = startX;
+  let currentY = startY;
+  let lastWidth = 90;
+
+  for(let i = 0; i < count; i++){
+    const w = isLong ? rand(70, 90) - i * 1.2 : rand(75, 100) - i * 2;
+    const h = 12;
+    lastWidth = w;
+
+    currentX += i === 0 ? 0 : stepX;
+    currentY -= stepY;
+
+    const colIdx = Math.min(Math.floor((i / count) * colors.length), colors.length - 1);
+    const col = colors[colIdx];
+
+    const isBouncy = isLong && i > 0 && i % 4 === 0;
+    const isCrumble = isLong && i > 2 && !isBouncy && Math.random() < 0.15;
+
+    obstacles.push({
+      x: currentX, w, h, type: 'platform',
+      isWalk: true, isPlatform: true,
+      isStaircase: true,
+      isStaircaseLong: isLong,
+      stairIndex: i,
+      stairTotal: count,
+      platformType: isBouncy ? 'bouncy' : (isCrumble ? 'crumble' : 'static'),
+      y: currentY, baseY: currentY, baseX: currentX,
+      amp: 0, phase: rand(0, Math.PI*2),
+      color: isBouncy ? '#E89B4C' : (isCrumble ? '#A88868' : col.color),
+      colorDark: isBouncy ? '#A06028' : (isCrumble ? '#6A4838' : col.dark),
+      accent: col.accent,
+      glow: col.glow,
+      isSkyPlatform: true,
+      skyTier: Math.min(Math.floor((i / count) * 5) + 1, 5),
+      t: 0, passed: false, dead: false,
+      solid: isBouncy || isCrumble,
+      crumbleTimer: 0, crumbled: false,
+      bounceBoost: isBouncy ? -24 : 0
+    });
+
+    if(i < count - 1){
+      const midX = currentX + stepX / 2;
+      const midY = currentY - stepY / 2 - 15;
+      spawnCoinCluster(midX, midY, i % 3 === 0 ? 4 : 3);
+    }
+    if(isLong && i > 0 && i % 4 === 2){
+      spawnPowerup(currentX + w/2, currentY - 30);
+    }
+  }
+
+  const topX = currentX + stepX + 20;
+  const topY = currentY - 50;
+  const topCenterX = topX + lastWidth / 2;
+
+  if(isLong){
+    orbs.push({ x: topX, y: topY, r: 18, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 20 });
+    orbs.push({ x: topX + 55, y: topY, r: 16, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 15 });
+    orbs.push({ x: topX - 55, y: topY, r: 16, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 15 });
+    const stairPU = makePowerup(topCenterX, topY - 60, { r: 18, isSkyReward: true });
+    if(stairPU) powerups.push(stairPU);
+  } else {
+    const roll = Math.random();
+    if(roll < 0.4){
+      const stairPU = makePowerup(topCenterX, topY, { r: 16, isSkyReward: true });
+      if(stairPU) powerups.push(stairPU);
+    } else if(roll < 0.8){
+      orbs.push({ x: topX, y: topY, r: 16, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 12 });
+    } else {
+      spawnCoinCluster(topX, topY, 8);
+    }
+  }
 }
 
 /* جزيرة عائمة */
@@ -8965,11 +12035,216 @@ function spawnUnderCrystal(layer){
   orbs.push({ x: x + 25, y: y + 30, r: 16, t: 0, dead: false, color: layer.accent, isSkyOrb: true, value: 18 });
 }
 
+/* ═══════════════════════════════════════════════════════
+   ============ ASCEND SPAWNER (النظام الجديد) ============
+   ═══════════════════════════════════════════════════════ */
+
+/* الحالة الداخلية للمولّد */
+let ascendState = {
+  highestY: 0,          // أعلى منصة تم توليدها
+  platformCount: 0,     // عدّاد المنصات (يُستخدم للأنماط)
+  lastTier: 0,          // آخر نوع تم توليده (لتجنب التكرار)
+  chainRemaining: 0,    // منصات متبقية في سلسلة التسلق
+  chainY: 0
+};
+
+function updateAscendSpawner(){
+  /* نولّد حتى 2.5 شاشة فوق اللاعب */
+  const spawnCeiling = P.y - H * 2.5;
+
+  while(ascendState.highestY > spawnCeiling){
+    generateNextPlatform();
+  }
+}
+
+function generateNextPlatform(){
+  const alt = Math.max(0, Math.floor((GROUND_Y - ascendState.highestY) / PIXELS_PER_METER));
+  const biome = getAscendBiome(alt);
+  const biomeIdx = getAscendBiomeIndex(alt);
+
+  /* ═══ سلسلة تسلق متتالية (كل 5-7 منصات) ═══ */
+  if(ascendState.chainRemaining > 0){
+    ascendState.chainRemaining--;
+    /* منصات قريبة جداً - صعود سريع */
+    const dy = rand(60, 95);
+    ascendState.highestY -= dy;
+    spawnAscendPlatform(ascendState.highestY, biome, 'chain', alt);
+    return;
+  }
+
+  ascendState.platformCount++;
+
+  /* ═══ جزيرة راحة كل 12 منصة ═══ */
+  if(ascendState.platformCount % 12 === 0){
+    const dy = rand(140, 190);
+    ascendState.highestY -= dy;
+    spawnAscendPlatform(ascendState.highestY, biome, 'rest', alt);
+    return;
+  }
+
+  /* ═══ سلسلة تسلق كل 5-7 منصات ═══ */
+  if(ascendState.platformCount % 6 === 0){
+    ascendState.chainRemaining = Math.floor(rand(2, 4));
+    ascendState.chainY = ascendState.highestY;
+    const dy = rand(100, 140);
+    ascendState.highestY -= dy;
+    spawnAscendPlatform(ascendState.highestY, biome, 'chain-start', alt);
+    return;
+  }
+
+  /* ═══ منصة عادية - تنويع كبير ═══ */
+  const dy = rand(85, 165);
+  ascendState.highestY -= dy;
+
+  /* اختر نوعاً عشوائياً */
+  const roll = Math.random();
+  let type;
+  if(roll < 0.55) type = 'normal';
+  else if(roll < 0.68) type = 'movingH';
+  else if(roll < 0.78) type = 'movingV';
+  else if(roll < 0.86) type = 'bouncy';
+  else if(roll < 0.93) type = 'crumble';
+  else if(roll < 0.97) type = 'narrow';
+  else type = 'phantom';
+
+  spawnAscendPlatform(ascendState.highestY, biome, type, alt);
+}
+
+/* ═══ الدالة الرئيسية لتوليد المنصة ═══ */
+function spawnAscendPlatform(worldY, biome, type, alt){
+  const pal = biome.palette[Math.floor(Math.random() * biome.palette.length)];
+
+  /* ═══ تحديد العرض حسب النوع ═══ */
+  let w;
+  if(type === 'rest') w = rand(180, 260);
+  else if(type === 'narrow') w = rand(45, 65);
+  else if(type === 'chain' || type === 'chain-start') w = rand(75, 95);
+  else w = rand(85, 145);
+
+  /* ═══ تحديد X (موزّع أفقيًا مع تفضيل الوصول من السابق) ═══ */
+  const margin = 24;
+  const x = rand(margin, W - w - margin);
+
+  /* ═══ إنشاء الكائن ═══ */
+  const plat = {
+    x, y: worldY, w, h: 16,
+    type: 'platform',
+    isWalk: true, isPlatform: true,
+    isAscendPlatform: true,
+    ascendType: type,
+    baseY: worldY, baseX: x,
+    amp: 0, phase: rand(0, Math.PI * 2),
+    color: pal.body,
+    topColor: pal.top,
+    colorDark: pal.edge,
+    accent: biome.accent,
+    t: 0, passed: false, dead: false,
+    solid: false,
+    crumbleTimer: 0, crumbled: false,
+    bounceBoost: 0,
+    phantomPhase: rand(0, Math.PI * 2),
+    biomeId: biome.id
+  };
+
+  /* ═══ إعدادات النوع الخاص ═══ */
+  switch(type){
+    case 'movingH':
+      plat.platformType = 'moving_x';
+      plat.amp = rand(35, 65);
+      plat.speed = rand(0.6, 0.9);
+      break;
+    case 'movingV':
+      plat.platformType = 'moving_y';
+      plat.amp = rand(20, 38);
+      plat.speed = rand(0.5, 0.8);
+      break;
+    case 'bouncy':
+      plat.platformType = 'bouncy';
+      plat.bounceBoost = -26;
+      plat.color = '#E89B4C';
+      plat.topColor = '#FFE090';
+      plat.colorDark = '#A06028';
+      break;
+    case 'crumble':
+      plat.platformType = 'crumble';
+      plat.color = '#A88868';
+      plat.topColor = '#E8D0A8';
+      plat.colorDark = '#6A4838';
+      break;
+    case 'phantom':
+      plat.platformType = 'phantom';
+      plat.phantomPeriod = rand(120, 180);
+      break;
+    default:
+      plat.platformType = 'static';
+  }
+
+  /* ═══ سلسلة الأرجل المزخرفة (كل نوع له تفاصيل) ═══ */
+  if(type === 'rest'){
+    plat.isRest = true;
+  }
+  if(type === 'chain-start'){
+    plat.isChainStart = true;
+  }
+
+  obstacles.push(plat);
+
+  /* ═══ المكافآت (تعتمد على نوع المنصة) ═══ */
+  const rewardRoll = Math.random();
+  const cx = x + w / 2;
+  const cy = worldY - 40;
+
+  if(type === 'rest'){
+    /* جزيرة راحة: مكافآت دائمة */
+    spawnCoinCluster(cx - 40, cy, 4);
+    spawnCoinCluster(cx + 40, cy, 4);
+    if(Math.random() < 0.5){
+      spawnPowerup(cx, cy - 20);
+    } else {
+      orbs.push({ x: cx, y: cy - 20, r: 14, t: 0, dead: false,
+                  color: '#FFD700', isSkyOrb: true, value: 18 });
+    }
+    return;
+  }
+
+  if(rewardRoll < 0.10){
+    spawnPowerup(cx, cy);
+  } else if(rewardRoll < 0.28){
+    orbs.push({ x: cx, y: cy, r: 12, t: 0, dead: false,
+                color: '#FFD700', isSkyOrb: true, value: 8 });
+  } else if(rewardRoll < 0.65){
+    spawnCoinCluster(cx, cy - 5, Math.floor(rand(2, 5)));
+  }
+
+  /* ═══ بعض المنصات لها عمود بلوري تحتها (جمالي) ═══ */
+  if(Math.random() < 0.25 && type !== 'narrow'){
+    plat.hasPillar = true;
+    plat.pillarH = rand(20, 60);
+  }
+}
+
+/* ═══ إزالة المنصات البعيدة جدًا (تحت اللاعب) ═══ */
+function cleanupAscendPlatforms(){
+  const bottom = P.y + H * 1.5;
+  for(let i = obstacles.length - 1; i >= 0; i--){
+    const o = obstacles[i];
+    if(!o.isAscendPlatform) continue;
+    if(o.y > bottom){
+      obstacles.splice(i, 1);
+    }
+  }
+  /* cleanup للجسيمات البعيدة */
+  if(coins.length > 200) coins.splice(0, coins.length - 200);
+  if(orbs.length > 60) orbs.splice(0, orbs.length - 60);
+  if(powerups.length > 30) powerups.splice(0, powerups.length - 30);
+}
+
 /* ============================================================
    ==================== Game flow ============================
    ============================================================ */
 function resetRun(){
   P.r = 13;
+
   /* ═══════════════ اختيار النمط أولاً ═══════════════ */
   G.selectedMode = Save.data.mode || 'FLIP';
   G.isMixedMode = (G.selectedMode === 'MIXED');
@@ -8982,7 +12257,7 @@ function resetRun(){
     G.mode = G.selectedMode;
   }
 
-  /* ═══════════════ تصفير الحالة ═══════════════ */
+  /* ═══════════════ تصفير الحالة العامة ═══════════════ */
   G.dist = 0; G.meters = 0;
   G.orbCount = 0; G.runCoins = 0;
   G.speed = PROGRESSION.speedStart;
@@ -9009,7 +12284,9 @@ function resetRun(){
   G.camY = 0;
   G.camTargetY = 0;
   G.skyDecor = [];
-    G.realm = REALM.GROUND;
+
+  /* ═══════════════ تصفير حالة العوالم ═══════════════ */
+  G.realm = REALM.GROUND;
   G.skyLayerIdx = 0;
   G.underLayerIdx = 0;
   G.skyLayersVisited = [];
@@ -9017,31 +12294,112 @@ function resetRun(){
   G.realmTransition = 0;
   G.realmFrom = REALM.GROUND;
   G.realmTo = REALM.GROUND;
-  G.nextHoleMeters = 450;   /* أول حفرة بعد 450م */
+  G.nextHoleMeters = 450;
   G.isDigging = false;
   G.underDepthPx = 0;
   G.camYUnder = 0;
+
+_lastContextKey = '';
+const cb = document.getElementById('context-banner');
+if(cb) cb.classList.remove('show');
+const gg = document.getElementById('altitude-gauge');
+if(gg) gg.classList.remove('show');
+
+  /* ═══════════════ تصفير حالة ASCEND ═══════════════ */
+  G.ascendHighestY = 0;
+  G.ascendLastJumpTap = 0;
+
   const ri = document.getElementById('realm-indicator');
   if(ri) ri.style.opacity = '0';
+
   initSkyDecor();
   lastSkySpawn = 0;
+
+  /* ═══════════════ تصفير المصفوفات ═══════════════ */
   obstacles = []; orbs = []; coins = []; powerups = [];
   particles = []; floats = []; G.weather = [];
   sparkParticles = [];
+
+  /* ═══════════════ تصفير اللاعب ═══════════════ */
   P.trail = [];
-  P.vx = 0; P.vy = 0; P.gravityDir = 1; P.rot = 0; P.jumps = 0;
+  P.vx = 0; P.vy = 0;
+  P.gravityDir = 1; P.rot = 0; P.jumps = 0;
   P.enginePhase = 0; P.legPhase = 0; P.bouncePhase = 0;
   P.jumpHeld = false; P.jumpHoldTimer = 0;
   P.coyoteTimer = 0; P.jumpBufferTimer = 0;
   initCape();
 
-  if(G.mode==='WALK'){ P.y = GROUND_Y-P.r; P.onGround = true; }
-  else if(G.mode==='FLIP_WALK'){ P.y = CEILING_H + P.r; P.onGround = true; P.vy = 0; }
-  else if(G.mode==='SKY_JUMP'){ P.y = GROUND_Y-P.r; P.onGround = true; P.vy = -13.5; }
-  else { P.y = H/2; P.onGround = false; }
-  P.x = G.mode==='DRIFT' ? W*0.3 : P.baseX;
-  pointer.x = P.x; pointer.y = P.y;
+  /* ═══════════════ تحديد موضع البداية حسب النمط ═══════════════ */
+  if(G.mode === 'ASCEND'){
+    P.x = W / 2;
+    P.y = GROUND_Y - P.r;
+    P.vx = 0; P.vy = 0;
+    P.onGround = true;
+    P.jumps = 0;
+    P.coyoteTimer = 0;
+    P.trail = [];
+    G.speed = 0;         /* لا حركة عالمية في ASCEND */
 
+    /* تصفير المولّد */
+    ascendState.highestY = 0;
+    ascendState.platformCount = 0;
+    ascendState.chainRemaining = 0;
+    ascendState.chainY = 0;
+
+    /* cooldown القفز */
+    G.ascendJumpCooldown = 0;
+
+    G.camY = 0;
+    G.camTargetY = 0;
+
+    /* ═══ أرض البداية ═══ */
+    obstacles.push({
+      x: -80, y: GROUND_Y, w: W + 160, h: 400,
+      type: 'platform', isWalk: true, isPlatform: true,
+      isAscendPlatform: true, ascendType: 'ground',
+      platformType: 'static',
+      baseY: GROUND_Y, baseX: -80,
+      amp: 0, phase: 0,
+      color: '#5E3223', topColor: '#6B9B37', colorDark: '#3A1F14',
+      accent: '#E86A2E',
+      t: 0, passed: false, dead: false,
+      solid: false, crumbleTimer: 0, crumbled: false, bounceBoost: 0
+    });
+
+    /* ═══ أول منصة فوق اللاعب ═══ */
+    ascendState.highestY = GROUND_Y - 140;
+    spawnAscendPlatform(ascendState.highestY, ASCEND_BIOMES[0], 'normal', 0);
+
+    /* ═══ ملء الشاشة الأولى ═══ */
+    updateAscendSpawner();
+  } else if(G.mode === 'WALK'){
+    P.y = GROUND_Y - P.r;
+    P.onGround = true;
+    P.x = P.baseX;
+
+  } else if(G.mode === 'FLIP_WALK'){
+    P.y = CEILING_H + P.r;
+    P.onGround = true;
+    P.vy = 0;
+    P.x = P.baseX;
+
+  } else if(G.mode === 'SKY_JUMP'){
+    P.y = GROUND_Y - P.r;
+    P.onGround = true;
+    P.vy = -13.5;
+    P.x = P.baseX;
+
+  } else {
+    /* FLIP / FLAP / DRIFT */
+    P.y = H / 2;
+    P.onGround = false;
+    P.x = G.mode === 'DRIFT' ? W * 0.3 : P.baseX;
+  }
+
+  pointer.x = P.x;
+  pointer.y = P.y;
+
+  /* ═══════════════ تحديث HUD ═══════════════ */
   const hudM = document.getElementById('hud-meters');
   const hudC = document.getElementById('hud-coins');
   const comboPill = document.getElementById('combo-pill');
@@ -9049,7 +12407,10 @@ function resetRun(){
   if(hudC) hudC.textContent = '0';
   if(comboPill) comboPill.style.display = 'none';
 
-  updateLevelUI(); updatePowerupsUI(); initClouds();
+  updateLevelUI();
+  updatePowerupsUI();
+  initClouds();
+
   const tag = document.getElementById('scene-tag');
   if(tag){
     tag.textContent = SCENES[0].en;
@@ -9058,16 +12419,22 @@ function resetRun(){
   const altHud = document.getElementById('altitude-hud');
   if(altHud) altHud.style.opacity = '0';
 
-  /* Shift Gates */
+/* ✅ إعادة ضبط التبديل العشوائي للمشاهد */
+sceneRandomMode = false;
+nextRandomSwitchMeters = 0;
+
+  /* ═══════════════ تصفير بوابة Shift ═══════════════ */
   G.distSinceGate = 0;
   G.pendingShift = false;
   G.shiftGrace = 0;
   activeSynergies = [];
 
-  /* بانر الافتتاح في MIXED */
+  /* ═══════════════ بانر الافتتاح ═══════════════ */
   if(G.isMixedMode){
     const startAr = MODES.find(m => m.id === G.mode)?.ar || G.mode;
     showBanner('MIXED RUN', '◆ ' + startAr);
+  } else if(G.mode === 'ASCEND'){
+    showBanner('ASCEND', '↑ اصعد نحو الفضاء');
   }
 }
 
@@ -9086,6 +12453,7 @@ function startGame(){
   else if(G.mode==='FLAP') txt = 'اضغط باستمرار للارتفاع';
   else if(G.mode==='DRIFT') txt = 'اسحب إصبعك لتحريك السفينة';
   else if(G.mode==='WALK') txt = 'اضغط للقفز — مزدوجة متاحة';
+    else if(G.mode === 'ASCEND') txt = 'المس الشخصية = قفز فوق · المس جانبيها = قفز للجانب';
   else if(G.mode==='FLIP_WALK') txt = 'أنت على السقف! اقفز للأسفل — لا تسقط في العمق!';
   else if(G.mode==='SKY_JUMP') txt = 'قفز تلقائي — اضغط في الهواء لتطير أعلى!';
   const h = document.getElementById('hint');
@@ -9226,12 +12594,20 @@ function quitToMenu(){
   G.combo = 0; G.comboTimer = 0;
   const comboPill = document.getElementById('combo-pill');
   if(comboPill) comboPill.style.display = 'none';
+  _lastContextKey = '';
+const cb = document.getElementById('context-banner');
+if(cb) cb.classList.remove('show');
+const gg = document.getElementById('altitude-gauge');
+if(gg) gg.classList.remove('show');
   setInGame(false);
   hideOverlay();
   showScreen('s-home');
   buildHome();
   updateCoinsUI();
   updateGlobalLevelUI();
+  /* ✅ إعادة ضبط التبديل العشوائي للمشاهد */
+sceneRandomMode = false;
+nextRandomSwitchMeters = 0;
 }
 
 /* ============================================================
@@ -10685,9 +14061,11 @@ function wireGameButtons() {
     if(document.hidden && G.state === 'PLAYING') pauseGame();
   });
 
-  window.addEventListener('keydown', e=>{
-    if(['Space','ArrowUp','ArrowDown'].includes(e.code)) e.preventDefault();
-  });
+window.addEventListener('keydown', e=>{
+  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)){
+    e.preventDefault();
+  }
+});
 
     /* ═══════════════ HOME MENU ═══════════════ */
   const menuBtn = $('menu-btn');
@@ -10770,6 +14148,12 @@ function boot() {
   } else {
     G.mode = G.selectedMode;
   }
+
+_lastContextKey = '';
+const cb = document.getElementById('context-banner');
+if(cb) cb.classList.remove('show');
+const gg = document.getElementById('altitude-gauge');
+if(gg) gg.classList.remove('show');
 
   ensureMissions();
   buildHome();

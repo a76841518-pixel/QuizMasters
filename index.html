@@ -18,34 +18,59 @@
        HUD (يظهر أثناء اللعب)
        ============================================================ -->
   <div id="hud">
-    <div class="hud-col">
-      <div class="run-stats">
-        <div class="stat-pill coins">
-          <span class="icon">◆</span>
-          <span class="val" id="hud-coins">0</span>
+    <div class="hud-top">
+      <div class="hud-left">
+        <!-- صف الإحصاءات -->
+        <div class="stat-cluster">
+          <div class="stat-chip coins">
+            <span class="chip-ic">◆</span>
+            <span class="chip-val" id="hud-coins">0</span>
+          </div>
+          <div class="stat-chip meters">
+            <span class="chip-ic">↔</span>
+            <span class="chip-val" id="hud-meters">0</span>
+            <span class="chip-unit">م</span>
+          </div>
+          <div class="stat-chip combo" id="combo-pill" style="display:none;">
+            <span class="chip-ic">×</span>
+            <span class="chip-val" id="hud-combo">2</span>
+          </div>
         </div>
-        <div class="stat-pill meters">
-          <span class="val" id="hud-meters">0</span>
-          <span class="unit">م</span>
+
+        <!-- شريط المستوى -->
+        <div class="level-track">
+          <div class="level-head">
+            <span class="level-badge">LVL</span>
+            <span class="level-num" id="level-num">1</span>
+          </div>
+          <div class="level-bar"><div class="level-fill" id="level-bar"></div></div>
         </div>
-        <div class="stat-pill combo" id="combo-pill" style="display:none;">
-          <span class="icon">×</span>
-          <span class="val" id="hud-combo">2</span>
-        </div>
+
+        <!-- الشرائح النشطة -->
+        <div class="chips-row" id="powerups-row"></div>
+        <div class="chips-row" id="synergy-row"></div>
       </div>
-      <div class="level-pill">
-        <div class="bar"><div class="bar-fill" id="level-bar" style="width:0%"></div></div>
-        <div class="num" id="level-num">LVL 1</div>
+
+      <div class="hud-right">
+        <button id="pause-btn">❚❚</button>
       </div>
-      <div class="powerups-row" id="powerups-row"></div>
-      <div class="synergy-row" id="synergy-row"></div>
-    </div>
-    <div class="hud-col right">
-      <button id="pause-btn">❚❚</button>
     </div>
   </div>
 
-  <div id="scene-tag">DAWN</div>
+  <!-- مقياس الارتفاع العمودي -->
+  <div id="altitude-gauge">
+    <div class="gauge-track">
+      <div class="gauge-zone zone-sky"></div>
+      <div class="gauge-zone zone-ground"></div>
+      <div class="gauge-zone zone-under"></div>
+      <div class="gauge-marker" id="gauge-marker"></div>
+    </div>
+    <div class="gauge-readout" id="gauge-readout">
+      <span class="readout-val" id="gauge-val">0</span>
+      <span class="readout-unit">م</span>
+    </div>
+  </div>
+
   <div id="hint"></div>
 
   <div id="levelup">
