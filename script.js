@@ -6037,7 +6037,12 @@ function updateCapePhysics(){
 }
 
 function drawCape(c, r, cape, t, ox, oy){
-  if(!cape || cape.id === 'none' || !P.cape) return;
+  if(!cape || typeof cape !== 'object') return;
+  if(!cape.id || cape.id === 'none') return;
+  if(!P.cape || !Array.isArray(P.cape)) return;
+  if(typeof c !== 'object' || !c) return;
+  if(typeof r !== 'number' || r <= 0) return;
+
   ox = ox || 0; oy = oy || 0;
 
   /* ✅ عباءة مخصصة بصورة */
@@ -6368,7 +6373,12 @@ function drawCape(c, r, cape, t, ox, oy){
    ==================== AURA (هالة دائمة) ====================
    ============================================================ */
 function drawAura(c, r, aura, t){
-  if(!aura || aura.id === 'none') return;
+  /* ═══ حماية شاملة ═══ */
+  if(!aura || typeof aura !== 'object') return;
+  if(!aura.id || aura.id === 'none') return;
+  if(typeof c !== 'object' || !c) return;
+  if(typeof r !== 'number' || r <= 0 || !isFinite(r)) return;
+  if(typeof t !== 'number' || !isFinite(t)) return;
 
   /* ✅ هالة مخصصة بصورة */
   if(hasItemImage(aura)){
@@ -6383,6 +6393,11 @@ function drawAura(c, r, aura, t){
       return;
     }
   }
+
+  /* ═══════════════════════════════════════════════════
+     ✅ الإصلاح: تعريف kind قبل أي استخدام
+     ═══════════════════════════════════════════════════ */
+  const kind = aura.id;
   if(kind === 'none') return;
 
   const pulse = 1 + Math.sin(t * 0.08) * 0.1;
@@ -6625,8 +6640,14 @@ function drawAura(c, r, aura, t){
    ==================== CROWN (تاج) ==========================
    ============================================================ */
 function drawCrown(c, r, crown, t){
+  /* ═══ حماية شاملة ═══ */
+  if(!crown || typeof crown !== 'object') return;
+  if(!crown.id || crown.id === 'none') return;
+  if(typeof c !== 'object' || !c) return;
+  if(typeof r !== 'number' || r <= 0 || !isFinite(r)) return;
+  if(typeof t !== 'number' || !isFinite(t)) return;
+
   const kind = crown.id;
-  if(kind === 'none') return;
 
   /* ✅ تاج مخصص بصورة */
   if(hasItemImage(crown)){
@@ -8382,10 +8403,16 @@ function renderCharacter(c, r, skin, opts){
   c.save();
   c.globalAlpha = alpha;
 
-  if(!skipExtras) drawAura(c, r, aura, G.t);
+  /* ═══ هالة (وراء الشخصية) ═══ */
+  if(!skipExtras){
+    try { drawAura(c, r, aura, G.t); }
+    catch(err){ console.error('[drawAura] Failed for "' + aura.id + '":', err); }
+  }
 
+  /* ═══ عباءة (وراء الشخصية) ═══ */
   if(!skipExtras && cape.id !== 'none' && P.cape){
-    drawCape(c, r, cape, G.t, P.x, P.y);
+    try { drawCape(c, r, cape, G.t, P.x, P.y); }
+    catch(err){ console.error('[drawCape] Failed for "' + cape.id + '":', err); }
   }
 
   if(isShip && facingRot !== 0) c.rotate(facingRot);
@@ -8425,9 +8452,12 @@ if(!skinHasImage && ['horns','leaf','cloud','spikes','halo','star'].includes(ski
   drawCharacterAccessory(c, r, skin, G.t);
 }
 
-/* لا ترسم التاج إذا كان الزي صورة مخصصة */
-const skinIsImage = !!(skin.imageData || skin.imagePath || hasItemImage(skin));
-if(!skipExtras && !skinIsImage) drawCrown(c, r, crown, G.t);
+  /* ═══ تاج (فوق الشخصية) ═══ */
+  const skinIsImage = !!(skin.imageData || skin.imagePath || hasItemImage(skin));
+  if(!skipExtras && !skinIsImage){
+    try { drawCrown(c, r, crown, G.t); }
+    catch(err){ console.error('[drawCrown] Failed for "' + crown.id + '":', err); }
+  }
 
   c.restore();
 }
