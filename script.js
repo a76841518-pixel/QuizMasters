@@ -7782,7 +7782,10 @@ function drawCharacterBody(c, r, skin, t){
 }
 
 function drawCharacterFace(c, r, skin){
-  if(skin.imageData && !skin.isCustom) return; /* زي مخصص */
+  /* ═══ لا ترسم العيون إذا كان الزي يحتوي على صورة ═══ */
+  if(skin.imageData) return;
+  if(skin.imagePath) return;
+  if(hasItemImage(skin)) return;
 
   const eyes = currentEyes();
 
@@ -8401,8 +8404,12 @@ function renderCharacter(c, r, skin, opts){
 
   if(skin.sparkle) drawSparklesAround(c, r, skin);
 
+/* لا ترسم إكسسوارات الوجه إذا كان الزي صورة مخصصة */
+const skinHasImage = !!(skin.imageData || skin.imagePath || hasItemImage(skin));
+if(!skinHasImage){
   if(skin.accessory === 'rainbow') drawCharacterAccessory(c, r, skin, G.t);
   if(skin.accessory === 'wings') drawCharacterAccessory(c, r, skin, G.t);
+}
 
   if(isShip){
     drawEngineFlame(c, r, skin);
@@ -8414,11 +8421,13 @@ function renderCharacter(c, r, skin, opts){
   drawCharacterBody(c, r, skin, G.t);
   drawCharacterFace(c, r, skin);
 
-  if(['horns','leaf','cloud','spikes','halo','star'].includes(skin.accessory)){
-    drawCharacterAccessory(c, r, skin, G.t);
-  }
+if(!skinHasImage && ['horns','leaf','cloud','spikes','halo','star'].includes(skin.accessory)){
+  drawCharacterAccessory(c, r, skin, G.t);
+}
 
-  if(!skipExtras && !skin.imageData) drawCrown(c, r, crown, G.t);
+/* لا ترسم التاج إذا كان الزي صورة مخصصة */
+const skinIsImage = !!(skin.imageData || skin.imagePath || hasItemImage(skin));
+if(!skipExtras && !skinIsImage) drawCrown(c, r, crown, G.t);
 
   c.restore();
 }
