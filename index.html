@@ -20,7 +20,6 @@
   <div id="hud">
     <div class="hud-top">
       <div class="hud-left">
-        <!-- صف الإحصاءات -->
         <div class="stat-cluster">
           <div class="stat-chip coins">
             <span class="chip-ic">◆</span>
@@ -37,7 +36,6 @@
           </div>
         </div>
 
-        <!-- شريط المستوى -->
         <div class="level-track">
           <div class="level-head">
             <span class="level-badge">LVL</span>
@@ -46,7 +44,6 @@
           <div class="level-bar"><div class="level-fill" id="level-bar"></div></div>
         </div>
 
-        <!-- الشرائح النشطة -->
         <div class="chips-row" id="powerups-row"></div>
         <div class="chips-row" id="synergy-row"></div>
       </div>
@@ -197,41 +194,15 @@
           <button class="admin-btn-full danger" id="admin-reset-coins">تصفير النقود</button>
         </div>
 
-        <!-- قسم: إدارة المصادر -->
-        <div class="section-head"><div class="section-title">المصادر</div><div class="section-sub">SOURCES</div></div>
-        <button class="admin-btn-full soft" id="admin-add-source">➕ إضافة مصدر جديد</button>
-        <div id="admin-sources-list" class="admin-sources-list"></div>
-
-        <div class="admin-form" id="admin-source-form" style="display:none;">
-          <div class="af-title">مصدر جديد</div>
-          <label class="af-label">نوع المصدر</label>
-          <select class="af-input" id="asf-type">
-            <option value="battle_pass">🎫 باتل باس</option>
-            <option value="season_rank">🏅 تصنيف الموسم</option>
-            <option value="daily_login">📅 تسجيل يومي</option>
-            <option value="chest">📦 صناديق</option>
-            <option value="lucky_wheel">🎡 عجلة الحظ</option>
-          </select>
-          <label class="af-label">اسم المصدر</label>
-          <input class="af-input" id="asf-name" type="text" maxlength="30" placeholder="مثال: تصنيف الموسم 3">
-          <label class="af-label">تاريخ البداية</label>
-          <input class="af-input" id="asf-start" type="date">
-          <label class="af-label">تاريخ النهاية</label>
-          <input class="af-input" id="asf-end" type="date">
-          <div class="af-actions">
-            <button class="admin-btn-full soft" id="asf-cancel">إلغاء</button>
-            <button class="admin-btn-full" id="asf-save">حفظ المصدر</button>
-          </div>
-          <div class="af-status" id="asf-status"></div>
-        </div>
-
-        <!-- قسم: إدارة المحتوى -->
+        <!-- ═══════════════════════════════════════════════════
+             قسم: إدارة المحتوى المخصص (v2)
+             ═══════════════════════════════════════════════════ -->
         <div class="section-head"><div class="section-title">المحتوى المخصص</div><div class="section-sub">CONTENT</div></div>
         <div class="admin-content-tabs">
           <button class="act-chip active" data-act="skin">الأزياء</button>
           <button class="act-chip" data-act="eyes">العيون</button>
-<button class="act-chip" data-act="companion">الرفاق</button>
-<button class="act-chip" data-act="footstep">آثار الأقدام</button>
+          <button class="act-chip" data-act="companion">الرفاق</button>
+          <button class="act-chip" data-act="footstep">آثار الأقدام</button>
           <button class="act-chip" data-act="spark">الشرار</button>
           <button class="act-chip" data-act="trail">خط السير</button>
           <button class="act-chip" data-act="jump">القفز</button>
@@ -244,37 +215,94 @@
         <button class="admin-btn-full gold" id="admin-add-content">➕ إضافة عنصر جديد</button>
         <div id="admin-content-list" class="admin-content-list"></div>
 
+        <!-- ═══ نموذج إضافة عنصر جديد ═══ -->
         <div class="admin-form" id="admin-form" style="display:none;">
           <div class="af-title">عنصر جديد — <span id="af-cat-label">أزياء</span></div>
-          <label class="af-label">الاسم بالعربية</label>
-          <input class="af-input" id="af-name" type="text" maxlength="20" placeholder="مثال: التنين الذهبي">
-          <label class="af-label">الاسم بالإنجليزية</label>
-          <input class="af-input" id="af-name-en" type="text" maxlength="20" placeholder="GOLD DRAGON">
-          <label class="af-label">السعر (◆)</label>
-          <input class="af-input" id="af-price" type="number" min="0" value="500">
-          <label class="af-label">الندرة</label>
-          <select class="af-input" id="af-rarity">
-            <option value="common">عادي</option>
-            <option value="rare">نادر</option>
-            <option value="epic">ملحمي</option>
-            <option value="legend">أسطوري</option>
-            <option value="mythic">خرافي</option>
-          </select>
-          <label class="af-label">المصدر *</label>
-          <select class="af-input" id="af-source"></select>
-          <label class="af-label">الصورة (PNG شفافة يُفضّل)</label>
-          <div class="af-upload">
-            <input type="file" id="af-file" accept="image/*" hidden>
-            <button class="af-upload-btn" id="af-upload-btn">📷 اختر صورة</button>
-            <div class="af-preview" id="af-preview"><span>لا توجد صورة</span></div>
+
+          <!-- ─── المعلومات الأساسية ─── -->
+          <div class="af-section-head">
+            <span class="af-sh-ic">📝</span>
+            <span class="af-sh-lbl">البيانات الأساسية</span>
           </div>
-          <label class="af-label" id="af-color-label">اللون الأساسي (اختياري)</label>
-          <input class="af-input color" id="af-color" type="color" value="#E07A3F">
-          <label class="af-label">اللون الثانوي</label>
-          <input class="af-input color" id="af-color2" type="color" value="#E8B34E">
+
+          <div class="af-group">
+            <label class="af-label">الاسم بالعربية *</label>
+            <input class="af-input" id="af-name" type="text" maxlength="24" placeholder="التنين الذهبي">
+          </div>
+
+          <div class="af-group">
+            <label class="af-label">الاسم بالإنجليزية</label>
+            <input class="af-input" id="af-name-en" type="text" maxlength="24" placeholder="GOLDEN DRAGON">
+          </div>
+
+          <div class="af-row-2">
+            <div class="af-group">
+              <label class="af-label">الندرة</label>
+              <select class="af-input" id="af-rarity">
+                <option value="common">عادي</option>
+                <option value="rare">نادر</option>
+                <option value="epic">ملحمي</option>
+                <option value="legend">أسطوري</option>
+                <option value="mythic">خرافي</option>
+              </select>
+            </div>
+            <div class="af-group">
+              <label class="af-label">الحالة</label>
+              <select class="af-input" id="af-enabled">
+                <option value="true">مُفعّل</option>
+                <option value="false">مُخفي</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- ─── الصورة (مسار ملف فقط) ─── -->
+          <div class="af-section-head">
+            <span class="af-sh-ic">🖼️</span>
+            <span class="af-sh-lbl">الصورة</span>
+          </div>
+          <div class="af-hint">
+            ضع ملف PNG في المجلد:
+            <code>assets/custom/<span id="af-path-cat">skins</span>/</code>
+            <br>ثم اكتب اسم الملف فقط (مثال: <code>dragon-gold.png</code>)
+          </div>
+          <input class="af-input" id="af-image-path" type="text"
+                 placeholder="dragon-gold.png"
+                 autocomplete="off" spellcheck="false">
+          <div class="af-path-preview" id="af-path-preview">
+            <span>لا توجد معاينة</span>
+          </div>
+
+          <!-- ─── الألوان ─── -->
+          <div class="af-section-head">
+            <span class="af-sh-ic">🎨</span>
+            <span class="af-sh-lbl">الألوان الاحتياطية</span>
+          </div>
+          <div class="af-row-2">
+            <div class="af-group">
+              <label class="af-label">اللون الأساسي</label>
+              <input class="af-input color" id="af-color" type="color" value="#E07A3F">
+            </div>
+            <div class="af-group">
+              <label class="af-label">اللون الثانوي</label>
+              <input class="af-input color" id="af-color2" type="color" value="#E8B34E">
+            </div>
+          </div>
+
+          <!-- ─── أماكن الحصول (الأهم) ─── -->
+          <div class="af-section-head">
+            <span class="af-sh-ic">🎯</span>
+            <span class="af-sh-lbl">أماكن الحصول على العنصر</span>
+          </div>
+          <div class="af-hint">
+            اختر مصدراً واحداً على الأقل — سيظهر العنصر في كل مكان تحدده،
+            ويُزامَن فوراً لكل اللاعبين عند النشر.
+          </div>
+          <div id="sources-editor" class="sources-editor"></div>
+
+          <!-- ─── الأزرار ─── -->
           <div class="af-actions">
             <button class="admin-btn-full soft" id="af-cancel">إلغاء</button>
-            <button class="admin-btn-full" id="af-save">حفظ ونشر</button>
+            <button class="admin-btn-full gold" id="af-save">حفظ ونشر للجميع</button>
           </div>
           <div class="af-status" id="af-status"></div>
         </div>
@@ -556,8 +584,8 @@
         <div class="tab-row" id="cos-tabs">
           <button class="tab-chip active" data-cat="spark">الشرار</button>
           <button class="tab-chip" data-cat="eyes">العيون</button>
-<button class="tab-chip" data-cat="companion">الرفاق</button>
-<button class="tab-chip" data-cat="footstep">الآثار</button>
+          <button class="tab-chip" data-cat="companion">الرفاق</button>
+          <button class="tab-chip" data-cat="footstep">الآثار</button>
           <button class="tab-chip" data-cat="trail">خط السير</button>
           <button class="tab-chip" data-cat="jump">القفز</button>
           <button class="tab-chip" data-cat="death">النهاية</button>
