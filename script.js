@@ -16701,6 +16701,9 @@ const MP = {
   countdownShown: -1,
   countdownActive: false,
 
+  countdownTimer: null,   // 👈 أضف هذا السطر
+  countdownLoopActive: false,  // 👈 وأضف هذا السطر
+
   starting: false,
   resultShown: false,
   round: 1,
@@ -16928,6 +16931,20 @@ async function mpJoinRoom(code){
 /* ═══════════════ مغادرة ═══════════════ */
 async function mpLeaveRoom(){
   if(!MP.active) return;
+
+  /* 👇👇👇 أضف هذا الجزء 👇👇👇 */
+  /* ✅ نظّف مؤقت العد التنازلي */
+  if(MP.countdownTimer){
+    clearTimeout(MP.countdownTimer);
+    MP.countdownTimer = null;
+  }
+  MP.countdownLoopActive = false;
+  MP.countdownActive = false;
+
+  const countdownEl = document.getElementById('mp-countdown');
+  if(countdownEl) countdownEl.style.display = 'none';
+  /* 👆👆👆 نهاية الإضافة 👆👆👆 */
+
   const roomId = MP.roomId;
   const uid = Cloud.user ? Cloud.user.uid : null;
   const wasHost = MP.isHost;
@@ -17023,16 +17040,30 @@ function mpAttachListeners(){
 
     /* ✅ العد التنازلي */
     if(data.status === 'countdown' && data.countdownEndsAt){
+      const isNewCountdown = (MP.countdownEndsAt !== data.countdownEndsAt);
+
       MP.countdownEndsAt = data.countdownEndsAt;
       MP.countdownActive = true;
-      if(document.getElementById('s-multiplayer-waiting').classList.contains('active')){
-        mpShowCountdownOverlay();
-      }
-    }
 
-    /* ✅ بدء اللعب الفعلي بعد العد التنازلي */
-    if(data.status === 'countdown' && Date.now() >= data.countdownEndsAt && !MP.starting){
-      mpStartMyGame();
+      /* أظهر الـ overlay مرة واحدة فقط */
+      if(isNewCountdown){
+        MP.countdownShown = -1;
+        if(document.getElementById('s-multiplayer-waiting').classList.contains('active')){
+          mpShowCountdownOverlay();
+        }
+
+        /* ✅ الأهم: جدوِل بدء اللعبة بعد انتهاء العد التنازلي */
+        if(MP.countdownTimer) clearTimeout(MP.countdownTimer);
+        const delayMs = Math.max(0, data.countdownEndsAt - Date.now()) + 150;
+
+        MP.countdownTimer = setTimeout(() => {
+          MP.countdownTimer = null;
+          if(MP.active && !MP.starting){
+            console.log('[MP] Countdown ended → starting game');
+            mpStartMyGame();
+          }
+        }, delayMs);
+      }
     }
 
     /* ✅ نهاية الجولة */
@@ -17388,26 +17419,47 @@ function mpShowCountdownOverlay(){
   }
   el.style.display = 'flex';
 
-  // تحديث الرقم كل إطار
+  /* ✅ منع تشغيل أكثر من حلقة tick في نفس الوقت */
+  if(MP.countdownLoopActive) return;
+  MP.countdownLoopActive = true;
+
   const tick = () => {
-    if(!MP.countdownActive){ el.style.display = 'none'; return; }
+    if(!MP.countdownActive){
+      el.style.display = 'none';
+      MP.countdownLoopActive = false;
+      return;
+    }
+
     const remain = MP.countdownEndsAt - Date.now();
     const n = Math.ceil(remain / 1000);
+
     if(n !== MP.countdownShown){
       MP.countdownShown = n;
+
       if(n <= 0){
         el.innerHTML = '<div class="mp-cd-go">GO!</div>';
-        setTimeout(() => { el.style.display = 'none'; }, 400);
+        Sfx.play(880, 0.25, 'sine', 0.07, 1320);
+        setTimeout(() => {
+          el.style.display = 'none';
+          MP.countdownLoopActive = false;
+        }, 500);
+        haptic(20);
+        return;  // ⛔ توقف عن الـ loop
       } else if(n <= 3){
         el.innerHTML = `<div class="mp-cd-num">${n}</div>`;
-        Sfx.play(440 + (3-n) * 100, 0.15, 'sine', 0.06, 660);
+        Sfx.play(440 + (3 - n) * 100, 0.15, 'sine', 0.06, 660);
+        haptic(8);
       } else {
-        el.innerHTML = `<div class="mp-cd-ready">READY</div>`;
+        el.innerHTML = '<div class="mp-cd-ready">READY</div>';
+        haptic(5);
       }
-      haptic(8);
     }
+
     if(remain > -600) requestAnimationFrame(tick);
-    else el.style.display = 'none';
+    else {
+      el.style.display = 'none';
+      MP.countdownLoopActive = false;
+    }
   };
   tick();
 }
