@@ -15,7 +15,7 @@
   <canvas id="c"></canvas>
 
   <!-- ============================================================
-       HUD (يظهر أثناء اللعب)
+       HUD
        ============================================================ -->
   <div id="hud">
     <div class="hud-top">
@@ -54,6 +54,9 @@
     </div>
   </div>
 
+  <!-- ✅ جديد: لوحة الترتيب المباشرة -->
+  <div id="mp-leaderboard" class="mp-leaderboard" style="display:none;"></div>
+
   <!-- مقياس الارتفاع العمودي -->
   <div id="altitude-gauge">
     <div class="gauge-track">
@@ -77,11 +80,11 @@
   </div>
 
   <!-- ============================================================
-       OVERLAY (جميع الشاشات)
+       OVERLAY
        ============================================================ -->
   <div id="overlay" class="active">
 
-    <!-- ============ LOGIN SCREEN ============ -->
+    <!-- ============ LOGIN ============ -->
     <div class="screen" id="s-login">
       <div class="login-screen">
         <div class="login-deco"></div>
@@ -136,9 +139,7 @@
       </div>
     </div>
 
-    <!-- ============================================================
-         ADMIN PANEL
-         ============================================================ -->
+    <!-- ============ ADMIN PANEL ============ -->
     <div class="screen" id="s-admin">
       <div class="sub">
         <div class="sub-top">
@@ -158,7 +159,6 @@
           </div>
         </div>
 
-        <!-- قسم: تحكم سريع -->
         <div class="section-head"><div class="section-title">تحكم سريع</div><div class="section-sub">QUICK</div></div>
         <div class="admin-toggles">
           <button class="admin-toggle" data-toggle="unlimitedCoins">
@@ -178,7 +178,6 @@
           </button>
         </div>
 
-        <!-- قسم: إدارة النقود -->
         <div class="section-head"><div class="section-title">إدارة النقود</div><div class="section-sub">ECONOMY</div></div>
         <div class="admin-coins-panel">
           <div class="admin-coins-display">
@@ -194,9 +193,6 @@
           <button class="admin-btn-full danger" id="admin-reset-coins">تصفير النقود</button>
         </div>
 
-        <!-- ═══════════════════════════════════════════════════
-             قسم: إدارة المحتوى المخصص (v2)
-             ═══════════════════════════════════════════════════ -->
         <div class="section-head"><div class="section-title">المحتوى المخصص</div><div class="section-sub">CONTENT</div></div>
         <div class="admin-content-tabs">
           <button class="act-chip active" data-act="skin">الأزياء</button>
@@ -215,11 +211,9 @@
         <button class="admin-btn-full gold" id="admin-add-content">➕ إضافة عنصر جديد</button>
         <div id="admin-content-list" class="admin-content-list"></div>
 
-        <!-- ═══ نموذج إضافة عنصر جديد ═══ -->
         <div class="admin-form" id="admin-form" style="display:none;">
           <div class="af-title">عنصر جديد — <span id="af-cat-label">أزياء</span></div>
 
-          <!-- ─── المعلومات الأساسية ─── -->
           <div class="af-section-head">
             <span class="af-sh-ic">📝</span>
             <span class="af-sh-lbl">البيانات الأساسية</span>
@@ -255,7 +249,6 @@
             </div>
           </div>
 
-          <!-- ─── الصورة (مسار ملف فقط) ─── -->
           <div class="af-section-head">
             <span class="af-sh-ic">🖼️</span>
             <span class="af-sh-lbl">الصورة</span>
@@ -272,7 +265,6 @@
             <span>لا توجد معاينة</span>
           </div>
 
-          <!-- ─── الألوان ─── -->
           <div class="af-section-head">
             <span class="af-sh-ic">🎨</span>
             <span class="af-sh-lbl">الألوان الاحتياطية</span>
@@ -288,7 +280,6 @@
             </div>
           </div>
 
-          <!-- ─── أماكن الحصول (الأهم) ─── -->
           <div class="af-section-head">
             <span class="af-sh-ic">🎯</span>
             <span class="af-sh-lbl">أماكن الحصول على العنصر</span>
@@ -299,7 +290,6 @@
           </div>
           <div id="sources-editor" class="sources-editor"></div>
 
-          <!-- ─── الأزرار ─── -->
           <div class="af-actions">
             <button class="admin-btn-full soft" id="af-cancel">إلغاء</button>
             <button class="admin-btn-full gold" id="af-save">حفظ ونشر للجميع</button>
@@ -307,7 +297,6 @@
           <div class="af-status" id="af-status"></div>
         </div>
 
-        <!-- قسم: إدارة اللاعبين -->
         <div class="section-head"><div class="section-title">اللاعبون</div><div class="section-sub">PLAYERS</div></div>
         <button class="admin-btn-full soft" id="admin-load-players">🔄 تحميل قائمة اللاعبين</button>
         <div id="admin-players-list" class="admin-players-list"></div>
@@ -315,7 +304,7 @@
     </div>
 
     <!-- ============================================================
-         HOME SCREEN
+         HOME
          ============================================================ -->
     <div class="screen" id="s-home">
       <div class="home">
@@ -404,6 +393,22 @@
           </div>
         </div>
 
+        <!-- ✅ جديد: زر اللعب الجماعي -->
+        <div class="section">
+          <div class="section-head">
+            <div class="section-title">اللعب الجماعي</div>
+            <div class="section-sub">MULTIPLAYER</div>
+          </div>
+          <button class="mp-open-card" id="mp-open-btn">
+            <div class="mp-open-ic">👥</div>
+            <div class="mp-open-body">
+              <div class="mp-open-title">العب مع صديق</div>
+              <div class="mp-open-sub">أنشئ غرفة وشارك الكود، أو انضم بغرفة موجودة</div>
+            </div>
+            <div class="mp-open-arrow">‹</div>
+          </button>
+        </div>
+
         <div class="section">
           <div class="section-head">
             <div class="section-title">التخصيص والمقتنيات</div>
@@ -444,9 +449,7 @@
         </div>
       </div>
 
-      <!-- ============================================================
-           HOME MENU (القائمة المنسدلة)
-           ============================================================ -->
+      <!-- HOME MENU -->
       <div id="home-menu" class="home-menu">
         <div class="home-menu-backdrop"></div>
         <div class="home-menu-panel">
@@ -486,6 +489,93 @@
             <span class="hm-arrow">‹</span>
           </button>
 
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         MULTIPLAYER — LOBBY
+         ============================================================ -->
+    <div class="screen" id="s-multiplayer">
+      <div class="sub">
+        <div class="sub-top">
+          <button class="back-btn" data-back>←</button>
+          <div>
+            <div class="sub-title">اللعب الجماعي</div>
+            <div class="sub-eyebrow">MULTIPLAYER</div>
+          </div>
+          <div class="sub-spacer"></div>
+        </div>
+
+        <div class="mp-hero">
+          <div class="mp-hero-ic">⚔️</div>
+          <div class="mp-hero-title">سباق ضد صديقك</div>
+          <div class="mp-hero-sub">أول من يموت يخسر — الفائز هو من يصل أبعد</div>
+        </div>
+
+        <button class="action-btn" id="mp-create-btn"
+                style="max-width:100%;margin-bottom:14px;">
+          ➕ &nbsp; إنشاء غرفة جديدة
+        </button>
+
+        <div class="mp-divider"><span>أو</span></div>
+
+        <div class="mp-join-box">
+          <label class="af-label" style="text-align:center;">انضم بكود الغرفة</label>
+          <input class="af-input mp-code-input" id="mp-code-input"
+                 maxlength="6" placeholder="ABC123"
+                 autocomplete="off" spellcheck="false" dir="ltr">
+          <button class="action-btn gold" id="mp-join-btn"
+                  style="margin-top:10px;max-width:100%;">
+            🚪 &nbsp; انضم
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         MULTIPLAYER — WAITING ROOM
+         ============================================================ -->
+    <div class="screen" id="s-multiplayer-waiting">
+      <div class="sub">
+        <div class="sub-top">
+          <button class="back-btn" data-mp-leave>←</button>
+          <div>
+            <div class="sub-title">غرفة الانتظار</div>
+            <div class="sub-eyebrow">LOBBY</div>
+          </div>
+          <div class="sub-spacer"></div>
+        </div>
+
+        <div class="mp-code-card">
+          <div class="mp-code-label">كود الغرفة</div>
+          <div class="mp-code" id="mp-room-code" dir="ltr">—</div>
+          <button class="mp-copy-btn" id="mp-copy-btn">📋 نسخ الكود</button>
+        </div>
+
+        <div class="mp-slots" id="mp-slots"></div>
+
+        <button class="action-btn gold" id="mp-start-btn" disabled
+                style="max-width:100%;margin-top:auto;">...</button>
+
+        <button class="action-btn soft" data-mp-leave
+                style="max-width:100%;margin-top:8px;">
+          مغادرة الغرفة
+        </button>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         MULTIPLAYER — RESULT
+         ============================================================ -->
+    <div class="screen" id="s-multiplayer-result">
+      <div class="center-screen">
+        <div class="mp-result-title" id="mp-result-title">🏆</div>
+        <div class="mp-result-sub" id="mp-result-sub">MATCH FINISHED</div>
+        <div class="mp-result-stats" id="mp-result-stats"></div>
+        <div class="over-actions" style="width:100%;max-width:300px;margin-top:18px;">
+          <button class="action-btn gold" id="mp-play-again-btn">🔁 إعادة المباراة</button>
+          <button class="action-btn soft" data-mp-leave>🏠 العودة للقائمة</button>
         </div>
       </div>
     </div>
@@ -531,7 +621,7 @@
     </div>
 
     <!-- ============================================================
-         EVENTS SCREEN
+         EVENTS
          ============================================================ -->
     <div class="screen" id="s-events">
       <div class="sub">
@@ -548,7 +638,7 @@
     </div>
 
     <!-- ============================================================
-         SHOP SCREEN
+         SHOP
          ============================================================ -->
     <div class="screen" id="s-shop">
       <div class="sub">
@@ -569,7 +659,7 @@
     </div>
 
     <!-- ============================================================
-         COSMETICS SCREEN
+         COSMETICS
          ============================================================ -->
     <div class="screen" id="s-cosmetics">
       <div class="sub">
@@ -598,7 +688,7 @@
     </div>
 
     <!-- ============================================================
-         POWERUPS SCREEN
+         POWERUPS
          ============================================================ -->
     <div class="screen" id="s-powerups">
       <div class="sub">
@@ -620,7 +710,7 @@
     </div>
 
     <!-- ============================================================
-         QUESTS SCREEN
+         QUESTS
          ============================================================ -->
     <div class="screen" id="s-quests">
       <div class="sub">
@@ -642,7 +732,7 @@
     </div>
 
     <!-- ============================================================
-         SEASON SCREEN
+         SEASON
          ============================================================ -->
     <div class="screen" id="s-season">
       <div class="sub">
@@ -676,7 +766,7 @@
     </div>
 
     <!-- ============================================================
-         BATTLE PASS SCREEN
+         BATTLE PASS
          ============================================================ -->
     <div class="screen" id="s-battlepass">
       <div class="sub">
@@ -703,7 +793,7 @@
     </div>
 
     <!-- ============================================================
-         DAILY LOGIN SCREEN
+         DAILY LOGIN
          ============================================================ -->
     <div class="screen" id="s-daily">
       <div class="sub">
@@ -727,7 +817,7 @@
     </div>
 
     <!-- ============================================================
-         ACHIEVEMENTS SCREEN
+         ACHIEVEMENTS
          ============================================================ -->
     <div class="screen" id="s-achieve">
       <div class="sub">
@@ -744,7 +834,7 @@
     </div>
 
     <!-- ============================================================
-         STATS SCREEN
+         STATS
          ============================================================ -->
     <div class="screen" id="s-stats">
       <div class="sub">
@@ -761,7 +851,7 @@
     </div>
 
     <!-- ============================================================
-         SETTINGS SCREEN
+         SETTINGS
          ============================================================ -->
     <div class="screen" id="s-settings">
       <div class="sub">
@@ -820,7 +910,7 @@
     </div>
 
     <!-- ============================================================
-         CHANGE NAME SCREEN
+         CHANGE NAME
          ============================================================ -->
     <div class="screen" id="s-change-name">
       <div class="center-screen">
@@ -838,7 +928,7 @@
     </div>
 
     <!-- ============================================================
-         PAUSE SCREEN
+         PAUSE
          ============================================================ -->
     <div class="screen" id="s-pause">
       <div class="center-screen">
@@ -850,7 +940,7 @@
     </div>
 
     <!-- ============================================================
-         GAME OVER SCREEN
+         GAME OVER
          ============================================================ -->
     <div class="screen" id="s-over">
       <div class="center-screen">

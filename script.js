@@ -23,6 +23,847 @@ const ADMIN_CONFIG = {
 };
 
 /* ============================================================
+   ============ نظام الألقاب المتقدم (TITLES v2) ============
+   ============================================================ */
+const TITLES_V2 = [
+  { id:'rookie',     name:'مبتدئ',       en:'ROOKIE',       icon:'🌱', color:'#8B8278',
+    desc:'العب أول جولة', cond: s => (s.stats.totalPlays||0) >= 1 },
+  { id:'explorer',   name:'مستكشف',      en:'EXPLORER',     icon:'🧭', color:'#4A88C8',
+    desc:'العب 25 جولة', cond: s => (s.stats.totalPlays||0) >= 25 },
+  { id:'veteran',    name:'محارب قديم',  en:'VETERAN',      icon:'⚔️', color:'#9A6AC8',
+    desc:'العب 100 جولة', cond: s => (s.stats.totalPlays||0) >= 100 },
+  { id:'master',     name:'خبير',        en:'MASTER',       icon:'🎖️', color:'#E8B34E',
+    desc:'العب 500 جولة', cond: s => (s.stats.totalPlays||0) >= 500 },
+  { id:'skyWalker',  name:'سالك السماء', en:'SKY WALKER',   icon:'☁️', color:'#88C8E8',
+    desc:'WALK: 2000م', cond: s => (s.bestMeters.WALK||0) >= 2000 },
+  { id:'gravityGod', name:'إله الجاذبية',en:'GRAVITY GOD',  icon:'⇅',  color:'#4A7FA0',
+    desc:'FLIP: 3000م', cond: s => (s.bestMeters.FLIP||0) >= 3000 },
+  { id:'stormRunner',name:'عدّاء العاصفة',en:'STORM RUNNER',icon:'⛈️', color:'#5A5A80',
+    desc:'FLAP: 2000م', cond: s => (s.bestMeters.FLAP||0) >= 2000 },
+  { id:'driftKing',  name:'ملك الانسياق',en:'DRIFT KING',   icon:'✦',  color:'#C98A2E',
+    desc:'DRIFT: 2000م', cond: s => (s.bestMeters.DRIFT||0) >= 2000 },
+  { id:'comboHunter',name:'قنّاص السلاسل',en:'COMBO HUNTER', icon:'🔥', color:'#FF6020',
+    desc:'سلسلة x50', cond: s => (s.stats.bestCombo||0) >= 50 },
+  { id:'comboGod',   name:'إله السلاسل', en:'COMBO GOD',    icon:'🌟', color:'#FFD060',
+    desc:'سلسلة x150', cond: s => (s.stats.bestCombo||0) >= 150 },
+  { id:'marathoner', name:'الماراثوني',  en:'MARATHONER',   icon:'🏃', color:'#6B9B6B',
+    desc:'50,000م إجمالاً', cond: s => (s.stats.totalMeters||0) >= 50000 },
+  { id:'voidSurvivor',name:'ناجي الفراغ',en:'VOID SURVIVOR',icon:'👑', color:'#C080FF',
+    desc:'500,000م إجمالاً', cond: s => (s.stats.totalMeters||0) >= 500000 },
+  { id:'shifter',    name:'المتحوّل',    en:'SHIFTER',      icon:'◆',  color:'#A06AD8',
+    desc:'50 SHIFT Runs', cond: s => (s.stats.shiftRuns||0) >= 50 },
+  { id:'shiftMaster',name:'سيّد التحولات',en:'SHIFT MASTER', icon:'🌀', color:'#6A28A0',
+    desc:'200 SHIFT Runs', cond: s => (s.stats.shiftRuns||0) >= 200 },
+  { id:'collector',  name:'الجامع',      en:'COLLECTOR',    icon:'💎', color:'#E8B34E',
+    desc:'امتلك 10 أزياء', cond: s => (s.ownedSkins||[]).length >= 10 },
+  { id:'hoarder',    name:'الكنّاز',     en:'HOARDER',      icon:'👑', color:'#E85838',
+    desc:'امتلك 20 زي', cond: s => (s.ownedSkins||[]).length >= 20 },
+  { id:'mythic',     name:'الأسطورة',    en:'MYTHIC',       icon:'✨', color:'#FFD060',
+    desc:'10,000 نقطة موسم', cond: s => (s.season.points||0) >= 10000 },
+  { id:'god',        name:'الإله',       en:'GOD',          icon:'⚡', color:'#FF4040',
+    desc:'100,000 نقطة موسم', cond: s => (s.season.points||0) >= 100000 }
+];
+
+/* ============================================================
+   ============ نظام المخزون (INVENTORY) ====================
+   ============================================================ */
+function buildInventory(){
+  const grid = document.getElementById('inv-grid');
+  const header = document.getElementById('inv-header');
+  if(!grid) return;
+
+  /* ═══ الإحصائيات ═══ */
+  const totalSkins = getAllSkins().length;
+  const ownedSkins = Save.data.ownedSkins.length;
+  let totalCos = 0, ownedCos = 0;
+  const cats = ['spark','eyes','companion','footstep','trail','jump','death','aura','crown','cape'];
+  for(const cat of cats){
+    totalCos += getAllCosmetics(cat).length;
+    ownedCos += (Save.data.cosmetics.owned[cat] || []).length;
+  }
+
+  if(header){
+    header.innerHTML = `
+      <div class="inv-stat">
+        <div class="k">SKINS</div>
+        <div class="v">${ownedSkins}/${totalSkins}</div>
+      </div>
+      <div class="inv-stat">
+        <div class="k">EFFECTS</div>
+        <div class="v">${ownedCos}/${totalCos}</div>
+      </div>
+      <div class="inv-stat">
+        <div class="k">COINS</div>
+        <div class="v">${Save.data.coins}</div>
+      </div>
+    `;
+  }
+
+  /* ═══ عرض الأزياء المملوكة ═══ */
+  grid.innerHTML = '';
+
+  const allSkins = getAllSkins();
+  allSkins.filter(s => Save.data.ownedSkins.includes(s.id)).forEach(skin => {
+    const el = document.createElement('div');
+    el.className = 'inv-item';
+    el.style.setProperty('--rar', `var(--r-${skin.rarity || 'common'})`);
+
+    const img = resolveImageSrc(skin);
+    const thumb = img
+      ? `<img src="${img}" alt="">`
+      : `<div style="width:100%;height:100%;background:${skin.body || '#E07A3F'};display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:800;">${(skin.ar||'?').charAt(0)}</div>`;
+
+    el.innerHTML = `
+      <div class="inv-thumb">${thumb}</div>
+      <div class="inv-name">${skin.ar}</div>
+      <div class="inv-cat">SKIN · ${RARITY_LABELS[skin.rarity || 'common']}</div>
+    `;
+    grid.appendChild(el);
+  });
+
+  /* ═══ عرض التأثيرات المملوكة ═══ */
+  for(const cat of cats){
+    const owned = Save.data.cosmetics.owned[cat] || [];
+    const all = getAllCosmetics(cat);
+    for(const item of all){
+      if(!owned.includes(item.id)) continue;
+      const el = document.createElement('div');
+      el.className = 'inv-item';
+
+      const img = resolveImageSrc(item);
+      const thumb = img
+        ? `<img src="${img}" alt="">`
+        : `<span style="font-size:24px;">✨</span>`;
+
+      el.innerHTML = `
+        <div class="inv-thumb">${thumb}</div>
+        <div class="inv-name">${item.name}</div>
+        <div class="inv-cat">${CATEGORY_LABELS[cat] || cat}</div>
+      `;
+      grid.appendChild(el);
+    }
+  }
+
+  if(grid.children.length === 0){
+    grid.innerHTML = '<div style="grid-column: span 2; text-align:center;padding:40px;color:var(--ink-mute);font-size:13px;">لا يوجد عناصر بعد — ابدأ اللعب والشراء!</div>';
+  }
+}
+
+/* ============================================================
+   ============ نظام المهام v2 (مع المطالبة) ================
+   ============================================================ */
+function buildMissionsV2(tier){
+  const list = document.getElementById('quest-list');
+  if(!list) return;
+  list.innerHTML = '';
+
+  const active = Save.data.missions[tier] || [];
+  if(active.length === 0){
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-mute);font-size:13px;">لا توجد مهام حالياً</div>';
+    return;
+  }
+
+  active.forEach(id => {
+    const data = getMissionData(tier, id);
+    if(!data) return;
+    const { tmpl, prog, done } = data;
+
+    const claimKey = `claimed_${tier}_${id}`;
+    const isClaimed = Save.data.missions[claimKey] === true;
+
+    const pct = Math.min(100, (prog / tmpl.target) * 100);
+
+    const el = document.createElement('div');
+    el.className = 'mission-card' + (done ? ' done' : '') + (isClaimed ? ' claimed' : '');
+
+    let actionHtml = '';
+    if(isClaimed){
+      actionHtml = '<button class="mission-claim claimed">✓ مُستلمة</button>';
+    } else if(done){
+      actionHtml = '<button class="mission-claim">استلام</button>';
+    } else {
+      actionHtml = `<span style="font-family:'Space Grotesk';font-size:11px;color:var(--ink-mute);font-weight:700;">${Math.min(prog, tmpl.target)}/${tmpl.target}</span>`;
+    }
+
+    el.innerHTML = `
+      <div class="mission-icon">${tmpl.icon}</div>
+      <div class="mission-body">
+        <div class="mission-title">${tmpl.title}</div>
+        <div class="mission-desc">${isClaimed ? 'تم الاستلام' : (done ? 'جاهزة للاستلام!' : 'قيد التقدم')}</div>
+        <div class="mission-prog"><div class="mission-prog-fill" style="width:${pct}%"></div></div>
+      </div>
+      <div class="mission-side">
+        <div class="mission-reward">◆ ${tmpl.reward}</div>
+        ${actionHtml}
+      </div>
+    `;
+
+    const btn = el.querySelector('.mission-claim:not(.claimed)');
+    if(btn && done && !isClaimed){
+      btn.addEventListener('click', () => {
+        if(Save.data.missions[claimKey]) return;
+        Save.data.missions[claimKey] = true;
+        Save.data.coins += tmpl.reward;
+        Save.data.stats.totalCoins += tmpl.reward;
+        Save.save();
+        updateCoinsUI();
+        Sfx.reward(); haptic(20);
+        buildMissionsV2(tier);
+      });
+    }
+
+    list.appendChild(el);
+  });
+}
+
+/* ============================================================
+   ============ المهام - التحقق من إعادة التعيين ============
+   ============================================================ */
+function ensureMissionsV2(){
+  const m = Save.data.missions;
+  const t = today();
+  const w = weekStart();
+  const mo = monthStart();
+
+  if(!m.claimedDaily) m.claimedDaily = {};
+  if(!m.claimedWeekly) m.claimedWeekly = {};
+  if(!m.claimedMonthly) m.claimedMonthly = {};
+
+  if(m.dailyReset !== t){
+    m.daily = MISSION_TEMPLATES.daily.map(x => x.id);
+    m.dailyReset = t;
+    m.progressDaily = { plays:0, meters:0, coins:0, orbs:0 };
+    m.claimedDaily = {};
+  }
+  if(m.weeklyReset !== w){
+    m.weekly = MISSION_TEMPLATES.weekly.map(x => x.id);
+    m.weeklyReset = w;
+    m.progressWeekly = { plays:0, meters:0, coins:0, orbs:0 };
+    m.claimedWeekly = {};
+  }
+  if(m.monthlyReset !== mo){
+    m.monthly = MISSION_TEMPLATES.monthly.map(x => x.id);
+    m.monthlyReset = mo;
+    m.progressMonthly = { plays:0, meters:0, coins:0, orbs:0 };
+    m.claimedMonthly = {};
+  }
+
+  /* تحقق إذا كانت كل المهام اليومية مكتملة وتم استلامها */
+  Save.save();
+}
+
+/* ============================================================
+   ============ الإنجازات v2 (مع تصنيفات) ===================
+   ============================================================ */
+const ACHIEVEMENT_CATEGORIES = {
+  progression: { name:'التقدم',     icon:'📈' },
+  skill:       { name:'المهارة',    icon:'🎯' },
+  mode:        { name:'الأنماط',    icon:'🎮' },
+  shift:       { name:'التحولات',   icon:'◆'  },
+  collection:  { name:'المجموعة',   icon:'💎' },
+  secret:      { name:'سرية',       icon:'❓' }
+};
+
+function buildAchievementsV2(){
+  const container = document.getElementById('ach-list');
+  if(!container) return;
+  container.innerHTML = '';
+
+  /* تجميع الإنجازات حسب التصنيف */
+  const byCat = {};
+  ACHIEVEMENTS.forEach(a => {
+    const cat = a.cat || 'progression';
+    if(!byCat[cat]) byCat[cat] = [];
+    byCat[cat].push(a);
+  });
+
+  /* عرض كل تصنيف */
+  Object.entries(byCat).forEach(([cat, list]) => {
+    const catInfo = ACHIEVEMENT_CATEGORIES[cat] || { name: cat, icon: '🏆' };
+
+    const section = document.createElement('div');
+    section.className = 'ach-category';
+    section.innerHTML = `
+      <div class="ach-category-title">
+        <span>${catInfo.icon}</span>
+        <span>${catInfo.name}</span>
+      </div>
+    `;
+
+    const grid = document.createElement('div');
+    grid.className = 'ach-grid';
+
+    list.forEach(a => {
+      const un = !!Save.data.achievements[a.id];
+      let val = 0;
+      try { val = Math.min(a.value(Save.data), a.target); } catch(e) { val = 0; }
+      const pct = a.target > 0 ? (val / a.target) * 100 : 0;
+
+      const card = document.createElement('div');
+      card.className = 'ach-card' + (un ? ' unlocked' : '');
+      card.innerHTML = `
+        <div class="ach-icon">${un ? a.icon : '❔'}</div>
+        <div class="ach-name">${a.name}</div>
+        <div class="ach-desc">${a.desc}</div>
+        <div class="ach-prog"><div class="ach-prog-fill" style="width:${pct}%"></div></div>
+      `;
+      grid.appendChild(card);
+    });
+
+    section.appendChild(grid);
+    container.appendChild(section);
+  });
+}
+
+/* ============================================================
+   ============ الإحصائيات v2 ===============================
+   ============================================================ */
+function buildStatsV2(){
+  const container = document.getElementById('stats-list');
+  if(!container) return;
+
+  const s = Save.data.stats;
+  const totalM = getGlobalMeters();
+  const glvl = getGlobalLevel() + 1;
+
+  container.innerHTML = `
+    <div class="stats-hero">
+      <div class="sh-title">TOTAL DISTANCE</div>
+      <div class="sh-big">
+        ${Math.floor(totalM).toLocaleString()}<span class="unit">م</span>
+      </div>
+      <div class="sh-sub">عبر ${s.totalPlays || 0} جولة</div>
+    </div>
+
+    <div class="section-head">
+      <div class="section-title">أرقام قياسية</div>
+      <div class="section-sub">RECORDS</div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="sb-icon">🏆</div>
+        <div class="sb-val">${Math.floor(s.bestMeters || 0)}</div>
+        <div class="sb-label">أفضل مسافة</div>
+      </div>
+      <div class="stat-box">
+        <div class="sb-icon">🔥</div>
+        <div class="sb-val">x${s.bestCombo || 0}</div>
+        <div class="sb-label">أفضل سلسلة</div>
+      </div>
+      <div class="stat-box">
+        <div class="sb-icon">🎯</div>
+        <div class="sb-val">${glvl}</div>
+        <div class="sb-label">المستوى العام</div>
+      </div>
+      <div class="stat-box">
+        <div class="sb-icon">🎮</div>
+        <div class="sb-val">${s.totalPlays || 0}</div>
+        <div class="sb-label">إجمالي الجولات</div>
+      </div>
+    </div>
+
+    <div class="section-head" style="margin-top:18px;">
+      <div class="section-title">حسب النمط</div>
+      <div class="section-sub">BY MODE</div>
+    </div>
+    <div class="stats-grid">
+      ${['FLIP','FLAP','DRIFT','WALK','MIXED'].map(m => {
+        const md = MODES.find(x => x.id === m);
+        const best = Save.data.bestMeters[m] || 0;
+        return `<div class="stat-box">
+          <div class="sb-icon">${md ? md.icon : '◆'}</div>
+          <div class="sb-val">${best}</div>
+          <div class="sb-label">${md ? md.ar : m}</div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="section-head" style="margin-top:18px;">
+      <div class="section-title">التقدم</div>
+      <div class="section-sub">PROGRESS</div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="sb-icon">◆</div>
+        <div class="sb-val">${(Save.data.coins || 0).toLocaleString()}</div>
+        <div class="sb-label">مجموع العملات</div>
+      </div>
+      <div class="stat-box">
+        <div class="sb-icon">🏅</div>
+        <div class="sb-val">${(Save.data.season.points || 0).toLocaleString()}</div>
+        <div class="sb-label">نقاط الموسم</div>
+      </div>
+      <div class="stat-box">
+        <div class="sb-icon">◆</div>
+        <div class="sb-val">${s.shiftRuns || 0}</div>
+        <div class="sb-label">SHIFT Runs</div>
+      </div>
+      <div class="stat-box">
+        <div class="sb-icon">🎨</div>
+        <div class="sb-val">${(Save.data.ownedSkins || []).length}</div>
+        <div class="sb-label">الأزياء المملوكة</div>
+      </div>
+    </div>
+  `;
+}
+
+/* ============================================================
+   ============ الإعدادات v2 =================================
+   ============================================================ */
+function buildSettingsV2(){
+  const container = document.getElementById('settings-list');
+  if(!container) return;
+  container.innerHTML = '';
+
+  const sections = [
+    {
+      title: 'الصوت والتحكم',
+      items: [
+        { key:'sound', icon:'🔊', title:'المؤثرات الصوتية', sub:'SOUND EFFECTS', type:'toggle' },
+        { key:'haptics', icon:'📳', title:'الاهتزاز', sub:'HAPTICS', type:'toggle' },
+        { key:'music', icon:'🎵', title:'الموسيقى الخلفية', sub:'BACKGROUND MUSIC', type:'toggle' }
+      ]
+    }
+  ];
+
+  sections.forEach(sec => {
+    const sectionEl = document.createElement('div');
+    sectionEl.className = 'settings-section';
+
+    sec.items.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'settings-row';
+      const on = Save.data.settings[item.key] !== false;
+
+      row.innerHTML = `
+        <div class="sr-icon">${item.icon}</div>
+        <div class="sr-info">
+          <div class="sr-title">${item.title}</div>
+          <div class="sr-sub">${item.sub}</div>
+        </div>
+        <div class="toggle-sw ${on ? 'on' : ''}" data-key="${item.key}"></div>
+      `;
+
+      const toggle = row.querySelector('.toggle-sw');
+      toggle.addEventListener('click', () => {
+        Save.data.settings[item.key] = !Save.data.settings[item.key];
+        Save.save();
+        toggle.classList.toggle('on', Save.data.settings[item.key]);
+        Sfx.tap(); haptic(6);
+      });
+
+      sectionEl.appendChild(row);
+    });
+
+    container.appendChild(sectionEl);
+  });
+}
+
+/* ============================================================
+   ============ الألقاب - عرض واختيار ======================
+   ============================================================ */
+function buildTitles(){
+  const grid = document.getElementById('titles-grid');
+  if(!grid) return;
+  grid.innerHTML = '';
+
+  const equipped = Save.data.titles?.equipped || 'rookie';
+
+  TITLES_V2.forEach(t => {
+    const unlocked = t.cond(Save.data);
+    const isEquipped = equipped === t.id;
+
+    const card = document.createElement('button');
+    card.className = 'title-card' + (isEquipped ? ' equipped' : '') + (!unlocked ? ' locked' : '');
+
+    card.innerHTML = `
+      <div class="tc-icon" style="background: ${unlocked ? `linear-gradient(135deg, ${t.color}40, ${t.color}20)` : ''}; color: ${t.color};">
+        ${t.icon}
+      </div>
+      <div class="tc-name">${t.name}</div>
+      <div class="tc-desc">${t.desc}</div>
+      <div class="tc-status">${isEquipped ? '✓ مُجهّز' : (unlocked ? 'اضغط للتجهيز' : '🔒 مقفل')}</div>
+    `;
+
+    if(unlocked){
+      card.addEventListener('click', () => {
+        if(isEquipped) return;
+        if(!Save.data.titles) Save.data.titles = { equipped: 'rookie', owned: [] };
+        Save.data.titles.equipped = t.id;
+        Save.save();
+        Sfx.reward(); haptic(15);
+        buildTitles();
+      });
+    }
+
+    grid.appendChild(card);
+  });
+}
+
+/* ============================================================
+   ============ الرتب v2 =====================================
+   ============================================================ */
+function buildSeasonV2(){
+  const pts = Save.data.season.points || 0;
+  const rankIdx = getSeasonRankIdx();
+  const rank = SEASON_RANKS[rankIdx];
+  const nextRank = SEASON_RANKS[rankIdx + 1];
+
+  /* Hero */
+  const hero = document.getElementById('season-hero');
+  if(hero){
+    hero.innerHTML = `
+      <div class="rank-current">
+        <div class="rank-current-icon">${rank.icon}</div>
+        <div class="rank-current-info">
+          <div class="rank-current-name">${rank.name}</div>
+          <div class="rank-current-points">${pts.toLocaleString()} نقطة موسم</div>
+        </div>
+      </div>
+      ${nextRank ? `
+        <div class="rank-progress-v2">
+          <div class="rp-labels">
+            <span>${rank.name}</span>
+            <span>${nextRank.name}</span>
+          </div>
+          <div class="rp-bar">
+            <div class="rp-fill" style="width:${clamp((pts - rank.points) / (nextRank.points - rank.points), 0, 1) * 100}%"></div>
+          </div>
+        </div>
+      ` : '<div style="text-align:center;margin-top:14px;font-size:12px;opacity:.8;">🌟 أعلى رتبة!</div>'}
+    `;
+  }
+
+  /* List */
+  const list = document.getElementById('rank-list');
+  if(list){
+    list.innerHTML = '';
+    SEASON_RANKS.forEach((r, i) => {
+      const isCurrent = i === rankIdx;
+      const isUnlocked = i <= rankIdx;
+
+      const el = document.createElement('div');
+      el.className = 'rank-item' + (isCurrent ? ' current' : '') + (!isUnlocked ? ' locked' : '');
+
+      el.innerHTML = `
+        <div class="rank-icon-v2">${r.icon}</div>
+        <div class="rank-info-v2">
+          <div class="rank-name-v2">${r.name}</div>
+          <div class="rank-req-v2">${r.points.toLocaleString()} نقطة</div>
+        </div>
+        <div class="rank-status-v2">${isUnlocked ? '✓' : '🔒'}</div>
+      `;
+      list.appendChild(el);
+    });
+  }
+
+  /* عيّن النصوص القديمة إن وُجدت */
+  const el1 = document.getElementById('season-rank');
+  const el2 = document.getElementById('season-points');
+  const el3 = document.getElementById('season-prog');
+  if(el1) el1.textContent = rank.icon + ' ' + rank.name;
+  if(el2) el2.textContent = pts;
+  if(el3 && nextRank){
+    el3.style.width = clamp((pts - rank.points) / (nextRank.points - rank.points), 0, 1) * 100 + '%';
+  }
+}
+
+/* ============================================================
+   ============ الباتل باس v2 (مع المطالبة) ================
+   ============================================================ */
+let currentBPTrack = 'free';
+
+function buildBattlePassV2(){
+  const tier = getBPTier();
+  const pts = Save.data.season.points || 0;
+  const nextTierPts = (tier + 1) * BP_TIER_POINTS;
+  const currentTierPts = tier * BP_TIER_POINTS;
+  const progInTier = clamp((pts - currentTierPts) / BP_TIER_POINTS, 0, 1);
+
+  /* Hero */
+  const hero = document.getElementById('bp-hero');
+  if(hero){
+    hero.innerHTML = `
+      <div class="bp-hero-top">
+        <div>
+          <div class="bp-hero-title">BATTLE PASS</div>
+          <div class="bp-hero-sub">SEASON 1 · ORIGINS</div>
+        </div>
+        <div class="bp-tier-badge">
+          <span class="k">TIER</span>
+          <span class="v">${tier}</span>
+        </div>
+      </div>
+      <div class="bp-progress-wrap">
+        <div class="bp-progress-labels">
+          <span>المستوى ${tier}</span>
+          <span>${pts.toLocaleString()} / ${nextTierPts.toLocaleString()}</span>
+        </div>
+        <div class="bp-progress-bar">
+          <div class="bp-progress-fill" style="width:${progInTier * 100}%"></div>
+        </div>
+      </div>
+    `;
+  }
+
+  /* Track toggle */
+  const trackToggle = document.getElementById('bp-track-toggle');
+  if(trackToggle){
+    trackToggle.querySelectorAll('button').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.track === currentBPTrack);
+      if(btn.dataset.track === 'premium') btn.classList.add('premium');
+    });
+  }
+
+  /* Tiers list */
+  const list = document.getElementById('bp-tiers');
+  if(!list) return;
+  list.innerHTML = '';
+
+  /* اعرض فقط 3 مستويات قبل الحالي و 7 بعده */
+  const startTier = Math.max(1, tier - 2);
+  const endTier = Math.min(BP_TIERS, tier + 8);
+
+  if(startTier > 1){
+    const sep = document.createElement('div');
+    sep.style.cssText = 'text-align:center;padding:10px;color:var(--ink-mute);font-size:11px;font-weight:700;letter-spacing:2px;';
+    sep.textContent = '··· المستويات السابقة ···';
+    list.appendChild(sep);
+  }
+
+  for(let i = startTier; i <= endTier; i++){
+    const unlocked = i <= tier;
+    const isCurrent = i === tier;
+    const claimedFree = (Save.data.battlePass.claimedFree || []).includes(i);
+    const claimedPrem = (Save.data.battlePass.claimedPremium || []).includes(i);
+
+    const freeItems = getBattlePassItems(i, 'free');
+    const premItems = getBattlePassItems(i, 'premium');
+
+    const el = document.createElement('div');
+    el.className = 'bp-tier-row-v2' + 
+      (unlocked ? ' unlocked' : '') + 
+      (isCurrent ? ' current' : '') +
+      ((currentBPTrack === 'free' && claimedFree) || (currentBPTrack === 'premium' && claimedPrem) ? ' claimed' : '');
+
+    const coinReward = 5 + i * 2;
+
+    /* المكافآت المعروضة حسب المسار المختار */
+    let rewardHtml = '';
+    if(currentBPTrack === 'free'){
+      const canClaim = unlocked && !claimedFree;
+      rewardHtml = `
+        <div class="bp-reward-row free">
+          <div class="bp-reward-icon">◆</div>
+          <div class="bp-reward-info">
+            <div class="bp-reward-name">${coinReward} عملة</div>
+            <div class="bp-reward-meta">FREE REWARD</div>
+          </div>
+          ${claimedFree 
+            ? '<button class="bp-claim-btn done">✓</button>'
+            : unlocked 
+              ? '<button class="bp-claim-btn" data-tier="' + i + '" data-track="free">استلام</button>'
+              : '<button class="bp-claim-btn locked">🔒</button>'
+          }
+        </div>
+      `;
+      /* عناصر مخصصة */
+      freeItems.forEach(({item}) => {
+        rewardHtml += `
+          <div class="bp-reward-row premium">
+            <div class="bp-reward-icon">🎁</div>
+            <div class="bp-reward-info">
+              <div class="bp-reward-name">${item.name}</div>
+              <div class="bp-reward-meta">CUSTOM ITEM</div>
+            </div>
+            ${unlocked 
+              ? '<button class="bp-claim-btn gold" data-tier="' + i + '" data-track="free" data-custom="' + item.id + '">استلام</button>'
+              : '<button class="bp-claim-btn locked">🔒</button>'
+            }
+          </div>
+        `;
+      });
+    } else {
+      /* Premium track */
+      const hasPrem = Save.data.battlePass.premiumOwned;
+      const canClaim = unlocked && hasPrem && !claimedPrem;
+
+      rewardHtml = `
+        <div class="bp-reward-row premium">
+          <div class="bp-reward-icon">👑</div>
+          <div class="bp-reward-info">
+            <div class="bp-reward-name">${coinReward * 3} عملة</div>
+            <div class="bp-reward-meta">PREMIUM REWARD</div>
+          </div>
+          ${claimedPrem 
+            ? '<button class="bp-claim-btn done">✓</button>'
+            : !hasPrem 
+              ? '<button class="bp-claim-btn premium-locked">قفل مميز</button>'
+              : unlocked 
+                ? '<button class="bp-claim-btn gold" data-tier="' + i + '" data-track="premium">استلام</button>'
+                : '<button class="bp-claim-btn locked">🔒</button>'
+          }
+        </div>
+      `;
+
+      premItems.forEach(({item}) => {
+        rewardHtml += `
+          <div class="bp-reward-row premium">
+            <div class="bp-reward-icon">💎</div>
+            <div class="bp-reward-info">
+              <div class="bp-reward-name">${item.name}</div>
+              <div class="bp-reward-meta">PREMIUM ITEM</div>
+            </div>
+            ${hasPrem && unlocked 
+              ? '<button class="bp-claim-btn gold" data-tier="' + i + '" data-track="premium" data-custom="' + item.id + '">استلام</button>'
+              : '<button class="bp-claim-btn locked">🔒</button>'
+            }
+          </div>
+        `;
+      });
+    }
+
+    el.innerHTML = `
+      <div class="bp-tier-side">
+        <div class="bp-tier-num-v2">${i}</div>
+        <div class="bp-tier-label">TIER</div>
+      </div>
+      <div class="bp-rewards-v2">${rewardHtml}</div>
+    `;
+
+    list.appendChild(el);
+  }
+
+  /* Event listeners */
+  list.querySelectorAll('.bp-claim-btn[data-tier]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tierNum = parseInt(btn.dataset.tier);
+      const track = btn.dataset.track;
+      claimBPReward(tierNum, track, btn.dataset.custom);
+    });
+  });
+}
+
+function claimBPReward(tier, track, customItemId){
+  const tierProgress = getBPTier();
+  if(tier > tierProgress){
+    Sfx.play(220, 0.15, 'sine', 0.05, 180);
+    haptic(20);
+    return;
+  }
+
+  const claimedArr = track === 'free' ? 'claimedFree' : 'claimedPremium';
+  if(!Save.data.battlePass[claimedArr]) Save.data.battlePass[claimedArr] = [];
+  if(Save.data.battlePass[claimedArr].includes(tier)) return;
+
+  /* فحص Premium */
+  if(track === 'premium' && !Save.data.battlePass.premiumOwned){
+    Sfx.play(220, 0.15, 'sine', 0.05, 180);
+    haptic(20);
+    return;
+  }
+
+  /* أعط المكافأة */
+  const coinReward = track === 'free' ? (5 + tier * 2) : ((5 + tier * 2) * 3);
+
+  /* إذا كانت المكافأة عنصر مخصص، أعطه */
+  if(customItemId){
+    /* ابحث عن العنصر وأضفه للمخزون */
+    const allCats = ['spark','eyes','companion','footstep','trail','jump','death','aura','crown','cape'];
+    let found = false;
+    for(const cat of allCats){
+      const all = getAllCosmetics(cat);
+      const item = all.find(x => x.id === customItemId);
+      if(item){
+        if(!Save.data.cosmetics.owned[cat]) Save.data.cosmetics.owned[cat] = [];
+        if(!Save.data.cosmetics.owned[cat].includes(customItemId)){
+          Save.data.cosmetics.owned[cat].push(customItemId);
+        }
+        found = true;
+        break;
+      }
+    }
+    /* تحقق في الأزياء */
+    if(!found){
+      const allSkins = getAllSkins();
+      const skin = allSkins.find(x => x.id === customItemId);
+      if(skin && !Save.data.ownedSkins.includes(customItemId)){
+        Save.data.ownedSkins.push(customItemId);
+      }
+    }
+  } else {
+    Save.data.coins += coinReward;
+    Save.data.stats.totalCoins += coinReward;
+  }
+
+  Save.data.battlePass[claimedArr].push(tier);
+  Save.save();
+
+  Sfx.reward(); haptic(20);
+  updateCoinsUI();
+  buildBattlePassV2();
+}
+
+/* ============================================================
+   ============ الدخول اليومي v2 ============================
+   ============================================================ */
+function buildDailyV2(){
+  checkDailyReset();
+  const dl = Save.data.dailyLogin;
+  const curDay = dl.streak % 7;
+  const canClaim = canClaimDaily();
+
+  /* Hero */
+  const hero = document.getElementById('daily-hero');
+  if(hero){
+    hero.innerHTML = `
+      <div class="daily-streak">
+        <div class="daily-flame">🔥</div>
+        <div class="daily-streak-info">
+          <div class="ds-k">CURRENT STREAK</div>
+          <div class="ds-v">${dl.streak}<small> يوم</small></div>
+        </div>
+      </div>
+    `;
+  }
+
+  /* Grid */
+  const grid = document.getElementById('login-grid');
+  if(!grid) return;
+  grid.className = 'daily-grid-v2';
+  grid.innerHTML = '';
+
+  for(let i = 0; i < 7; i++){
+    const rw = LOGIN_REWARDS[i];
+    const claimed = i < curDay || (i === curDay && !canClaim);
+    const isToday = i === curDay && canClaim;
+
+    const el = document.createElement('div');
+    el.className = 'daily-day-v2' + (claimed ? ' claimed' : '') + (isToday ? ' today' : '');
+    el.innerHTML = `
+      <span class="dd-num">${i+1}</span>
+      <span class="dd-ic">${claimed ? '✓' : rw.icon}</span>
+      <span class="dd-val">${rw.label}</span>
+    `;
+    grid.appendChild(el);
+  }
+
+  /* Button */
+  const btn = document.getElementById('claim-daily-btn');
+  if(btn){
+    if(!canClaim){
+      btn.textContent = '✓ تم الاستلام اليوم';
+      btn.style.opacity = '0.5';
+      btn.disabled = true;
+    } else {
+      btn.textContent = '🎁 استلام مكافأة اليوم';
+      btn.style.opacity = '1';
+      btn.disabled = false;
+    }
+  }
+}
+
+/* ============================================================
    ==================== Utilities ============================
    ============================================================ */
 const rand=(a,b)=>a+Math.random()*(b-a);
@@ -715,7 +1556,9 @@ const DEFAULT_SAVE_DATA = {
       { id:'src_chest',  type:'chest',       name:'الصناديق',         start:'2024-01-01', end:'2099-12-31', active:true },
       { id:'src_wheel',  type:'lucky_wheel', name:'عجلة الحظ',        start:'2024-01-01', end:'2099-12-31', active:true }
     ]
-  }
+  },
+  titles: { equipped: 'rookie', owned: ['rookie'] },
+inventory: { seen: [] },
 };
 
 /* ============================================================
@@ -12240,6 +13083,15 @@ function buildSettings(){
    ==================== Home build ===========================
    ============================================================ */
 function buildHome(){
+  /* Show equipped title in hero */
+const heroModeEl = document.getElementById('hero-mode-name');
+if(heroModeEl){
+  const t = TITLES_V2.find(x => x.id === (Save.data.titles?.equipped || 'rookie'));
+  if(t){
+    const modeName = heroModeEl.textContent.split(' · ')[0];
+    heroModeEl.textContent = modeName + ' · ' + t.icon + ' ' + t.name;
+  }
+}
   const selectedMode = Save.data.mode || 'FLIP';
   const grid = document.getElementById('mode-grid');
   if(!grid) return;
@@ -15752,6 +16604,825 @@ function buildBP(){
 }
 
 /* ============================================================
+   ============================================================
+   ================ MULTIPLAYER SYSTEM v1 ====================
+   ============================================================
+   ============================================================ */
+
+const MP_CONFIG = {
+  collection: 'mp_rooms',
+  codeLength: 6,
+  codeChars: 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789',
+  syncRateMs: 180,
+  maxPlayers: 2
+};
+
+const MP = {
+  active: false,
+  roomId: null,
+  roomCode: null,
+  isHost: false,
+  roomData: null,
+  otherPlayers: new Map(),
+  roomUnsub: null,
+  playersUnsub: null,
+  syncTimer: null,
+  lastLeaderboardUpdate: 0,
+  resultShown: false,
+  starting: false
+};
+
+/* ═══════════════ دوال مساعدة ═══════════════ */
+function mpGenerateRoomCode(){
+  let code = '';
+  for(let i = 0; i < MP_CONFIG.codeLength; i++){
+    code += MP_CONFIG.codeChars.charAt(
+      Math.floor(Math.random() * MP_CONFIG.codeChars.length)
+    );
+  }
+  return code;
+}
+
+function mpEscape(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  }[c]));
+}
+
+async function mpFindUnusedCode(){
+  for(let attempt = 0; attempt < 6; attempt++){
+    const code = mpGenerateRoomCode();
+    try {
+      const snap = await Cloud.db.collection(MP_CONFIG.collection)
+        .where('code', '==', code)
+        .where('status', 'in', ['waiting', 'playing'])
+        .limit(1).get();
+      if(snap.empty) return code;
+    } catch(e){ /* ignore */ }
+  }
+  return mpGenerateRoomCode();
+}
+
+/* ═══════════════ إنشاء غرفة ═══════════════ */
+async function mpCreateRoom(mode){
+  if(!Cloud.user){
+    alert('يجب تسجيل الدخول أولاً');
+    return;
+  }
+  if(MP.active) await mpLeaveRoom();
+
+  const code = await mpFindUnusedCode();
+  const uid = Cloud.user.uid;
+  const name = (Cloud.profile && Cloud.profile.username) || 'لاعب';
+  const skinId = Save.data.currentSkin;
+  const roomMode = mode || Save.data.mode || 'FLIP';
+
+  try {
+    const col = Cloud.db.collection(MP_CONFIG.collection);
+    const ref = col.doc();
+    const roomId = ref.id;
+
+    await ref.set({
+      code,
+      hostUid: uid,
+      hostName: name,
+      hostSkin: skinId,
+      guestUid: null,
+      guestName: null,
+      guestSkin: null,
+      status: 'waiting',
+      mode: roomMode,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      startedAt: null,
+      finishedAt: null,
+      winnerUid: null,
+      hostScore: 0,
+      guestScore: 0
+    });
+
+    await ref.collection('players').doc(uid).set({
+      uid, name, skin: skinId, isHost: true,
+      meters: 0, coins: 0, alive: true,
+      xRatio: 0.26, yRatio: 0.5, rot: 0,
+      mode: roomMode,
+      joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    MP.active = true;
+    MP.roomId = roomId;
+    MP.roomCode = code;
+    MP.isHost = true;
+    MP.resultShown = false;
+
+    mpAttachListeners();
+    showScreen('s-multiplayer-waiting');
+    mpBuildWaitingRoom();
+    Sfx.reward(); haptic(20);
+  } catch(e){
+    console.error('[MP] Create failed:', e);
+    alert('تعذر إنشاء الغرفة: ' + (e.message || 'خطأ'));
+  }
+}
+
+/* ═══════════════ الانضمام لغرفة ═══════════════ */
+async function mpJoinRoom(code){
+  if(!Cloud.user){
+    alert('يجب تسجيل الدخول أولاً');
+    return;
+  }
+  code = String(code || '').trim().toUpperCase();
+  if(code.length !== MP_CONFIG.codeLength){
+    alert('كود غير صحيح');
+    return;
+  }
+  if(MP.active) await mpLeaveRoom();
+
+  try {
+    const snap = await Cloud.db.collection(MP_CONFIG.collection)
+      .where('code', '==', code)
+      .where('status', '==', 'waiting')
+      .limit(1).get();
+
+    if(snap.empty){
+      alert('لا توجد غرفة بهذا الكود أو أن السباق بدأ');
+      return;
+    }
+
+    const roomDoc = snap.docs[0];
+    const roomId = roomDoc.id;
+    const data = roomDoc.data();
+    const uid = Cloud.user.uid;
+
+    if(data.hostUid === uid){
+      alert('أنت صاحب هذه الغرفة');
+      return;
+    }
+    if(data.guestUid && data.guestUid !== uid){
+      alert('الغرفة ممتلئة');
+      return;
+    }
+
+    const name = (Cloud.profile && Cloud.profile.username) || 'لاعب';
+    const skinId = Save.data.currentSkin;
+
+    await Cloud.db.collection(MP_CONFIG.collection).doc(roomId).update({
+      guestUid: uid,
+      guestName: name,
+      guestSkin: skinId
+    });
+
+    await Cloud.db.collection(MP_CONFIG.collection).doc(roomId)
+      .collection('players').doc(uid).set({
+        uid, name, skin: skinId, isHost: false,
+        meters: 0, coins: 0, alive: true,
+        xRatio: 0.26, yRatio: 0.5, rot: 0,
+        mode: data.mode || 'FLIP',
+        joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+    MP.active = true;
+    MP.roomId = roomId;
+    MP.roomCode = code;
+    MP.isHost = false;
+    MP.resultShown = false;
+
+    mpAttachListeners();
+    showScreen('s-multiplayer-waiting');
+    mpBuildWaitingRoom();
+    Sfx.reward(); haptic(20);
+  } catch(e){
+    console.error('[MP] Join failed:', e);
+    alert('تعذر الانضمام: ' + (e.message || 'خطأ'));
+  }
+}
+
+/* ═══════════════ مغادرة الغرفة ═══════════════ */
+async function mpLeaveRoom(){
+  if(!MP.active) return;
+  const roomId = MP.roomId;
+  const uid = Cloud.user ? Cloud.user.uid : null;
+  const wasHost = MP.isHost;
+
+  mpDetachListeners();
+  mpStopSync();
+
+  MP.active = false;
+  MP.roomId = null;
+  MP.roomCode = null;
+  MP.isHost = false;
+  MP.roomData = null;
+  MP.otherPlayers.clear();
+  MP.resultShown = false;
+  MP.starting = false;
+
+  if(roomId && uid && Cloud.db){
+    try {
+      const roomRef = Cloud.db.collection(MP_CONFIG.collection).doc(roomId);
+      const roomSnap = await roomRef.get();
+      if(!roomSnap.exists) return;
+      const data = roomSnap.data();
+
+      if(wasHost || data.hostUid === uid){
+        // المضيف يغادر → حذف الغرفة كاملة
+        try {
+          const playersSnap = await roomRef.collection('players').get();
+          const batch = Cloud.db.batch();
+          playersSnap.forEach(d => batch.delete(d.ref));
+          batch.delete(roomRef);
+          await batch.commit();
+        } catch(e){
+          try { await roomRef.delete(); } catch(_){}
+        }
+      } else {
+        // الضيف يغادر
+        try {
+          await roomRef.update({
+            guestUid: null,
+            guestName: null,
+            guestSkin: null,
+            status: 'waiting'
+          });
+          await roomRef.collection('players').doc(uid).delete();
+        } catch(e){ /* ignore */ }
+      }
+    } catch(e){
+      console.warn('[MP] cleanup failed:', e);
+    }
+  }
+}
+
+/* ═══════════════ بدء السباق (المضيف) ═══════════════ */
+async function mpStartRace(){
+  if(!MP.active || !MP.isHost) return;
+  if(!MP.roomData || !MP.roomData.guestUid) return;
+  try {
+    await Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId).update({
+      status: 'playing',
+      startedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    Sfx.reward(); haptic(20);
+  } catch(e){
+    console.error('[MP] Start failed:', e);
+    alert('تعذر بدء السباق');
+  }
+}
+
+/* ═══════════════ مستمعو Firestore ═══════════════ */
+function mpAttachListeners(){
+  mpDetachListeners();
+  if(!MP.roomId || !Cloud.db) return;
+
+  const roomRef = Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId);
+
+  MP.roomUnsub = roomRef.onSnapshot(snap => {
+    if(!snap.exists){
+      if(MP.active){
+        alert('انتهت الغرفة');
+        mpLeaveRoom();
+        showScreen('s-home'); buildHome();
+      }
+      return;
+    }
+    const data = snap.data();
+    const prevStatus = MP.roomData ? MP.roomData.status : null;
+    MP.roomData = data;
+
+    /* بدء تلقائي عند تغيير الحالة إلى playing */
+    if(data.status === 'playing' && prevStatus !== 'playing' &&
+       G.state !== 'PLAYING' && !MP.starting){
+      mpStartMyGame();
+    }
+
+    /* نهاية المباراة */
+    if(data.status === 'finished' && !MP.resultShown){
+      MP.resultShown = true;
+      mpShowResult();
+    }
+
+    if(document.getElementById('s-multiplayer-waiting').classList.contains('active')){
+      mpBuildWaitingRoom();
+    }
+  }, err => console.warn('[MP] room listener:', err));
+
+  MP.playersUnsub = roomRef.collection('players').onSnapshot(snap => {
+    MP.otherPlayers.clear();
+    snap.forEach(d => MP.otherPlayers.set(d.id, d.data()));
+    if(document.getElementById('s-multiplayer-waiting').classList.contains('active')){
+      mpBuildWaitingRoom();
+    }
+  }, err => console.warn('[MP] players listener:', err));
+}
+
+function mpDetachListeners(){
+  if(MP.roomUnsub){ try { MP.roomUnsub(); } catch(_){} MP.roomUnsub = null; }
+  if(MP.playersUnsub){ try { MP.playersUnsub(); } catch(_){} MP.playersUnsub = null; }
+}
+
+/* ═══════════════ بدء اللعبة محلياً ═══════════════ */
+function mpStartMyGame(){
+  if(MP.starting) return;
+  MP.starting = true;
+
+  // ضبط النمط على نمط الغرفة
+  const roomMode = (MP.roomData && MP.roomData.mode) || 'FLIP';
+  Save.data.mode = roomMode;
+
+  startGame();
+  mpStartSync();
+
+  setTimeout(()=>{ MP.starting = false; }, 1500);
+}
+
+/* ═══════════════ مزامنة حالتك ═══════════════ */
+function mpStartSync(){
+  mpStopSync();
+  MP.syncTimer = setInterval(() => {
+    mpPushMyState().catch(()=>{});
+  }, MP_CONFIG.syncRateMs);
+}
+
+function mpStopSync(){
+  if(MP.syncTimer){
+    clearInterval(MP.syncTimer);
+    MP.syncTimer = null;
+  }
+}
+
+async function mpPushMyState(){
+  if(!MP.active || !MP.roomId || !Cloud.user || !Cloud.db) return;
+  if(G.state !== 'PLAYING' && G.state !== 'OVER') return;
+
+  const uid = Cloud.user.uid;
+  try {
+    await Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId)
+      .collection('players').doc(uid).update({
+        meters: getMeters(),
+        coins: G.runCoins,
+        alive: G.state === 'PLAYING',
+        xRatio: clamp(P.x / Math.max(1, W), 0, 1),
+        yRatio: clamp(P.y / Math.max(1, H), 0, 1),
+        rot: P.rot || 0,
+        mode: G.mode,
+        lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+      });
+  } catch(e){ /* silent */ }
+}
+
+/* ═══════════════ إشعار الموت + تحديد الفائز ═══════════════ */
+async function mpNotifyDeath(){
+  if(!MP.active || !MP.roomId || !Cloud.user || !Cloud.db) return;
+
+  const uid = Cloud.user.uid;
+  const myMeters = getMeters();
+  const myCoins = G.runCoins;
+
+  try {
+    const roomRef = Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId);
+
+    await roomRef.collection('players').doc(uid).update({
+      meters: myMeters,
+      coins: myCoins,
+      alive: false,
+      lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    const playersSnap = await roomRef.collection('players').get();
+    let opponentUid = null, opponentMeters = 0, opponentAlive = false;
+
+    playersSnap.forEach(d => {
+      if(d.id !== uid){
+        opponentUid = d.id;
+        const data = d.data();
+        opponentMeters = data.meters || 0;
+        opponentAlive = !!data.alive;
+      }
+    });
+
+    if(!opponentUid) return;
+
+    let winnerUid;
+    if(opponentAlive){
+      // أنا مت أولاً → الخصم يفوز
+      winnerUid = opponentUid;
+    } else {
+      // كلانا ميت → الأبعد يفوز
+      if(myMeters > opponentMeters) winnerUid = uid;
+      else if(opponentMeters > myMeters) winnerUid = opponentUid;
+      else winnerUid = null;
+    }
+
+    const fresh = await roomRef.get();
+    if(fresh.exists && fresh.data().status !== 'finished'){
+      const rd = fresh.data();
+      await roomRef.update({
+        status: 'finished',
+        finishedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        winnerUid,
+        hostScore: rd.hostUid === uid ? myMeters : opponentMeters,
+        guestScore: rd.guestUid === uid ? myMeters : opponentMeters
+      });
+    }
+  } catch(e){
+    console.warn('[MP] death notify:', e);
+  }
+}
+
+/* ═══════════════ بناء غرفة الانتظار ═══════════════ */
+function mpBuildWaitingRoom(){
+  if(!MP.roomData) return;
+
+  const codeEl = document.getElementById('mp-room-code');
+  if(codeEl) codeEl.textContent = MP.roomCode || '—';
+
+  const slots = document.getElementById('mp-slots');
+  if(!slots) return;
+
+  const host = {
+    name: MP.roomData.hostName,
+    skin: MP.roomData.hostSkin,
+    uid: MP.roomData.hostUid
+  };
+  const guest = MP.roomData.guestUid ? {
+    name: MP.roomData.guestName,
+    skin: MP.roomData.guestSkin,
+    uid: MP.roomData.guestUid
+  } : null;
+
+  const myUid = Cloud.user ? Cloud.user.uid : null;
+
+  const renderSlot = (player, label) => {
+    if(!player){
+      return `<div class="mp-slot mp-empty">
+        <div class="mp-slot-avatar">?</div>
+        <div class="mp-slot-name">بانتظار لاعب...</div>
+        <div class="mp-slot-label">${label}</div>
+      </div>`;
+    }
+    const sk = getAllSkins().find(s => s.id === player.skin) || SKINS[0];
+    const gradient = `radial-gradient(circle at 30% 30%,
+      ${mixColor(sk.body, '#FFFFFF', 0.4)},
+      ${sk.body} 55%, ${sk.bodyDark})`;
+    return `<div class="mp-slot">
+      <div class="mp-slot-avatar" style="background:${gradient};"></div>
+      <div class="mp-slot-name">${mpEscape(player.name || 'لاعب')}</div>
+      <div class="mp-slot-label">${label}</div>
+    </div>`;
+  };
+
+  const hostLabel = myUid === host.uid ? 'أنت (المضيف)' : 'المضيف';
+  const guestLabel = !guest ? 'ضيف' : (myUid === guest.uid ? 'أنت' : 'الضيف');
+
+  slots.innerHTML = `
+    ${renderSlot(host, hostLabel)}
+    <div class="mp-vs">VS</div>
+    ${renderSlot(guest, guestLabel)}
+  `;
+
+  const startBtn = document.getElementById('mp-start-btn');
+  if(startBtn){
+    const canStart = MP.isHost && !!MP.roomData.guestUid;
+    startBtn.disabled = !canStart;
+    startBtn.style.opacity = canStart ? '1' : '0.55';
+    if(MP.isHost){
+      startBtn.textContent = MP.roomData.guestUid
+        ? '🏁  ابدأ السباق'
+        : '⏳  بانتظار انضمام اللاعب الثاني...';
+    } else {
+      startBtn.textContent = '⏳  بانتظار أن يبدأ المضيف...';
+    }
+  }
+}
+
+/* ═══════════════ عرض النتيجة ═══════════════ */
+function mpShowResult(){
+  const myUid = Cloud.user ? Cloud.user.uid : null;
+  const winnerUid = MP.roomData ? MP.roomData.winnerUid : null;
+
+  const titleEl = document.getElementById('mp-result-title');
+  const subEl = document.getElementById('mp-result-sub');
+  const statsEl = document.getElementById('mp-result-stats');
+
+  const isDraw = winnerUid === null || winnerUid === undefined;
+  const isWinner = winnerUid === myUid;
+
+  if(titleEl){
+    titleEl.textContent = isDraw ? '🤝' : (isWinner ? '🏆' : '💀');
+  }
+  if(subEl){
+    subEl.textContent = isDraw ? 'DRAW' : (isWinner ? 'YOU WIN' : 'YOU LOSE');
+  }
+  if(statsEl && MP.roomData){
+    const hostName = mpEscape(MP.roomData.hostName || 'المضيف');
+    const guestName = mpEscape(MP.roomData.guestName || 'الضيف');
+    const hostScore = MP.roomData.hostScore || 0;
+    const guestScore = MP.roomData.guestScore || 0;
+    statsEl.innerHTML = `
+      <div class="mp-result-row"><span>${hostName}</span><span>${hostScore}m</span></div>
+      <div class="mp-result-row"><span>${guestName}</span><span>${guestScore}m</span></div>
+    `;
+  }
+
+  mpStopSync();
+  showScreen('s-multiplayer-result');
+  Sfx.reward(); haptic(25);
+}
+
+/* ═══════════════ رسم أشباح اللاعبين الآخرين ═══════════════ */
+function mpDrawGhosts(){
+  if(!MP.active || G.state !== 'PLAYING') return;
+  if(!MP.otherPlayers.size) return;
+
+  const myM = getMeters();
+  const myUid = Cloud.user ? Cloud.user.uid : null;
+
+  for(const [uid, p] of MP.otherPlayers){
+    if(uid === myUid) continue;
+    if(!p) continue;
+
+    const distDiff = (p.meters || 0) - myM;
+    const maxOffset = W * 0.42;
+    const pxOffset = clamp(distDiff * PIXELS_PER_METER * 0.55, -maxOffset, maxOffset);
+    const ghostX = P.baseX + pxOffset;
+    const ghostY = clamp((p.yRatio || 0.5) * H, 40, H - 40);
+
+    const sk = getAllSkins().find(s => s.id === p.skin) || SKINS[0];
+    const alpha = p.alive ? 0.65 : 0.25;
+
+    // اسم اللاعب
+    ctx.save();
+    ctx.globalAlpha = p.alive ? 0.85 : 0.4;
+    ctx.fillStyle = p.alive ? '#4A88C8' : '#8B8278';
+    ctx.font = 'bold 11px "Space Grotesk", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(p.name || 'لاعب', ghostX, ghostY - P.r * 2.6);
+    ctx.restore();
+
+    // سهم إذا كان خارج الشاشة
+    if(Math.abs(pxOffset) >= maxOffset - 1){
+      ctx.save();
+      ctx.globalAlpha = 0.65;
+      ctx.fillStyle = '#4A88C8';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const arrowX = ghostX + (distDiff > 0 ? 18 : -18);
+      ctx.fillText(distDiff > 0 ? '→' : '←', arrowX, ghostY);
+      ctx.restore();
+    }
+
+    // رسم الشخصية
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(ghostX, ghostY);
+    try {
+      renderCharacter(ctx, P.r, sk, {
+        mode: p.mode || 'FLIP',
+        rot: p.rot || 0,
+        alpha: alpha,
+        skipExtras: true
+      });
+    } catch(e){ /* ignore */ }
+    ctx.restore();
+  }
+}
+
+/* ═══════════════ لوحة الترتيب المباشرة ═══════════════ */
+function mpUpdateLeaderboard(){
+  const el = document.getElementById('mp-leaderboard');
+  if(!el) return;
+
+  if(!MP.active || G.state !== 'PLAYING' || MP.otherPlayers.size === 0){
+    el.style.display = 'none';
+    return;
+  }
+
+  el.style.display = 'flex';
+
+  const myUid = Cloud.user ? Cloud.user.uid : null;
+  const entries = [{
+    uid: myUid || 'me',
+    name: (Cloud.profile && Cloud.profile.username) || 'أنت',
+    meters: getMeters(),
+    coins: G.runCoins,
+    alive: G.state === 'PLAYING',
+    isMe: true
+  }];
+
+  for(const [uid, p] of MP.otherPlayers){
+    if(uid === myUid) continue;
+    entries.push({
+      uid,
+      name: p.name || 'لاعب',
+      meters: p.meters || 0,
+      coins: p.coins || 0,
+      alive: !!p.alive,
+      isMe: false
+    });
+  }
+
+  entries.sort((a, b) => b.meters - a.meters);
+
+  el.innerHTML = entries.map((e, i) => `
+    <div class="mp-row${e.isMe ? ' mp-me' : ''}${!e.alive ? ' mp-dead' : ''}">
+      <span class="mp-rank">${i + 1}</span>
+      <span class="mp-name">${mpEscape(e.name)}</span>
+      <span class="mp-meters">${e.meters}m</span>
+      <span class="mp-coins">◆${e.coins}</span>
+    </div>
+  `).join('');
+}
+
+/* ═══════════════ تهيئة الأزرار ═══════════════ */
+function mpInit(){
+  const openBtn = document.getElementById('mp-open-btn');
+  if(openBtn){
+    openBtn.addEventListener('click', () => {
+      if(!Cloud.user){
+        alert('سجّل دخولك أولاً للعب الجماعي');
+        return;
+      }
+      showScreen('s-multiplayer');
+      Sfx.tap(); haptic(6);
+    });
+  }
+
+  const createBtn = document.getElementById('mp-create-btn');
+  if(createBtn){
+    createBtn.addEventListener('click', async () => {
+      createBtn.disabled = true;
+      const orig = createBtn.textContent;
+      createBtn.textContent = '⏳ ...';
+      await mpCreateRoom(Save.data.mode);
+      createBtn.disabled = false;
+      createBtn.textContent = orig;
+    });
+  }
+
+  const codeInput = document.getElementById('mp-code-input');
+  const joinBtn = document.getElementById('mp-join-btn');
+  if(codeInput){
+    codeInput.addEventListener('input', () => {
+      codeInput.value = codeInput.value
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '')
+        .slice(0, MP_CONFIG.codeLength);
+    });
+  }
+  if(joinBtn && codeInput){
+    joinBtn.addEventListener('click', async () => {
+      joinBtn.disabled = true;
+      const orig = joinBtn.textContent;
+      joinBtn.textContent = '⏳ ...';
+      await mpJoinRoom(codeInput.value);
+      joinBtn.disabled = false;
+      joinBtn.textContent = orig;
+    });
+    codeInput.addEventListener('keydown', e => {
+      if(e.code === 'Enter') joinBtn.click();
+    });
+  }
+
+  const startBtn = document.getElementById('mp-start-btn');
+  if(startBtn) startBtn.addEventListener('click', mpStartRace);
+
+  document.querySelectorAll('[data-mp-leave]').forEach(b => {
+    b.addEventListener('click', async () => {
+      if(!confirm('مغادرة الغرفة؟')) return;
+      await mpLeaveRoom();
+      if(G.state === 'PLAYING' || G.state === 'PAUSED'){
+        quitToMenu();
+      } else {
+        showScreen('s-home');
+        buildHome();
+      }
+      Sfx.tap(); haptic(6);
+    });
+  });
+
+  const copyBtn = document.getElementById('mp-copy-btn');
+  if(copyBtn){
+    copyBtn.addEventListener('click', async () => {
+      const code = (document.getElementById('mp-room-code') || {}).textContent || '';
+      try {
+        await navigator.clipboard.writeText(code);
+        copyBtn.textContent = '✓ تم النسخ';
+      } catch(e){
+        copyBtn.textContent = '📋 ' + code;
+      }
+      setTimeout(() => { copyBtn.textContent = '📋 نسخ الكود'; }, 1500);
+    });
+  }
+
+  const againBtn = document.getElementById('mp-play-again-btn');
+  if(againBtn){
+    againBtn.addEventListener('click', async () => {
+      if(!MP.isHost){
+        alert('فقط المضيف يمكنه إعادة المباراة');
+        return;
+      }
+      try {
+        MP.resultShown = false;
+        await Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId).update({
+          status: 'waiting',
+          winnerUid: null,
+          startedAt: null,
+          finishedAt: null,
+          hostScore: 0,
+          guestScore: 0
+        });
+        // إعادة تصفير حالات اللاعبين
+        const playersSnap = await Cloud.db.collection(MP_CONFIG.collection)
+          .doc(MP.roomId).collection('players').get();
+        const batch = Cloud.db.batch();
+        playersSnap.forEach(d => {
+          batch.update(d.ref, {
+            meters: 0, coins: 0, alive: true,
+            xRatio: 0.26, yRatio: 0.5, rot: 0
+          });
+        });
+        await batch.commit();
+
+        showScreen('s-multiplayer-waiting');
+        mpBuildWaitingRoom();
+      } catch(e){
+        alert('فشل: ' + e.message);
+      }
+    });
+  }
+}
+
+/* ═══════════════ ربط مع حلقة اللعب ═══════════════
+   نستخدم التفاف (wrapper) لعدم تعديل الكود الأصلي  */
+
+// ═══ التفاف draw() ═══
+(function patchDraw(){
+  const _orig = window.draw || draw;
+  try {
+    // نستبدل draw بشيء يضيف الأشباح
+    const originalDraw = draw;
+    draw = function(){
+      originalDraw();
+      // أشباح اللاعبين تُرسم فوق اللاعب الأصلي وقبل HUD
+      if(MP.active) {
+        try { mpDrawGhosts(); } catch(e){}
+      }
+    };
+  } catch(e){ console.warn('[MP] patch draw failed:', e); }
+})();
+
+// ═══ التفاف gameOver() ═══
+(function patchGameOver(){
+  const original = gameOver;
+  gameOver = function(){
+    const r = original.apply(this, arguments);
+    // نُعلم اللاعبين بموتي
+    if(MP.active){
+      setTimeout(() => { mpNotifyDeath().catch(()=>{}); }, 200);
+      setTimeout(() => { mpUpdateLeaderboard(); }, 100);
+    }
+    return r;
+  };
+})();
+
+// ═══ التفاف updateGameplay لتحديث لوحة الترتيب ═══
+(function patchUpdateGameplay(){
+  const original = updateGameplay;
+  updateGameplay = function(){
+    const r = original.apply(this, arguments);
+    if(MP.active && G.t % 10 === 0){
+      try { mpUpdateLeaderboard(); } catch(e){}
+    }
+    return r;
+  };
+})();
+
+// ═══ التفاف quitToMenu للخروج من الغرفة ═══
+(function patchQuitToMenu(){
+  const original = quitToMenu;
+  quitToMenu = function(){
+    if(MP.active){
+      // لا نُغادر تلقائياً - نعرض شاشة النتيجة
+      if(MP.roomData && MP.roomData.status === 'playing'){
+        // انتظر النتيجة
+      }
+    }
+    const r = original.apply(this, arguments);
+    return r;
+  };
+})();
+
+/* ═══════════════ تنظيف عند إغلاق الصفحة ═══════════════ */
+window.addEventListener('beforeunload', () => {
+  if(MP.active && MP.isHost && MP.roomId && Cloud.db){
+    // استخدام sendBeacon أو حذف متزامن غير ممكن هنا، لكن Firestore سيحرر الغرفة
+    // يمكن إضافة Cloud Function لتنظيف الغرف الميتة لاحقاً
+  }
+});
+
+/* ============================================================
    ==================== BOOT =================================
    ============================================================ */
 function boot() {
@@ -15797,10 +17468,11 @@ if(gg) gg.classList.remove('show');
 /* تهيئة نظام المصادر */
 PLACEMENT_TYPES = buildPlacementTypes();
 
-  wireGameButtons();
-  wireAdminPanel();
-  applyAdminEffects();
-  updateAdminUI();
+wireGameButtons();
+wireAdminPanel();
+mpInit();                 // ← أضف هذا السطر هنا
+applyAdminEffects();
+updateAdminUI();
 
   let firebaseOk = false;
   try {
