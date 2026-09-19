@@ -664,176 +664,169 @@ function spawnPowerup(cx, cy){
 }
 
 /* ============================================================
-   ==================== Save =================================
+   ==================== DEFAULT SAVE DATA ====================
    ============================================================ */
-const Save = {
-  KEY:'shift_v10',
-  data:{
-    coins:0,
-    bestMeters:{FLIP:0,FLAP:0,DRIFT:0,WALK:0,FLIP_WALK:0,SKY_JUMP:0,MIXED:0},
-    ownedSkins:['cream'],
-    currentSkin:'cream',
-    cosmetics:{
-      owned:{
-        spark:['none'],
-        trail:['default'],
-        jump:['default'],
-        death:['default'],
-        aura:['none'],
-        crown:['none'],
-        cape:['none']
-      },
-      current:{
-        spark:'none',
-        trail:'default',
-        jump:'default',
-        death:'default',
-        aura:'none',
-        crown:'none',
-        cape:'none'
-      }
+const DEFAULT_SAVE_DATA = {
+  coins: 0,
+  bestMeters: { FLIP:0, FLAP:0, DRIFT:0, WALK:0, FLIP_WALK:0, SKY_JUMP:0, MIXED:0 },
+  ownedSkins: ['cream'],
+  currentSkin: 'cream',
+  cosmetics: {
+    owned: {
+      spark:['none'], trail:['default'], jump:['default'], death:['default'],
+      aura:['none'], crown:['none'], cape:['none'],
+      eyes:['default'], companion:['none'], footstep:['none']
     },
-    achievements:{},
-    claimedGlobalLevels:[],
-    mode:'FLIP',
-    runType:'classic',
-    stats:{totalPlays:0,totalMeters:0,totalCoins:0,orbCount:0,bestMeters:0,bestCombo:0,shiftRuns:0},
-    settings:{sound:true,haptics:true},
-    season:{ number: 1, startDate: null, points: 0 },
-    battlePass:{ claimedFree: [], claimedPremium: [] },
-    missions:{
-      daily: [], weekly: [], monthly: [],
-      dailyReset: null, weeklyReset: null, monthlyReset: null,
-      progressDaily: { plays:0, meters:0, coins:0, orbs:0 },
-      progressWeekly: { plays:0, meters:0, coins:0, orbs:0 },
-      progressMonthly: { plays:0, meters:0, coins:0, orbs:0 }
-    },
-    dailyLogin:{ streak: 0, lastClaim: null, claimedToday: false },
-    powerupUpgrades: {},
-    admin:{
-      access: false,
-      unlimitedCoins: false,
-      unlimitedUnlock: false,
-      godMode: false,
-      customSkins: [],
-      customSpark: [],
-      customTrail: [],
-      customJump: [],
-      customDeath: [],
-      customAura: [],
-      customCrown: [],
-      customCape: [],
-      customEyes: [],         // ← أضف هذا
-      customCompanion: [],    // ← أضف هذا
-      customFootstep: [],     // ← أضف هذا
-      lastContentSync: null,
-      sources: [
-        { id:'src_rank_1', type:'season_rank', name:'تصنيف الموسم 1', start:'2024-01-01', end:'2024-03-31', active:true },
-        { id:'src_rank_2', type:'season_rank', name:'تصنيف الموسم 2', start:'2024-04-01', end:'2024-06-30', active:false },
-        { id:'src_bp_1',   type:'battle_pass', name:'باتل باس الموسم 1', start:'2024-01-01', end:'2024-03-31', active:true },
-        { id:'src_bp_2',   type:'battle_pass', name:'باتل باس الموسم 2', start:'2024-04-01', end:'2024-06-30', active:false },
-        { id:'src_login',  type:'daily_login', name:'التسجيل اليومي', start:'2024-01-01', end:'2099-12-31', active:true },
-        { id:'src_chest',  type:'chest',       name:'الصناديق', start:'2024-01-01', end:'2099-12-31', active:true },
-        { id:'src_wheel',  type:'lucky_wheel', name:'عجلة الحظ', start:'2024-01-01', end:'2099-12-31', active:true }
-      ]
+    current: {
+      spark:'none', trail:'default', jump:'default', death:'default',
+      aura:'none', crown:'none', cape:'none',
+      eyes:'default', companion:'none', footstep:'none'
     }
   },
+  achievements: {},
+  claimedGlobalLevels: [],
+  mode: 'FLIP',
+  stats: { totalPlays:0, totalMeters:0, totalCoins:0, orbCount:0, bestMeters:0, bestCombo:0, shiftRuns:0 },
+  settings: { sound:true, haptics:true },
+  season: { number: 1, startDate: null, points: 0 },
+  battlePass: { claimedFree: [], claimedPremium: [] },
+  missions: {
+    daily: [], weekly: [], monthly: [],
+    dailyReset: null, weeklyReset: null, monthlyReset: null,
+    progressDaily:   { plays:0, meters:0, coins:0, orbs:0 },
+    progressWeekly:  { plays:0, meters:0, coins:0, orbs:0 },
+    progressMonthly: { plays:0, meters:0, coins:0, orbs:0 }
+  },
+  dailyLogin: { streak: 0, lastClaim: null, claimedToday: false },
+  powerupUpgrades: {},
+  admin: {
+    access: false,
+    unlimitedCoins: false,
+    unlimitedUnlock: false,
+    godMode: false,
+    customSkins: [], customSpark: [], customTrail: [], customJump: [],
+    customDeath: [], customAura: [], customCrown: [], customCape: [],
+    customEyes: [], customCompanion: [], customFootstep: [],
+    lastContentSync: null,
+    sources: [
+      { id:'src_rank_1', type:'season_rank', name:'تصنيف الموسم 1', start:'2024-01-01', end:'2024-03-31', active:true },
+      { id:'src_bp_1',   type:'battle_pass', name:'باتل باس الموسم 1', start:'2024-01-01', end:'2024-03-31', active:true },
+      { id:'src_login',  type:'daily_login', name:'التسجيل اليومي',  start:'2024-01-01', end:'2099-12-31', active:true },
+      { id:'src_chest',  type:'chest',       name:'الصناديق',         start:'2024-01-01', end:'2099-12-31', active:true },
+      { id:'src_wheel',  type:'lucky_wheel', name:'عجلة الحظ',        start:'2024-01-01', end:'2099-12-31', active:true }
+    ]
+  }
+};
+
+/* ============================================================
+   ==================== Save (Firebase ONLY) =================
+   لا يوجد أي استخدام لـ localStorage — كل شيء في الذاكرة
+   + Firestore (مع Offline Persistence المُفعَّل مسبقاً)
+   ============================================================ */
+const Save = {
+  KEY: 'shift_v10',   // للتوافق مع إصدارات سابقة فقط
+
+  /* الحالة الحالية في الذاكرة — تبدأ بالافتراضيات */
+  data: JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA)),
+
+  /* لا يوجد تحميل محلي — البيانات الافتراضية جاهزة في الذاكرة */
   load(){
-    try{
-      const raw = localStorage.getItem(this.KEY);
-      if(raw){
-        const p = JSON.parse(raw);
-        for(const k in p){
-          if(typeof p[k] === 'object' && !Array.isArray(p[k]) && p[k] !== null){
-            Object.assign(this.data[k], p[k]);
-          } else {
-            this.data[k] = p[k];
-          }
+    // لا شيء — Firebase سيتولّى الأمر بعد تسجيل الدخول
+  },
+
+  /* يستدعى بعد pullSave() — يدمج بيانات السحابة فوق الافتراضيات */
+  applyCloud(cloudData){
+    const base = JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA));
+
+    if (cloudData && typeof cloudData === 'object') {
+      for (const k in cloudData) {
+        const v = cloudData[k];
+        if (v && typeof v === 'object' && !Array.isArray(v) && base[k] && typeof base[k] === 'object') {
+          base[k] = Object.assign({}, base[k], v);
+        } else {
+          base[k] = v;
         }
       }
-    }catch(e){}
+    }
 
-if(!this.data.cosmetics.owned.eyes) this.data.cosmetics.owned.eyes = ['default'];
-if(!this.data.cosmetics.current.eyes) this.data.cosmetics.current.eyes = 'default';
-if(!this.data.cosmetics.owned.companion) this.data.cosmetics.owned.companion = ['none'];
-if(!this.data.cosmetics.current.companion) this.data.cosmetics.current.companion = 'none';
-if(!this.data.cosmetics.owned.footstep) this.data.cosmetics.owned.footstep = ['none'];
-if(!this.data.cosmetics.current.footstep) this.data.cosmetics.current.footstep = 'none';
+    this.data = base;
+    this.runMigrations();
+  },
 
-    if(!this.data.cosmetics.owned.spark) this.data.cosmetics.owned.spark = ['none'];
-    if(!this.data.cosmetics.current.spark) this.data.cosmetics.current.spark = 'none';
+  /* إصلاحات/ترحيلات لبيانات قديمة */
+  runMigrations(){
+    // ضمان مجلدات التجميل
+    if(!this.data.cosmetics) this.data.cosmetics = { owned:{}, current:{} };
+    if(!this.data.cosmetics.owned)   this.data.cosmetics.owned = {};
+    if(!this.data.cosmetics.current) this.data.cosmetics.current = {};
 
-    ['aura','crown','cape'].forEach(cat=>{
-      if(!this.data.cosmetics.owned[cat]) this.data.cosmetics.owned[cat] = ['none'];
-      if(!this.data.cosmetics.current[cat]) this.data.cosmetics.current[cat] = 'none';
-    });
+    const catDefaults = {
+      spark:'none', trail:'default', jump:'default', death:'default',
+      aura:'none', crown:'none', cape:'none',
+      eyes:'default', companion:'none', footstep:'none'
+    };
+    for(const cat in catDefaults){
+      if(!this.data.cosmetics.owned[cat])   this.data.cosmetics.owned[cat]   = [catDefaults[cat]];
+      if(!this.data.cosmetics.current[cat]) this.data.cosmetics.current[cat] =  catDefaults[cat];
+    }
 
-    /* ترحيل الأوضاع القديمة */
+    // ضمان أفضل المسافات
+    if(typeof this.data.bestMeters.MIXED !== 'number') this.data.bestMeters.MIXED = 0;
+
+    // ترحيل الأنماط القديمة
     if(this.data.mode === 'FLIP_WALK' || this.data.mode === 'SKY_JUMP'){
       this.data.mode = 'WALK';
     }
-
-    /* ضمان وجود shiftRuns */
-    if(typeof this.data.stats.shiftRuns !== 'number') this.data.stats.shiftRuns = 0;
-
-    /* ترحيل: ضمان وجود MIXED في bestMeters */
-    if(typeof this.data.bestMeters.MIXED !== 'number') this.data.bestMeters.MIXED = 0;
-
-    /* ترحيل: حذف runType القديم */
     delete this.data.runType;
 
-    /* ✅✅✅ أضف هنا ✅✅✅ */
-    /* ضمان وجود powerupUpgrades */
+    // عدّاد SHIFT
+    if(typeof this.data.stats.shiftRuns !== 'number') this.data.stats.shiftRuns = 0;
+
+    // تطويرات التعزيزات
     if(!this.data.powerupUpgrades || typeof this.data.powerupUpgrades !== 'object'){
       this.data.powerupUpgrades = {};
     }
-    /* تأكد من وجود جميع التعزيزات */
     Object.keys(POWERUP_DEFS).forEach(id => {
       if(typeof this.data.powerupUpgrades[id] !== 'number'){
         this.data.powerupUpgrades[id] = 0;
       }
     });
-    /* ✅✅✅ نهاية الإضافة ✅✅✅ */
 
+    // قسم المشرف
+    if(!this.data.admin){
+      this.data.admin = JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA.admin));
+    }
+    if(!Array.isArray(this.data.admin.sources) || !this.data.admin.sources.length){
+      this.data.admin.sources = JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA.admin.sources));
+    }
+    ['customSkins','customSpark','customTrail','customJump','customDeath',
+     'customAura','customCrown','customCape','customEyes','customCompanion','customFootstep']
+      .forEach(k => { if(!Array.isArray(this.data.admin[k])) this.data.admin[k] = []; });
   },
-  save(){ try{ localStorage.setItem(this.KEY, JSON.stringify(this.data)); }catch(e){} },
-  reset(){ try{ localStorage.removeItem(this.KEY); }catch(e){} location.reload(); }
+
+  /* الحفظ = دفع إلى Firebase فقط (بدون localStorage) */
+  save(){
+    try {
+      if (typeof Cloud !== 'undefined' && Cloud.user && Cloud.db) {
+        Cloud.queueSync();
+      }
+    } catch(e){}
+  },
+
+  /* حذف التقدم = تصفير في الذاكرة + دفع للسحابة */
+  reset(){
+    this.data = JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA));
+    this.runMigrations();
+    try {
+      if (typeof Cloud !== 'undefined' && Cloud.user && Cloud.db) {
+        Cloud.pushSave();
+      }
+    } catch(e){}
+  }
 };
 
 Save.load();
-
-/* ضمان وجود قسم المشرف */
-if(!Save.data.admin){
-  Save.data.admin = {
-    access:false,
-    unlimitedCoins:false,
-    unlimitedUnlock:false,
-    godMode:false,
-    customSkins:[],
-    customSpark:[],
-    customTrail:[],
-    customJump:[],
-    customDeath:[],
-    customAura:[],
-    customCrown:[],
-    customCape:[],
-    customEyes:[],           // ← أضف
-    customCompanion:[],      // ← أضف
-    customFootstep:[],       // ← أضف
-    lastContentSync:null,
-    sources:[]
-  };
-}
-if(!Save.data.admin.sources || !Save.data.admin.sources.length){
-  Save.data.admin.sources = [
-    { id:'src_rank_1', type:'season_rank', name:'تصنيف الموسم 1', start:'2024-01-01', end:'2024-03-31', active:true },
-    { id:'src_bp_1',   type:'battle_pass', name:'باتل باس الموسم 1', start:'2024-01-01', end:'2024-03-31', active:true },
-    { id:'src_login',  type:'daily_login', name:'التسجيل اليومي', start:'2024-01-01', end:'2099-12-31', active:true },
-    { id:'src_chest',  type:'chest',       name:'الصناديق', start:'2024-01-01', end:'2099-12-31', active:true },
-    { id:'src_wheel',  type:'lucky_wheel', name:'عجلة الحظ', start:'2024-01-01', end:'2099-12-31', active:true }
-  ];
-}
-Save.save();
+Save.runMigrations();
 
 /* ═══════════════════════════════════════════════════════
    ═══════════ ADMIN CONTENT SYSTEM v2 — HELPERS ═════════
@@ -14450,18 +14443,24 @@ async function handleSignInResult(result) {
 }
 
 async function mergeAndGoHome() {
+  /* ═══ 1. حمّل الحفظ الشخصي من Firebase ═══ */
   const cloudSave = await Cloud.pullSave();
+
   if (cloudSave) {
-    const merged = mergeSaveData(Save.data, cloudSave);
-    Save.data = merged;
-    Save.save();
+    Save.applyCloud(cloudSave);   // دمج فوق الافتراضيات + ترحيلات
+  } else {
+    /* لاعب جديد — ابدأ بالافتراضيات */
+    Save.data = JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA));
+    Save.runMigrations();
   }
 
-  /* ═══ جلب محتوى المشرف من السحابة ═══ */
+  /* ═══ 2. حمّل محتوى المشرف العام (custom items) ═══ */
   await pullAdminContent();
 
+  /* ═══ 3. ادفع الحالة الحالية لضمان التزامن ═══ */
   await Cloud.pushSave();
 
+  /* ═══ 4. حدّث الواجهة ═══ */
   updateProfileUI();
   buildHome();
   updateCoinsUI();
@@ -14704,13 +14703,6 @@ function setupAuthListener() {
     }
   });
 }
-
-/* Override Save.save to queue cloud sync */
-const _origSave = Save.save.bind(Save);
-Save.save = function() {
-  _origSave();
-  try { Cloud.queueSync(); } catch(e) {}
-};
 
 /* ============================================================
    ==================== POWERUPS UPGRADE UI =================
@@ -15547,12 +15539,18 @@ function wireGameButtons() {
     e.stopPropagation();
     if(G.state === 'PLAYING') pauseGame();
   });
-  safe('reset-btn', () => {
-    if(confirm('حذف التقدم المحلي فقط؟ (بيانات السحابة لن تتأثر)')) {
-      try { localStorage.removeItem(Save.KEY); } catch(e){}
-      location.reload();
-    }
-  });
+safe('reset-btn', async () => {
+  if(!confirm('⚠️ سيتم حذف تقدمك من Firebase نهائياً. هل أنت متأكد؟')) return;
+  if(!confirm('تأكيد أخير: لا يمكن التراجع عن هذه العملية!')) return;
+
+  Save.reset();   // تصفير الذاكرة + دفع للسحابة
+
+  Sfx.tap(); haptic(20);
+  alert('✓ تم حذف التقدم من السحابة');
+
+  /* أعد تحميل الصفحة ليعاد التحميل من Firebase */
+  location.reload();
+});
   safe('global-lvl-btn', () => {
     showScreen('s-stats');
     buildStats();
