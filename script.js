@@ -16672,7 +16672,7 @@ const MP_CONFIG = {
   maxPlayers: 2,
   reconnTimeoutMs: 20000,
   rematchWindowMs: 90000,
-  emojis: ['👋','🔥','😂','😱','💀','👑','🎯','⚡','🧠','💪']
+  emojis: ['👋','🔥','😂']    // 👈 3 فقط لعرض عمودي أنيق
 };
 
 const MP = {
@@ -16867,43 +16867,97 @@ async function mpJoinRoom(code){
   if(code.length !== MP_CONFIG.codeLength){ alert('كود غير صحيح'); return; }
   if(MP.active) await mpLeaveRoom();
 
+  let roomDoc = null;
+  let roomId = null;
+  let data = null;
+
   try {
+    console.log('[MP] Searching room with code:', code);
+
+    /* ✅ استعلام بحقل واحد فقط (لا يحتاج Composite Index) */
     const snap = await Cloud.db.collection(MP_CONFIG.collection)
       .where('code', '==', code)
-      .where('status', '==', 'waiting')
-      .limit(1).get();
+      .limit(10)
+      .get();
 
-    if(snap.empty){ alert('لا توجد غرفة بهذا الكود أو أن السباق بدأ'); return; }
+    console.log('[MP] Found docs:', snap.size);
 
-    const roomDoc = snap.docs[0];
-    const roomId = roomDoc.id;
-    const data = roomDoc.data();
-    const uid = Cloud.user.uid;
+    /* ✅ فلترة محلية للنشطة فقط */
+    const myUid = Cloud.user.uid;
 
-    if(data.hostUid === uid){ alert('أنت صاحب هذه الغرفة'); return; }
-    if(data.guestUid && data.guestUid !== uid){ alert('الغرفة ممتلئة'); return; }
+    for(const doc of snap.docs){
+      const d = doc.data();
+      console.log('[MP] Candidate:', doc.id, '| status:', d.status, '| host:', d.hostUid);
+
+      /* تجاهل الغرف المنتهية أو غرفي أنا */
+      if(d.status !== 'waiting' && d.status !== 'countdown') continue;
+      if(d.hostUid === myUid) continue;
+
+      /* اقبل الغرفة الأولى الصالحة */
+      roomDoc = doc;
+      roomId = doc.id;
+      data = d;
+      break;
+    }
+
+    if(!roomDoc){
+      alert('لا توجد غرفة متاحة بهذا الكود (قد تكون ممتلئة أو بدأ السباق)');
+      return;
+    }
+
+    /* تحقق من الامتلاء */
+    if(data.guestUid && data.guestUid !== myUid){
+      alert('الغرفة ممتلئة');
+      return;
+    }
 
     const name = (Cloud.profile && Cloud.profile.username) || 'لاعب';
     const skinId = Save.data.currentSkin;
 
-    await Cloud.db.collection(MP_CONFIG.collection).doc(roomId).update({
-      guestUid: uid,
-      guestName: name,
-      guestSkin: skinId
-    });
+    console.log('[MP] Joining room:', roomId);
 
-    await Cloud.db.collection(MP_CONFIG.collection).doc(roomId)
-      .collection('players').doc(uid).set({
-        uid, name, skin: skinId, isHost: false,
-        meters: 0, coins: 0, alive: true,
-        xRatio: 0.26, yRatio: 0.5, rot: 0,
-        vx: 0, vy: 0,
-        mode: data.mode || 'FLIP',
-        clientTime: Date.now(),
-        lastEmoji: null, lastEmojiAt: 0,
-        joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+    /* ✅ تحديث الغرفة — قد يفشل إذا كانت القواعد تمنع */
+    try {
+      await Cloud.db.collection(MP_CONFIG.collection).doc(roomId).update({
+        guestUid: myUid,
+        guestName: name,
+        guestSkin: skinId
       });
+    } catch(updateErr){
+      console.error('[MP] Update room failed:', updateErr);
+      alert('فشل تحديث الغرفة: ' + (updateErr.code || updateErr.message));
+      return;
+    }
+
+    console.log('[MP] Room updated with guest');
+
+    /* ✅ إضافة وثيقة اللاعب */
+    try {
+      await Cloud.db.collection(MP_CONFIG.collection).doc(roomId)
+        .collection('players').doc(myUid).set({
+          uid: myUid, name, skin: skinId, isHost: false,
+          meters: 0, coins: 0, alive: true,
+          xRatio: 0.26, yRatio: 0.5, rot: 0,
+          vx: 0, vy: 0,
+          mode: data.mode || 'FLIP',
+          clientTime: Date.now(),
+          lastEmoji: null, lastEmojiAt: 0,
+          joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    } catch(playerErr){
+      console.error('[MP] Create player doc failed:', playerErr);
+      /* حاول تنظيف التحديث السابق */
+      try {
+        await Cloud.db.collection(MP_CONFIG.collection).doc(roomId).update({
+          guestUid: null, guestName: null, guestSkin: null
+        });
+      } catch(_){}
+      alert('فشل إنشاء وثيقة اللاعب: ' + (playerErr.code || playerErr.message));
+      return;
+    }
+
+    console.log('[MP] Player doc created');
 
     MP.active = true;
     MP.roomId = roomId;
@@ -16924,7 +16978,7 @@ async function mpJoinRoom(code){
     Sfx.reward(); haptic(20);
   } catch(e){
     console.error('[MP] Join failed:', e);
-    alert('تعذر الانضمام: ' + (e.message || 'خطأ'));
+    alert('تعذر الانضمام: ' + (e.code || e.message || 'خطأ غير معروف'));
   }
 }
 
