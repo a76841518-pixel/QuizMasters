@@ -12,6 +12,30 @@ const FIREBASE_CONFIG = {
 };
 
 /* ============================================================
+   ============ SEEDED WORLD RNG (نفس العالم للاعبين) ========
+   ============================================================
+   يستخدم نفس البذرة لضمان توليد نفس العقبات في نفس الأماكن */
+let _wSeed = 0;
+let _wCounter = 0;
+
+function setWorldSeed(seed){
+  _wSeed = (seed | 0) >>> 0;
+  _wCounter = 0;
+}
+
+function WR(min = 1, max = 0){
+  _wCounter++;
+  let h = (_wSeed + _wCounter * 0x9E3779B1) >>> 0;
+  h = Math.imul(h ^ (h >>> 15), 0x85EBCA6B) >>> 0;
+  h = Math.imul(h ^ (h >>> 13), 0xC2B2AE35) >>> 0;
+  h = (h ^ (h >>> 16)) >>> 0;
+  const v = h / 4294967296;
+  return min + v * (max - min);
+}
+
+// استخدم WR() مكان rand() داخل دوال توليد العالم فقط
+
+/* ============================================================
    ==================== ADMIN CONFIG =========================
    ============================================================ */
 const ADMIN_CONFIG = {
@@ -3749,7 +3773,7 @@ function initSkyDecor(){
    ==================== Spawning =============================
    ============================================================ */
 function spawnCoinCluster(cx, cy, count){
-  count = count || Math.floor(rand(3,6));
+  count = count || Math.floor(WR(3,6));          // ← تم الاستبدال
   const spacing = 22;
   for(let i=0;i<count;i++){
     const t = i/(count-1) - 0.5;
@@ -3787,14 +3811,14 @@ function spawnTunnelObstacle(){
   const margin = 76;
   const minY = margin + gap/2;
   const maxY = GROUND_Y - margin - gap/2;
-  const gapY = rand(minY, Math.max(minY,maxY));
+  const gapY = WR(minY, Math.max(minY,maxY));        // ✅
 
-  obstacles.push({x: W+50, w: 60, gapY, gap, baseGapY: gapY, phase: rand(0,Math.PI*2),
-    amp: rand(18,42) * prog.wobble, t:0, passed:false, dead:false, isWalk:false,
+  obstacles.push({x: W+50, w: 60, gapY, gap, baseGapY: gapY, phase: WR(0,Math.PI*2),
+    amp: WR(18,42) * prog.wobble, t:0, passed:false, dead:false, isWalk:false,   // ✅
     color: s.wall, colorDark: s.wallDark, accent: s.accent });
 
-  const cy = gapY + rand(-gap*0.22, gap*0.22);
-  const r = Math.random();
+  const cy = gapY + WR(-gap*0.22, gap*0.22);          // ✅
+  const r = Math.random();                            // ❌ اتركها كما هي
   if(r < 0.06){ spawnPowerup(W+50+30, gapY); }
   else if(r < 0.20){ orbs.push({ x:W+50+30, y:gapY, r:10, t:0, dead:false, color:s.accent }); }
   else if(r < 0.90){ spawnCoinCluster(W+50+30, cy); }
@@ -4219,9 +4243,9 @@ function spawnGroundObstacle(prog, s){
   const type = types[Math.floor(Math.random() * types.length)];
 
   let w, h;
-  if(type === 'block'){ w = rand(40,54); h = rand(32, 50 + prog.eased*10); }
-  else if(type === 'spike'){ w = rand(36,52); h = rand(34, 50 + prog.eased*8); }
-  else { w = rand(26,34); h = rand(60, 78 + prog.eased*14); }
+  if(type === 'block'){ w = WR(40,54); h = WR(32, 50 + prog.eased*10); }
+  else if(type === 'spike'){ w = WR(36,52); h = WR(34, 50 + prog.eased*8); }
+  else { w = WR(26,34); h = WR(60, 78 + prog.eased*14); }
 
   obstacles.push({
     x:W+40, w, h, type,
@@ -4229,21 +4253,21 @@ function spawnGroundObstacle(prog, s){
     color:s.wall, colorDark:s.wallDark, accent:s.accent
   });
 
-  const oy = GROUND_Y - h - rand(40,90);
+  const oy = GROUND_Y - h - WR(40,90);
   maybeReward(W+40+w/2, oy, s);
 }
 
 function spawnPlatform(prog, s){
   const level = Math.random();
   let baseY;
-  if(level < 0.55)      baseY = GROUND_Y - rand(85, 125);
-  else if(level < 0.88) baseY = GROUND_Y - rand(145, 195);
-  else                  baseY = GROUND_Y - rand(205, 255);
+  if(level < 0.55)      baseY = GROUND_Y - WR(85, 125);
+  else if(level < 0.88) baseY = GROUND_Y - WR(145, 195);
+  else                  baseY = GROUND_Y - WR(205, 255);
 
   const platformTypes = ['static', 'static', 'moving_y', 'moving_x', 'crumble', 'bouncy'];
   const platformType = platformTypes[Math.floor(Math.random() * platformTypes.length)];
 
-  const w = rand(70, 120);
+  const w = WR(70, 120);
   const h = 14;
 
   if(platformType === 'moving_y' || platformType === 'moving_x'){
@@ -4255,9 +4279,9 @@ function spawnPlatform(prog, s){
     isWalk:true, isPlatform:true,
     platformType,
     y: baseY, baseY, baseX: W+40,
-    amp: platformType === 'moving_y' ? rand(15, 30)
-       : (platformType === 'moving_x' ? rand(20, 40) : 0),
-    phase: rand(0, Math.PI*2),
+    amp: platformType === 'moving_y' ? WR(15, 30)
+       : (platformType === 'moving_x' ? WR(20, 40) : 0),
+    phase: WR(0, Math.PI*2),
     color: s.wall, colorDark: s.wallDark, accent: s.accent,
     t:0, passed:false, dead:false,
     solid: platformType === 'crumble' || platformType === 'bouncy',
@@ -4280,18 +4304,18 @@ function spawnPlatform(prog, s){
 }
 
 function spawnPlatformChain(prog, s){
-  const count = Math.floor(rand(3, 6));
+  const count = Math.floor(WR(3, 6));
   const startX = W + 40;
-  const startY = GROUND_Y - rand(90, 140);
-const spacing = rand(140, 190) * getSpeedScale();
+  const startY = GROUND_Y - WR(90, 140);
+const spacing = WR(140, 190) * getSpeedScale();
 const direction = Math.random() < 0.5 ? -1 : 1;
 
   let lastY = startY;
 
   for(let i = 0; i < count; i++){
-    const w = rand(70, 100);
+    const w = WR(70, 100);
     const h = 12;
-    const dy = direction * rand(15, 35) * (i % 2 === 0 ? 1 : -0.4);
+    const dy = direction * WR(15, 35) * (i % 2 === 0 ? 1 : -0.4);
     let y = clamp(lastY + dy, GROUND_Y - 250, GROUND_Y - 80);
     lastY = y;
 
@@ -4326,8 +4350,8 @@ const direction = Math.random() < 0.5 ? -1 : 1;
 function spawnSkyElevator(prog, s){
   const w = 110;
   const h = 16;
-  const maxRise = rand(300, 700);
-  const startY = GROUND_Y - rand(90, 150);
+  const maxRise = WR(300, 700);
+  const startY = GROUND_Y - WR(90, 150);
 
   /* ═══ المصعد نفسه ═══ */
   obstacles.push({
@@ -4337,7 +4361,7 @@ function spawnSkyElevator(prog, s){
     isSingleElevator: true,
     platformType: 'static',
     y: startY, baseY: startY, baseX: W + 40,
-    riseSpeed: rand(1.4, 2.0),
+    riseSpeed: WR(1.4, 2.0),
     maxRise: maxRise,
     risen: 0,
     isCarryingPlayer: false,
@@ -4394,9 +4418,9 @@ function spawnSkyElevator(prog, s){
 }
 
 function spawnSkyElevatorChain(prog, s){
-  const count = Math.floor(rand(3, 6));
+  const count = Math.floor(WR(3, 6));
   const startX = W + 60;
-const spacing = rand(180, 240) * getSpeedScale();
+const spacing = WR(180, 240) * getSpeedScale();
 const baseRise = 200;
 
   let lastY = GROUND_Y - 100;
@@ -4468,9 +4492,9 @@ function spawnSkyPlatform(prog, s){
   if(m > 1200) maxTier = 4;
   if(m > 2000) maxTier = 5;
 
-  const tier = Math.floor(rand(1, maxTier + 1));
+  const tier = Math.floor(WR(1, maxTier + 1));
   const baseY = GROUND_Y - (180 + (tier - 1) * 100);
-  const w = rand(90, 130);
+  const w = WR(90, 130);
   const h = 14;
 
   const tierColors = [
@@ -4519,15 +4543,15 @@ function spawnSkyPlatform(prog, s){
 }
 
 function spawnStaircase(prog, s){
-  const count = Math.floor(rand(4, 15));
+  const count = Math.floor(WR(4, 15));
   const isLong = count >= 9;
 
   const startX = W + 60;
   const startY = GROUND_Y - 100;
 
   const speedScale = getSpeedScale();
-  const stepX = (isLong ? rand(85, 115) : rand(75, 105)) * speedScale;
-  const stepY = isLong ? rand(60, 85) : rand(55, 75);
+  const stepX = (isLong ? WR(85, 115) : WR(75, 105)) * speedScale;
+  const stepY = isLong ? WR(60, 85) : WR(55, 75);
 
   const colors = [
     { color:'#80C0E8', dark:'#4080B0', accent:'#C0E0FF', glow:'#80D0FF' },
@@ -4542,7 +4566,7 @@ function spawnStaircase(prog, s){
   let lastWidth = 90;   /* ✅ نتذكّر آخر عرض لاستخدامه في المكافأة العلوية */
 
   for(let i = 0; i < count; i++){
-    const w = isLong ? rand(70, 90) - i * 1.2 : rand(75, 100) - i * 2;
+    const w = isLong ? WR(70, 90) - i * 1.2 : WR(75, 100) - i * 2;
     const h = 12;
     lastWidth = w;   /* ✅ خزّن العرض */
 
@@ -4567,8 +4591,8 @@ function spawnStaircase(prog, s){
       stairTotal: count,
       platformType: isBouncy ? 'bouncy' : (isCrumble ? 'crumble' : (isMoving ? 'moving_x' : 'static')),
       y: currentY, baseY: currentY, baseX: currentX,
-      amp: isMoving ? rand(15, 30) : 0,
-      phase: rand(0, Math.PI*2),
+      amp: isMoving ? WR(15, 30) : 0,
+      phase: WR(0, Math.PI*2),
       color: isBouncy ? '#E89B4C' : (isCrumble ? '#A88868' : col.color),
       colorDark: isBouncy ? '#A06028' : (isCrumble ? '#6A4838' : col.dark),
       accent: col.accent,
@@ -4633,17 +4657,17 @@ function spawnSpring(prog, s){
     color:'#E8B34E', colorDark:'#A07028', accent:'#FFF4C0'
   });
 
-  const skyY = GROUND_Y - rand(140, 210);
+  const skyY = GROUND_Y - WR(140, 210);
   orbs.push({ x: W+40 + w/2, y: skyY, r:13, t:0, dead:false, color:'#FFF4C0', isSkyOrb:true });
-  spawnCoinCluster(W+40 + w/2, skyY + 35, Math.floor(rand(3,5)));
+  spawnCoinCluster(W+40 + w/2, skyY + 35, Math.floor(WR(3,5)));
 }
 
 function spawnSaw(prog, s){
-  const r = rand(28, 42);
+  const r = WR(28, 42);
   const isGround = Math.random() < 0.6;
   const y = isGround
-    ? GROUND_Y - r - rand(0, 4)
-    : GROUND_Y - rand(120, 240);
+    ? GROUND_Y - r - WR(0, 4)
+    : GROUND_Y - WR(120, 240);
 
   const saw = {
     x: W+40, w: r*2, h: r*2, type:'saw',
@@ -4654,10 +4678,10 @@ function spawnSaw(prog, s){
     cy: y + r,
     r: r,
     angle: 0,
-    angleSpd: rand(0.15, 0.30) * (Math.random() < 0.5 ? 1 : -1),
+    angleSpd: WR(0.15, 0.30) * (Math.random() < 0.5 ? 1 : -1),
     movingY: !isGround,
-    amp: isGround ? 0 : rand(30, 70),
-    phase: rand(0, Math.PI*2),
+    amp: isGround ? 0 : WR(30, 70),
+    phase: WR(0, Math.PI*2),
     color:'#B0B8C0', colorDark:'#606870', accent:'#FF6040'
   };
   obstacles.push(saw);
@@ -4675,7 +4699,7 @@ function spawnLaserFence(prog, s){
     const gapSize = rand(60, 90);
 
     for(let i = 0; i < gapCount; i++){
-      const segH = rand(60, 120);
+      const segH = WR(60, 120);
       segments.push({ y: curY, h: segH });
       curY += segH + gapSize;
       if(curY > GROUND_Y - 60) break;
@@ -4697,10 +4721,10 @@ function spawnLaserFence(prog, s){
       t:0, passed:false, dead:false,
       isWalk:true, isLaser:true,
       isVertical: false,
-      y: GROUND_Y - rand(70, 140),
-      baseY: GROUND_Y - rand(70, 140),
-      amp: rand(20, 50),
-      phase: rand(0, Math.PI*2),
+      y: GROUND_Y - WR(70, 140),
+      baseY: GROUND_Y - WR(70, 140),
+      amp: WR(20, 50),
+      phase: WR(0, Math.PI*2),
       color:'#FF40A0', accent:'#FF80D0',
       damage: true
     });
@@ -4715,7 +4739,7 @@ function spawnVortex(prog, s){
     t:0, passed:false, dead:false,
     isWalk:true, isVortex:true,
     cx: W+40 + 40,
-    cy: GROUND_Y - rand(120, 220),
+    cy: GROUND_Y - WR(120, 220),
     r: 40,
     pullForce: 0.55,
     angle: 0,
@@ -4725,8 +4749,8 @@ function spawnVortex(prog, s){
 }
 
 function spawnPiston(prog, s){
-  const w = rand(50, 80);
-  const h = rand(40, 60);
+  const w = WR(50, 80);
+  const h = WR(40, 60);
   const isTop = Math.random() < 0.5;
 
   obstacles.push({
@@ -4734,9 +4758,9 @@ function spawnPiston(prog, s){
     t:0, passed:false, dead:false,
     isWalk:true, isPiston:true,
     isTop,
-    cycle: rand(0, 90),
-    period: rand(70, 130),
-    extendDist: rand(70, 130),
+    cycle: WR(0, 90),
+    period: WR(70, 130),
+    extendDist: WR(70, 130),
     extend: 0,
     hasSpikes: Math.random() < 0.5,
     color:'#5A6878', colorDark:'#2A3038', accent:'#FFA040'
@@ -4747,7 +4771,7 @@ function spawnPiston(prog, s){
 }
 
 function spawnFallingSpike(prog, s){
-  const count = Math.floor(rand(2, 5));
+  const count = Math.floor(WR(2, 5));
   const startX = W + 40;
   const spacing = 90;
 
@@ -4761,7 +4785,7 @@ function spawnFallingSpike(prog, s){
       falling: false,
       warned: false,
       landed: false,
-      triggerDistance: rand(140, 220),
+      triggerDistance: WR(140, 220),
       color:'#8A4838', colorDark:'#4A2018', accent:'#FF8060'
     });
   }
@@ -4770,8 +4794,8 @@ function spawnFallingSpike(prog, s){
 }
 
 function spawnRotatingBar(prog, s){
-  const length = rand(60, 100);
-  const cy = GROUND_Y - rand(120, 180);
+  const length = WR(60, 100);
+  const cy = GROUND_Y - WR(120, 180);
 
   obstacles.push({
     x: W+40, w: length, h: 20, type:'rotBar',
@@ -4780,7 +4804,7 @@ function spawnRotatingBar(prog, s){
     cx: W+40 + length/2, cy,
     length, thickness: 10,
     angle: 0,
-    angleSpd: rand(0.012, 0.025) * (Math.random() < 0.5 ? 1 : -1),
+    angleSpd: WR(0.012, 0.025) * (Math.random() < 0.5 ? 1 : -1),
     warmupTimer: 30,
     color:'#6A5A48', colorDark:'#3A2820', accent:'#E8B34E'
   });
@@ -4790,12 +4814,12 @@ function maybeReward(x, y, s){
   const r = Math.random();
   if(r < 0.06) spawnPowerup(x, y);
   else if(r < 0.20) orbs.push({ x, y, r:10, t:0, dead:false, color:s.accent });
-  else if(r < 0.80) spawnCoinCluster(x, y, Math.floor(rand(2,4)));
+  else if(r < 0.80) spawnCoinCluster(x, y, Math.floor(WR(2,4)));
 }
 
 /* ═══════════════ GROUND HOLES (النزول للأعماق) ═══════════════ */
 function spawnGroundHole(){
-  const w = rand(110, 160);
+  const w = WR(110, 160);
   const hole = {
     x: W + 60,
     w,
@@ -13166,10 +13190,10 @@ if(heroModeEl){
    ==================== SKY ZONE =============================
    ============================================================ */
 function spawnSkyZoneRewards(){
-  const count = Math.floor(rand(4, 8));
+  const count = Math.floor(WR(4, 8));
   const startX = W + 60;
-  const arcHeight = rand(30, 55);
-  const baseY = GROUND_Y - rand(120, 170);
+  const arcHeight = WR(30, 55);
+  const baseY = GROUND_Y - WR(120, 170);
 
   /* ═══ قوس العملات ═══ */
   for(let i = 0; i < count; i++){
@@ -14435,6 +14459,13 @@ function cleanupAscendPlatforms(){
    ==================== Game flow ============================
    ============================================================ */
 function resetRun(){
+  // ✅ تعيين البذرة المشتركة في اللعب الجماعي
+  if(typeof MP !== 'undefined' && MP.active && MP.roomSeed){
+    setWorldSeed(MP.roomSeed);
+  } else {
+    setWorldSeed(Math.floor(Math.random() * 0xFFFFFFFF));
+  }
+  
   P.r = 13;
 
   /* ═══════════════ اختيار النمط أولاً ═══════════════ */
@@ -14788,19 +14819,22 @@ function quitToMenu(){
   const comboPill = document.getElementById('combo-pill');
   if(comboPill) comboPill.style.display = 'none';
   _lastContextKey = '';
-const cb = document.getElementById('context-banner');
-if(cb) cb.classList.remove('show');
-const gg = document.getElementById('altitude-gauge');
-if(gg) gg.classList.remove('show');
+  const cb = document.getElementById('context-banner');
+  if(cb) cb.classList.remove('show');
+  const gg = document.getElementById('altitude-gauge');
+  if(gg) gg.classList.remove('show');
   setInGame(false);
   hideOverlay();
   showScreen('s-home');
   buildHome();
   updateCoinsUI();
   updateGlobalLevelUI();
-  /* ✅ إعادة ضبط التبديل العشوائي للمشاهد */
-sceneRandomMode = false;
-nextRandomSwitchMeters = 0;
+  sceneRandomMode = false;
+  nextRandomSwitchMeters = 0;
+
+  /* 👇👇👇 أضف هذين السطرين هنا 👇👇👇 */
+  const emojiBar = document.getElementById('mp-emoji-bar');
+  if(emojiBar) emojiBar.style.display = 'none';
 }
 
 /* ============================================================
@@ -16625,31 +16659,69 @@ function buildBP(){
 
 /* ============================================================
    ============================================================
-   ================ MULTIPLAYER SYSTEM v1 ====================
+   ============ MULTIPLAYER v2 — PROFESSIONAL ================
    ============================================================
    ============================================================ */
 
 const MP_CONFIG = {
-  collection: 'mp_rooms',
+  collection: 'mp_rooms_v3',
   codeLength: 6,
   codeChars: 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789',
-  syncRateMs: 180,
-  maxPlayers: 2
+  syncRateMs: 66,
+  countdownMs: 3200,
+  maxPlayers: 2,
+  reconnTimeoutMs: 20000,
+  rematchWindowMs: 90000,
+  emojis: ['👋','🔥','😂','😱','💀','👑','🎯','⚡','🧠','💪']
 };
 
 const MP = {
   active: false,
   roomId: null,
   roomCode: null,
+  roomSeed: 0,
   isHost: false,
   roomData: null,
   otherPlayers: new Map(),
+
   roomUnsub: null,
   playersUnsub: null,
+
   syncTimer: null,
-  lastLeaderboardUpdate: 0,
+  latencyTimer: null,
+  lastSyncAt: 0,
+  ping: 0,
+  pingSamples: [],
+
+  remoteStates: {},
+  localLastState: null,
+  clientTimeOffset: 0,
+
+  countdownEndsAt: 0,
+  countdownShown: -1,
+  countdownActive: false,
+
+  starting: false,
   resultShown: false,
-  starting: false
+  round: 1,
+  bestOf: 3,
+  hostWins: 0,
+  guestWins: 0,
+
+  connectionState: 'connected',
+
+  emojiCooldown: 0,
+  lastEmojiAt: 0,
+
+  opponentAlive: true,
+  opponentMeters: 0,
+  opponentCoins: 0,
+
+  // throttling
+  lastPushAt: 0,
+
+  // ربط تشغيلي
+  bound: false
 };
 
 /* ═══════════════ دوال مساعدة ═══════════════ */
@@ -16669,41 +16741,43 @@ function mpEscape(s){
   }[c]));
 }
 
+function mpGenerateSeed(){
+  return Math.floor(Math.random() * 0xFFFFFFFF) >>> 0;
+}
+
 async function mpFindUnusedCode(){
-  for(let attempt = 0; attempt < 6; attempt++){
+  for(let i = 0; i < 8; i++){
     const code = mpGenerateRoomCode();
     try {
       const snap = await Cloud.db.collection(MP_CONFIG.collection)
         .where('code', '==', code)
-        .where('status', 'in', ['waiting', 'playing'])
+        .where('status', 'in', ['waiting','countdown','playing'])
         .limit(1).get();
       if(snap.empty) return code;
-    } catch(e){ /* ignore */ }
+    } catch(e){}
   }
   return mpGenerateRoomCode();
 }
 
 /* ═══════════════ إنشاء غرفة ═══════════════ */
 async function mpCreateRoom(mode){
-  if(!Cloud.user){
-    alert('يجب تسجيل الدخول أولاً');
-    return;
-  }
+  if(!Cloud.user){ alert('يجب تسجيل الدخول أولاً'); return; }
   if(MP.active) await mpLeaveRoom();
 
   const code = await mpFindUnusedCode();
+  const seed = mpGenerateSeed();
   const uid = Cloud.user.uid;
   const name = (Cloud.profile && Cloud.profile.username) || 'لاعب';
   const skinId = Save.data.currentSkin;
   const roomMode = mode || Save.data.mode || 'FLIP';
 
   try {
-    const col = Cloud.db.collection(MP_CONFIG.collection);
-    const ref = col.doc();
+    const ref = Cloud.db.collection(MP_CONFIG.collection).doc();
     const roomId = ref.id;
 
     await ref.set({
       code,
+      seed,
       hostUid: uid,
       hostName: name,
       hostSkin: skinId,
@@ -16712,19 +16786,30 @@ async function mpCreateRoom(mode){
       guestSkin: null,
       status: 'waiting',
       mode: roomMode,
+      bestOf: 3,
+      round: 1,
+      hostWins: 0,
+      guestWins: 0,
+      hostScore: 0,
+      guestScore: 0,
+      roundWinner: null,
+      matchWinner: null,
+      countdownEndsAt: null,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       startedAt: null,
       finishedAt: null,
-      winnerUid: null,
-      hostScore: 0,
-      guestScore: 0
+      heartbeatAt: firebase.firestore.FieldValue.serverTimestamp()
     });
 
     await ref.collection('players').doc(uid).set({
       uid, name, skin: skinId, isHost: true,
       meters: 0, coins: 0, alive: true,
       xRatio: 0.26, yRatio: 0.5, rot: 0,
+      vx: 0, vy: 0,
       mode: roomMode,
+      clientTime: Date.now(),
+      lastEmoji: null,
+      lastEmojiAt: 0,
       joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
       lastSeen: firebase.firestore.FieldValue.serverTimestamp()
     });
@@ -16732,12 +16817,19 @@ async function mpCreateRoom(mode){
     MP.active = true;
     MP.roomId = roomId;
     MP.roomCode = code;
+    MP.roomSeed = seed;
     MP.isHost = true;
     MP.resultShown = false;
+    MP.countdownActive = false;
+    MP.round = 1;
+    MP.hostWins = 0;
+    MP.guestWins = 0;
 
     mpAttachListeners();
     showScreen('s-multiplayer-waiting');
     mpBuildWaitingRoom();
+    mpStartLatencyProbe();
+
     Sfx.reward(); haptic(20);
   } catch(e){
     console.error('[MP] Create failed:', e);
@@ -16745,17 +16837,11 @@ async function mpCreateRoom(mode){
   }
 }
 
-/* ═══════════════ الانضمام لغرفة ═══════════════ */
+/* ═══════════════ الانضمام ═══════════════ */
 async function mpJoinRoom(code){
-  if(!Cloud.user){
-    alert('يجب تسجيل الدخول أولاً');
-    return;
-  }
+  if(!Cloud.user){ alert('يجب تسجيل الدخول أولاً'); return; }
   code = String(code || '').trim().toUpperCase();
-  if(code.length !== MP_CONFIG.codeLength){
-    alert('كود غير صحيح');
-    return;
-  }
+  if(code.length !== MP_CONFIG.codeLength){ alert('كود غير صحيح'); return; }
   if(MP.active) await mpLeaveRoom();
 
   try {
@@ -16764,24 +16850,15 @@ async function mpJoinRoom(code){
       .where('status', '==', 'waiting')
       .limit(1).get();
 
-    if(snap.empty){
-      alert('لا توجد غرفة بهذا الكود أو أن السباق بدأ');
-      return;
-    }
+    if(snap.empty){ alert('لا توجد غرفة بهذا الكود أو أن السباق بدأ'); return; }
 
     const roomDoc = snap.docs[0];
     const roomId = roomDoc.id;
     const data = roomDoc.data();
     const uid = Cloud.user.uid;
 
-    if(data.hostUid === uid){
-      alert('أنت صاحب هذه الغرفة');
-      return;
-    }
-    if(data.guestUid && data.guestUid !== uid){
-      alert('الغرفة ممتلئة');
-      return;
-    }
+    if(data.hostUid === uid){ alert('أنت صاحب هذه الغرفة'); return; }
+    if(data.guestUid && data.guestUid !== uid){ alert('الغرفة ممتلئة'); return; }
 
     const name = (Cloud.profile && Cloud.profile.username) || 'لاعب';
     const skinId = Save.data.currentSkin;
@@ -16797,7 +16874,10 @@ async function mpJoinRoom(code){
         uid, name, skin: skinId, isHost: false,
         meters: 0, coins: 0, alive: true,
         xRatio: 0.26, yRatio: 0.5, rot: 0,
+        vx: 0, vy: 0,
         mode: data.mode || 'FLIP',
+        clientTime: Date.now(),
+        lastEmoji: null, lastEmojiAt: 0,
         joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
         lastSeen: firebase.firestore.FieldValue.serverTimestamp()
       });
@@ -16805,12 +16885,19 @@ async function mpJoinRoom(code){
     MP.active = true;
     MP.roomId = roomId;
     MP.roomCode = code;
+    MP.roomSeed = data.seed || 0;
     MP.isHost = false;
     MP.resultShown = false;
+    MP.countdownActive = false;
+    MP.round = data.round || 1;
+    MP.hostWins = data.hostWins || 0;
+    MP.guestWins = data.guestWins || 0;
 
     mpAttachListeners();
     showScreen('s-multiplayer-waiting');
     mpBuildWaitingRoom();
+    mpStartLatencyProbe();
+
     Sfx.reward(); haptic(20);
   } catch(e){
     console.error('[MP] Join failed:', e);
@@ -16818,7 +16905,7 @@ async function mpJoinRoom(code){
   }
 }
 
-/* ═══════════════ مغادرة الغرفة ═══════════════ */
+/* ═══════════════ مغادرة ═══════════════ */
 async function mpLeaveRoom(){
   if(!MP.active) return;
   const roomId = MP.roomId;
@@ -16827,6 +16914,7 @@ async function mpLeaveRoom(){
 
   mpDetachListeners();
   mpStopSync();
+  mpStopLatencyProbe();
 
   MP.active = false;
   MP.roomId = null;
@@ -16834,8 +16922,11 @@ async function mpLeaveRoom(){
   MP.isHost = false;
   MP.roomData = null;
   MP.otherPlayers.clear();
+  MP.remoteStates = {};
   MP.resultShown = false;
   MP.starting = false;
+  MP.countdownActive = false;
+  MP.countdownShown = -1;
 
   if(roomId && uid && Cloud.db){
     try {
@@ -16845,41 +16936,38 @@ async function mpLeaveRoom(){
       const data = roomSnap.data();
 
       if(wasHost || data.hostUid === uid){
-        // المضيف يغادر → حذف الغرفة كاملة
-        try {
-          const playersSnap = await roomRef.collection('players').get();
-          const batch = Cloud.db.batch();
-          playersSnap.forEach(d => batch.delete(d.ref));
-          batch.delete(roomRef);
-          await batch.commit();
-        } catch(e){
+        const playersSnap = await roomRef.collection('players').get();
+        const batch = Cloud.db.batch();
+        playersSnap.forEach(d => batch.delete(d.ref));
+        batch.delete(roomRef);
+        await batch.commit().catch(async ()=>{
           try { await roomRef.delete(); } catch(_){}
-        }
+        });
       } else {
-        // الضيف يغادر
-        try {
-          await roomRef.update({
-            guestUid: null,
-            guestName: null,
-            guestSkin: null,
-            status: 'waiting'
-          });
-          await roomRef.collection('players').doc(uid).delete();
-        } catch(e){ /* ignore */ }
+        await roomRef.update({
+          guestUid: null, guestName: null, guestSkin: null,
+          status: 'waiting',
+          countdownEndsAt: null,
+          startedAt: null
+        }).catch(()=>{});
+        await roomRef.collection('players').doc(uid).delete().catch(()=>{});
       }
-    } catch(e){
-      console.warn('[MP] cleanup failed:', e);
-    }
+    } catch(e){ console.warn('[MP] cleanup:', e); }
   }
+
+  MP.connectionState = 'connected';
+  mpUpdateConnectionBadge();
 }
 
-/* ═══════════════ بدء السباق (المضيف) ═══════════════ */
+/* ═══════════════ بدء السباق ═══════════════ */
 async function mpStartRace(){
   if(!MP.active || !MP.isHost) return;
   if(!MP.roomData || !MP.roomData.guestUid) return;
   try {
+    const countdownEndsAt = Date.now() + MP_CONFIG.countdownMs;
     await Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId).update({
-      status: 'playing',
+      status: 'countdown',
+      countdownEndsAt,
       startedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     Sfx.reward(); haptic(20);
@@ -16889,7 +16977,7 @@ async function mpStartRace(){
   }
 }
 
-/* ═══════════════ مستمعو Firestore ═══════════════ */
+/* ═══════════════ المستمعون ═══════════════ */
 function mpAttachListeners(){
   mpDetachListeners();
   if(!MP.roomId || !Cloud.db) return;
@@ -16908,17 +16996,38 @@ function mpAttachListeners(){
     const data = snap.data();
     const prevStatus = MP.roomData ? MP.roomData.status : null;
     MP.roomData = data;
+    MP.roomSeed = data.seed || MP.roomSeed;
+    MP.round = data.round || 1;
+    MP.hostWins = data.hostWins || 0;
+    MP.guestWins = data.guestWins || 0;
 
-    /* بدء تلقائي عند تغيير الحالة إلى playing */
-    if(data.status === 'playing' && prevStatus !== 'playing' &&
-       G.state !== 'PLAYING' && !MP.starting){
+    /* ✅ العد التنازلي */
+    if(data.status === 'countdown' && data.countdownEndsAt){
+      MP.countdownEndsAt = data.countdownEndsAt;
+      MP.countdownActive = true;
+      if(document.getElementById('s-multiplayer-waiting').classList.contains('active')){
+        mpShowCountdownOverlay();
+      }
+    }
+
+    /* ✅ بدء اللعب الفعلي بعد العد التنازلي */
+    if(data.status === 'countdown' && Date.now() >= data.countdownEndsAt && !MP.starting){
       mpStartMyGame();
     }
 
-    /* نهاية المباراة */
-    if(data.status === 'finished' && !MP.resultShown){
+    /* ✅ نهاية الجولة */
+    if((data.status === 'round_end' || data.status === 'finished') && !MP.resultShown){
       MP.resultShown = true;
       mpShowResult();
+    }
+
+    /* ✅ إعادة المباراة */
+    if(data.status === 'waiting' && prevStatus !== 'waiting' && MP.resultShown){
+      MP.resultShown = false;
+      MP.countdownActive = false;
+      mpResetRoundState();
+      showScreen('s-multiplayer-waiting');
+      mpBuildWaitingRoom();
     }
 
     if(document.getElementById('s-multiplayer-waiting').classList.contains('active')){
@@ -16927,8 +17036,49 @@ function mpAttachListeners(){
   }, err => console.warn('[MP] room listener:', err));
 
   MP.playersUnsub = roomRef.collection('players').onSnapshot(snap => {
+    const now = Date.now();
     MP.otherPlayers.clear();
-    snap.forEach(d => MP.otherPlayers.set(d.id, d.data()));
+    const myUid = Cloud.user ? Cloud.user.uid : null;
+
+    snap.forEach(d => {
+      const data = d.data();
+      MP.otherPlayers.set(d.id, data);
+
+      if(d.id !== myUid){
+        // ✅ تخزين الحالة السابقة والحالية للاستيفاء
+        const prev = MP.remoteStates[d.id];
+        MP.remoteStates[d.id] = {
+          prev: prev ? prev.curr : data,
+          curr: data,
+          receivedAt: now,
+          prevReceivedAt: prev ? prev.receivedAt : now - 66
+        };
+
+        MP.opponentAlive = !!data.alive;
+        MP.opponentMeters = data.meters || 0;
+        MP.opponentCoins = data.coins || 0;
+
+        // ✅ قياس ping (round-trip)
+        if(data.pingEcho && data.pingEcho.clientTime){
+          const rtt = now - data.pingEcho.clientTime;
+          if(rtt > 0 && rtt < 2000){
+            MP.pingSamples.push(rtt);
+            if(MP.pingSamples.length > 6) MP.pingSamples.shift();
+            MP.ping = Math.round(
+              MP.pingSamples.reduce((a,b)=>a+b,0) / MP.pingSamples.length
+            );
+            mpUpdateConnectionBadge();
+          }
+        }
+
+        // ✅ إيموجي
+        if(data.lastEmoji && data.lastEmojiAt > MP.lastEmojiAt){
+          MP.lastEmojiAt = data.lastEmojiAt;
+          mpShowOpponentEmoji(data.lastEmoji);
+        }
+      }
+    });
+
     if(document.getElementById('s-multiplayer-waiting').classList.contains('active')){
       mpBuildWaitingRoom();
     }
@@ -16940,22 +17090,31 @@ function mpDetachListeners(){
   if(MP.playersUnsub){ try { MP.playersUnsub(); } catch(_){} MP.playersUnsub = null; }
 }
 
-/* ═══════════════ بدء اللعبة محلياً ═══════════════ */
+/* ═══════════════ بدء لعبتي ═══════════════ */
 function mpStartMyGame(){
   if(MP.starting) return;
   MP.starting = true;
+  MP.countdownActive = false;
+  MP.resultShown = false;
 
-  // ضبط النمط على نمط الغرفة
   const roomMode = (MP.roomData && MP.roomData.mode) || 'FLIP';
   Save.data.mode = roomMode;
 
+  setWorldSeed(MP.roomSeed);
+
   startGame();
+  setWorldSeed(MP.roomSeed);
+
   mpStartSync();
 
-  setTimeout(()=>{ MP.starting = false; }, 1500);
+  /* 👇👇👇 أضف هذا السطر هنا 👇👇👇 */
+  const emojiBar = document.getElementById('mp-emoji-bar');
+  if(emojiBar) emojiBar.style.display = 'flex';
+
+  setTimeout(()=>{ MP.starting = false; }, 2000);
 }
 
-/* ═══════════════ مزامنة حالتك ═══════════════ */
+/* ═══════════════ المزامنة ═══════════════ */
 function mpStartSync(){
   mpStopSync();
   MP.syncTimer = setInterval(() => {
@@ -16973,8 +17132,23 @@ function mpStopSync(){
 async function mpPushMyState(){
   if(!MP.active || !MP.roomId || !Cloud.user || !Cloud.db) return;
   if(G.state !== 'PLAYING' && G.state !== 'OVER') return;
+  if(Date.now() - MP.lastPushAt < MP_CONFIG.syncRateMs - 10) return;
+  MP.lastPushAt = Date.now();
 
   const uid = Cloud.user.uid;
+  const now = Date.now();
+
+  // حساب السرعة (للاستيفاء)
+  let vx = 0, vy = 0;
+  if(MP.localLastState){
+    const dt = (now - MP.localLastState.t) / 1000;
+    if(dt > 0){
+      vx = (P.x - MP.localLastState.x) / dt;
+      vy = (P.y - MP.localLastState.y) / dt;
+    }
+  }
+  MP.localLastState = { x: P.x, y: P.y, t: now };
+
   try {
     await Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId)
       .collection('players').doc(uid).update({
@@ -16984,10 +17158,44 @@ async function mpPushMyState(){
         xRatio: clamp(P.x / Math.max(1, W), 0, 1),
         yRatio: clamp(P.y / Math.max(1, H), 0, 1),
         rot: P.rot || 0,
+        vx, vy,
         mode: G.mode,
+        clientTime: now,
         lastSeen: firebase.firestore.FieldValue.serverTimestamp()
       });
   } catch(e){ /* silent */ }
+}
+
+/* ═══════════════ قياس ping ═══════════════ */
+function mpStartLatencyProbe(){
+  mpStopLatencyProbe();
+  MP.latencyTimer = setInterval(async () => {
+    if(!MP.active || !MP.roomId || !Cloud.user || !Cloud.db) return;
+    const uid = Cloud.user.uid;
+    try {
+      // ✅ نكتب في وثيقتنا فقط — لكن نقرأ وثيقة الخصم لقياس RTT
+      // الحيلة: نرسل clientTime في وثيقتنا، الخصم يقرأها ويعيد إرسالها في pingEcho
+      await Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId)
+        .collection('players').doc(uid).update({
+          pingEcho: {
+            clientTime: Date.now(),
+            from: uid
+          }
+        });
+
+      // ✅ إعادة إرسال pingEcho الخاص بالخصم إذا وُجد
+      const mySnap = await Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId)
+        .collection('players').doc(uid).get();
+      if(!mySnap.exists) return;
+    } catch(e){ /* silent */ }
+  }, 3000);
+}
+
+function mpStopLatencyProbe(){
+  if(MP.latencyTimer){
+    clearInterval(MP.latencyTimer);
+    MP.latencyTimer = null;
+  }
 }
 
 /* ═══════════════ إشعار الموت + تحديد الفائز ═══════════════ */
@@ -17008,6 +17216,9 @@ async function mpNotifyDeath(){
       lastSeen: firebase.firestore.FieldValue.serverTimestamp()
     });
 
+    // ✅ ننتظر قليلاً لالتقاط موت الخصم إن مات في نفس اللحظة
+    await new Promise(r => setTimeout(r, 350));
+
     const playersSnap = await roomRef.collection('players').get();
     let opponentUid = null, opponentMeters = 0, opponentAlive = false;
 
@@ -17022,34 +17233,44 @@ async function mpNotifyDeath(){
 
     if(!opponentUid) return;
 
-    let winnerUid;
+    let winnerUid = null;
     if(opponentAlive){
-      // أنا مت أولاً → الخصم يفوز
       winnerUid = opponentUid;
     } else {
-      // كلانا ميت → الأبعد يفوز
       if(myMeters > opponentMeters) winnerUid = uid;
       else if(opponentMeters > myMeters) winnerUid = opponentUid;
       else winnerUid = null;
     }
 
     const fresh = await roomRef.get();
-    if(fresh.exists && fresh.data().status !== 'finished'){
-      const rd = fresh.data();
-      await roomRef.update({
-        status: 'finished',
-        finishedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        winnerUid,
-        hostScore: rd.hostUid === uid ? myMeters : opponentMeters,
-        guestScore: rd.guestUid === uid ? myMeters : opponentMeters
-      });
-    }
+    if(!fresh.exists) return;
+    const rd = fresh.data();
+    if(rd.status === 'finished' || rd.status === 'round_end') return;
+
+    const isHostWinner = winnerUid === rd.hostUid;
+    const isGuestWinner = winnerUid === rd.guestUid;
+    const newHostWins = (rd.hostWins || 0) + (isHostWinner ? 1 : 0);
+    const newGuestWins = (rd.guestWins || 0) + (isGuestWinner ? 1 : 0);
+
+    const winsNeeded = Math.ceil((rd.bestOf || 3) / 2);
+    const matchOver = newHostWins >= winsNeeded || newGuestWins >= winsNeeded;
+
+    await roomRef.update({
+      status: matchOver ? 'finished' : 'round_end',
+      finishedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      roundWinner: winnerUid,
+      matchWinner: matchOver ? winnerUid : null,
+      hostWins: newHostWins,
+      guestWins: newGuestWins,
+      hostScore: rd.hostUid === uid ? myMeters : opponentMeters,
+      guestScore: rd.guestUid === uid ? myMeters : opponentMeters
+    });
   } catch(e){
     console.warn('[MP] death notify:', e);
   }
 }
 
-/* ═══════════════ بناء غرفة الانتظار ═══════════════ */
+/* ═══════════════ غرفة الانتظار ═══════════════ */
 function mpBuildWaitingRoom(){
   if(!MP.roomData) return;
 
@@ -17084,21 +17305,39 @@ function mpBuildWaitingRoom(){
     const gradient = `radial-gradient(circle at 30% 30%,
       ${mixColor(sk.body, '#FFFFFF', 0.4)},
       ${sk.body} 55%, ${sk.bodyDark})`;
-    return `<div class="mp-slot">
+    const isMe = myUid === player.uid;
+    return `<div class="mp-slot${isMe ? ' mp-me' : ''}">
       <div class="mp-slot-avatar" style="background:${gradient};"></div>
       <div class="mp-slot-name">${mpEscape(player.name || 'لاعب')}</div>
-      <div class="mp-slot-label">${label}</div>
+      <div class="mp-slot-label">${label}${isMe ? ' · أنت' : ''}</div>
+      ${isMe ? '<div class="mp-you-badge">YOU</div>' : ''}
     </div>`;
   };
 
-  const hostLabel = myUid === host.uid ? 'أنت (المضيف)' : 'المضيف';
-  const guestLabel = !guest ? 'ضيف' : (myUid === guest.uid ? 'أنت' : 'الضيف');
+  const hostLabel = myUid === host.uid ? 'المضيف' : 'المضيف';
+  const guestLabel = !guest ? 'ضيف' : 'الضيف';
+
+  // ✅ شريط الانتصارات
+  const scoreBar = `<div class="mp-score-bar">
+    <div class="mp-score-side ${MP.hostWins > MP.guestWins ? 'leading' : ''}">
+      <div class="mp-score-num">${MP.hostWins}</div>
+      <div class="mp-score-lbl">HOST</div>
+    </div>
+    <div class="mp-score-vs">BO${MP.roomData.bestOf || 3}</div>
+    <div class="mp-score-side ${MP.guestWins > MP.hostWins ? 'leading' : ''}">
+      <div class="mp-score-num">${MP.guestWins}</div>
+      <div class="mp-score-lbl">GUEST</div>
+    </div>
+  </div>`;
 
   slots.innerHTML = `
     ${renderSlot(host, hostLabel)}
     <div class="mp-vs">VS</div>
     ${renderSlot(guest, guestLabel)}
   `;
+
+  const scoreEl = document.getElementById('mp-score-display');
+  if(scoreEl) scoreEl.innerHTML = scoreBar;
 
   const startBtn = document.getElementById('mp-start-btn');
   if(startBtn){
@@ -17113,35 +17352,112 @@ function mpBuildWaitingRoom(){
       startBtn.textContent = '⏳  بانتظار أن يبدأ المضيف...';
     }
   }
+
+  // ✅ حالة الاتصال
+  mpUpdateConnectionBadge();
 }
 
-/* ═══════════════ عرض النتيجة ═══════════════ */
+/* ═══════════════ العد التنازلي ═══════════════ */
+function mpShowCountdownOverlay(){
+  let el = document.getElementById('mp-countdown');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'mp-countdown';
+    el.className = 'mp-countdown';
+    document.getElementById('wrap').appendChild(el);
+  }
+  el.style.display = 'flex';
+
+  // تحديث الرقم كل إطار
+  const tick = () => {
+    if(!MP.countdownActive){ el.style.display = 'none'; return; }
+    const remain = MP.countdownEndsAt - Date.now();
+    const n = Math.ceil(remain / 1000);
+    if(n !== MP.countdownShown){
+      MP.countdownShown = n;
+      if(n <= 0){
+        el.innerHTML = '<div class="mp-cd-go">GO!</div>';
+        setTimeout(() => { el.style.display = 'none'; }, 400);
+      } else if(n <= 3){
+        el.innerHTML = `<div class="mp-cd-num">${n}</div>`;
+        Sfx.play(440 + (3-n) * 100, 0.15, 'sine', 0.06, 660);
+      } else {
+        el.innerHTML = `<div class="mp-cd-ready">READY</div>`;
+      }
+      haptic(8);
+    }
+    if(remain > -600) requestAnimationFrame(tick);
+    else el.style.display = 'none';
+  };
+  tick();
+}
+
+/* ═══════════════ النتيجة ═══════════════ */
 function mpShowResult(){
   const myUid = Cloud.user ? Cloud.user.uid : null;
-  const winnerUid = MP.roomData ? MP.roomData.winnerUid : null;
+  const winnerUid = MP.roomData ? MP.roomData.roundWinner : null;
+  const matchWinner = MP.roomData ? MP.roomData.matchWinner : null;
 
   const titleEl = document.getElementById('mp-result-title');
   const subEl = document.getElementById('mp-result-sub');
   const statsEl = document.getElementById('mp-result-stats');
 
-  const isDraw = winnerUid === null || winnerUid === undefined;
-  const isWinner = winnerUid === myUid;
+  const isDraw = !winnerUid;
+  const isRoundWinner = winnerUid === myUid;
+  const isMatchOver = !!matchWinner;
+  const isMatchWinner = matchWinner === myUid;
 
   if(titleEl){
-    titleEl.textContent = isDraw ? '🤝' : (isWinner ? '🏆' : '💀');
+    if(isMatchOver){
+      titleEl.textContent = isMatchWinner ? '👑' : '💀';
+    } else {
+      titleEl.textContent = isDraw ? '🤝' : (isRoundWinner ? '🏆' : '💀');
+    }
   }
   if(subEl){
-    subEl.textContent = isDraw ? 'DRAW' : (isWinner ? 'YOU WIN' : 'YOU LOSE');
+    if(isMatchOver){
+      subEl.textContent = isMatchWinner ? 'MATCH WON' : 'MATCH LOST';
+    } else {
+      subEl.textContent = isDraw ? 'DRAW · ROUND ' + MP.round : (isRoundWinner ? 'ROUND WON' : 'ROUND LOST');
+    }
   }
+
   if(statsEl && MP.roomData){
     const hostName = mpEscape(MP.roomData.hostName || 'المضيف');
     const guestName = mpEscape(MP.roomData.guestName || 'الضيف');
     const hostScore = MP.roomData.hostScore || 0;
     const guestScore = MP.roomData.guestScore || 0;
+    const hw = MP.roomData.hostWins || 0;
+    const gw = MP.roomData.guestWins || 0;
+
     statsEl.innerHTML = `
-      <div class="mp-result-row"><span>${hostName}</span><span>${hostScore}m</span></div>
-      <div class="mp-result-row"><span>${guestName}</span><span>${guestScore}m</span></div>
+      <div class="mp-result-row ${MP.roomData.hostUid === winnerUid ? 'winner' : ''}">
+        <span>${hostName} ${hw > 0 ? '· ' + hw + 'W' : ''}</span>
+        <span>${hostScore}m</span>
+      </div>
+      <div class="mp-result-row ${MP.roomData.guestUid === winnerUid ? 'winner' : ''}">
+        <span>${guestName} ${gw > 0 ? '· ' + gw + 'W' : ''}</span>
+        <span>${guestScore}m</span>
+      </div>
+      <div class="mp-result-row" style="border-color:var(--amber);">
+        <span>الجولات</span>
+        <span>${hw} - ${gw}</span>
+      </div>
     `;
+  }
+
+  // زر إعادة المباراة
+  const againBtn = document.getElementById('mp-play-again-btn');
+  if(againBtn){
+    if(isMatchOver){
+      againBtn.textContent = '🔁 مباراة جديدة';
+      againBtn.disabled = !MP.isHost;
+      againBtn.style.opacity = MP.isHost ? '1' : '0.5';
+    } else {
+      againBtn.textContent = '▶ الجولة التالية';
+      againBtn.disabled = !MP.isHost;
+      againBtn.style.opacity = MP.isHost ? '1' : '0.5';
+    }
   }
 
   mpStopSync();
@@ -17149,46 +17465,135 @@ function mpShowResult(){
   Sfx.reward(); haptic(25);
 }
 
-/* ═══════════════ رسم أشباح اللاعبين الآخرين ═══════════════ */
+/* ═══════════════ إعادة تعيين حالة الجولة ═══════════════ */
+function mpResetRoundState(){
+  MP.resultShown = false;
+  MP.countdownActive = false;
+  MP.countdownShown = -1;
+  MP.localLastState = null;
+  MP.remoteStates = {};
+}
+
+/* ═══════════════ إعادة المباراة ═══════════════ */
+async function mpRematch(){
+  if(!MP.isHost){
+    alert('فقط المضيف يمكنه بدء جولة جديدة');
+    return;
+  }
+  try {
+    const roomRef = Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId);
+    const snap = await roomRef.get();
+    if(!snap.exists) return;
+    const rd = snap.data();
+    const isMatchOver = !!rd.matchWinner;
+
+    const newRound = isMatchOver ? 1 : (rd.round || 1) + 1;
+    const newHostWins = isMatchOver ? 0 : (rd.hostWins || 0);
+    const newGuestWins = isMatchOver ? 0 : (rd.guestWins || 0);
+
+    await roomRef.update({
+      status: 'waiting',
+      round: newRound,
+      hostWins: newHostWins,
+      guestWins: newGuestWins,
+      hostScore: 0,
+      guestScore: 0,
+      roundWinner: null,
+      matchWinner: null,
+      countdownEndsAt: null,
+      startedAt: null,
+      finishedAt: null
+    });
+
+    // إعادة تصفير حالات اللاعبين
+    const playersSnap = await roomRef.collection('players').get();
+    const batch = Cloud.db.batch();
+    playersSnap.forEach(d => {
+      batch.update(d.ref, {
+        meters: 0, coins: 0, alive: true,
+        xRatio: 0.26, yRatio: 0.5, rot: 0,
+        vx: 0, vy: 0,
+        lastEmoji: null, lastEmojiAt: 0
+      });
+    });
+    await batch.commit();
+
+    mpResetRoundState();
+    showScreen('s-multiplayer-waiting');
+    mpBuildWaitingRoom();
+  } catch(e){
+    alert('فشل: ' + e.message);
+  }
+}
+
+/* ═══════════════ رسم الخصم (باستيفاء) ═══════════════ */
 function mpDrawGhosts(){
   if(!MP.active || G.state !== 'PLAYING') return;
   if(!MP.otherPlayers.size) return;
 
   const myM = getMeters();
   const myUid = Cloud.user ? Cloud.user.uid : null;
+  const now = Date.now();
 
   for(const [uid, p] of MP.otherPlayers){
     if(uid === myUid) continue;
     if(!p) continue;
 
-    const distDiff = (p.meters || 0) - myM;
+    // ✅ استيفاء الموضع
+    const rs = MP.remoteStates[uid];
+    let interpData = p;
+    if(rs && rs.curr && rs.prev){
+      const timeSince = now - rs.receivedAt;
+      const dtBetween = Math.max(1, rs.receivedAt - rs.prevReceivedAt);
+      const t = clamp(timeSince / dtBetween, 0, 2.5);  // extrapolation حتى 2.5x
+
+      const px = lerp(rs.prev.xRatio || 0.26, rs.curr.xRatio || 0.26, t);
+      const py = lerp(rs.prev.yRatio || 0.5, rs.curr.yRatio || 0.5, t);
+      const pr = lerp(rs.prev.rot || 0, rs.curr.rot || 0, t);
+      const pm = lerp(rs.prev.meters || 0, rs.curr.meters || 0, t);
+
+      interpData = {
+        ...p,
+        xRatio: px,
+        yRatio: py,
+        rot: pr,
+        meters: pm
+      };
+    }
+
+    const distDiff = (interpData.meters || 0) - myM;
     const maxOffset = W * 0.42;
     const pxOffset = clamp(distDiff * PIXELS_PER_METER * 0.55, -maxOffset, maxOffset);
     const ghostX = P.baseX + pxOffset;
-    const ghostY = clamp((p.yRatio || 0.5) * H, 40, H - 40);
+    const ghostY = clamp((interpData.yRatio || 0.5) * H, 40, H - 40);
 
-    const sk = getAllSkins().find(s => s.id === p.skin) || SKINS[0];
-    const alpha = p.alive ? 0.65 : 0.25;
+    const sk = getAllSkins().find(s => s.id === interpData.skin) || SKINS[0];
+    const alpha = interpData.alive ? 0.72 : 0.25;
 
     // اسم اللاعب
     ctx.save();
-    ctx.globalAlpha = p.alive ? 0.85 : 0.4;
-    ctx.fillStyle = p.alive ? '#4A88C8' : '#8B8278';
+    ctx.globalAlpha = interpData.alive ? 0.9 : 0.4;
+    ctx.fillStyle = interpData.alive ? '#4A88C8' : '#8B8278';
     ctx.font = 'bold 11px "Space Grotesk", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
-    ctx.fillText(p.name || 'لاعب', ghostX, ghostY - P.r * 2.6);
+    ctx.fillText(interpData.name || 'لاعب', ghostX, ghostY - P.r * 2.6);
+
+    // المسافة أسفل الاسم
+    ctx.font = 'bold 9px "Space Grotesk", sans-serif';
+    ctx.fillStyle = 'rgba(74, 136, 200, 0.7)';
+    ctx.fillText((interpData.meters || 0) + 'm', ghostX, ghostY - P.r * 2.6 + 11);
     ctx.restore();
 
     // سهم إذا كان خارج الشاشة
     if(Math.abs(pxOffset) >= maxOffset - 1){
       ctx.save();
-      ctx.globalAlpha = 0.65;
+      ctx.globalAlpha = 0.75;
       ctx.fillStyle = '#4A88C8';
-      ctx.font = 'bold 20px sans-serif';
+      ctx.font = 'bold 22px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      const arrowX = ghostX + (distDiff > 0 ? 18 : -18);
+      const arrowX = ghostX + (distDiff > 0 ? 20 : -20);
       ctx.fillText(distDiff > 0 ? '→' : '←', arrowX, ghostY);
       ctx.restore();
     }
@@ -17199,14 +17604,46 @@ function mpDrawGhosts(){
     ctx.translate(ghostX, ghostY);
     try {
       renderCharacter(ctx, P.r, sk, {
-        mode: p.mode || 'FLIP',
-        rot: p.rot || 0,
+        mode: interpData.mode || 'FLIP',
+        rot: interpData.rot || 0,
         alpha: alpha,
         skipExtras: true
       });
-    } catch(e){ /* ignore */ }
+    } catch(e){}
     ctx.restore();
   }
+}
+
+/* ═══════════════ إيموجي الخصم ═══════════════ */
+function mpShowOpponentEmoji(emoji){
+  if(!emoji) return;
+  const el = document.createElement('div');
+  el.className = 'mp-emoji-pop';
+  el.textContent = emoji;
+  el.style.cssText = `
+    position:absolute;top:35%;left:20%;font-size:42px;
+    z-index:100;pointer-events:none;
+    animation:mpEmojiPop 1.6s cubic-bezier(.34,1.56,.64,1) forwards;
+  `;
+  document.getElementById('wrap').appendChild(el);
+  Sfx.play(880, 0.15, 'sine', 0.04, 1320);
+  setTimeout(() => el.remove(), 1700);
+}
+
+async function mpSendEmoji(emoji){
+  if(!MP.active || !Cloud.user || !Cloud.db) return;
+  const now = Date.now();
+  if(now - MP.lastEmojiAt < 2500) return;
+  MP.lastEmojiAt = now;
+  try {
+    await Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId)
+      .collection('players').doc(Cloud.user.uid).update({
+        lastEmoji: emoji,
+        lastEmojiAt: now
+      });
+    // إظهارها لك أيضاً
+    mpShowOpponentEmoji(emoji);
+  } catch(e){}
 }
 
 /* ═══════════════ لوحة الترتيب المباشرة ═══════════════ */
@@ -17218,7 +17655,6 @@ function mpUpdateLeaderboard(){
     el.style.display = 'none';
     return;
   }
-
   el.style.display = 'flex';
 
   const myUid = Cloud.user ? Cloud.user.uid : null;
@@ -17228,7 +17664,8 @@ function mpUpdateLeaderboard(){
     meters: getMeters(),
     coins: G.runCoins,
     alive: G.state === 'PLAYING',
-    isMe: true
+    isMe: true,
+    ping: MP.ping
   }];
 
   for(const [uid, p] of MP.otherPlayers){
@@ -17239,31 +17676,58 @@ function mpUpdateLeaderboard(){
       meters: p.meters || 0,
       coins: p.coins || 0,
       alive: !!p.alive,
-      isMe: false
+      isMe: false,
+      ping: MP.ping
     });
   }
 
   entries.sort((a, b) => b.meters - a.meters);
+  const top = entries[0].meters || 1;
 
-  el.innerHTML = entries.map((e, i) => `
-    <div class="mp-row${e.isMe ? ' mp-me' : ''}${!e.alive ? ' mp-dead' : ''}">
-      <span class="mp-rank">${i + 1}</span>
-      <span class="mp-name">${mpEscape(e.name)}</span>
-      <span class="mp-meters">${e.meters}m</span>
-      <span class="mp-coins">◆${e.coins}</span>
-    </div>
-  `).join('');
+  el.innerHTML = entries.map((e, i) => {
+    const pct = top > 0 ? (e.meters / top) * 100 : 0;
+    const connDot = mpGetPingColor(e.isMe ? MP.ping : MP.ping);
+    return `
+      <div class="mp-row${e.isMe ? ' mp-me' : ''}${!e.alive ? ' mp-dead' : ''}">
+        <span class="mp-rank">${i + 1}</span>
+        <span class="mp-name">${mpEscape(e.name)}</span>
+        <span class="mp-meters">${e.meters}m</span>
+        <span class="mp-coins">◆${e.coins}</span>
+        <span class="mp-conn" style="background:${connDot};"></span>
+      </div>
+      <div class="mp-progress-track">
+        <div class="mp-progress-fill" style="width:${pct}%;background:${e.isMe ? '#E8B34E' : '#4A88C8'};"></div>
+      </div>
+    `;
+  }).join('');
+}
+
+function mpGetPingColor(ping){
+  if(ping < 100) return '#4CAF50';
+  if(ping < 250) return '#FFB060';
+  return '#C14A4A';
+}
+
+function mpUpdateConnectionBadge(){
+  const badge = document.getElementById('mp-conn-badge');
+  if(!badge) return;
+  const ping = MP.ping;
+  let color = '#4CAF50', label = 'متصل';
+  if(ping >= 250){ color = '#C14A4A'; label = 'ضعيف'; }
+  else if(ping >= 100){ color = '#FFB060'; label = 'متوسط'; }
+  badge.innerHTML = `<span class="mp-conn-dot" style="background:${color};"></span>
+                     <span class="mp-conn-lbl">${label} · ${ping}ms</span>`;
 }
 
 /* ═══════════════ تهيئة الأزرار ═══════════════ */
 function mpInit(){
+  if(MP.bound) return;
+  MP.bound = true;
+
   const openBtn = document.getElementById('mp-open-btn');
   if(openBtn){
     openBtn.addEventListener('click', () => {
-      if(!Cloud.user){
-        alert('سجّل دخولك أولاً للعب الجماعي');
-        return;
-      }
+      if(!Cloud.user){ alert('سجّل دخولك أولاً للعب الجماعي'); return; }
       showScreen('s-multiplayer');
       Sfx.tap(); haptic(6);
     });
@@ -17285,10 +17749,7 @@ function mpInit(){
   const joinBtn = document.getElementById('mp-join-btn');
   if(codeInput){
     codeInput.addEventListener('input', () => {
-      codeInput.value = codeInput.value
-        .toUpperCase()
-        .replace(/[^A-Z0-9]/g, '')
-        .slice(0, MP_CONFIG.codeLength);
+      codeInput.value = codeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, MP_CONFIG.codeLength);
     });
   }
   if(joinBtn && codeInput){
@@ -17312,12 +17773,8 @@ function mpInit(){
     b.addEventListener('click', async () => {
       if(!confirm('مغادرة الغرفة؟')) return;
       await mpLeaveRoom();
-      if(G.state === 'PLAYING' || G.state === 'PAUSED'){
-        quitToMenu();
-      } else {
-        showScreen('s-home');
-        buildHome();
-      }
+      if(G.state === 'PLAYING' || G.state === 'PAUSED') quitToMenu();
+      else { showScreen('s-home'); buildHome(); }
       Sfx.tap(); haptic(6);
     });
   });
@@ -17329,85 +17786,53 @@ function mpInit(){
       try {
         await navigator.clipboard.writeText(code);
         copyBtn.textContent = '✓ تم النسخ';
-      } catch(e){
-        copyBtn.textContent = '📋 ' + code;
-      }
+      } catch(e){ copyBtn.textContent = '📋 ' + code; }
       setTimeout(() => { copyBtn.textContent = '📋 نسخ الكود'; }, 1500);
     });
   }
 
   const againBtn = document.getElementById('mp-play-again-btn');
-  if(againBtn){
-    againBtn.addEventListener('click', async () => {
-      if(!MP.isHost){
-        alert('فقط المضيف يمكنه إعادة المباراة');
-        return;
-      }
-      try {
-        MP.resultShown = false;
-        await Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId).update({
-          status: 'waiting',
-          winnerUid: null,
-          startedAt: null,
-          finishedAt: null,
-          hostScore: 0,
-          guestScore: 0
-        });
-        // إعادة تصفير حالات اللاعبين
-        const playersSnap = await Cloud.db.collection(MP_CONFIG.collection)
-          .doc(MP.roomId).collection('players').get();
-        const batch = Cloud.db.batch();
-        playersSnap.forEach(d => {
-          batch.update(d.ref, {
-            meters: 0, coins: 0, alive: true,
-            xRatio: 0.26, yRatio: 0.5, rot: 0
-          });
-        });
-        await batch.commit();
+  if(againBtn) againBtn.addEventListener('click', mpRematch);
 
-        showScreen('s-multiplayer-waiting');
-        mpBuildWaitingRoom();
-      } catch(e){
-        alert('فشل: ' + e.message);
-      }
+  // ✅ إيموجي بار
+  const emojiBar = document.getElementById('mp-emoji-bar');
+  if(emojiBar){
+    emojiBar.innerHTML = MP_CONFIG.emojis.map(e =>
+      `<button class="mp-emoji-btn" data-emoji="${e}">${e}</button>`
+    ).join('');
+    emojiBar.querySelectorAll('.mp-emoji-btn').forEach(b => {
+      b.addEventListener('click', () => {
+        mpSendEmoji(b.dataset.emoji);
+        b.style.transform = 'scale(1.3)';
+        setTimeout(() => b.style.transform = '', 200);
+      });
     });
   }
 }
 
-/* ═══════════════ ربط مع حلقة اللعب ═══════════════
-   نستخدم التفاف (wrapper) لعدم تعديل الكود الأصلي  */
-
-// ═══ التفاف draw() ═══
+/* ═══════════════ Patches ═══════════════ */
 (function patchDraw(){
-  const _orig = window.draw || draw;
-  try {
-    // نستبدل draw بشيء يضيف الأشباح
-    const originalDraw = draw;
-    draw = function(){
-      originalDraw();
-      // أشباح اللاعبين تُرسم فوق اللاعب الأصلي وقبل HUD
-      if(MP.active) {
-        try { mpDrawGhosts(); } catch(e){}
-      }
-    };
-  } catch(e){ console.warn('[MP] patch draw failed:', e); }
+  const originalDraw = draw;
+  draw = function(){
+    originalDraw();
+    if(MP.active){
+      try { mpDrawGhosts(); } catch(e){ console.warn('[MP] ghost:', e); }
+    }
+  };
 })();
 
-// ═══ التفاف gameOver() ═══
 (function patchGameOver(){
   const original = gameOver;
   gameOver = function(){
     const r = original.apply(this, arguments);
-    // نُعلم اللاعبين بموتي
     if(MP.active){
-      setTimeout(() => { mpNotifyDeath().catch(()=>{}); }, 200);
+      setTimeout(() => { mpNotifyDeath().catch(()=>{}); }, 220);
       setTimeout(() => { mpUpdateLeaderboard(); }, 100);
     }
     return r;
   };
 })();
 
-// ═══ التفاف updateGameplay لتحديث لوحة الترتيب ═══
 (function patchUpdateGameplay(){
   const original = updateGameplay;
   updateGameplay = function(){
@@ -17419,26 +17844,11 @@ function mpInit(){
   };
 })();
 
-// ═══ التفاف quitToMenu للخروج من الغرفة ═══
-(function patchQuitToMenu(){
-  const original = quitToMenu;
-  quitToMenu = function(){
-    if(MP.active){
-      // لا نُغادر تلقائياً - نعرض شاشة النتيجة
-      if(MP.roomData && MP.roomData.status === 'playing'){
-        // انتظر النتيجة
-      }
-    }
-    const r = original.apply(this, arguments);
-    return r;
-  };
-})();
-
-/* ═══════════════ تنظيف عند إغلاق الصفحة ═══════════════ */
 window.addEventListener('beforeunload', () => {
-  if(MP.active && MP.isHost && MP.roomId && Cloud.db){
-    // استخدام sendBeacon أو حذف متزامن غير ممكن هنا، لكن Firestore سيحرر الغرفة
-    // يمكن إضافة Cloud Function لتنظيف الغرف الميتة لاحقاً
+  // Firestore سيحرر الوثيقة تلقائياً لكن نترك أثراً
+  if(MP.active && MP.roomId && Cloud.db){
+    try { Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId)
+      .update({ heartbeatAt: firebase.firestore.FieldValue.serverTimestamp() }); } catch(e){}
   }
 });
 
@@ -17490,7 +17900,14 @@ PLACEMENT_TYPES = buildPlacementTypes();
 
 wireGameButtons();
 wireAdminPanel();
-mpInit();                 // ← أضف هذا السطر هنا
+mpInit();
+// ✅ تحقق دوري من حالة الاتصال
+setInterval(() => {
+  if(!MP.active) return;
+  const stale = Date.now() - MP.lastSyncAt > 3000;
+  MP.connectionState = stale ? 'reconnecting' : 'connected';
+  mpUpdateConnectionBadge();
+}, 2000);
 applyAdminEffects();
 updateAdminUI();
 

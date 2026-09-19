@@ -2475,3 +2475,180 @@ canvas{display:block;width:100%;height:100%;}
 }
 .mp-result-row span:last-child{color:var(--amber);font-size:16px;}
 .mp-result-row:first-child{border-color:var(--gold);box-shadow:0 4px 14px rgba(232,179,78,.25);}
+
+/* ============================================================
+   ============ MULTIPLAYER v2 UI ============================
+   ============================================================ */
+
+/* حالة الاتصال */
+.mp-conn-badge{
+  display:flex;align-items:center;gap:6px;
+  padding:5px 10px;border-radius:100px;
+  background:rgba(0,0,0,0.35);backdrop-filter:blur(8px);
+  position:absolute;top:14px;left:14px;z-index:7;
+}
+.mp-conn-dot{
+  width:7px;height:7px;border-radius:50%;
+  box-shadow:0 0 8px currentColor;
+  animation:mpPulse 1.6s infinite;
+}
+@keyframes mpPulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+.mp-conn-lbl{
+  font-family:'Space Grotesk',sans-serif;font-size:10px;
+  font-weight:700;color:#fff;letter-spacing:.5px;
+}
+
+/* شارة "أنت" */
+.mp-me{border-color:var(--amber) !important;
+  box-shadow:0 6px 22px rgba(224,122,63,.3) !important;}
+.mp-you-badge{
+  position:absolute;top:-8px;right:8px;
+  padding:2px 8px;border-radius:100px;
+  background:var(--amber);color:#fff;
+  font-family:'Space Grotesk';font-size:8px;font-weight:700;
+  letter-spacing:1px;
+}
+
+/* شريط النقاط */
+.mp-score-bar{
+  display:flex;align-items:center;justify-content:center;gap:14px;
+  padding:10px;border-radius:14px;
+  background:#fff;border:1px solid var(--line);
+  box-shadow:var(--shadow-sm);margin-bottom:14px;
+}
+.mp-score-side{
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:6px 14px;border-radius:12px;transition:all .3s;
+}
+.mp-score-side.leading{
+  background:linear-gradient(135deg,#FFF9EC,#FBF1DC);
+  box-shadow:0 4px 14px rgba(232,179,78,.25);
+}
+.mp-score-num{
+  font-family:'Space Grotesk';font-size:24px;font-weight:700;
+  color:var(--ink);line-height:1;
+}
+.mp-score-lbl{
+  font-size:8px;font-weight:800;letter-spacing:2px;
+  color:var(--ink-mute);
+}
+.mp-score-vs{
+  font-family:'Space Grotesk';font-size:11px;font-weight:700;
+  color:var(--amber);letter-spacing:1px;
+  padding:4px 10px;border-radius:100px;
+  background:linear-gradient(135deg,#FFF9EC,#FBF1DC);
+}
+
+/* العد التنازلي */
+.mp-countdown{
+  position:absolute;inset:0;z-index:100;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(15,12,10,.65);backdrop-filter:blur(12px);
+  pointer-events:none;
+}
+.mp-cd-num{
+  font-family:'Space Grotesk';font-size:140px;font-weight:700;
+  color:#fff;line-height:1;
+  text-shadow:0 12px 40px rgba(232,179,78,.8);
+  animation:mpCountdown 0.9s cubic-bezier(.34,1.56,.64,1);
+}
+.mp-cd-go{
+  font-family:'Space Grotesk';font-size:110px;font-weight:700;
+  color:var(--amber);line-height:1;
+  text-shadow:0 12px 40px rgba(224,122,63,.9);
+  animation:mpCountdown 0.6s cubic-bezier(.34,1.56,.64,1);
+}
+.mp-cd-ready{
+  font-family:'Space Grotesk';font-size:52px;font-weight:700;
+  color:#fff;letter-spacing:8px;line-height:1;
+  opacity:0.85;
+}
+@keyframes mpCountdown{
+  0%{transform:scale(2);opacity:0;}
+  40%{transform:scale(1);opacity:1;}
+  100%{transform:scale(0.9);opacity:0.85;}
+}
+
+/* لوحة الترتيب المحسّنة */
+.mp-leaderboard{
+  position:absolute;top:120px;right:14px;
+  display:flex;flex-direction:column;gap:2px;
+  padding:8px;border-radius:14px;
+  background:rgba(15,12,10,.82);
+  backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,.1);
+  box-shadow:0 10px 30px rgba(0,0,0,.4);
+  min-width:190px;z-index:6;pointer-events:none;
+}
+.mp-row{
+  display:flex;align-items:center;gap:6px;
+  padding:6px 8px;border-radius:8px;
+  font-family:'Space Grotesk';font-size:10.5px;font-weight:700;
+  color:#fff;transition:background .3s;
+}
+.mp-row.mp-me{background:rgba(232,179,78,.22);}
+.mp-row.mp-dead{opacity:.5;}
+.mp-row.mp-dead .mp-name::after{content:' ✝';color:#C14A4A;}
+.mp-rank{
+  width:16px;height:16px;border-radius:50%;
+  background:rgba(255,255,255,.15);
+  display:flex;align-items:center;justify-content:center;
+  font-size:9px;flex-shrink:0;
+}
+.mp-row:first-child .mp-rank{background:#E8B34E;color:#1A1512;}
+.mp-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mp-meters{font-size:10px;color:#E8B34E;letter-spacing:.3px;}
+.mp-coins{font-size:9px;color:#FFC860;opacity:.85;}
+.mp-conn{
+  width:6px;height:6px;border-radius:50%;
+  box-shadow:0 0 6px currentColor;flex-shrink:0;
+}
+
+/* شريط التقدم تحت كل لاعب */
+.mp-progress-track{
+  height:2px;border-radius:2px;
+  background:rgba(255,255,255,.1);
+  overflow:hidden;margin:0 8px 4px;
+}
+.mp-progress-fill{
+  height:100%;border-radius:2px;
+  transition:width .3s cubic-bezier(.34,1.56,.64,1);
+  box-shadow:0 0 6px currentColor;
+}
+
+/* الإيموجي */
+.mp-emoji-bar{
+  position:absolute;bottom:20px;left:50%;transform:translateX(-50%);
+  display:flex;gap:6px;padding:8px 12px;
+  border-radius:100px;
+  background:rgba(15,12,10,.75);
+  backdrop-filter:blur(14px);
+  border:1px solid rgba(255,255,255,.12);
+  z-index:7;
+}
+.mp-emoji-btn{
+  width:36px;height:36px;border-radius:50%;
+  border:none;background:rgba(255,255,255,.08);
+  font-size:20px;cursor:pointer;
+  transition:all .15s cubic-bezier(.34,1.56,.64,1);
+  display:flex;align-items:center;justify-content:center;
+  padding:0;
+}
+.mp-emoji-btn:active{
+  background:rgba(232,179,78,.35);
+  transform:scale(1.2);
+}
+
+@keyframes mpEmojiPop{
+  0%{transform:scale(0) translateY(0);opacity:0;}
+  30%{transform:scale(1.4) translateY(-30px);opacity:1;}
+  70%{transform:scale(1.1) translateY(-70px);opacity:1;}
+  100%{transform:scale(0.9) translateY(-120px);opacity:0;}
+}
+
+/* صف النتيجة */
+.mp-result-row.winner{
+  border-color:var(--gold);
+  box-shadow:0 4px 14px rgba(232,179,78,.3);
+  background:linear-gradient(135deg,#FFF9EC,#FBF1DC);
+}

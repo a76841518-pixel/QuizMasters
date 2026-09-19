@@ -52,7 +52,9 @@
         <button id="pause-btn">❚❚</button>
       </div>
     </div>
-  </div>
+  <!-- 👇 أضف هذا السطر هنا 👇 -->
+  <div class="mp-emoji-bar" id="mp-emoji-bar" style="display:none;"></div>
+</div>
 
   <!-- ✅ جديد: لوحة الترتيب المباشرة -->
   <div id="mp-leaderboard" class="mp-leaderboard" style="display:none;"></div>
@@ -554,6 +556,12 @@
         </div>
 
         <div class="mp-slots" id="mp-slots"></div>
+
+<div id="mp-score-display"></div>
+<div class="mp-conn-badge" id="mp-conn-badge" style="position:static;margin:0 auto 14px;justify-content:center;">
+  <span class="mp-conn-dot" style="background:#4CAF50;"></span>
+  <span class="mp-conn-lbl">متصل · 0ms</span>
+</div>
 
         <button class="action-btn gold" id="mp-start-btn" disabled
                 style="max-width:100%;margin-top:auto;">...</button>
