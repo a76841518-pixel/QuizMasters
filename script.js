@@ -14895,17 +14895,22 @@ const Cloud = {
     return { ok: false, error: msg, code };
   },
 
-  async signOut() {
-    try {
-      await this.auth.signOut();
-      this.user = null;
-      this.profile = null;
-      this.setState('offline');
-      return { ok: true };
-    } catch (e) {
-      return { ok: false, error: e.message };
-    }
-  },
+async signOut() {
+  try {
+    await this.auth.signOut();
+    this.user = null;
+    this.profile = null;
+
+    /* ✅ إصلاح: تصفير بيانات اللاعب في الذاكرة عند الخروج */
+    Save.data = JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA));
+    Save.runMigrations();
+
+    this.setState('offline');
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+},
 
   async loadProfile(uid) {
     try {
@@ -15295,16 +15300,17 @@ async function handleSignInResult(result) {
 }
 
 async function mergeAndGoHome() {
+  /* ✅ إصلاح: تصفير الذاكرة أولاً قبل أي عملية سحب */
+  Save.data = JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA));
+  Save.runMigrations();
+
   /* ═══ 1. حمّل الحفظ الشخصي من Firebase ═══ */
   const cloudSave = await Cloud.pullSave();
 
   if (cloudSave) {
-    Save.applyCloud(cloudSave);   // دمج فوق الافتراضيات + ترحيلات
-  } else {
-    /* لاعب جديد — ابدأ بالافتراضيات */
-    Save.data = JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA));
-    Save.runMigrations();
+    Save.applyCloud(cloudSave);   /* يدمج فوق الافتراضيات + ترحيلات */
   }
+  /* إن لم يوجد حفظ سحابي: نبقى على الافتراضيات المُصفّرة أعلاه */
 
   /* ═══ 2. حمّل محتوى المشرف العام (custom items) ═══ */
   await pullAdminContent();
@@ -15513,15 +15519,25 @@ function setupAuthWiring() {
 function setupAuthListener() {
   Cloud.auth.onAuthStateChanged(async (user) => {
     if (user) {
+      /* ✅ إصلاح: كشف تغيير المستخدم وتصفير البيانات القديمة فوراً */
+      const previousUid = Cloud.user ? Cloud.user.uid : null;
+      const isDifferentUser = (previousUid !== user.uid);
+
+      if (isDifferentUser) {
+        Save.data = JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA));
+        Save.runMigrations();
+      }
+
       Cloud.user = user;
       Cloud.setState('idle');
+
       try {
         await Cloud.loadProfile(user.uid);
       } catch (e) {}
 
       if(isAdminUser()){
         Save.data.admin.access = true;
-        Save.save();
+        /* ❌ لا تستدعِ Save.save() هنا — mergeAndGoHome سيتولى ذلك */
       }
       applyAdminEffects();
       updateProfileUI();
@@ -15545,6 +15561,10 @@ function setupAuthListener() {
     } else {
       Cloud.user = null;
       Cloud.profile = null;
+      /* ✅ إصلاح: تصفير البيانات أيضاً عند تسجيل الخروج */
+      Save.data = JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA));
+      Save.runMigrations();
+
       Cloud.setState('offline');
       if (Cloud.enabled) {
         showScreen('s-login');
