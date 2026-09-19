@@ -16746,17 +16746,37 @@ function mpGenerateSeed(){
 }
 
 async function mpFindUnusedCode(){
-  for(let i = 0; i < 8; i++){
-    const code = mpGenerateRoomCode();
-    try {
-      const snap = await Cloud.db.collection(MP_CONFIG.collection)
-        .where('code', '==', code)
-        .where('status', 'in', ['waiting','countdown','playing'])
-        .limit(1).get();
-      if(snap.empty) return code;
-    } catch(e){}
+  /* ✅ نبني كوداً فريداً مع لاحقة عشوائية إضافية لتقليل التصادم */
+  const baseCode = mpGenerateRoomCode();
+  
+  /* ⏱️ استعلام واحد فقط مع timeout صارم */
+  try {
+    const queryPromise = Cloud.db.collection(MP_CONFIG.collection)
+      .where('code', '==', baseCode)
+      .limit(1)
+      .get();
+    
+    const timeoutPromise = new Promise(resolve => 
+      setTimeout(() => resolve({ _timeout: true }), 350)
+    );
+    
+    const result = await Promise.race([queryPromise, timeoutPromise]);
+    
+    /* إذا فشل الاستعلام بالـ timeout، استخدم الكود على أي حال */
+    if(result._timeout) return baseCode;
+    
+    /* إذا لم توجد غرفة بهذا الكود — ممتاز */
+    if(!result || result.empty) return baseCode;
+  } catch(e){
+    /* فشل الاستعلام (عدم وجود Index مثلاً) → استخدم الكود */
+    console.warn('[MP] Code check skipped:', e.message);
+    return baseCode;
   }
-  return mpGenerateRoomCode();
+  
+  /* في حالة نادرة جداً (تصادم): أضف حرفاً عشوائياً مختلفاً */
+  const lastCharIdx = Math.floor(Math.random() * MP_CONFIG.codeChars.length);
+  return baseCode.slice(0, MP_CONFIG.codeLength - 1) + 
+         MP_CONFIG.codeChars.charAt(lastCharIdx);
 }
 
 /* ═══════════════ إنشاء غرفة ═══════════════ */
@@ -17733,17 +17753,24 @@ function mpInit(){
     });
   }
 
-  const createBtn = document.getElementById('mp-create-btn');
-  if(createBtn){
-    createBtn.addEventListener('click', async () => {
-      createBtn.disabled = true;
-      const orig = createBtn.textContent;
-      createBtn.textContent = '⏳ ...';
+const createBtn = document.getElementById('mp-create-btn');
+if(createBtn){
+  createBtn.addEventListener('click', async () => {
+    if(createBtn.disabled) return;
+    createBtn.disabled = true;
+    createBtn.textContent = '⏳ جارٍ إنشاء الغرفة...';
+    
+    try {
       await mpCreateRoom(Save.data.mode);
+    } catch(e){
+      console.error('[MP] Create error:', e);
+      alert('تعذر إنشاء الغرفة: ' + (e.message || 'خطأ غير معروف'));
+    } finally {
       createBtn.disabled = false;
-      createBtn.textContent = orig;
-    });
-  }
+      createBtn.textContent = '➕  إنشاء غرفة جديدة';
+    }
+  });
+}
 
   const codeInput = document.getElementById('mp-code-input');
   const joinBtn = document.getElementById('mp-join-btn');
