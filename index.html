@@ -542,31 +542,101 @@
 <div class="admin-form-v3" id="admin-form" style="display:none;">
   <div class="afv3-backdrop" id="afv3-backdrop"></div>
   <div class="afv3-panel">
+
     <div class="afv3-head">
       <div class="afv3-title">عنصر جديد — <span id="af-cat-label">أزياء</span></div>
       <button class="afv3-close" id="afv3-close">✕</button>
     </div>
+
     <div class="afv3-body">
-      <!-- 📝 الاسم عربي / إنجليزي -->
-      <input id="af-name">
-      <input id="af-name-en">
-      <!-- ⭐ الندرة + الحالة -->
-      <select id="af-rarity">...</select>
-      <select id="af-enabled">...</select>
-      <!-- 🖼️ مسار الصورة -->
-      <input id="af-image-path" placeholder="dragon-gold.png">
-      <div class="af-path-preview" id="af-path-preview"></div>
-      <!-- 🎨 الألوان الاحتياطية -->
-      <input id="af-color" type="color">
-      <input id="af-color2" type="color">
-      <!-- 🎯 أماكن الحصول (تُبنى ديناميكياً) -->
-      <div id="sources-editor" class="sources-editor"></div>
+
+      <!-- ═══ البيانات الأساسية ═══ -->
+      <div class="afv3-section">
+        <div class="afv3-section-head">📝 البيانات الأساسية</div>
+
+        <div class="af-group">
+          <label class="af-label">الاسم بالعربية *</label>
+          <input class="af-input" id="af-name" type="text"
+                 maxlength="24" placeholder="التنين الذهبي">
+        </div>
+
+        <div class="af-group">
+          <label class="af-label">الاسم بالإنجليزية</label>
+          <input class="af-input" id="af-name-en" type="text"
+                 maxlength="24" placeholder="GOLDEN DRAGON">
+        </div>
+
+        <div class="af-row-2">
+          <div class="af-group">
+            <label class="af-label">الندرة</label>
+            <select class="af-input" id="af-rarity">
+              <option value="common">عادي</option>
+              <option value="rare">نادر</option>
+              <option value="epic">ملحمي</option>
+              <option value="legend">أسطوري</option>
+              <option value="mythic">خرافي</option>
+            </select>
+          </div>
+          <div class="af-group">
+            <label class="af-label">الحالة</label>
+            <select class="af-input" id="af-enabled">
+              <option value="true">مُفعّل</option>
+              <option value="false">مُخفي</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ الصورة ═══ -->
+      <div class="afv3-section">
+        <div class="afv3-section-head">🖼️ الصورة</div>
+        <div class="af-hint">
+          ضع ملف PNG في:
+          <code>assets/custom/<span id="af-path-cat">skins</span>/</code>
+          <br>ثم اكتب اسم الملف فقط
+        </div>
+        <input class="af-input" id="af-image-path" type="text"
+               placeholder="dragon-gold.png"
+               autocomplete="off" spellcheck="false">
+        <div class="af-path-preview" id="af-path-preview">
+          <span>لا توجد معاينة</span>
+        </div>
+      </div>
+
+      <!-- ═══ الألوان ═══ -->
+      <div class="afv3-section">
+        <div class="afv3-section-head">🎨 الألوان الاحتياطية</div>
+        <div class="af-row-2">
+          <div class="af-group">
+            <label class="af-label">اللون الأساسي</label>
+            <input class="af-input color" id="af-color" type="color" value="#E07A3F">
+          </div>
+          <div class="af-group">
+            <label class="af-label">اللون الثانوي</label>
+            <input class="af-input color" id="af-color2" type="color" value="#E8B34E">
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ أماكن الحصول ═══ -->
+      <div class="afv3-section">
+        <div class="afv3-section-head">🎯 أماكن الحصول</div>
+        <div class="af-hint">
+          اختر مصدراً واحداً على الأقل — سيظهر العنصر في كل مكان تحدده.
+        </div>
+        <div id="sources-editor" class="sources-editor"></div>
+      </div>
+
     </div>
+
     <div class="afv3-foot">
       <div class="af-status" id="af-status"></div>
-      <button id="af-cancel">إلغاء</button>
-      <button id="af-save">💾 حفظ ونشر</button>
+      <div class="afv3-actions">
+        <button class="admin-btn-full soft" id="af-cancel">إلغاء</button>
+        <button class="admin-btn-full gold" id="af-save">💾 حفظ ونشر</button>
+      </div>
     </div>
+
   </div>
 </div>
 

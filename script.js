@@ -19581,13 +19581,11 @@ function wireAdminPanel(){
   /* ============================================================
      ═══ 4) زر "إضافة عنصر جديد" ═══
      ============================================================ */
-  const addBtn = $('admin-add-content');
-  if(addBtn && !addBtn._bound){
-    addBtn._bound = true;
-    addBtn.addEventListener('click', () => {
-      openAdminItemForm();
-    });
-  }
+const addBtn = $('admin-add-content');
+if(addBtn && !addBtn._bound){
+  addBtn._bound = true;
+  addBtn.addEventListener('click', () => openAdminItemForm());
+}
 
   /* ============================================================
      ═══ 5) حقول النموذج ═══
@@ -19721,17 +19719,16 @@ function wireAdminOpenButtons($){
 }
 
 /* ═══ 2) فتح نموذج إضافة عنصر ═══ */
+/* ═══ 2) فتح نموذج إضافة عنصر ═══ */
 function openAdminItemForm(){
   const $ = id => document.getElementById(id);
 
-  /* ═══ تحديد التصنيف الحالي (توحيد المرجعين) ═══ */
   const cat = (typeof Admin !== 'undefined' && Admin && Admin.contentTab)
     ? Admin.contentTab
     : currentAdminTab;
-
   currentAdminTab = cat;
 
-  /* ═══ تصفير الحقول ═══ */
+  /* تصفير الحقول */
   const reset = (id, val) => { const el = $(id); if(el) el.value = val; };
   reset('af-name',       '');
   reset('af-name-en',    '');
@@ -19741,53 +19738,61 @@ function openAdminItemForm(){
   reset('af-color2',     '#E8B34E');
   reset('af-image-path', '');
 
-  /* ═══ تصفير المعاينة ═══ */
+  /* تصفير المعاينة */
   const preview = $('af-path-preview');
   if(preview){
     preview.innerHTML = '<span>لا توجد معاينة</span>';
     preview.classList.remove('err');
   }
 
-  /* ═══ تصفير الحالة ═══ */
+  /* تصفير الحالة */
   const status = $('af-status');
   if(status){
     status.textContent = '';
     status.className = 'af-status';
   }
 
-  /* ═══ تحديث التسميات ═══ */
+  /* تحديث التسميات */
   const catLabel = $('af-cat-label');
   if(catLabel){
     catLabel.textContent =
       (typeof CATEGORY_LABELS !== 'undefined' && CATEGORY_LABELS[cat]) || cat;
   }
-
   const pathCat = $('af-path-cat');
   if(pathCat){
     pathCat.textContent =
       (typeof CATEGORY_FOLDERS !== 'undefined' && CATEGORY_FOLDERS[cat]) || 'misc';
   }
 
-  /* ═══ بناء محرر المصادر ═══ */
+  /* بناء محرر المصادر */
   if(typeof PLACEMENT_TYPES === 'undefined' || !PLACEMENT_TYPES ||
      Object.keys(PLACEMENT_TYPES).length === 0){
     if(typeof buildPlacementTypes === 'function'){
       PLACEMENT_TYPES = buildPlacementTypes();
     }
   }
-
   if(typeof buildSourcesEditor === 'function') buildSourcesEditor();
 
-  /* ═══ إظهار النموذج ═══ */
+  /* ✅ الإصلاح: استخدم .active بدل style.display */
   const form = $('admin-form');
   if(form){
-    form.style.display = 'block';
+    form.classList.add('active');
+    form.style.display = '';           /* ⬅️ نظّف أي inline style قديم */
     requestAnimationFrame(() => {
       form.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   }
 
   Sfx.tap(); haptic(6);
+}
+
+/* ═══ 3) إغلاق نموذج إضافة عنصر ═══ */
+function closeAdminItemForm(){
+  const form = document.getElementById('admin-form');
+  if(form){
+    form.classList.remove('active');
+    form.style.display = 'none';       /* ⬅️ أبقِ هذا للتوافق */
+  }
 }
 
 /* ═══ 3) إغلاق نموذج إضافة عنصر ═══ */
@@ -23000,6 +23005,82 @@ const Admin = {
 
 /* ═══ تصدير للاستخدام الخارجي ═══ */
 window.Admin = Admin;
+
+/* ============================================================
+   ═══ ضمان ظهور تبويبات لوحة المشرف دائماً ═══
+   ============================================================ */
+(function forceAdminTabsVisible(){
+
+  function fixTabs(){
+    const tabs = document.getElementById('admin-tabs');
+    if(!tabs) return;
+
+    /* فرض كل خصائص العرض */
+    const force = {
+      display: 'flex',
+      visibility: 'visible',
+      opacity: '1',
+      height: 'auto',
+      minHeight: '52px',
+      flexShrink: '0',
+      width: '100%',
+      boxSizing: 'border-box',
+      overflowX: 'auto',
+      overflowY: 'hidden',
+      position: 'relative',
+      zIndex: '5',
+      alignItems: 'center',
+      flexWrap: 'nowrap'
+    };
+    Object.assign(tabs.style, force);
+
+    /* فرض ظهور كل زر */
+    tabs.querySelectorAll('.admin-tab').forEach(tab => {
+      tab.style.display = 'inline-flex';
+      tab.style.visibility = 'visible';
+      tab.style.opacity = '1';
+      tab.style.flexShrink = '0';
+    });
+
+    console.log('[Admin] ✅ Tabs forced visible:', tabs.querySelectorAll('.admin-tab').length, 'tabs');
+  }
+
+  /* 1) عند فتح لوحة المشرف */
+  document.addEventListener('click', (e) => {
+    if(e.target.closest('#menu-admin-btn') ||
+       e.target.closest('[data-menu="admin"]')){
+      setTimeout(fixTabs, 100);
+      setTimeout(fixTabs, 400);
+    }
+  });
+
+  /* 2) عند تبديل التبويبات */
+  document.addEventListener('click', (e) => {
+    if(e.target.closest('.admin-tab')){
+      setTimeout(fixTabs, 50);
+    }
+  });
+
+  /* 3) عند الجاهزية */
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', () => setTimeout(fixTabs, 200));
+  } else {
+    setTimeout(fixTabs, 200);
+  }
+
+  /* 4) مراقب دوري خفيف */
+  setInterval(() => {
+    const screen = document.getElementById('s-admin');
+    if(screen && screen.classList.contains('active')){
+      const tabs = document.getElementById('admin-tabs');
+      if(tabs && getComputedStyle(tabs).height === '0px'){
+        console.warn('[Admin] Tabs collapsed — fixing...');
+        fixTabs();
+      }
+    }
+  }, 1500);
+
+})();
 
 /* ============================================================
    ==================== BOOT =================================
