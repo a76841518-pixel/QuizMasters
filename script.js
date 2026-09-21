@@ -18106,75 +18106,121 @@ init() {
     return this._signIn(provider);
   },
 
-  async _signIn(provider) {
-    /* ═══════════════ 1) اكتشف نوع الجهاز/المتصفح ═══════════════ */
-    const ua = navigator.userAgent || '';
-    const isMobile = /Android|iPhone|iPad|iPod|Mobile|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+async _signIn(provider) {
+  const ua = navigator.userAgent || '';
+  const isIOS = /iPhone|iPad|iPod/i.test(ua);
+  const isAndroid = /Android/i.test(ua);
+  const isMobile = isIOS || isAndroid;
+  const isInAppBrowser = /FBAN|FBAV|FB_IAB|Instagram|Twitter|Line\/|WhatsApp|MicroMessenger|Snapchat|Pinterest|Snapchat/i.test(ua);
 
-    /* متصفحات داخل التطبيقات — Google يحجب فيها OAuth أصلاً */
-    const isInAppBrowser = /FBAN|FBAV|FB_IAB|Instagram|Twitter|Line\/|WhatsApp|MicroMessenger|Snapchat|Pinterest/i.test(ua);
+  /* ═══════════════ 1) متصفح داخل تطبيق ═══════════════ */
+  if (isInAppBrowser) {
+    return {
+      ok: false,
+      code: 'in-app-browser',
+      error: 'افتح اللعبة في Chrome أو Safari — ليس داخل تطبيق آخر (فيسبوك، إنستغرام...)'
+    };
+  }
 
-    /* ═══════════════ 2) متصفح داخل تطبيق — لا يمكن تسجيل الدخول ═══════════════ */
-    if (isInAppBrowser) {
-      return {
-        ok: false,
-        code: 'in-app-browser',
-        error: 'افتح اللعبة في متصفح خارجي (Chrome أو Safari) لتسجيل الدخول بـ Google'
-      };
-    }
+  /* ═══════════════ 2) فحص توفر التخزين ═══════════════ */
+  const hasStorage = this._checkStorage();
+  if (!hasStorage) {
+    return {
+      ok: false,
+      code: 'no-storage',
+      error: 'المتصفح يمنع التخزين — فعّل الكوكيز أو أغلق "التصفح المتخفي"'
+    };
+  }
 
-    /* ═══════════════ 3) على الهاتف: استخدم redirect مباشرة (popup محجوب) ═══════════════ */
-    if (isMobile) {
-      try {
-        await this.auth.signInWithRedirect(provider);
-        return { ok: true, redirect: true };
-      } catch (e) {
-        return this._handleAuthError(e);
-      }
-    }
+  /* ═══════════════ 3) جرّب popup أولاً على كل الأجهزة ═══════════════ */
+  /* ملاحظة: Chrome Android و Safari iOS الحديث يدعمان popup */
+  try {
+    const cred = await this.auth.signInWithPopup(provider);
+    return { ok: true, user: cred.user };
+  } catch (e) {
+    console.log('[Cloud] Popup failed, reason:', e.code);
 
-    /* ═══════════════ 4) على سطح المكتب: جرّب popup أولاً ═══════════════ */
-    try {
-      const cred = await this.auth.signInWithPopup(provider);
-      return { ok: true, user: cred.user };
-    } catch (e) {
-      const fallbackCodes = [
-        'auth/popup-blocked',
-        'auth/popup-closed-by-user',
-        'auth/cancelled-popup-request',
-        'auth/operation-not-supported-in-this-environment',
-        'auth/web-storage-unsupported'
-      ];
+    /* ═══════════════ 4) قرر إن كان يجب التحول إلى redirect ═══════════════ */
+    const fallbackCodes = [
+      'auth/popup-blocked',
+      'auth/popup-closed-by-user',
+      'auth/cancelled-popup-request',
+      'auth/operation-not-supported-in-this-environment',
+      'auth/web-storage-unsupported',
+      'auth/internal-error'
+    ];
 
-      if (fallbackCodes.includes(e.code)) {
-        try {
-          await this.auth.signInWithRedirect(provider);
-          return { ok: true, redirect: true };
-        } catch (e2) {
-          return this._handleAuthError(e2);
-        }
-      }
+    if (!fallbackCodes.includes(e.code)) {
+      /* خطأ حقيقي — لا داعي للـ redirect */
       return this._handleAuthError(e);
     }
-  },
 
-  _handleAuthError(e) {
-    console.warn('[Cloud] Auth error:', e);
-    const code = (e && e.code) || '';
-    const host = location.hostname || '(unknown)';
-    let msg = 'تعذّر تسجيل الدخول، حاول مجدداً';
+    /* ═══════════════ 5) انتقل إلى redirect ═══════════════ */
+    try {
+      /* ✅ للتغلب على iOS ITP: استخدم SESSION بدل LOCAL */
+      await this.auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
 
-    if (code.includes('unauthorized-domain')) {
-      msg = `النطاق "${host}" غير مصرّح. أضفه في Firebase → Authentication → Authorized domains`;
-    } else if (code.includes('operation-not-allowed')) {
-      msg = 'تسجيل الدخول بـ Google غير مُفعّل في Firebase. فعّله من Authentication → Sign-in method';
-    } else if (code.includes('network-request-failed')) {
-      msg = 'فشل الاتصال بالشبكة، تحقّق من الإنترنت';
-    } else if (code.includes('invalid-api-key')) {
-      msg = 'مفتاح Firebase API غير صالح — تحقّق من FIREBASE_CONFIG';
+      /* ✅ احفظ علامة قبل الـ redirect لاستخدامها عند العودة */
+      try {
+        sessionStorage.setItem('auth_redirect_pending', '1');
+        sessionStorage.setItem('auth_redirect_started_at', Date.now().toString());
+      } catch(_) {}
+
+      await this.auth.signInWithRedirect(provider);
+      return { ok: true, redirect: true };
+    } catch (e2) {
+      return this._handleAuthError(e2);
     }
-    return { ok: false, error: msg, code };
-  },
+  }
+},
+
+/* ═══ فحص توفر التخزين ═══ */
+_checkStorage() {
+  try {
+    const k = '__firebase_test__';
+    localStorage.setItem(k, '1');
+    localStorage.removeItem(k);
+    return true;
+  } catch (e) {
+    try {
+      sessionStorage.setItem(k, '1');
+      sessionStorage.removeItem(k);
+      return true;
+    } catch (e2) {
+      return false;
+    }
+  }
+},
+
+_handleAuthError(e) {
+  console.warn('[Cloud] Auth error:', e);
+  const code = (e && e.code) || '';
+  const host = location.hostname || '(unknown)';
+  let msg = 'تعذّر تسجيل الدخول، حاول مجدداً';
+
+  if (code.includes('unauthorized-domain')) {
+    msg = `النطاق "${host}" غير مصرّح. أضفه في Firebase → Authentication → Authorized domains`;
+  } else if (code.includes('operation-not-allowed')) {
+    msg = 'Google Sign-In غير مُفعّل في Firebase. فعّله من Authentication → Sign-in method';
+  } else if (code.includes('network-request-failed')) {
+    msg = 'فشل الاتصال — تحقّق من الإنترنت';
+  } else if (code.includes('invalid-api-key')) {
+    msg = 'مفتاح Firebase API غير صالح — راجع FIREBASE_CONFIG';
+  } else if (code.includes('popup-blocked')) {
+    msg = 'المتصفح منع النافذة المنبثقة — سيُفتح تسجيل الدخول في نفس الصفحة';
+  } else if (code.includes('web-storage-unsupported')) {
+    msg = 'المتصفح يمنع التخزين — أغلق التصفح المتخفي';
+  } else if (code.includes('account-exists-with-different-credential')) {
+    msg = 'هذا البريد مسجّل بطريقة أخرى — استخدم نفس طريقة الدخول';
+  } else if (code.includes('internal-error')) {
+    msg = 'خطأ داخلي — حاول مرة أخرى';
+  } else if (code.includes('redirect-cancelled-by-user')) {
+    msg = 'تم إلغاء تسجيل الدخول';
+  } else if (code.includes('cancelled-popup-request')) {
+    msg = 'تم إلغاء تسجيل الدخول';
+  }
+  return { ok: false, error: msg, code };
+},
 
 async signOut() {
   try {
@@ -18544,22 +18590,22 @@ async function handleSignInResult(result) {
     if (!result.redirect) showLoginError(result.error || 'حدث خطأ');
     return;
   }
+  /* redirect — لا نكمل، المستمع سيتولى */
   if (result.redirect) return;
 
   const user = result.user;
-
   if (!Cloud.profile) Cloud.profile = { uid: user.uid, username: null };
 
   try {
     await Cloud.loadProfile(user.uid);
-  } catch(e) {
+  } catch (e) {
     Cloud.profile = { uid: user.uid, username: null };
   }
 
-  if (!Cloud.profile) Cloud.profile = { uid: user.uid, username: null };
-
   if (!Cloud.profile.username && user.displayName) {
-    const suggested = user.displayName.replace(/[^A-Za-z0-9_\u0600-\u06FF]/g, '').slice(0, 16) || '';
+    const suggested = user.displayName
+      .replace(/[^A-Za-z0-9_\u0600-\u06FF]/g, '')
+      .slice(0, 16);
     if (suggested) {
       const setupInput = document.getElementById('setup-username');
       if (setupInput) {
@@ -18814,36 +18860,65 @@ function setupAuthWiring() {
    ============================================================ */
 async function setupAuthListener() {
 
-  /* ═══════════════ ✅ 1) استرجع نتيجة redirect إن وُجدت ═══════════════ */
-  try {
-    const redirectResult = await Cloud.auth.getRedirectResult();
-    if (redirectResult && redirectResult.user) {
-      console.log('[Cloud] Redirect sign-in succeeded:', redirectResult.user.uid);
-      /* ستُعالج تلقائياً عبر onAuthStateChanged أدناه */
+  /* ═══════════════════════════════════════════════════════
+     ✅ 1) معالجة نتيجة الـ redirect مع إعادة محاولة
+     ═══════════════════════════════════════════════════════ */
+  const wasRedirecting = (() => {
+    try { return sessionStorage.getItem('auth_redirect_pending') === '1'; }
+    catch(_) { return false; }
+  })();
+
+  let redirectResult = null;
+  let redirectError  = null;
+
+  if (wasRedirecting) {
+    /* إظهار شاشة تحميل */
+    showLoginLoading(true);
+
+    /* ⏱️ retry حتى 3 مرات — iOS يحتاج وقتاً لتطبيق الـ state */
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        redirectResult = await Cloud.auth.getRedirectResult();
+        if (redirectResult && redirectResult.user) break;
+      } catch (e) {
+        redirectError = e;
+        console.warn(`[Cloud] getRedirectResult attempt ${attempt+1} failed:`, e.code);
+      }
+      if (attempt < 2) await new Promise(r => setTimeout(r, 400));
     }
-  } catch (e) {
-    console.warn('[Cloud] getRedirectResult error:', e);
-    /* أظهر خطأ إذا فشلت عملية الـ redirect */
-    const errCode = (e && e.code) || '';
-    if (errCode && errCode !== 'auth/no-auth-event') {
+
+    /* نظّف العلامة */
+    try {
+      sessionStorage.removeItem('auth_redirect_pending');
+      sessionStorage.removeItem('auth_redirect_started_at');
+    } catch(_) {}
+
+    showLoginLoading(false);
+
+    /* ✅ عالج الأخطاء */
+    if (redirectError) {
+      const errCode = redirectError.code || '';
       let msg = 'تعذّر إكمال تسجيل الدخول';
+
       if (errCode.includes('unauthorized-domain')) {
-        msg = 'النطاق الحالي غير مصرّح في Firebase';
+        msg = 'النطاق الحالي غير مصرّح في Firebase Console';
       } else if (errCode.includes('network-request-failed')) {
         msg = 'فشل الاتصال بالشبكة';
       } else if (errCode.includes('account-exists-with-different-credential')) {
         msg = 'هذا البريد مسجّل بطريقة دخول أخرى';
+      } else if (errCode.includes('internal-error')) {
+        msg = 'خطأ داخلي — جرّب Chrome بدل Safari';
       }
-      setTimeout(() => {
-        try { showLoginError(msg); } catch(_){}
-      }, 500);
+
+      setTimeout(() => showLoginError(msg), 400);
     }
   }
 
-  /* ═══════════════ 2) مستمع حالة الدخول (كما هو) ═══════════════ */
+  /* ═══════════════════════════════════════════════════════
+     ✅ 2) مستمع حالة الدخول
+     ═══════════════════════════════════════════════════════ */
   Cloud.auth.onAuthStateChanged(async (user) => {
     if (user) {
-      /* ✅ إصلاح: كشف تغيير المستخدم وتصفير البيانات القديمة فوراً */
       const previousUid = Cloud.user ? Cloud.user.uid : null;
       const isDifferentUser = (previousUid !== user.uid);
 
@@ -18857,20 +18932,25 @@ async function setupAuthListener() {
 
       try {
         await Cloud.loadProfile(user.uid);
-      } catch (e) {}
-
-      if(isAdminUser()){
-        Save.data.admin.access = true;
-        /* ❌ لا تستدعِ Save.save() هنا — mergeAndGoHome سيتولى ذلك */
+      } catch (e) {
+        console.warn('[Cloud] loadProfile failed:', e);
       }
+
+      if (isAdminUser()) {
+        Save.data.admin.access = true;
+      }
+
       applyAdminEffects();
       updateProfileUI();
 
+      /* ═══ لا يوجد اسم → افتح شاشة الإعداد ═══ */
       if (!Cloud.profile || !Cloud.profile.username) {
         if (user.displayName) {
           const inp = document.getElementById('setup-username');
           if (inp && !inp.value) {
-            inp.value = user.displayName.replace(/[^A-Za-z0-9_\u0600-\u06FF]/g,'').slice(0,16);
+            inp.value = user.displayName
+              .replace(/[^A-Za-z0-9_\u0600-\u06FF]/g, '')
+              .slice(0, 16);
             inp.dispatchEvent(new Event('input'));
           }
         }
@@ -18880,12 +18960,20 @@ async function setupAuthListener() {
           if (inp) inp.focus();
         }, 300);
       } else {
-        await mergeAndGoHome();
+        /* ═══ عنده اسم → للقائمة الرئيسية ═══ */
+        try {
+          await mergeAndGoHome();
+        } catch (e) {
+          console.error('[mergeAndGoHome] failed:', e);
+          /* احتياطي: افتح الرئيسية على أي حال */
+          buildHome();
+          showScreen('s-home');
+        }
       }
     } else {
+      /* ═══ تم تسجيل الخروج ═══ */
       Cloud.user = null;
       Cloud.profile = null;
-      /* ✅ إصلاح: تصفير البيانات أيضاً عند تسجيل الخروج */
       Save.data = JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA));
       Save.runMigrations();
 
