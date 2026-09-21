@@ -40,7 +40,7 @@ function WR(min = 1, max = 0){
    ============================================================ */
 const ADMIN_CONFIG = {
   uids: [
-    'HyMhuOo0qLSjH736yosktQloBv12'
+    'T5tWDNgLVWhaonRvvCE4KrQMFWH3'
   ],
   secretCode: 'SHIFT_ADMIN_2024',
   panelRoute: 'admin'
@@ -96,14 +96,21 @@ function buildInventory(){
   const header = document.getElementById('inv-header');
   if(!grid) return;
 
-  /* ═══ الإحصائيات ═══ */
+  /* ✅ كل الفئات */
+  const cats = [
+    'spark','eyes','companion','footstep','trail','jump','death','aura','crown','cape',
+    /* ✨ جديدة */
+    'headItem','backItem','heldItem','groundMark',
+    'nameTag','badge','avatarFrame','banner',
+    'spawnEffect','reviveEffect','hitEffect'
+  ];
+
   const totalSkins = getAllSkins().length;
   const ownedSkins = Save.data.ownedSkins.length;
   let totalCos = 0, ownedCos = 0;
-  const cats = ['spark','eyes','companion','footstep','trail','jump','death','aura','crown','cape'];
   for(const cat of cats){
     totalCos += getAllCosmetics(cat).length;
-    ownedCos += (Save.data.cosmetics.owned[cat] || []).length;
+    ownedCos += ((Save.data.cosmetics.owned[cat] || []).length);
   }
 
   if(header){
@@ -123,9 +130,9 @@ function buildInventory(){
     `;
   }
 
-  /* ═══ عرض الأزياء المملوكة ═══ */
   grid.innerHTML = '';
 
+  /* عرض الأزياء المملوكة */
   const allSkins = getAllSkins();
   allSkins.filter(s => Save.data.ownedSkins.includes(s.id)).forEach(skin => {
     const el = document.createElement('div');
@@ -145,7 +152,7 @@ function buildInventory(){
     grid.appendChild(el);
   });
 
-  /* ═══ عرض التأثيرات المملوكة ═══ */
+  /* ✅ عرض كل التأثيرات المملوكة */
   for(const cat of cats){
     const owned = Save.data.cosmetics.owned[cat] || [];
     const all = getAllCosmetics(cat);
@@ -162,7 +169,7 @@ function buildInventory(){
       el.innerHTML = `
         <div class="inv-thumb">${thumb}</div>
         <div class="inv-name">${item.name}</div>
-        <div class="inv-cat">${CATEGORY_LABELS[cat] || cat}</div>
+        <div class="inv-cat">${(CATEGORY_LABELS && CATEGORY_LABELS[cat]) || cat}</div>
       `;
       grid.appendChild(el);
     }
@@ -793,7 +800,13 @@ function claimBPReward(tier, track, customItemId){
   /* إذا كانت المكافأة عنصر مخصص، أعطه */
   if(customItemId){
     /* ابحث عن العنصر وأضفه للمخزون */
-    const allCats = ['spark','eyes','companion','footstep','trail','jump','death','aura','crown','cape'];
+const allCats = [
+  'spark','eyes','companion','footstep','trail','jump','death','aura','crown','cape',
+  /* ✨ جديدة */
+  'headItem','backItem','heldItem','groundMark',
+  'nameTag','badge','avatarFrame','banner',
+  'spawnEffect','reviveEffect','hitEffect'
+];
     let found = false;
     for(const cat of allCats){
       const all = getAllCosmetics(cat);
@@ -1318,6 +1331,138 @@ footstep: [
     { id:'cape_god',     name:'عباءة الإله',  price:8000, desc:'عباءة الأساطير' }
   ]
 };
+
+/* ═══════════ الفئات الجديدة ═══════════ */
+
+COSMETICS.headItem = [
+  { id:'none', name:'بدون', price:0, desc:'لا شيء' },
+  { id:'tophat', name:'قبعة رسمية', price:400, desc:'أنيقة' },
+  { id:'cap_red', name:'كاب أحمر', price:250, desc:'رياضي' },
+  { id:'beanie', name:'قبعة صوف', price:350, desc:'شتوية' },
+  { id:'crown_gold', name:'تاج ذهبي', price:1200, desc:'ملكي' },
+  { id:'horns_demon', name:'قرون شيطان', price:900, desc:'مرعب' },
+  { id:'halo', name:'هالة ملاك', price:1400, desc:'مقدس' },
+  { id:'wizard', name:'قبعة ساحر', price:1000, desc:'سحري' },
+  { id:'viking_helm', name:'خوذة فايكنغ', price:1100, desc:'محارب' },
+  { id:'cowboy', name:'قبعة راعي', price:750, desc:'الغرب' },
+  { id:'santa', name:'قبعة بابا نويل', price:600, desc:'عيد' },
+  { id:'graduation', name:'قبعة تخرج', price:800, desc:'أكاديمي' }
+];
+
+COSMETICS.backItem = [
+  { id:'none', name:'بدون', price:0 },
+  { id:'wings_angel', name:'أجنحة ملاك', price:2500, desc:'ريش نوراني' },
+  { id:'wings_demon', name:'أجنحة شيطان', price:2500, desc:'جلد داكن' },
+  { id:'wings_dragon', name:'أجنحة تنين', price:3500, desc:'حراشف' },
+  { id:'wings_butterfly', name:'أجنحة فراشة', price:1800, desc:'ملونة' },
+  { id:'jetpack', name:'حقيبة طائرة', price:1500, desc:'صاروخ' },
+  { id:'backpack_hero', name:'حقيبة بطل', price:900, desc:'مغامر' },
+  { id:'shield_round', name:'درع دائري', price:1200, desc:'دفاعي' },
+  { id:'katana_x2', name:'سيفان', price:2200, desc:'نينجا' },
+  { id:'astronaut_tank', name:'خزان أوكسجين', price:1600, desc:'فضاء' },
+  { id:'rocket_pack', name:'صاروخ خلفي', price:2800, desc:'علمي' },
+  { id:'aura_sphere', name:'كرة طاقة', price:3000, desc:'كوني' }
+];
+
+COSMETICS.heldItem = [
+  { id:'none', name:'بدون', price:0 },
+  { id:'sword_wood', name:'سيف خشبي', price:300, desc:'مبتدئ' },
+  { id:'sword_iron', name:'سيف حديدي', price:800, desc:'محارب' },
+  { id:'sword_gold', name:'سيف ذهبي', price:1800, desc:'أسطوري' },
+  { id:'staff_wizard', name:'عصا ساحر', price:1200, desc:'سحر' },
+  { id:'staff_nature', name:'عصا طبيعية', price:1000, desc:'حياة' },
+  { id:'torch', name:'شعلة', price:400, desc:'إضاءة' },
+  { id:'lantern', name:'فانوس', price:600, desc:'هادئ' },
+  { id:'flag', name:'علم', price:350, desc:'شعار' },
+  { id:'umbrella', name:'مظلة', price:500, desc:'مطر' },
+  { id:'balloon_string', name:'بالون', price:400, desc:'مرح' },
+  { id:'ice_cream', name:'مثلجات', price:300, desc:'صيفي' },
+  { id:'guitar', name:'جيتار', price:900, desc:'موسيقي' },
+  { id:'mic_stand', name:'ميكروفون', price:700, desc:'غناء' },
+  { id:'scepter_divine', name:'صولجان إلهي', price:3500, desc:'أساطير' },
+  { id:'scythe_reaper', name:'منجل الموت', price:3200, desc:'حاصد' }
+];
+
+COSMETICS.nameTag = [
+  { id:'default', name:'افتراضي', price:0 },
+  { id:'neon_blue', name:'نيون أزرق', price:200 },
+  { id:'neon_pink', name:'نيون وردي', price:200 },
+  { id:'gold_royal', name:'ذهبي ملكي', price:600 },
+  { id:'rainbow', name:'قوس قزح', price:1000 },
+  { id:'flame', name:'لهبي', price:800 },
+  { id:'crystal', name:'بلوري', price:900 },
+  { id:'holo', name:'هولوجرافي', price:1500 }
+];
+
+COSMETICS.badge = [
+  { id:'none', name:'بدون', price:0 },
+  { id:'star_blue', name:'نجمة زرقاء', price:100 },
+  { id:'star_gold', name:'نجمة ذهبية', price:300 },
+  { id:'crown_mini', name:'تاج صغير', price:500 },
+  { id:'flame_mini', name:'لهب صغير', price:400 },
+  { id:'skull_mini', name:'جمجمة صغيرة', price:600 },
+  { id:'diamond_mini', name:'ألماسة صغيرة', price:800 }
+];
+
+COSMETICS.avatarFrame = [
+  { id:'default', name:'افتراضي', price:0 },
+  { id:'bronze', name:'برونزي', price:200 },
+  { id:'silver', name:'فضي', price:400 },
+  { id:'gold', name:'ذهبي', price:800 },
+  { id:'platinum', name:'بلاتيني', price:1400 },
+  { id:'diamond', name:'ماسي', price:2200 },
+  { id:'flames', name:'لهيب', price:1800 },
+  { id:'ice', name:'جليد', price:1800 },
+  { id:'cosmic', name:'كوني', price:3000 },
+  { id:'divine', name:'إلهي', price:4000 }
+];
+
+COSMETICS.banner = [
+  { id:'default', name:'افتراضي', price:0 },
+  { id:'gradient_sunset', name:'غروب', price:300 },
+  { id:'gradient_ocean', name:'محيط', price:300 },
+  { id:'galaxy_bg', name:'مجرّة', price:1200 },
+  { id:'flames_bg', name:'لهيب', price:1000 },
+  { id:'forest_bg', name:'غابة', price:700 },
+  { id:'neon_city', name:'مدينة نيون', price:1500 }
+];
+
+COSMETICS.groundMark = [
+  { id:'none', name:'بدون', price:0 },
+  { id:'ring_amber', name:'حلقة عنبرية', price:300 },
+  { id:'ring_cyan', name:'حلقة سماوية', price:300 },
+  { id:'ring_gold', name:'حلقة ذهبية', price:600 },
+  { id:'rune_circle', name:'دائرة رونية', price:1200 },
+  { id:'pentagram', name:'خماسي', price:1000 },
+  { id:'portal', name:'بوابة', price:1800 },
+  { id:'spinning_stars', name:'نجوم دوّارة', price:1500 }
+];
+
+COSMETICS.spawnEffect = [
+  { id:'default', name:'افتراضي', price:0 },
+  { id:'explosion', name:'انفجار', price:400 },
+  { id:'beam_down', name:'شعاع نزول', price:600 },
+  { id:'portal_open', name:'فتح بوابة', price:1200 },
+  { id:'thunder_strike', name:'صاعقة', price:900 },
+  { id:'feather_fall', name:'ريش متساقط', price:700 }
+];
+
+COSMETICS.reviveEffect = [
+  { id:'default', name:'افتراضي', price:0 },
+  { id:'phoenix_flame', name:'لهب العنقاء', price:1500 },
+  { id:'holy_light', name:'نور مقدس', price:1200 },
+  { id:'time_rewind', name:'إعادة الزمن', price:1800 },
+  { id:'crystal_shatter', name:'تحطم بلوري', price:1000 }
+];
+
+COSMETICS.hitEffect = [
+  { id:'default', name:'افتراضي', price:0 },
+  { id:'sparks', name:'شرارات', price:300 },
+  { id:'shatter', name:'تحطم', price:500 },
+  { id:'shockwave', name:'موجة', price:700 },
+  { id:'lightning', name:'برق', price:900 },
+  { id:'explosion', name:'انفجار', price:1100 }
+];
 
 /* ============================================================
    ==================== Skins ================================
@@ -1971,6 +2116,51 @@ function spawnPowerup(cx, cy){
   if(p) powerups.push(p);
 }
 
+function currentHeadItem(){
+  return getAllCosmetics('headItem').find(c => c.id === Save.data.cosmetics.current.headItem)
+      || COSMETICS.headItem[0];
+}
+function currentBackItem(){
+  return getAllCosmetics('backItem').find(c => c.id === Save.data.cosmetics.current.backItem)
+      || COSMETICS.backItem[0];
+}
+function currentHeldItem(){
+  return getAllCosmetics('heldItem').find(c => c.id === Save.data.cosmetics.current.heldItem)
+      || COSMETICS.heldItem[0];
+}
+function currentNameTag(){
+  return getAllCosmetics('nameTag').find(c => c.id === Save.data.cosmetics.current.nameTag)
+      || COSMETICS.nameTag[0];
+}
+function currentBadge(){
+  return getAllCosmetics('badge').find(c => c.id === Save.data.cosmetics.current.badge)
+      || COSMETICS.badge[0];
+}
+function currentAvatarFrame(){
+  return getAllCosmetics('avatarFrame').find(c => c.id === Save.data.cosmetics.current.avatarFrame)
+      || COSMETICS.avatarFrame[0];
+}
+function currentBanner(){
+  return getAllCosmetics('banner').find(c => c.id === Save.data.cosmetics.current.banner)
+      || COSMETICS.banner[0];
+}
+function currentGroundMark(){
+  return getAllCosmetics('groundMark').find(c => c.id === Save.data.cosmetics.current.groundMark)
+      || COSMETICS.groundMark[0];
+}
+function currentSpawnEffect(){
+  return getAllCosmetics('spawnEffect').find(c => c.id === Save.data.cosmetics.current.spawnEffect)
+      || COSMETICS.spawnEffect[0];
+}
+function currentReviveEffect(){
+  return getAllCosmetics('reviveEffect').find(c => c.id === Save.data.cosmetics.current.reviveEffect)
+      || COSMETICS.reviveEffect[0];
+}
+function currentHitEffect(){
+  return getAllCosmetics('hitEffect').find(c => c.id === Save.data.cosmetics.current.hitEffect)
+      || COSMETICS.hitEffect[0];
+}
+
 /* ============================================================
    ==================== DEFAULT SAVE DATA ====================
    ============================================================ */
@@ -1979,18 +2169,29 @@ const DEFAULT_SAVE_DATA = {
   bestMeters: { FLIP:0, FLAP:0, DRIFT:0, WALK:0, FLIP_WALK:0, SKY_JUMP:0, MIXED:0 },
   ownedSkins: ['cream'],
   currentSkin: 'cream',
-  cosmetics: {
-    owned: {
-      spark:['none'], trail:['default'], jump:['default'], death:['default'],
-      aura:['none'], crown:['none'], cape:['none'],
-      eyes:['default'], companion:['none'], footstep:['none']
-    },
-    current: {
-      spark:'none', trail:'default', jump:'default', death:'default',
-      aura:'none', crown:'none', cape:'none',
-      eyes:'default', companion:'none', footstep:'none'
-    }
+/* استبدل cosmetics في DEFAULT_SAVE_DATA بـ: */
+cosmetics: {
+  owned: {
+    spark:['none'], trail:['default'], jump:['default'], death:['default'],
+    aura:['none'], crown:['none'], cape:['none'],
+    eyes:['default'], companion:['none'], footstep:['none'],
+    /* جديدة */
+    headItem:['none'], backItem:['none'], heldItem:['none'],
+    nameTag:['default'], badge:['none'], avatarFrame:['default'],
+    banner:['default'], groundMark:['none'],
+    spawnEffect:['default'], reviveEffect:['default'], hitEffect:['default']
   },
+  current: {
+    spark:'none', trail:'default', jump:'default', death:'default',
+    aura:'none', crown:'none', cape:'none',
+    eyes:'default', companion:'none', footstep:'none',
+    /* جديدة */
+    headItem:'none', backItem:'none', heldItem:'none',
+    nameTag:'default', badge:'none', avatarFrame:'default',
+    banner:'default', groundMark:'none',
+    spawnEffect:'default', reviveEffect:'default', hitEffect:'default'
+  }
+},
   achievements: {},
   claimedGlobalLevels: [],
   mode: 'FLIP',
@@ -2012,9 +2213,13 @@ const DEFAULT_SAVE_DATA = {
     unlimitedCoins: false,
     unlimitedUnlock: false,
     godMode: false,
-    customSkins: [], customSpark: [], customTrail: [], customJump: [],
-    customDeath: [], customAura: [], customCrown: [], customCape: [],
-    customEyes: [], customCompanion: [], customFootstep: [],
+customSkins: [], customSpark: [], customTrail: [], customJump: [],
+customDeath: [], customAura: [], customCrown: [], customCape: [],
+customEyes: [], customCompanion: [], customFootstep: [],
+customHeadItem: [], customBackItem: [], customHeldItem: [],
+customGroundMark: [], customNameTag: [], customBadge: [],
+customAvatarFrame: [], customBanner: [],
+customSpawnEffect: [], customReviveEffect: [], customHitEffect: [],
     lastContentSync: null,
     sources: [
       { id:'src_rank_1', type:'season_rank', name:'تصنيف الموسم 1', start:'2024-01-01', end:'2024-03-31', active:true },
@@ -2029,29 +2234,34 @@ inventory: { seen: [] },
 };
 
 /* ============================================================
-   ==================== Save (Firebase ONLY) =================
-   لا يوجد أي استخدام لـ localStorage — كل شيء في الذاكرة
-   + Firestore (مع Offline Persistence المُفعَّل مسبقاً)
+   ═══════════════ SAVE SYSTEM v10 — CLEAN ═══════════════════
+   ============================================================
+   - لا استخدام لـ localStorage (كل شيء في الذاكرة + Firebase)
+   - ترحيلات شاملة لكل الفئات القديمة والجديدة
+   - دوال مساعدة للحصول على القيم بأمان
    ============================================================ */
-const Save = {
-  KEY: 'shift_v10',   // للتوافق مع إصدارات سابقة فقط
 
-  /* الحالة الحالية في الذاكرة — تبدأ بالافتراضيات */
+const Save = {
+  KEY: 'shift_v10',
+
+  /* ═══════════════ الحالة في الذاكرة ═══════════════ */
   data: JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA)),
 
-  /* لا يوجد تحميل محلي — البيانات الافتراضية جاهزة في الذاكرة */
+  /* ═══════════════ تحميل (لا شيء — Firebase يتولى) ═══════════════ */
   load(){
-    // لا شيء — Firebase سيتولّى الأمر بعد تسجيل الدخول
+    /* لا يوجد تحميل محلي — Firebase سيتولّى الأمر بعد تسجيل الدخول */
   },
 
-  /* يستدعى بعد pullSave() — يدمج بيانات السحابة فوق الافتراضيات */
+  /* ═══════════════ دمج بيانات السحابة فوق الافتراضيات ═══════════════ */
   applyCloud(cloudData){
     const base = JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA));
 
-    if (cloudData && typeof cloudData === 'object') {
-      for (const k in cloudData) {
+    if(cloudData && typeof cloudData === 'object'){
+      for(const k in cloudData){
         const v = cloudData[k];
-        if (v && typeof v === 'object' && !Array.isArray(v) && base[k] && typeof base[k] === 'object') {
+        /* دمج عميق للأشياء، استبدال للقيم البسيطة */
+        if(v && typeof v === 'object' && !Array.isArray(v) &&
+           base[k] && typeof base[k] === 'object' && !Array.isArray(base[k])){
           base[k] = Object.assign({}, base[k], v);
         } else {
           base[k] = v;
@@ -2063,104 +2273,289 @@ const Save = {
     this.runMigrations();
   },
 
-  /* إصلاحات/ترحيلات لبيانات قديمة */
+  /* ═══════════════ ترحيلات وإصلاحات ═══════════════ */
   runMigrations(){
-    // ضمان مجلدات التجميل
-    if(!this.data.cosmetics) this.data.cosmetics = { owned:{}, current:{} };
+    /* ═══ ضمان وجود بنية cosmetics ═══ */
+    if(!this.data.cosmetics) this.data.cosmetics = { owned: {}, current: {} };
     if(!this.data.cosmetics.owned)   this.data.cosmetics.owned = {};
     if(!this.data.cosmetics.current) this.data.cosmetics.current = {};
 
+    /* ═══ قيم افتراضية لكل فئة (قديمة + جديدة) ═══ */
     const catDefaults = {
-      spark:'none', trail:'default', jump:'default', death:'default',
-      aura:'none', crown:'none', cape:'none',
-      eyes:'default', companion:'none', footstep:'none'
+      /* قديمة */
+      spark: 'none', trail: 'default', jump: 'default', death: 'default',
+      aura: 'none', crown: 'none', cape: 'none',
+      eyes: 'default', companion: 'none', footstep: 'none',
+      /* ✨ جديدة */
+      headItem: 'none', backItem: 'none', heldItem: 'none',
+      nameTag: 'default', badge: 'none', avatarFrame: 'default',
+      banner: 'default', groundMark: 'none',
+      spawnEffect: 'default', reviveEffect: 'default', hitEffect: 'default'
     };
+
     for(const cat in catDefaults){
-      if(!this.data.cosmetics.owned[cat])   this.data.cosmetics.owned[cat]   = [catDefaults[cat]];
-      if(!this.data.cosmetics.current[cat]) this.data.cosmetics.current[cat] =  catDefaults[cat];
+      const defValue = catDefaults[cat];
+
+      /* ═══ owned ═══ */
+      if(!Array.isArray(this.data.cosmetics.owned[cat])){
+        this.data.cosmetics.owned[cat] = [defValue];
+      } else if(!this.data.cosmetics.owned[cat].includes(defValue)){
+        this.data.cosmetics.owned[cat].push(defValue);
+      }
+
+      /* ═══ current ═══ */
+      if(!this.data.cosmetics.current[cat]){
+        this.data.cosmetics.current[cat] = defValue;
+      }
     }
 
-    // ضمان أفضل المسافات
-    if(typeof this.data.bestMeters.MIXED !== 'number') this.data.bestMeters.MIXED = 0;
+    /* ═══ bestMeters — ضمان كل الأنماط ═══ */
+    if(!this.data.bestMeters || typeof this.data.bestMeters !== 'object'){
+      this.data.bestMeters = JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA.bestMeters));
+    }
+    ['FLIP','FLAP','DRIFT','WALK','MIXED','ASCEND'].forEach(m => {
+      if(typeof this.data.bestMeters[m] !== 'number') this.data.bestMeters[m] = 0;
+    });
 
-    // ترحيل الأنماط القديمة
+    /* ═══ ترحيل الأنماط القديمة ═══ */
     if(this.data.mode === 'FLIP_WALK' || this.data.mode === 'SKY_JUMP'){
       this.data.mode = 'WALK';
     }
     delete this.data.runType;
 
-    // عدّاد SHIFT
-    if(typeof this.data.stats.shiftRuns !== 'number') this.data.stats.shiftRuns = 0;
+    /* ═══ stats ═══ */
+    if(!this.data.stats || typeof this.data.stats !== 'object'){
+      this.data.stats = JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA.stats));
+    }
+    const statsDefaults = { totalPlays:0, totalMeters:0, totalCoins:0, orbCount:0, bestMeters:0, bestCombo:0, shiftRuns:0 };
+    for(const k in statsDefaults){
+      if(typeof this.data.stats[k] !== 'number') this.data.stats[k] = statsDefaults[k];
+    }
 
-    // تطويرات التعزيزات
+    /* ═══ powerupUpgrades ═══ */
     if(!this.data.powerupUpgrades || typeof this.data.powerupUpgrades !== 'object'){
       this.data.powerupUpgrades = {};
     }
-    Object.keys(POWERUP_DEFS).forEach(id => {
-      if(typeof this.data.powerupUpgrades[id] !== 'number'){
-        this.data.powerupUpgrades[id] = 0;
-      }
-    });
+    if(typeof POWERUP_DEFS !== 'undefined'){
+      Object.keys(POWERUP_DEFS).forEach(id => {
+        if(typeof this.data.powerupUpgrades[id] !== 'number'){
+          this.data.powerupUpgrades[id] = 0;
+        }
+      });
+    }
 
-    // قسم المشرف
+    /* ═══ admin ═══ */
     if(!this.data.admin){
       this.data.admin = JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA.admin));
     }
-    if(!Array.isArray(this.data.admin.sources) || !this.data.admin.sources.length){
+    if(!Array.isArray(this.data.admin.sources) || this.data.admin.sources.length === 0){
       this.data.admin.sources = JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA.admin.sources));
     }
-    ['customSkins','customSpark','customTrail','customJump','customDeath',
-     'customAura','customCrown','customCape','customEyes','customCompanion','customFootstep']
-      .forEach(k => { if(!Array.isArray(this.data.admin[k])) this.data.admin[k] = []; });
+
+    /* ✅ كل مصفوفات المحتوى المخصص (قديمة + جديدة) */
+    const allCustomKeys = [
+      /* قديمة */
+      'customSkins','customEyes','customCompanion','customFootstep',
+      'customSpark','customTrail','customJump','customDeath',
+      'customAura','customCrown','customCape',
+      /* ✨ جديدة */
+      'customHeadItem','customBackItem','customHeldItem',
+      'customGroundMark','customNameTag','customBadge',
+      'customAvatarFrame','customBanner',
+      'customSpawnEffect','customReviveEffect','customHitEffect'
+    ];
+    allCustomKeys.forEach(k => {
+      if(!Array.isArray(this.data.admin[k])) this.data.admin[k] = [];
+    });
+
+    /* ✅ titles ═══ */
+    if(!this.data.titles || typeof this.data.titles !== 'object'){
+      this.data.titles = { equipped: 'rookie', owned: ['rookie'] };
+    }
+
+    /* ═══ season ═══ */
+    if(!this.data.season || typeof this.data.season !== 'object'){
+      this.data.season = { number: 1, startDate: null, points: 0 };
+    }
+    if(typeof this.data.season.points !== 'number') this.data.season.points = 0;
+
+    /* ═══ battlePass ═══ */
+    if(!this.data.battlePass || typeof this.data.battlePass !== 'object'){
+      this.data.battlePass = { claimedFree: [], claimedPremium: [] };
+    }
+    if(!Array.isArray(this.data.battlePass.claimedFree))    this.data.battlePass.claimedFree = [];
+    if(!Array.isArray(this.data.battlePass.claimedPremium)) this.data.battlePass.claimedPremium = [];
+
+    /* ═══ missions ═══ */
+    if(!this.data.missions || typeof this.data.missions !== 'object'){
+      this.data.missions = JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA.missions));
+    }
+
+    /* ═══ dailyLogin ═══ */
+    if(!this.data.dailyLogin || typeof this.data.dailyLogin !== 'object'){
+      this.data.dailyLogin = { streak: 0, lastClaim: null, claimedToday: false };
+    }
+
+    /* ═══ ownedSkins ═══ */
+    if(!Array.isArray(this.data.ownedSkins) || this.data.ownedSkins.length === 0){
+      this.data.ownedSkins = ['cream'];
+    }
+
+    /* ═══ currentSkin ═══ */
+    if(!this.data.currentSkin){
+      this.data.currentSkin = 'cream';
+    }
+
+    /* ═══ settings ═══ */
+    if(!this.data.settings || typeof this.data.settings !== 'object'){
+      this.data.settings = { sound: true, haptics: true };
+    }
+
+    /* ═══ achievements ═══ */
+    if(!this.data.achievements || typeof this.data.achievements !== 'object'){
+      this.data.achievements = {};
+    }
+
+    /* ═══ claimedGlobalLevels ═══ */
+    if(!Array.isArray(this.data.claimedGlobalLevels)){
+      this.data.claimedGlobalLevels = [];
+    }
   },
 
-  /* الحفظ = دفع إلى Firebase فقط (بدون localStorage) */
+  /* ═══════════════ الحفظ — دفع إلى Firebase فقط ═══════════════ */
   save(){
     try {
-      if (typeof Cloud !== 'undefined' && Cloud.user && Cloud.db) {
+      if(typeof Cloud !== 'undefined' && Cloud.user && Cloud.db){
         Cloud.queueSync();
       }
-    } catch(e){}
+    } catch(e){
+      /* صامت */
+    }
   },
 
-  /* حذف التقدم = تصفير في الذاكرة + دفع للسحابة */
+  /* ═══════════════ حذف التقدم — تصفير + دفع للسحابة ═══════════════ */
   reset(){
     this.data = JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA));
     this.runMigrations();
     try {
-      if (typeof Cloud !== 'undefined' && Cloud.user && Cloud.db) {
+      if(typeof Cloud !== 'undefined' && Cloud.user && Cloud.db){
         Cloud.pushSave();
       }
-    } catch(e){}
+    } catch(e){
+      /* صامت */
+    }
+  },
+
+  /* ═══════════════════════════════════════════════════════
+     ═══════════════ دوال مساعدة (جديدة) ═══════════════
+     ═══════════════════════════════════════════════════════ */
+
+  /* ═══ الحصول على تجميل حالي بأمان ═══ */
+  getCurrentCosmetic(category){
+    if(!this.data.cosmetics || !this.data.cosmetics.current) return null;
+    return this.data.cosmetics.current[category] || null;
+  },
+
+  /* ═══ تعيين تجميل حالي ═══ */
+  setCurrentCosmetic(category, itemId){
+    if(!this.data.cosmetics) this.data.cosmetics = { owned:{}, current:{} };
+    if(!this.data.cosmetics.current) this.data.cosmetics.current = {};
+    this.data.cosmetics.current[category] = itemId;
+    this.save();
+  },
+
+  /* ═══ هل اللاعب يملك عنصراً؟ ═══ */
+  ownsCosmetic(category, itemId){
+    if(!this.data.cosmetics || !this.data.cosmetics.owned) return false;
+    const list = this.data.cosmetics.owned[category] || [];
+    return list.includes(itemId);
+  },
+
+  /* ═══ إضافة عنصر للملكية ═══ */
+  grantCosmetic(category, itemId){
+    if(!this.data.cosmetics) this.data.cosmetics = { owned:{}, current:{} };
+    if(!this.data.cosmetics.owned) this.data.cosmetics.owned = {};
+    if(!Array.isArray(this.data.cosmetics.owned[category])){
+      this.data.cosmetics.owned[category] = [];
+    }
+    if(!this.data.cosmetics.owned[category].includes(itemId)){
+      this.data.cosmetics.owned[category].push(itemId);
+      return true;
+    }
+    return false;
+  },
+
+  /* ═══ إحصاءات سريعة ═══ */
+  getTotalCosmeticsOwned(){
+    if(!this.data.cosmetics || !this.data.cosmetics.owned) return 0;
+    let total = 0;
+    for(const cat in this.data.cosmetics.owned){
+      total += (this.data.cosmetics.owned[cat] || []).length;
+    }
+    return total;
+  },
+
+  /* ═══ تصدير البيانات (للنسخ الاحتياطي) ═══ */
+  export(){
+    try {
+      return JSON.stringify(this.data);
+    } catch(e){
+      return null;
+    }
+  },
+
+  /* ═══ استيراد البيانات ═══ */
+  import(jsonString){
+    try {
+      const parsed = JSON.parse(jsonString);
+      if(parsed && typeof parsed === 'object'){
+        this.data = parsed;
+        this.runMigrations();
+        this.save();
+        return true;
+      }
+    } catch(e){
+      console.error('[Save] Import failed:', e);
+    }
+    return false;
   }
 };
 
 Save.load();
 Save.runMigrations();
 
-/* ═══════════════════════════════════════════════════════
-   ═══════════ ADMIN CONTENT SYSTEM v2 — HELPERS ═════════
-   ═══════════════════════════════════════════════════════ */
+/* ============================================================
+   CATEGORIES v2 — موسّعة
+   ============================================================ */
+const CATEGORY_LABELS = {
+  // موجودة سابقاً
+  skin: 'زي', eyes: 'عيون', companion: 'رفيق', footstep: 'أثر',
+  spark: 'شرار', trail: 'خط سير', jump: 'قفزة', death: 'نهاية',
+  aura: 'هالة', crown: 'رأسية', cape: 'عباءة',
 
-/* ═══ مجلدات الصور حسب التصنيف ═══ */
-const CATEGORY_FOLDERS = {
-  skin: 'skins',
-  eyes: 'eyes',
-  companion: 'companion',
-  footstep: 'footstep',
-  spark: 'spark',
-  trail: 'trail',
-  jump: 'jump',
-  death: 'death',
-  aura: 'aura',
-  crown: 'crown',
-  cape: 'cape'
+  // ✨ جديدة
+  headItem: 'غطاء رأس',       // قبعات/خوذ — طبقة منفصلة
+  backItem: 'ظهر',             // أجنحة / حقائب / عباءات كصور
+  heldItem: 'محمول',           // سيف، مطرقة، مصباح، لافتة
+  nameTag: 'بطاقة الاسم',      // إطار الاسم في القوائم
+  badge: 'شارة ملف',          // شعار صغير بجانب الاسم
+  avatarFrame: 'إطار الصورة',  // إطار دائري في الملف الشخصي
+  banner: 'خلفية ملف',        // خلفية البطاقة
+  groundMark: 'علامة أرضية',  // حلقة/شعار تحت اللاعب
+  spawnEffect: 'تأثير البداية',// وميض عند بدء الجولة
+  reviveEffect: 'تأثير الإحياء',// عند العودة للحياة
+  hitEffect: 'تأثير الارتطام'   // عند الاصطدام بالدرع/العدو
 };
 
-const CATEGORY_LABELS = {
-  skin: 'زي', eyes: 'عيون', companion: 'رفيق', footstep: 'أثر قدم',
-  spark: 'شرار', trail: 'خط سير', jump: 'قفزة', death: 'نهاية',
-  aura: 'هالة', crown: 'رأسية', cape: 'عباءة'
+const CATEGORY_FOLDERS = {
+  skin: 'skins', eyes: 'eyes', companion: 'companion', footstep: 'footstep',
+  spark: 'spark', trail: 'trail', jump: 'jump', death: 'death',
+  aura: 'aura', crown: 'crown', cape: 'cape',
+  // جديدة
+  headItem: 'head', backItem: 'back', heldItem: 'held',
+  nameTag: 'tags', badge: 'badges', avatarFrame: 'frames',
+  banner: 'banners', groundMark: 'marks',
+  spawnEffect: 'spawn', reviveEffect: 'revive', hitEffect: 'hit'
 };
 
 /* ═══ دالة بناء أنواع الأماكن (نسخة آمنة) ═══ */
@@ -2365,16 +2760,26 @@ function collectPlacements(){
 /* ═══ جلب كل العناصر المخصصة ═══ */
 function getAllCustomItems(){
   const items = [];
-  const cats = ['skins','eyes','companion','footstep','spark','trail','jump','death','aura','crown','cape'];
+  /* ✅ كل الفئات — قديمة + جديدة */
+  const cats = [
+    'skins','eyes','companion','footstep',
+    'spark','trail','jump','death','aura','crown','cape',
+    /* ✨ جديدة */
+    'headItem','backItem','heldItem','groundMark',
+    'nameTag','badge','avatarFrame','banner',
+    'spawnEffect','reviveEffect','hitEffect'
+  ];
+
   for(const cat of cats){
     const key = 'custom' + cat.charAt(0).toUpperCase() + cat.slice(1);
-    const list = Save.data.admin[key] || [];
+    const list = (Save.data.admin && Save.data.admin[key]) || [];
     for(const item of list){
       if(item.enabled === false) continue;
       items.push({
         ...item,
-        _category: cat === 'skins' ? 'skin' : cat.replace(/s$/,''),
-        _sourceCat: cat
+        _category: cat === 'skins' ? 'skin' : cat,
+        _sourceCat: cat,
+        _folder: (typeof CATEGORY_FOLDERS !== 'undefined' ? CATEGORY_FOLDERS[cat] : cat) || cat
       });
     }
   }
@@ -2423,12 +2828,17 @@ function buildAdminContentList(){
   if(!list) return;
   list.innerHTML = '';
 
-  const keyMap = {
-    skin:'customSkins', eyes:'customEyes', companion:'customCompanion',
-    footstep:'customFootstep', spark:'customSpark', trail:'customTrail',
-    jump:'customJump', death:'customDeath', aura:'customAura',
-    crown:'customCrown', cape:'customCape'
-  };
+const keyMap = {
+  skin:'customSkins', eyes:'customEyes', companion:'customCompanion',
+  footstep:'customFootstep', spark:'customSpark', trail:'customTrail',
+  jump:'customJump', death:'customDeath', aura:'customAura',
+  crown:'customCrown', cape:'customCape',
+  /* ✨ جديدة */
+  headItem:'customHeadItem', backItem:'customBackItem', heldItem:'customHeldItem',
+  groundMark:'customGroundMark', nameTag:'customNameTag', badge:'customBadge',
+  avatarFrame:'customAvatarFrame', banner:'customBanner',
+  spawnEffect:'customSpawnEffect', reviveEffect:'customReviveEffect', hitEffect:'customHitEffect'
+};
 
   const key = keyMap[currentAdminTab];
   const items = Save.data.admin[key] || [];
@@ -3758,14 +4168,15 @@ function spawnFootstep(){
   const x = P.x - 6;
   const y = P.y + P.r - 2;
 
-  /* ✅ أثر مخصص بصورة */
   if(hasItemImage(fs)){
+    /* ✅ يظهر كصورة كاملة بحجم معقول */
     particles.push({
       x, y,
       vx: -1.2, vy: -0.3,
-      life: 0.85, decay: 0.025,
+      life: 1.0, decay: 0.02,
       item: fs,
-      size: 16,
+      size: 22,
+      rotation: rand(-0.2, 0.2),
       color: '#FFFFFF'
     });
     return;
@@ -10049,7 +10460,8 @@ function drawCharacterFace(c, r, skin){
   }
   const eyeId = eyes.id || 'default';
 
-  const eyeY = -r*0.15, eyeX = r*0.28, eyeR = r*0.24;
+const eyeY = -r*0.15, eyeX = r*0.28, eyeR = r*0.24;
+const detailColor = skin.detail || '#1A1512';   /* ✅ حماية */
 
   /* ═══════════ ارسم العيون حسب النمط ═══════════ */
   if(eyeId === 'void'){
@@ -10610,68 +11022,159 @@ function renderCharacter(c, r, skin, opts){
   const isShip = mode === 'FLIP' || mode === 'FLAP' || mode === 'DRIFT';
   const alpha = opts.alpha ?? 1;
   const skipExtras = opts.skipExtras || false;
+  const t = G.t;
 
-  const aura  = currentAura();
-  const crown = currentCrown();
-  const cape  = currentCape();
+  /* ═══ كل الطبقات ═══ */
+  const aura       = currentAura();
+  const crown      = currentCrown();
+  const cape       = currentCape();
+  const headItem   = currentHeadItem();
+  const backItem   = currentBackItem();
+  const heldItem   = currentHeldItem();
+  const mark       = currentGroundMark();
+  const eyes       = currentEyes();
 
   c.save();
   c.globalAlpha = alpha;
 
-  /* ═══ هالة (وراء الشخصية) ═══ */
-  if(!skipExtras){
-    try { drawAura(c, r, aura, G.t); }
-    catch(err){ console.error('[drawAura] Failed for "' + aura.id + '":', err); }
+  /* ═══════════════════════════════════════════════════════
+      طبقة 0: Ground Mark (أسفل الشخصية)
+     ═══════════════════════════════════════════════════════ */
+  if(!skipExtras && mark.id !== 'none'){
+    const markSize = r * 4.5;
+    const bob = Math.sin(t * 0.05) * 2;
+    ASSET.drawItem(c, mark, {
+      x: 0, y: r * 1.8 + bob,
+      size: markSize,
+      alpha: 0.75 + Math.sin(t * 0.08) * 0.15,
+      rotation: t * 0.01,
+      anchorX: 0.5, anchorY: 0.5
+    });
   }
 
-  /* ═══ عباءة (وراء الشخصية) ═══ */
+  /* ═══════════════════════════════════════════════════════
+      طبقة 1: Aura (خلف الشخصية)
+     ═══════════════════════════════════════════════════════ */
+  if(!skipExtras && aura.id !== 'none'){
+    if(hasItemImage(aura)){
+      const auraSize = r * 5;
+      const pulse = 1 + Math.sin(t * 0.08) * 0.08;
+      ASSET.drawItem(c, aura, {
+        x: 0, y: 0,
+        size: auraSize * pulse,
+        alpha: 0.85,
+        rotation: t * 0.008,
+        anchorX: 0.5, anchorY: 0.5
+      });
+    } else {
+      try { drawAura(c, r, aura, t); } catch(err){}
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════
+      طبقة 2: Back Item (أجنحة/حقائب خلف الشخصية)
+     ═══════════════════════════════════════════════════════ */
+  if(!skipExtras && backItem.id !== 'none'){
+    const backSize = r * 4.5;
+    const flap = Math.sin(t * 0.12) * 0.05;
+    ASSET.drawItem(c, backItem, {
+      x: -r * 0.3, y: r * 0.2,
+      size: backSize,
+      rotation: flap,
+      anchorX: 0.75, anchorY: 0.5,   /* نقطة ارتكاز قريبة من الجسم */
+      alpha: alpha
+    });
+  }
+
+  /* ═══════════════════════════════════════════════════════
+      طبقة 3: Cape (عباءة برمجية قديمة — fallback)
+     ═══════════════════════════════════════════════════════ */
   if(!skipExtras && cape.id !== 'none' && P.cape){
-    try { drawCape(c, r, cape, G.t, P.x, P.y); }
-    catch(err){ console.error('[drawCape] Failed for "' + cape.id + '":', err); }
+    try { drawCape(c, r, cape, t, P.x, P.y); }
+    catch(err){}
   }
 
+  /* ═══ دوران المركبة / قلب المشي ═══ */
   if(isShip && facingRot !== 0) c.rotate(facingRot);
   if(isFlippedWalk) c.rotate(Math.PI);
 
+  /* ═══ توهج الشخصية ═══ */
   if(skin.glow){
     const glowCol = skin.glowColor || skin.accent;
-    const g = c.createRadialGradient(0,0,r*0.6, 0,0,r*2);
-    g.addColorStop(0, glowCol); g.addColorStop(1, 'rgba(0,0,0,0)');
+    const g = c.createRadialGradient(0, 0, r * 0.6, 0, 0, r * 2);
+    g.addColorStop(0, glowCol);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
     const prev = c.globalAlpha;
     c.globalAlpha = alpha * 0.35;
     c.fillStyle = g;
-    c.beginPath(); c.arc(0,0,r*2,0,Math.PI*2); c.fill();
+    c.beginPath(); c.arc(0, 0, r * 2, 0, Math.PI * 2); c.fill();
     c.globalAlpha = prev;
   }
 
   if(skin.sparkle) drawSparklesAround(c, r, skin);
 
-/* لا ترسم إكسسوارات الوجه إذا كان الزي صورة مخصصة */
-const skinHasImage = !!(skin.imageData || skin.imagePath || hasItemImage(skin));
-if(!skinHasImage){
-  if(skin.accessory === 'rainbow') drawCharacterAccessory(c, r, skin, G.t);
-  if(skin.accessory === 'wings') drawCharacterAccessory(c, r, skin, G.t);
-}
+  /* ═══════════════════════════════════════════════════════
+      طبقة 4: الجسم (صورة أو رسم برمجي)
+     ═══════════════════════════════════════════════════════ */
+  if(isWalk) drawWalkLimbs(c, r, skin, false);
+  if(isShip){ drawEngineFlame(c, r, skin); drawSideFins(c, r, skin); }
 
-  if(isShip){
-    drawEngineFlame(c, r, skin);
-    drawSideFins(c, r, skin);
+  drawCharacterBody(c, r, skin, t);
+
+  /* ═══════════════════════════════════════════════════════
+      طبقة 5: الوجه/العيون
+     ═══════════════════════════════════════════════════════ */
+  if(!skin.imageData && !skin.imagePath && !hasItemImage(skin)){
+    /* فقط للزي البرمجي */
+    if(hasItemImage(eyes)){
+      ASSET.drawItem(c, eyes, {
+        x: 0, y: -r * 0.1,
+        size: r * 1.6,
+        anchorX: 0.5, anchorY: 0.5
+      });
+    } else {
+      drawCharacterFace(c, r, skin);
+    }
   }
 
-  if(isWalk){ drawWalkLimbs(c, r, skin, false); }
+  /* ═══════════════════════════════════════════════════════
+      طبقة 6: Crown + Head Item (فوق الرأس)
+     ═══════════════════════════════════════════════════════ */
+  const skinHasImage = !!(skin.imageData || skin.imagePath || hasItemImage(skin));
 
-  drawCharacterBody(c, r, skin, G.t);
-  drawCharacterFace(c, r, skin);
+  if(!skipExtras && crown.id !== 'none'){
+    if(hasItemImage(crown)){
+      ASSET.drawItem(c, crown, {
+        x: 0, y: -r * 1.4,
+        size: r * 2.2,
+        anchorX: 0.5, anchorY: 1.0,   /* مرتكز على القاعدة */
+      });
+    } else if(!skinHasImage){
+      try { drawCrown(c, r, crown, t); } catch(err){}
+    }
+  }
 
-if(!skinHasImage && ['horns','leaf','cloud','spikes','halo','star'].includes(skin.accessory)){
-  drawCharacterAccessory(c, r, skin, G.t);
-}
+  if(!skipExtras && headItem.id !== 'none'){
+    ASSET.drawItem(c, headItem, {
+      x: 0, y: -r * 1.15,
+      size: r * 2.4,
+      rotation: Math.sin(t * 0.04) * 0.02,
+      anchorX: 0.5, anchorY: 1.0
+    });
+  }
 
-  /* ═══ تاج (فوق الشخصية) ═══ */
-  const skinIsImage = !!(skin.imageData || skin.imagePath || hasItemImage(skin));
-  if(!skipExtras && !skinIsImage){
-    try { drawCrown(c, r, crown, G.t); }
-    catch(err){ console.error('[drawCrown] Failed for "' + crown.id + '":', err); }
+  /* ═══════════════════════════════════════════════════════
+      طبقة 7: Held Item (في اليد — يسار الشخصية)
+     ═══════════════════════════════════════════════════════ */
+  if(!skipExtras && heldItem.id !== 'none'){
+    const heldSize = r * 2.5;
+    const bob = Math.sin(t * 0.08) * r * 0.05;
+    ASSET.drawItem(c, heldItem, {
+      x: -r * 1.1, y: r * 0.3 + bob,
+      size: heldSize,
+      rotation: -0.3 + Math.sin(t * 0.06) * 0.05,
+      anchorX: 0.7, anchorY: 0.5,   /* نقطة الإمساك */
+    });
   }
 
   c.restore();
@@ -14084,20 +14587,33 @@ function drawPowerups(){
 
 function drawParticles(){
   for(const p of particles){
-    ctx.globalAlpha = Math.max(0,p.life)*0.9;
+    const life = Math.max(0, p.life);
+    ctx.globalAlpha = life * 0.95;
 
-    /* ✅ جسيم صورة */
     if(p.item){
-      const img = getItemImageEl(p.item);
-      if(img && img.complete && img.naturalWidth > 0){
-        const sz = p.size * Math.max(0.3, p.life);
-        ctx.drawImage(img, p.x - sz/2, p.y - sz/2, sz, sz);
+      const img = ASSET.getImage(p.item);
+      if(img){
+        let sz = p.size;
+        /* تمدد تدريجي */
+        if(p.scaleOverLife){
+          const progress = 1 - life;
+          sz = p.size * (1 + progress * p.scaleOverLife);
+        } else {
+          sz = p.size * Math.max(0.3, life);
+        }
+        ASSET.drawItem(ctx, p.item, {
+          x: p.x, y: p.y,
+          size: sz,
+          anchorX: 0.5, anchorY: 0.5
+        });
         continue;
       }
     }
 
     ctx.fillStyle = p.color;
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.size * Math.max(0.2,p.life), 0, Math.PI*2); ctx.fill();
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * Math.max(0.2, life), 0, Math.PI * 2);
+    ctx.fill();
   }
   ctx.globalAlpha = 1;
 }
@@ -14618,19 +15134,27 @@ function buildShop(){
 let currentCosTab = 'spark';
 
 function renderCosPreview(pctx, w, h, cat, item){
+  if(!pctx || !item) return;
   const cx = w/2, cy = h/2;
 
   /* ✅ صورة مخصصة */
   if(hasItemImage(item)){
     const img = getItemImageEl(item);
-    const draw = ()=>{
+    if(!img) return;
+
+    const draw = () => {
+      if(!img.complete || img.naturalWidth <= 0) return;
       const sz = Math.min(w, h) * 0.8;
-      pctx.drawImage(img, cx - sz/2, cy - sz/2, sz, sz);
+      const ratio = img.naturalHeight / img.naturalWidth || 1;
+      pctx.clearRect(0, 0, w, h);
+      pctx.drawImage(img, cx - sz/2, cy - sz*ratio/2, sz, sz * ratio);
     };
+
     if(img.complete && img.naturalWidth > 0) draw();
     else {
-      img.onload = ()=>{ pctx.clearRect(0,0,w,h); draw(); };
-      img.onerror = ()=>{
+      img.onload = draw;
+      img.onerror = () => {
+        pctx.clearRect(0, 0, w, h);
         pctx.fillStyle = '#C14A4A';
         pctx.font = 'bold 11px Tajawal, sans-serif';
         pctx.textAlign = 'center';
@@ -14639,6 +15163,7 @@ function renderCosPreview(pctx, w, h, cat, item){
     }
     return;
   }
+  
   if(cat === 'spark'){
     pctx.fillStyle = '#E07A3F';
     pctx.beginPath(); pctx.arc(w*0.82, h/2, 6, 0, Math.PI*2); pctx.fill();
@@ -14747,109 +15272,541 @@ function renderCosPreview(pctx, w, h, cat, item){
   }
 }
 
+/* ============================================================
+   ============ COSMETICS BUILDER v2 — SHOP INTERFACE ========
+   ============================================================
+   الميزات الجديدة:
+   - دعم كل الفئات (قديمة + جديدة)
+   - تحميل الصور مع placeholder ذكي
+   - معاينة مختلفة حسب نوع العنصر
+   - حالة تحميل مستقلة لكل بطاقة
+   - دعم admin unlimited unlock
+   - تأثيرات بصرية عند التجهيز/الشراء
+   - Cache للصور المصغرة
+   - تصنيف RTL محسّن
+   ============================================================ */
+
+let _cosBuildToken = 0;
+
+/* ═══ Cache للمعاينات المصغّرة ═══ */
+const _cosPreviewCache = new Map();
+
+/* ═══ إعدادات كل فئة ═══ */
+const COS_CATEGORY_CONFIG = {
+  /* ═══ قديمة ═══ */
+  spark:      { label:'الشرار',      en:'SPARK',      icon:'✨', color:'#E8B34E', aspect:'square'  },
+  eyes:       { label:'العيون',      en:'EYES',       icon:'👁️', color:'#4A88C8', aspect:'wide'    },
+  companion:  { label:'الرفاق',      en:'COMPANION',  icon:'🐾', color:'#C98A2E', aspect:'square'  },
+  footstep:   { label:'الآثار',      en:'FOOTSTEP',   icon:'👣', color:'#8B8278', aspect:'wide'    },
+  trail:      { label:'خط السير',    en:'TRAIL',      icon:'➰', color:'#6B9B6B', aspect:'wide'    },
+  jump:       { label:'القفز',       en:'JUMP',       icon:'⬆️', color:'#5A8FD8', aspect:'square'  },
+  death:      { label:'النهاية',     en:'DEATH',      icon:'💀', color:'#A06AD8', aspect:'square'  },
+  aura:       { label:'الهالات',     en:'AURA',       icon:'🌟', color:'#FFD060', aspect:'square'  },
+  crown:      { label:'الرأسيات',    en:'CROWN',      icon:'👑', color:'#E8B34E', aspect:'square'  },
+  cape:       { label:'العباءات',    en:'CAPE',       icon:'🦸', color:'#9A6AC8', aspect:'square'  },
+
+  /* ✨ جديدة */
+  headItem:   { label:'غطاء الرأس',  en:'HEADGEAR',   icon:'🎩', color:'#E85838', aspect:'square'  },
+  backItem:   { label:'الظهر',       en:'BACK ITEM',  icon:'🦋', color:'#4A88C8', aspect:'square'  },
+  heldItem:   { label:'المحمول',     en:'HELD ITEM',  icon:'⚔️', color:'#C98A2E', aspect:'square'  },
+  groundMark: { label:'العلامة الأرضية', en:'GROUND', icon:'⭕', color:'#6B9B6B', aspect:'square'  },
+  nameTag:    { label:'بطاقة الاسم', en:'NAME TAG',   icon:'🏷️', color:'#A06AD8', aspect:'wide'    },
+  badge:      { label:'الشارة',      en:'BADGE',      icon:'⭐', color:'#E8B34E', aspect:'square'  },
+  avatarFrame:{ label:'الإطار',      en:'FRAME',      icon:'🖼️', color:'#FFD060', aspect:'square'  },
+  banner:     { label:'الخلفية',     en:'BANNER',     icon:'🎨', color:'#E85838', aspect:'wide'    },
+  spawnEffect:{ label:'تأثير البداية', en:'SPAWN',    icon:'🚀', color:'#4A88C8', aspect:'square'  },
+  reviveEffect:{ label:'تأثير الإحياء', en:'REVIVE',  icon:'💫', color:'#FFD060', aspect:'square'  },
+  hitEffect:  { label:'تأثير الارتطام', en:'HIT',     icon:'💥', color:'#E85838', aspect:'square'  }
+};
+
+/* ═══ الحصول على إعدادات الفئة ═══ */
+function getCosCategoryConfig(cat){
+  return COS_CATEGORY_CONFIG[cat] || {
+    label: (typeof CATEGORY_LABELS !== 'undefined' && CATEGORY_LABELS[cat]) || cat,
+    en: cat.toUpperCase(),
+    icon: '✨',
+    color: '#8B8278',
+    aspect: 'square'
+  };
+}
+
+/* ============================================================
+   ═══════════════ MAIN BUILDER ═══════════════
+   ============================================================ */
 function buildCosmetics(){
   const grid = document.getElementById('cos-grid');
   if(!grid) return;
+
+  /* ═══ Token لمنع التنفيذ المزدوج ═══ */
+  const buildToken = ++_cosBuildToken;
+
+  /* ═══ حماية أولية ═══ */
+  if(!Save.data || !Save.data.cosmetics){
+    console.warn('[Cosmetics] Save data not ready');
+    return;
+  }
+
+  /* ═══ ضمان تهيئة الفئات ═══ */
+  const cat = currentCosTab;
+  if(!Save.data.cosmetics.owned[cat])  Save.data.cosmetics.owned[cat]  = [];
+  if(!Save.data.cosmetics.current[cat]) Save.data.cosmetics.current[cat] = '';
+
+  /* ═══ الفئة وإعداداتها ═══ */
+  const catConfig = getCosCategoryConfig(cat);
+  grid.setAttribute('data-category', cat);
+
+  /* ═══ القائمة الكاملة ═══ */
+  let list;
+  try {
+    list = getAllCosmetics(cat) || [];
+  } catch(e){
+    console.error('[Cosmetics] getAllCosmetics failed:', e);
+    grid.innerHTML = '<div style="grid-column: span 2; text-align:center;padding:40px;color:#C14A4A;font-size:13px;">⚠ فشل تحميل العناصر</div>';
+    return;
+  }
+
+  if(list.length === 0){
+    grid.innerHTML = '<div style="grid-column: span 2; text-align:center;padding:40px;color:var(--ink-mute);font-size:13px;">لا توجد عناصر في هذا التصنيف</div>';
+    return;
+  }
+
+  /* ═══ بيانات سياقية ═══ */
+  const ownedList = Save.data.cosmetics.owned[cat] || [];
+  const ownedSet  = new Set(ownedList);
+  const currentId = Save.data.cosmetics.current[cat];
+
+  const isAdminUnlimited = hasAdminAccess() && Save.data.admin && Save.data.admin.unlimitedUnlock;
+  const userCoins = Save.data.coins || 0;
+
+  /* ═══ إحصاء ═══ */
+  const totalOwned = ownedList.length;
+  const totalItems = list.length;
+
+  /* ═══ Header (اختياري — يُبنى فوق الشبكة) ═══ */
+  let headerEl = grid.parentNode.querySelector('.cos-header');
+  if(!headerEl){
+    headerEl = document.createElement('div');
+    headerEl.className = 'cos-header';
+    headerEl.style.cssText = `
+      display:flex;align-items:center;justify-content:space-between;
+      padding:10px 14px;margin-bottom:12px;border-radius:14px;
+      background:linear-gradient(135deg, ${catConfig.color}15, ${catConfig.color}05);
+      border:1px solid ${catConfig.color}30;
+    `;
+    grid.parentNode.insertBefore(headerEl, grid);
+  }
+  headerEl.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:22px;">${catConfig.icon}</span>
+      <div>
+        <div style="font-family:'Space Grotesk';font-size:13px;font-weight:700;color:${catConfig.color};letter-spacing:1.5px;">
+          ${catConfig.en}
+        </div>
+        <div style="font-size:11px;font-weight:700;color:var(--ink-mute);">
+          ${catConfig.label}
+        </div>
+      </div>
+    </div>
+    <div style="text-align:left;">
+      <div style="font-family:'Space Grotesk';font-size:16px;font-weight:700;color:var(--ink);">
+        ${totalOwned}<span style="color:var(--ink-mute);font-size:12px;">/${totalItems}</span>
+      </div>
+      <div style="font-size:9px;font-weight:800;letter-spacing:1.5px;color:var(--ink-mute);">OWNED</div>
+    </div>
+  `;
+
+  /* ═══ مسح الشبكة ═══ */
   grid.innerHTML = '';
-  const list = getAllCosmetics(currentCosTab);
-  if(!list) return;
-  const owned = Save.data.cosmetics.owned[currentCosTab] || [];
-  const current = Save.data.cosmetics.current[currentCosTab];
 
-  list.forEach(item=>{
-    const isOwned = owned.includes(item.id);
-    const isEq = current === item.id;
+  /* ═══ بناء البطاقات ═══ */
+  const fragment = document.createDocumentFragment();
 
-    /* السعر من مصدر المتجر */
-    const shopPlacement = item.placements
-      ? (item.placements || []).find(p => p.type === 'shop')
-      : (item.price !== undefined ? { price: item.price } : null);
-    const canBuy = !!shopPlacement;
+  list.forEach((item, idx) => {
+    if(buildToken !== _cosBuildToken) return;  /* إلغاء إذا بدأ بناء جديد */
 
-    const el = document.createElement('button');
-    el.className = 'cos-card' + (isEq ? ' equipped' : '') + (!isOwned ? ' locked' : '');
-
-    const prev = document.createElement('div');
-    prev.className = 'cos-preview';
-    const pc = document.createElement('canvas');
-    const pw = 180, ph = 60;
-    const pDPR = Math.min(window.devicePixelRatio||1, 2.5);
-    pc.width = Math.floor(pw * pDPR);
-    pc.height = Math.floor(ph * pDPR);
-    pc.style.width = pw + 'px';
-    pc.style.height = ph + 'px';
-    const pctx = pc.getContext('2d');
-    pctx.setTransform(pDPR, 0, 0, pDPR, 0, 0);
-
-    /* رسم المعاينة */
-    if(hasItemImage(item)){
-      const img = getItemImageEl(item);
-      const draw = () => {
-        if(img.complete && img.naturalWidth > 0){
-          const sz = 48;
-          pctx.clearRect(0,0,pw,ph);
-          pctx.drawImage(img, pw/2 - sz/2, ph/2 - sz/2, sz, sz);
-        }
-      };
-      draw();
-      if(!img.complete) img.addEventListener('load', draw, { once: true });
-    } else {
-      renderCosPreview(pctx, pw, ph, currentCosTab, item);
-    }
-    prev.appendChild(pc);
-    el.appendChild(prev);
-
-    const name = document.createElement('div');
-    name.className = 'cos-name'; name.textContent = item.name;
-    el.appendChild(name);
-
-    let tag;
-    if(isEq) tag = '<div class="cos-tag equipped">مُجهّز</div>';
-    else if(isOwned) tag = '<div class="cos-tag owned">مملوك</div>';
-    else if(canBuy) tag = `<div class="cos-tag buy"><span>◆</span> ${shopPlacement.price}</div>`;
-    else {
-      const p = (item.placements || [])[0];
-      if(p){
-        const info = getSourceTypeInfo(p.type);
-        tag = `<div class="cos-tag" style="color:${info.color};font-size:9px;">${info.icon} ${info.label}</div>`;
-      } else {
-        tag = '<div class="cos-tag" style="color:var(--ink-mute);font-size:9px;">غير متوفر</div>';
-      }
-    }
-    const tagEl = document.createElement('div');
-    tagEl.innerHTML = tag;
-    el.appendChild(tagEl.firstChild);
-
-    if(!isOwned){
-      const lock = document.createElement('div');
-      lock.className = 'skin-lock'; lock.textContent = canBuy ? '🔒' : '🎁';
-      el.appendChild(lock);
-    }
-
-    el.addEventListener('click', ()=>{
-      if(isEq) return;
-      if(isOwned){
-        Save.data.cosmetics.current[currentCosTab] = item.id;
-        Save.save();
-        Sfx.tap(); haptic(8);
-        buildCosmetics();
-      } else if(canBuy && ((hasAdminAccess() && Save.data.admin.unlimitedUnlock) || Save.data.coins >= shopPlacement.price)){
-        if(!(hasAdminAccess() && Save.data.admin.unlimitedUnlock)) Save.data.coins -= shopPlacement.price;
-        if(!Save.data.cosmetics.owned[currentCosTab].includes(item.id))
-          Save.data.cosmetics.owned[currentCosTab].push(item.id);
-        Save.data.cosmetics.current[currentCosTab] = item.id;
-        Save.save();
-        Sfx.reward(); haptic(15);
-        buildCosmetics();
-        updateCoinsUI();
-      } else {
-        Sfx.play(220,0.15,'sine',0.05,180);
-        haptic(20);
-      }
+    const card = buildCosmeticCard(item, {
+      cat,
+      catConfig,
+      isOwned: ownedSet.has(item.id),
+      isEquipped: currentId === item.id,
+      userCoins,
+      isAdminUnlimited,
+      index: idx
     });
 
-    grid.appendChild(el);
+    fragment.appendChild(card);
   });
+
+  grid.appendChild(fragment);
+
+  /* ═══ Empty state ═══ */
+  if(grid.children.length === 0){
+    grid.innerHTML = '<div style="grid-column: span 2; text-align:center;padding:40px;color:var(--ink-mute);font-size:13px;">لا يوجد عناصر قابلة للعرض</div>';
+  }
+}
+
+
+/* ============================================================
+   ═══════════════ BUILD SINGLE CARD ═══════════════
+   ============================================================ */
+function buildCosmeticCard(item, ctx){
+  const { cat, catConfig, isOwned, isEquipped, userCoins, isAdminUnlimited, index } = ctx;
+
+  /* ═══ السعر من placements ═══ */
+  const shopPlacement = Array.isArray(item.placements)
+    ? item.placements.find(p => p && p.type === 'shop')
+    : (typeof item.price === 'number' ? { price: item.price } : null);
+
+  const canBuy = !!shopPlacement && typeof shopPlacement.price === 'number';
+  const price = canBuy ? shopPlacement.price : 0;
+  const canAfford = isAdminUnlimited || (canBuy && userCoins >= price);
+
+  /* ═══ العنصر الأساسي ═══ */
+  const el = document.createElement('button');
+  el.type = 'button';
+  el.className = 'cos-card';
+  if(isEquipped) el.classList.add('equipped');
+  if(!isOwned)   el.classList.add('locked');
+  if(isOwned && !isEquipped) el.classList.add('owned');
+  el.setAttribute('data-item-id', item.id);
+  el.setAttribute('data-category', cat);
+  el.setAttribute('aria-label', item.name || 'عنصر');
+  el.style.setProperty('--cos-color', catConfig.color);
+  el.style.animationDelay = Math.min(index * 15, 300) + 'ms';
+
+  /* ═══ المعاينة ═══ */
+  const preview = document.createElement('div');
+  preview.className = 'cos-preview' + ' cos-preview-' + catConfig.aspect;
+
+  const previewContent = buildCosPreviewContent(item, cat, catConfig);
+  preview.appendChild(previewContent);
+  el.appendChild(preview);
+
+  /* ═══ الاسم ═══ */
+  const nameEl = document.createElement('div');
+  nameEl.className = 'cos-name';
+  nameEl.textContent = item.name || 'بدون اسم';
+  el.appendChild(nameEl);
+
+  /* ═══ السطر الفرعي (EN) ═══ */
+  if(item.desc && item.desc !== item.name){
+    const enEl = document.createElement('div');
+    enEl.className = 'cos-name-en';
+    enEl.textContent = item.desc;
+    enEl.style.cssText = 'font-size:9px;color:var(--ink-mute);letter-spacing:1px;margin-top:1px;';
+    el.appendChild(enEl);
+  }
+
+  /* ═══ Tag (السعر/الحالة) ═══ */
+  const tag = buildCosTag(item, {
+    isOwned, isEquipped, canBuy, price, canAfford, isAdminUnlimited, cat
+  });
+  el.appendChild(tag);
+
+  /* ═══ Lock Icon ═══ */
+  if(!isOwned){
+    const lock = document.createElement('div');
+    lock.className = 'skin-lock';
+    lock.textContent = canBuy ? '🔒' : '🎁';
+    el.appendChild(lock);
+  }
+
+  /* ═══ شارة النُدرة ═══ */
+  if(item.rarity && item.rarity !== 'common'){
+    const rar = document.createElement('div');
+    rar.className = 'cos-rarity-dot';
+    rar.style.cssText = `
+      position:absolute;top:8px;left:8px;
+      width:8px;height:8px;border-radius:50%;
+      background:${getRarityColor(item.rarity)};
+      box-shadow:0 0 8px ${getRarityColor(item.rarity)};
+    `;
+    el.appendChild(rar);
+  }
+
+  /* ═══ التفاعل ═══ */
+  el.addEventListener('click', () => {
+    handleCosmeticClick(item, {
+      cat, isOwned, isEquipped, canBuy, price, canAfford, isAdminUnlimited, el
+    });
+  });
+
+  return el;
+}
+
+
+/* ============================================================
+   ═══════════════ BUILD PREVIEW CONTENT ═══════════════
+   ============================================================ */
+function buildCosPreviewContent(item, cat, catConfig){
+  /* ═══════════════════════════════════════════════════════
+     ✅ أولوية 1: عنصر مخصص بصورة
+     ═══════════════════════════════════════════════════════ */
+  if(hasItemImage(item)){
+    const wrapper = document.createElement('div');
+    wrapper.className = 'cos-preview-img-wrap';
+    wrapper.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;position:relative;';
+
+    const src = ASSET.resolve(item);
+
+    /* Loading spinner */
+    const spinner = document.createElement('div');
+    spinner.className = 'cos-preview-spinner';
+    spinner.innerHTML = '<div style="width:20px;height:20px;border:2px solid rgba(0,0,0,.1);border-top-color:var(--amber);border-radius:50%;animation:spin .8s linear infinite;"></div>';
+    wrapper.appendChild(spinner);
+
+    /* الصورة الفعلية */
+    const img = document.createElement('img');
+    img.alt = item.name || '';
+    img.draggable = false;
+    img.decoding = 'async';
+    img.loading = 'lazy';
+    img.style.cssText = `
+      position:absolute;inset:0;margin:auto;
+      max-width:92%;max-height:92%;
+      object-fit:contain;
+      opacity:0;transition:opacity .3s;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,.1));
+    `;
+    img.onload = () => {
+      spinner.style.display = 'none';
+      img.style.opacity = '1';
+    };
+    img.onerror = () => {
+      spinner.style.display = 'none';
+      wrapper.innerHTML = '<span style="font-size:24px;opacity:.4;">⚠</span>';
+    };
+    img.src = src || '';
+    wrapper.appendChild(img);
+
+    return wrapper;
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     ✅ أولوية 2: معاينة برمجية حسب الفئة
+     ═══════════════════════════════════════════════════════ */
+  const canvas = document.createElement('canvas');
+  const pw = 180, ph = 60;
+  const pDPR = Math.min(window.devicePixelRatio || 1, 2.5);
+  canvas.width  = Math.floor(pw * pDPR);
+  canvas.height = Math.floor(ph * pDPR);
+  canvas.style.width  = pw + 'px';
+  canvas.style.height = ph + 'px';
+  canvas.style.display = 'block';
+
+  const pctx = canvas.getContext('2d');
+  pctx.setTransform(pDPR, 0, 0, pDPR, 0, 0);
+
+  /* استدعاء مع حماية */
+  try {
+    renderCosPreview(pctx, pw, ph, cat, item);
+  } catch(e){
+    console.warn('[CosPreview] Failed for', item.id, ':', e);
+    /* Fallback آمن */
+    pctx.clearRect(0, 0, pw, ph);
+    pctx.fillStyle = catConfig.color + '30';
+    pctx.beginPath();
+    pctx.arc(pw/2, ph/2, 18, 0, Math.PI*2);
+    pctx.fill();
+    pctx.fillStyle = catConfig.color;
+    pctx.font = 'bold 18px sans-serif';
+    pctx.textAlign = 'center';
+    pctx.textBaseline = 'middle';
+    pctx.fillText(catConfig.icon, pw/2, ph/2);
+  }
+
+  return canvas;
+}
+
+
+/* ============================================================
+   ═══════════════ BUILD TAG (STATUS BADGE) ═══════════════
+   ============================================================ */
+function buildCosTag(item, ctx){
+  const { isOwned, isEquipped, canBuy, price, canAfford, isAdminUnlimited, cat } = ctx;
+
+  const tag = document.createElement('div');
+  tag.className = 'cos-tag';
+
+  /* ═══ مُجهّز ═══ */
+  if(isEquipped){
+    tag.classList.add('equipped');
+    tag.innerHTML = '<span style="font-weight:700;">✓ مُجهّز</span>';
+    return tag;
+  }
+
+  /* ═══ مملوك ═══ */
+  if(isOwned){
+    tag.classList.add('owned');
+    tag.innerHTML = '<span>مملوك · اضغط للتجهيز</span>';
+    return tag;
+  }
+
+  /* ═══ قابل للشراء ═══ */
+  if(canBuy){
+    tag.classList.add('buy');
+    if(!canAfford && !isAdminUnlimited){
+      tag.classList.add('cant-afford');
+      tag.style.opacity = '0.5';
+    }
+    tag.innerHTML = `
+      <span style="color:var(--gold);font-size:11px;">◆</span>
+      <span style="font-family:'Space Grotesk';font-weight:700;">${price.toLocaleString()}</span>
+    `;
+    return tag;
+  }
+
+  /* ═══ عنصر من مصدر آخر ═══ */
+  const placement = (item.placements || [])[0];
+  if(placement && typeof getSourceTypeInfo === 'function'){
+    const info = getSourceTypeInfo(placement.type);
+    tag.style.color = info.color;
+    tag.style.fontSize = '9px';
+    tag.innerHTML = `<span>${info.icon} ${info.label}</span>`;
+    return tag;
+  }
+
+  /* ═══ غير متوفر ═══ */
+  tag.style.color = 'var(--ink-mute)';
+  tag.style.fontSize = '9px';
+  tag.textContent = 'غير متوفر';
+  return tag;
+}
+
+
+/* ============================================================
+   ═══════════════ CLICK HANDLER ═══════════════
+   ============================================================ */
+function handleCosmeticClick(item, ctx){
+  const { cat, isOwned, isEquipped, canBuy, price, canAfford, isAdminUnlimited, el } = ctx;
+
+  /* ═══ مُجهّز مسبقاً ═══ */
+  if(isEquipped){
+    Sfx.tap();
+    haptic(4);
+    return;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     1) مملوك — تجهيز مباشر
+     ═══════════════════════════════════════════════════════ */
+  if(isOwned){
+    Save.data.cosmetics.current[cat] = item.id;
+    Save.save();
+
+    Sfx.tap();
+    haptic(8);
+
+    /* ✅ تأثير بصري فوري */
+    el.classList.add('just-equipped');
+    setTimeout(() => el.classList.remove('just-equipped'), 400);
+
+    /* ✅ تحميل مسبق ذكي — الصورة الجديدة فقط */
+    const newSrc = ASSET.resolve(item);
+    if(newSrc && typeof ASSET !== 'undefined'){
+      ASSET.preload([newSrc]).catch(()=>{});
+    }
+
+    /* إعادة البناء */
+    buildCosmetics();
+    return;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     2) شراء — التحقق من الرصيد
+     ═══════════════════════════════════════════════════════ */
+  if(canBuy && canAfford){
+    /* خصم الرصيد (إلا إذا كان admin unlimited) */
+    if(!isAdminUnlimited){
+      Save.data.coins -= price;
+    }
+
+    /* إضافة للمملوكات */
+    if(!Save.data.cosmetics.owned[cat].includes(item.id)){
+      Save.data.cosmetics.owned[cat].push(item.id);
+    }
+
+    /* تجهيز تلقائي */
+    Save.data.cosmetics.current[cat] = item.id;
+    Save.save();
+
+    Sfx.reward();
+    haptic(15);
+
+    /* ✅ تأثير الشراء */
+    el.classList.add('just-purchased');
+    setTimeout(() => el.classList.remove('just-purchased'), 600);
+
+    /* ✅ Preload */
+    const newSrc = ASSET.resolve(item);
+    if(newSrc && typeof ASSET !== 'undefined'){
+      ASSET.preload([newSrc]).catch(()=>{});
+    }
+
+    updateCoinsUI();
+    buildCosmetics();
+    return;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     3) لا يمكن الشراء — إشعار
+     ═══════════════════════════════════════════════════════ */
+  Sfx.play(220, 0.15, 'sine', 0.05, 180);
+  haptic(20);
+
+  /* اهتزاز البطاقة */
+  el.classList.add('shake-denied');
+  setTimeout(() => el.classList.remove('shake-denied'), 350);
+
+  /* نص توضيحي */
+  if(canBuy && !canAfford){
+    showToast(`تحتاج ◆ ${(price - Save.data.coins).toLocaleString()} إضافية`);
+  }
+}
+
+
+/* ============================================================
+   ═══════════════ HELPERS ═══════════════
+   ============================================================ */
+
+/* ═══ لون النُدرة ═══ */
+function getRarityColor(rarity){
+  const map = {
+    common:'#8B8278', uncommon:'#6B9B6B', rare:'#4A88C8',
+    epic:'#9A6AC8', legend:'#E8B34E', legendary:'#E8B34E', mythic:'#E85838'
+  };
+  return map[rarity] || '#8B8278';
+}
+
+/* ═══ Toast بسيط ═══ */
+function showToast(msg, duration = 1800){
+  if(!msg) return;
+  let toast = document.getElementById('toast-global');
+  if(!toast){
+    toast = document.createElement('div');
+    toast.id = 'toast-global';
+    toast.style.cssText = `
+      position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);
+      padding:10px 20px;border-radius:100px;
+      background:rgba(26,21,18,.92);color:#fff;
+      font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;
+      z-index:99999;pointer-events:none;
+      opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);
+      box-shadow:0 8px 24px rgba(0,0,0,.35);
+      max-width:280px;text-align:center;
+    `;
+    document.body.appendChild(toast);
+  }
+
+  toast.textContent = msg;
+  toast.style.opacity = '1';
+  toast.style.transform = 'translateX(-50%) translateY(0)';
+
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(-50%) translateY(20px)';
+  }, duration);
 }
 
 /* ============================================================
@@ -16728,30 +17685,159 @@ nextRandomSwitchMeters = 0;
   }
 }
 
+/* ============================================================
+   ═══════════ SPAWN EFFECTS (دوال مساعدة مستقلة) ═══════════
+   ضع هذه الدوال في مكان منفصل — قبل startGame
+   ============================================================ */
+
+/* ═══ تأثير البداية — استدعها في startGame() بعد resetRun() ═══ */
+function spawnSpawnEffect(){
+  const fx = currentSpawnEffect();
+  if(!fx || fx.id === 'none') return;
+
+  if(hasItemImage(fx)){
+    /* ✅ صورة واحدة تتوسع تدريجياً */
+    particles.push({
+      x: P.x, y: P.y,
+      vx: 0, vy: 0,
+      life: 1.2, decay: 0.018,
+      item: fx,
+      size: 80,
+      scaleOverLife: 2.5,   /* يتضخم 2.5x خلال حياته */
+      color: '#FFFFFF'
+    });
+    return;
+  }
+
+  /* fallback برمجي — انفجار تقليدي */
+  for(let i = 0; i < 40; i++){
+    const a = (i / 40) * Math.PI * 2;
+    particles.push({
+      x: P.x, y: P.y,
+      vx: Math.cos(a) * rand(4, 10),
+      vy: Math.sin(a) * rand(4, 10),
+      life: 1.4, decay: 0.016,
+      color: '#FFFFFF', size: rand(3, 6)
+    });
+  }
+}
+
+/* ═══ تأثير الإحياء — عند secondChance / phoenix ═══ */
+function spawnReviveEffect(){
+  const fx = currentReviveEffect();
+  if(!fx || fx.id === 'none') return;
+
+  if(hasItemImage(fx)){
+    particles.push({
+      x: P.x, y: P.y,
+      vx: 0, vy: 0,
+      life: 1.6, decay: 0.014,
+      item: fx,
+      size: 100,
+      scaleOverLife: 3,
+      color: '#FFFFFF'
+    });
+    return;
+  }
+
+  /* fallback — حلقة نور صاعدة */
+  for(let i = 0; i < 30; i++){
+    const a = (i / 30) * Math.PI * 2;
+    particles.push({
+      x: P.x, y: P.y,
+      vx: Math.cos(a) * rand(3, 7),
+      vy: Math.sin(a) * rand(3, 7) - 2,
+      life: 1.4, decay: 0.02,
+      color: '#FFF8C0', size: rand(3, 6)
+    });
+  }
+}
+
+/* ═══ تأثير الارتطام — عند صد الهجوم بالدرع ═══ */
+function spawnHitEffect(x, y){
+  const fx = currentHitEffect();
+  if(!fx || fx.id === 'none') {
+    burst(x, y, '#7BC4B0', 26, 7);
+    return;
+  }
+
+  if(hasItemImage(fx)){
+    particles.push({
+      x, y,
+      vx: 0, vy: 0,
+      life: 0.6, decay: 0.03,
+      item: fx,
+      size: 60,
+      scaleOverLife: 2,
+      color: '#FFFFFF'
+    });
+    return;
+  }
+
+  /* fallback — شرارات */
+  burst(x, y, '#7BC4B0', 26, 7);
+}
+
+
+/* ============================================================
+   ═══════════════ START GAME — النسخة النظيفة ═══════════════
+   ============================================================ */
 function startGame(){
+  /* ═══ 1) تهيئة الصوت ═══ */
   Sfx.init();
+
+  /* ═══ 2) تصفير الجولة بالكامل ═══ */
   resetRun();
+
+  /* ═══ 3) تحميل أصول اللاعب في الخلفية (لا يوقف اللعب) ═══ */
+  try {
+    if(typeof ASSET !== 'undefined' && ASSET.preloadPlayerAssets){
+      ASSET.preloadPlayerAssets().catch(() => {});
+    }
+  } catch(e){ /* صامت */ }
+
+  /* ═══ 4) تغيير الحالة إلى اللعب ═══ */
   G.state = 'PLAYING';
   setInGame(true);
   hideOverlay();
-  showBanner('GO','');
+
+  /* ═══ 5) ✨ تأثير البداية (صورة أو انفجار) ═══ */
+  spawnSpawnEffect();
+
+  /* ═══ 6) بانر GO ═══ */
+  showBanner('GO', '');
   G.banner.timer = 55;
+
+  /* ═══ 7) نص التلميح حسب النمط ═══ */
   let txt = '';
   if(G.isMixedMode){
     txt = 'النمط المتنوّع — كل ١٢٠م يتغير النمط!';
-  } else if(G.mode==='FLIP') txt = 'اضغط لقلب الجاذبية';
-  else if(G.mode==='FLAP') txt = 'اضغط باستمرار للارتفاع';
-  else if(G.mode==='DRIFT') txt = 'اسحب إصبعك لتحريك السفينة';
-  else if(G.mode==='WALK') txt = 'اضغط للقفز — مزدوجة متاحة';
-    else if(G.mode === 'ASCEND') txt = 'المس الشخصية = قفز فوق · المس جانبيها = قفز للجانب';
-  else if(G.mode==='FLIP_WALK') txt = 'أنت على السقف! اقفز للأسفل — لا تسقط في العمق!';
-  else if(G.mode==='SKY_JUMP') txt = 'قفز تلقائي — اضغط في الهواء لتطير أعلى!';
-  const h = document.getElementById('hint');
-  if(h){
-    h.textContent = txt;
-    h.classList.add('show');
+  } else if(G.mode === 'FLIP'){
+    txt = 'اضغط لقلب الجاذبية';
+  } else if(G.mode === 'FLAP'){
+    txt = 'اضغط باستمرار للارتفاع';
+  } else if(G.mode === 'DRIFT'){
+    txt = 'اسحب إصبعك لتحريك السفينة';
+  } else if(G.mode === 'WALK'){
+    txt = 'اضغط للقفز — مزدوجة متاحة';
+  } else if(G.mode === 'ASCEND'){
+    txt = 'المس الشخصية = قفز فوق · المس جانبيها = قفز للجانب';
+  } else if(G.mode === 'FLIP_WALK'){
+    txt = 'أنت على السقف! اقفز للأسفل — لا تسقط في العمق!';
+  } else if(G.mode === 'SKY_JUMP'){
+    txt = 'قفز تلقائي — اضغط في الهواء لتطير أعلى!';
+  }
+
+  const hint = document.getElementById('hint');
+  if(hint){
+    hint.textContent = txt;
+    hint.classList.add('show');
   }
   G.hintTimer = 220;
+
+  /* ═══ 8) رفع تركيز الإيموجي/الواجهة (اختياري) ═══ */
+  Sfx.tap();
+  haptic(6);
 }
 
 function gameOver(){
@@ -17495,25 +18581,40 @@ async function handleSignInResult(result) {
 }
 
 async function mergeAndGoHome() {
-  /* ✅ إصلاح: تصفير الذاكرة أولاً قبل أي عملية سحب */
+  /* ═══ 1) احفظ صلاحية المشرف الحالية ═══ */
+  const wasAdmin = isAdminUser();  /* ← ✅ تحقق من UID */
+  const hadLocalAdminAccess = Save.data.admin && Save.data.admin.access;
+
+  /* ═══ 2) صفّر البيانات ═══ */
   Save.data = JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA));
   Save.runMigrations();
 
-  /* ═══ 1. حمّل الحفظ الشخصي من Firebase ═══ */
+  /* ═══ 3) حمّل من السحابة ═══ */
   const cloudSave = await Cloud.pullSave();
+  if (cloudSave) Save.applyCloud(cloudSave);
 
-  if (cloudSave) {
-    Save.applyCloud(cloudSave);   /* يدمج فوق الافتراضيات + ترحيلات */
+  /* ═══ 4) ✅ أعد تفعيل صلاحية المشرف إذا لزم ═══ */
+  if (wasAdmin || hadLocalAdminAccess) {
+    Save.data.admin.access = true;
+    console.log('[Admin] ✅ Admin access restored for', Cloud.user?.uid);
   }
-  /* إن لم يوجد حفظ سحابي: نبقى على الافتراضيات المُصفّرة أعلاه */
 
-  /* ═══ 2. حمّل محتوى المشرف العام (custom items) ═══ */
+  /* ═══ 5) المحتوى المخصص ═══ */
   await pullAdminContent();
 
-  /* ═══ 3. ادفع الحالة الحالية لضمان التزامن ═══ */
+  /* ═══ 6) تحميل أصول اللاعب ═══ */
+  try {
+    await ASSET.preloadPlayerAssets();
+  } catch(e){
+    console.warn('[Preload] failed:', e);
+  }
+
+  /* ═══ 7) دفع الحالة المحدّثة للسحابة ═══ */
   await Cloud.pushSave();
 
-  /* ═══ 4. حدّث الواجهة ═══ */
+  /* ═══ 8) ⚠️ تحديث الواجهة بالترتيب الصحيح ═══ */
+  updateAdminUI();          /* ← ✅ أولاً — يُظهر/يخفي زر المشرف */
+  applyAdminEffects();      /* ← ✅ ثانياً — يُطبق تأثيرات المشرف */
   updateProfileUI();
   buildHome();
   updateCoinsUI();
@@ -18064,12 +19165,17 @@ function buildAdminContentList(){
   if(!list) return;
   list.innerHTML = '';
 
-  const keyMap = {
-    skin:'customSkins', eyes:'customEyes', companion:'customCompanion',
-    footstep:'customFootstep', spark:'customSpark', trail:'customTrail',
-    jump:'customJump', death:'customDeath', aura:'customAura',
-    crown:'customCrown', cape:'customCape'
-  };
+const keyMap = {
+  skin:'customSkins', eyes:'customEyes', companion:'customCompanion',
+  footstep:'customFootstep', spark:'customSpark', trail:'customTrail',
+  jump:'customJump', death:'customDeath', aura:'customAura',
+  crown:'customCrown', cape:'customCape',
+  /* ✨ جديدة */
+  headItem:'customHeadItem', backItem:'customBackItem', heldItem:'customHeldItem',
+  groundMark:'customGroundMark', nameTag:'customNameTag', badge:'customBadge',
+  avatarFrame:'customAvatarFrame', banner:'customBanner',
+  spawnEffect:'customSpawnEffect', reviveEffect:'customReviveEffect', hitEffect:'customHitEffect'
+};
 
   const key = keyMap[currentAdminTab];
   const items = Save.data.admin[key] || [];
@@ -18200,28 +19306,24 @@ async function deleteCustomItem(cat, idx){
   Sfx.tap();
 }
 
-/* ═══ نشر المحتوى لكل اللاعبين ═══ */
+const ALL_CUSTOM_KEYS = [
+  'customSkins','customEyes','customCompanion','customFootstep',
+  'customSpark','customTrail','customJump','customDeath',
+  'customAura','customCrown','customCape',
+  /* ✨ جديدة */
+  'customHeadItem','customBackItem','customHeldItem',
+  'customGroundMark','customNameTag','customBadge',
+  'customAvatarFrame','customBanner',
+  'customSpawnEffect','customReviveEffect','customHitEffect'
+];
+
 async function pushAdminContent(){
-  if(!Cloud.user || !Cloud.db){
-    return { ok: false, msg: 'غير متصل بالسحابة' };
-  }
+  if(!Cloud.user || !Cloud.db) return { ok: false, msg: 'غير متصل' };
   try {
-    const ref = Cloud.db.collection('admin_content').doc('global');
-    await ref.set({
-      customSkins:      Save.data.admin.customSkins || [],
-      customEyes:       Save.data.admin.customEyes || [],
-      customCompanion:  Save.data.admin.customCompanion || [],
-      customFootstep:   Save.data.admin.customFootstep || [],
-      customSpark:      Save.data.admin.customSpark || [],
-      customTrail:      Save.data.admin.customTrail || [],
-      customJump:       Save.data.admin.customJump || [],
-      customDeath:      Save.data.admin.customDeath || [],
-      customAura:       Save.data.admin.customAura || [],
-      customCrown:      Save.data.admin.customCrown || [],
-      customCape:       Save.data.admin.customCape || [],
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      updatedBy: Cloud.user.uid
-    }, { merge: false });
+    const payload = { updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: Cloud.user.uid };
+    for(const k of ALL_CUSTOM_KEYS) payload[k] = Save.data.admin[k] || [];
+
+    await Cloud.db.collection('admin_content').doc('global').set(payload, { merge: false });
     Save.data.admin.lastContentSync = Date.now();
     Save.save();
     return { ok: true };
@@ -18231,53 +19333,100 @@ async function pushAdminContent(){
   }
 }
 
-/* ═══ جلب المحتوى من السحابة (لكل اللاعبين) ═══ */
-async function pullAdminContent(){
-  if(!Cloud.user || !Cloud.db){
-    return { ok: false, msg: 'غير متصل' };
+/* ═══ يرسم شارة الاسم فوق اللاعب (في multiplayer) ═══ */
+function drawPlayerNameTag(ctx, x, y, name, opts = {}){
+  const tag = currentNameTag();
+  const badge = currentBadge();
+
+  ctx.save();
+
+  /* صورة بطاقة الاسم */
+  if(hasItemImage(tag)){
+    const tagW = 120;
+    ASSET.drawItem(ctx, tag, {
+      x, y: y - 34,
+      size: tagW,
+      anchorX: 0.5, anchorY: 0.5
+    });
   }
+
+  /* النص */
+  ctx.font = 'bold 12px "Space Grotesk", sans-serif';
+  ctx.fillStyle = '#FFFFFF';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor = 'rgba(0,0,0,.8)';
+  ctx.shadowBlur = 4;
+  ctx.fillText(name, x, y - 34);
+
+  /* شارة صغيرة بجانب الاسم */
+  if(badge.id !== 'none' && hasItemImage(badge)){
+    const textW = ctx.measureText(name).width;
+    ASSET.drawItem(ctx, badge, {
+      x: x + textW / 2 + 12, y: y - 34,
+      size: 18,
+      anchorX: 0.5, anchorY: 0.5
+    });
+  }
+
+  ctx.restore();
+}
+
+/* ═══ يرسم إطار الصورة الرمزية في الملف الشخصي ═══ */
+function drawAvatarFrame(ctx, x, y, radius){
+  const frame = currentAvatarFrame();
+  if(frame.id === 'none') return;
+
+  if(hasItemImage(frame)){
+    ASSET.drawItem(ctx, frame, {
+      x, y,
+      size: radius * 2.4,
+      anchorX: 0.5, anchorY: 0.5,
+      rotation: G.t * 0.005
+    });
+    return;
+  }
+
+  /* fallback: حلقة ملوّنة */
+  ctx.save();
+  ctx.strokeStyle = frame.color || '#E8B34E';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.arc(x, y, radius + 4, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+async function pullAdminContent(){
+  if(!Cloud.user || !Cloud.db) return { ok: false };
   try {
-    const ref = Cloud.db.collection('admin_content').doc('global');
-    const snap = await ref.get();
-    if(!snap.exists){
-      return { ok: true, empty: true };
-    }
+    const snap = await Cloud.db.collection('admin_content').doc('global').get();
+    if(!snap.exists) return { ok: true, empty: true };
     const data = snap.data();
-
-    /* دمج آمن: نحتفظ بالمحتوى المحلي أيضاً */
-    const merge = (key) => {
-      const cloudList = data[key] || [];
-      const localList = Save.data.admin[key] || [];
-      /* في حالة المشرف: نستخدم السحابي فقط (لتجنب الازدواج) */
-      if(hasAdminAccess() && isAdminUser()){
-        Save.data.admin[key] = cloudList;
-      } else {
-        /* للاعبين: نستخدم السحابي فقط (المحتوى موحّد) */
-        Save.data.admin[key] = cloudList;
-      }
-    };
-
-    ['customSkins','customEyes','customCompanion','customFootstep',
-     'customSpark','customTrail','customJump','customDeath',
-     'customAura','customCrown','customCape'].forEach(merge);
-
+    for(const k of ALL_CUSTOM_KEYS){
+      Save.data.admin[k] = data[k] || [];
+    }
     Save.data.admin.lastContentSync = Date.now();
     Save.save();
     return { ok: true };
   } catch(e){
-    console.warn('[pullAdminContent]', e);
     return { ok: false, msg: e.message };
   }
 }
 
 /* ═══ حذف عنصر (محلياً + السحابة) ═══ */
 async function deleteCustomItem(cat, idx){
-  const keyMap = {
-    skin:'customSkins', eyes:'customEyes', companion:'customCompanion',
-    footstep:'customFootstep', spark:'customSpark', trail:'customTrail',
-    jump:'customJump', death:'customDeath', aura:'customAura',
-    crown:'customCrown', cape:'customCape'
-  };
+const keyMap = {
+  skin:'customSkins', eyes:'customEyes', companion:'customCompanion',
+  footstep:'customFootstep', spark:'customSpark', trail:'customTrail',
+  jump:'customJump', death:'customDeath', aura:'customAura',
+  crown:'customCrown', cape:'customCape',
+  /* ✨ جديدة */
+  headItem:'customHeadItem', backItem:'customBackItem', heldItem:'customHeldItem',
+  groundMark:'customGroundMark', nameTag:'customNameTag', badge:'customBadge',
+  avatarFrame:'customAvatarFrame', banner:'customBanner',
+  spawnEffect:'customSpawnEffect', reviveEffect:'customReviveEffect', hitEffect:'customHitEffect'
+};
   const key = keyMap[cat];
   Save.data.admin[key].splice(idx, 1);
   Save.save();
@@ -18327,339 +19476,545 @@ function getImageEl(dataUrl){
 }
 
 /* ============================================================
-   ============ ADMIN PANEL WIRING v2 ========================
+   ═══════════ ADMIN PANEL WIRING v3 — CLEAN ═══════════
+   ============================================================
+   ✅ يمنع الربط المزدوج مع Admin v3
+   ✅ keyMap واحد في ثابت مركزي
+   ✅ حماية بـ init guard
+   ✅ event delegation
+   ✅ الكود السري يُسجّل مرة واحدة فقط
    ============================================================ */
+
+/* ═══ خريطة مفاتيح التصنيفات (ثابت مركزي) ═══ */
+const ADMIN_KEY_MAP = Object.freeze({
+  skin:        'customSkins',
+  eyes:        'customEyes',
+  companion:   'customCompanion',
+  footstep:    'customFootstep',
+  spark:       'customSpark',
+  trail:       'customTrail',
+  jump:        'customJump',
+  death:       'customDeath',
+  aura:        'customAura',
+  crown:       'customCrown',
+  cape:        'customCape',
+  /* ✨ الفئات الجديدة */
+  headItem:    'customHeadItem',
+  backItem:    'customBackItem',
+  heldItem:    'customHeldItem',
+  groundMark:  'customGroundMark',
+  nameTag:     'customNameTag',
+  badge:       'customBadge',
+  avatarFrame: 'customAvatarFrame',
+  banner:      'customBanner',
+  spawnEffect: 'customSpawnEffect',
+  reviveEffect:'customReviveEffect',
+  hitEffect:   'customHitEffect'
+});
+
+/* ═══ حالة الربط (يمنع التنفيذ المزدوج) ═══ */
+let _adminWired = false;
+
 function wireAdminPanel(){
+  /* ✅ حماية: يُنفّذ مرة واحدة فقط مهما استُدعي */
+  if(_adminWired){
+    console.log('[wireAdminPanel] Already wired — skipping');
+    return;
+  }
+  _adminWired = true;
+
   const $ = id => document.getElementById(id);
 
-  /* ═══════════════ زر المشرف (في القائمة المنسدلة) ═══════════════ */
-  const adminBtn = $('admin-btn');
-  if(adminBtn){
-    adminBtn.addEventListener('click', ()=>{
-      showScreen('s-admin');
-      buildAdminPanel();
-      Sfx.tap(); haptic(8);
-    });
-  }
+  /* ============================================================
+     ═══ 1) زر فتح لوحة المشرف ═══
+     ============================================================ */
+  wireAdminOpenButtons($);
 
-  /* ═══════════════ زر إنهاء صلاحية المشرف ═══════════════ */
+  /* ============================================================
+     ═══ 2) زر إنهاء الصلاحية ═══
+     ============================================================ */
   const logout = $('admin-logout');
-  if(logout){
-    logout.addEventListener('click', ()=>{
+  if(logout && !logout._bound){
+    logout._bound = true;
+    logout.addEventListener('click', () => {
       if(!confirm('إنهاء صلاحية المشرف؟')) return;
       revokeAdminAccess();
       showScreen('s-home');
       buildHome();
-    });
-  }
-
-  /* ═══════════════ مفاتيح التبديل السريعة ═══════════════ */
-  document.querySelectorAll('.admin-toggle').forEach(t=>{
-    t.addEventListener('click', ()=>{
-      const k = t.dataset.toggle;
-      Save.data.admin[k] = !Save.data.admin[k];
-      Save.save();
-      const sw = $('sw-' + k);
-      if(sw) sw.classList.toggle('on', Save.data.admin[k]);
-      applyAdminEffects();
-      Sfx.tap(); haptic(6);
-    });
-  });
-
-  /* ═══════════════ أزرار إضافة النقود ═══════════════ */
-  document.querySelectorAll('[data-add-coins]').forEach(b=>{
-    b.addEventListener('click', ()=>{
-      const amount = parseInt(b.dataset.addCoins, 10);
-      Save.data.coins += amount;
-      Save.save();
-      const cv = $('admin-coins-value');
-      if(cv) cv.textContent = Save.data.coins;
-      updateCoinsUI();
-      Sfx.coin(); haptic(10);
-    });
-  });
-
-  /* ═══════════════ زر تصفير النقود ═══════════════ */
-  const resetCoins = $('admin-reset-coins');
-  if(resetCoins){
-    resetCoins.addEventListener('click', ()=>{
-      if(!confirm('تصفير النقود؟')) return;
-      Save.data.coins = 0;
-      Save.save();
-      const cv = $('admin-coins-value');
-      if(cv) cv.textContent = '0';
-      updateCoinsUI();
-      Sfx.tap();
-    });
-  }
-
-  /* ═══════════════ تبويبات تصنيفات المحتوى ═══════════════ */
-  document.querySelectorAll('.act-chip').forEach(c=>{
-    c.addEventListener('click', ()=>{
-      currentAdminTab = c.dataset.act;
-      document.querySelectorAll('.act-chip').forEach(x=>x.classList.toggle('active', x === c));
-      buildAdminContentList();
-      Sfx.tap();
-    });
-  });
-
-  /* ═══════════════ زر إضافة عنصر جديد ═══════════════ */
-  const addBtn = $('admin-add-content');
-  if(addBtn){
-    addBtn.addEventListener('click', ()=>{
-
-      /* ═══ تصفير الحقول ═══ */
-      if($('af-name'))       $('af-name').value = '';
-      if($('af-name-en'))    $('af-name-en').value = '';
-      if($('af-rarity'))     $('af-rarity').value = 'common';
-      if($('af-enabled'))    $('af-enabled').value = 'true';
-      if($('af-color'))      $('af-color').value = '#E07A3F';
-      if($('af-color2'))     $('af-color2').value = '#E8B34E';
-      if($('af-image-path')) $('af-image-path').value = '';
-
-      if($('af-path-preview')){
-        $('af-path-preview').innerHTML = '<span>لا توجد معاينة</span>';
-        $('af-path-preview').classList.remove('err');
-      }
-      if($('af-status')){
-        $('af-status').textContent = '';
-        $('af-status').className = 'af-status';
-      }
-
-      /* ═══ تحديث التسميات ═══ */
-      if($('af-cat-label')){
-        $('af-cat-label').textContent = CATEGORY_LABELS[currentAdminTab] || currentAdminTab;
-      }
-      if($('af-path-cat')){
-        $('af-path-cat').textContent = CATEGORY_FOLDERS[currentAdminTab] || 'skins';
-      }
-
-      /* ═══ بناء محرر المصادر ═══ */
-      if(typeof PLACEMENT_TYPES === 'undefined' || !PLACEMENT_TYPES || Object.keys(PLACEMENT_TYPES).length === 0){
-        PLACEMENT_TYPES = buildPlacementTypes();
-      }
-      buildSourcesEditor();
-
-      /* ═══ إظهار النموذج ═══ */
-      if($('admin-form')){
-        $('admin-form').style.display = 'block';
-        $('admin-form').scrollIntoView({ behavior:'smooth', block:'start' });
-      }
-
       Sfx.tap(); haptic(6);
     });
   }
 
-  /* ═══════════════ معاينة الصورة عند كتابة المسار ═══════════════ */
-  const pathInput = $('af-image-path');
-  if(pathInput){
-    pathInput.addEventListener('input', ()=>{
-      const val = pathInput.value.trim();
-      const preview = $('af-path-preview');
-      if(!preview) return;
+  /* ============================================================
+     ═══ 3) تبويبات تصنيفات المحتوى ═══
+     - Admin v3 يربطها عبر bindContentTabs() لكن باسم مغاير
+     - هنا نوحّد المرجع: عند النقر نُحدّث BOTH currentAdminTab و Admin.contentTab
+     ============================================================ */
+  document.querySelectorAll('#admin-content-tabs .act-chip').forEach(chip => {
+    if(chip._adminContentBound) return;
+    chip._adminContentBound = true;
 
-      if(!val){
-        preview.innerHTML = '<span>لا توجد معاينة</span>';
-        preview.classList.remove('err');
-        return;
-      }
+    chip.addEventListener('click', () => {
+      const cat = chip.dataset.act;
+      if(!cat) return;
 
-      const folder = CATEGORY_FOLDERS[currentAdminTab] || 'skins';
-      let src;
-      if(val.startsWith('assets/') || val.startsWith('http') || val.startsWith('data:')){
-        src = val;
+      /* ✅ وحّد المرجعين */
+      currentAdminTab = cat;
+      if(typeof Admin !== 'undefined' && Admin) Admin.contentTab = cat;
+
+      /* UI */
+      document.querySelectorAll('#admin-content-tabs .act-chip').forEach(x => {
+        x.classList.toggle('active', x === chip);
+      });
+
+      /* إعادة بناء القائمة عبر النظام المُهيّأ */
+      if(typeof Admin !== 'undefined' && Admin && Admin.initialized){
+        Admin.renderContentList();
       } else {
-        src = 'assets/custom/' + folder + '/' + val.replace(/^\/+/, '');
+        buildAdminContentList();
       }
 
-      const testImg = new Image();
-      testImg.onload = ()=>{
-        preview.innerHTML = `<img src="${src}" alt="">`;
-        preview.classList.remove('err');
-      };
-      testImg.onerror = ()=>{
-        preview.innerHTML = '<span>⚠ لم يتم العثور على الملف</span>';
-        preview.classList.add('err');
-      };
-      testImg.src = src;
+      Sfx.tap(); haptic(4);
+    });
+  });
+
+  /* ============================================================
+     ═══ 4) زر "إضافة عنصر جديد" ═══
+     ============================================================ */
+  const addBtn = $('admin-add-content');
+  if(addBtn && !addBtn._bound){
+    addBtn._bound = true;
+    addBtn.addEventListener('click', () => {
+      openAdminItemForm();
     });
   }
 
-  /* ═══════════════ زر إلغاء ═══════════════ */
+  /* ============================================================
+     ═══ 5) حقول النموذج ═══
+     ============================================================ */
+  wireAdminFormFields($);
+
+  /* ============================================================
+     ═══ 6) زر إلغاء ═══
+     ============================================================ */
   const cancel = $('af-cancel');
-  if(cancel){
-    cancel.addEventListener('click', ()=>{
-      if($('admin-form')) $('admin-form').style.display = 'none';
+  if(cancel && !cancel._bound){
+    cancel._bound = true;
+    cancel.addEventListener('click', () => {
+      closeAdminItemForm();
       Sfx.tap(); haptic(4);
     });
   }
 
-  /* ═══════════════ زر حفظ ونشر للجميع ═══════════════ */
+  /* زر إغلاق ✕ داخل رأس النموذج */
+  const closeBtn = $('afv3-close');
+  if(closeBtn && !closeBtn._bound){
+    closeBtn._bound = true;
+    closeBtn.addEventListener('click', () => {
+      closeAdminItemForm();
+      Sfx.tap(); haptic(4);
+    });
+  }
+
+  /* النقر على الخلفية يُغلق النموذج */
+  const backdrop = $('afv3-backdrop');
+  if(backdrop && !backdrop._bound){
+    backdrop._bound = true;
+    backdrop.addEventListener('click', () => {
+      closeAdminItemForm();
+    });
+  }
+
+  /* ============================================================
+     ═══ 7) زر الحفظ والنشر ═══
+     ============================================================ */
   const save = $('af-save');
-  if(save){
-    save.addEventListener('click', async ()=>{
-
-      /* ═══ جمع البيانات ═══ */
-      const name      = ($('af-name')       ? $('af-name').value.trim()       : '');
-      const nameEn    = ($('af-name-en')    ? $('af-name-en').value.trim()    : '') || name.toUpperCase();
-      const rarity    = ($('af-rarity')     ? $('af-rarity').value            : 'common');
-      const enabled   = ($('af-enabled')    ? $('af-enabled').value === 'true' : true);
-      const color     = ($('af-color')      ? $('af-color').value             : '#E07A3F');
-      const color2    = ($('af-color2')     ? $('af-color2').value            : '#E8B34E');
-      const imagePath = ($('af-image-path') ? $('af-image-path').value.trim() : '');
-
-      /* ═══ التحقق ═══ */
-      if(!name){
-        if($('af-status')){
-          $('af-status').textContent = '✗ الاسم العربي مطلوب';
-          $('af-status').className = 'af-status err';
-        }
-        Sfx.play(220, 0.15, 'sine', 0.05, 180);
-        haptic(20);
-        return;
-      }
-      if(!imagePath){
-        if($('af-status')){
-          $('af-status').textContent = '✗ مسار الصورة مطلوب';
-          $('af-status').className = 'af-status err';
-        }
-        Sfx.play(220, 0.15, 'sine', 0.05, 180);
-        haptic(20);
-        return;
-      }
-
-      /* ═══ جمع الأماكن (Placements) ═══ */
-      const placements = collectPlacements();
-      if(placements.length === 0){
-        if($('af-status')){
-          $('af-status').textContent = '✗ اختر مكاناً واحداً على الأقل';
-          $('af-status').className = 'af-status err';
-        }
-        Sfx.play(220, 0.15, 'sine', 0.05, 180);
-        haptic(20);
-        return;
-      }
-
-      /* ═══ بناء العنصر ═══ */
-      const item = {
-        id: 'c_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
-        category: currentAdminTab,
-        name,
-        nameEn,
-        rarity,
-        color,
-        color2,
-        imagePath,
-        enabled,
-        placements,
-        createdBy: (typeof Cloud !== 'undefined' && Cloud.user) ? Cloud.user.uid : 'local',
-        createdAt: Date.now()
-      };
-
-      /* ═══ تحديد المفتاح في Save.data.admin ═══ */
-      const keyMap = {
-        skin:'customSkins', eyes:'customEyes', companion:'customCompanion',
-        footstep:'customFootstep', spark:'customSpark', trail:'customTrail',
-        jump:'customJump', death:'customDeath', aura:'customAura',
-        crown:'customCrown', cape:'customCape'
-      };
-      const key = keyMap[currentAdminTab];
-      if(!Save.data.admin[key]) Save.data.admin[key] = [];
-      Save.data.admin[key].push(item);
-      Save.save();
-
-      /* ═══ حالة الحفظ ═══ */
-      if($('af-status')){
-        $('af-status').textContent = '⏳ جارٍ النشر لكل اللاعبين...';
-        $('af-status').className = 'af-status';
-      }
-
-      /* ═══ النشر إلى السحابة ═══ */
-      const r = await pushAdminContent();
-
-      if(r.ok){
-        if($('af-status')){
-          $('af-status').textContent = '✓ تم النشر بنجاح لكل الحسابات';
-          $('af-status').className = 'af-status ok';
-        }
-        Sfx.reward(); haptic(20);
-      } else {
-        if($('af-status')){
-          $('af-status').textContent = '⚠ حُفظ محلياً — فشل النشر: ' + (r.msg || 'غير معروف');
-          $('af-status').className = 'af-status err';
-        }
-        haptic(20);
-      }
-
-      /* ═══ تحديث القوائم ═══ */
-      buildAdminContentList();
-      refreshContentEverywhere();
-
-      /* ═══ إغلاق النموذج بعد فترة ═══ */
-      setTimeout(()=>{
-        if($('admin-form')) $('admin-form').style.display = 'none';
-      }, 1200);
-    });
+  if(save && !save._bound){
+    save._bound = true;
+    save.addEventListener('click', handleAdminItemSave);
   }
 
-  /* ═══════════════ زر تحميل قائمة اللاعبين ═══════════════ */
-  const loadPlayers = $('admin-load-players');
-  if(loadPlayers){
-    loadPlayers.addEventListener('click', async ()=>{
-      const list = $('admin-players-list');
-      if(!list) return;
+  /* ============================================================
+     ═══ 8) الكود السري — يُسجّل مرة واحدة فقط ═══
+     ============================================================ */
+  if(!window._adminSecretBound){
+    window._adminSecretBound = true;
+    wireAdminSecretCode();
+  }
 
-      list.innerHTML = '<div style="padding:12px;text-align:center;color:var(--ink-mute);font-size:12px;">جارٍ التحميل...</div>';
+  /* ============================================================
+     ═══ 9) اختصار Ctrl+S لحفظ النموذج ═══
+     ============================================================ */
+  if(!window._adminShortcutsBound){
+    window._adminShortcutsBound = true;
+    window.addEventListener('keydown', e => {
+      /* فقط عندما يكون النموذج مفتوحاً */
+      const form = document.getElementById('admin-form');
+      if(!form || form.style.display === 'none') return;
 
-      try {
-        const snap = await Cloud.db.collection('players').limit(50).get();
-        list.innerHTML = '';
-
-        if(snap.empty){
-          list.innerHTML = '<div style="padding:12px;text-align:center;color:var(--ink-mute);font-size:12px;">لا يوجد لاعبون</div>';
-          return;
-        }
-
-        snap.forEach(doc=>{
-          const d = doc.data();
-          const el = document.createElement('div');
-          el.className = 'admin-player-item';
-          const photo = d.photoURL || '';
-          const av = photo ? `<img src="${photo}" alt="">` : '👤';
-          el.innerHTML = `
-            <div class="api-av">${av}</div>
-            <div class="api-info">
-              <div class="api-name">${d.username || d.displayName || 'لاعب'}</div>
-              <div class="api-uid">${doc.id.slice(0,12)}…</div>
-            </div>
-          `;
-          list.appendChild(el);
-        });
-      } catch(e){
-        list.innerHTML = '<div style="padding:12px;text-align:center;color:#C14A4A;font-size:12px;">فشل التحميل: ' + e.message + '</div>';
+      if((e.ctrlKey || e.metaKey) && e.key === 's'){
+        e.preventDefault();
+        const saveBtn = document.getElementById('af-save');
+        if(saveBtn) saveBtn.click();
       }
     });
   }
+}
 
-  /* ═══════════════ الكود السري ═══════════════ */
-  let secretBuffer = '';
-  window.addEventListener('keydown', (e)=>{
-    if(e.key.length === 1){
-      secretBuffer += e.key;
-      if(secretBuffer.length > 30) secretBuffer = secretBuffer.slice(-30);
+/* ============================================================
+   ═══════════════ HELPERS ═══════════════
+   ============================================================ */
 
-      if(secretBuffer.endsWith(ADMIN_CONFIG.secretCode)){
-        secretBuffer = '';
-        const code = prompt('أدخل كود المشرف:');
-        if(code === ADMIN_CONFIG.secretCode){
-          grantAdminAccess();
-          alert('✓ تم تفعيل صلاحية المشرف');
-          showScreen('s-admin');
-          buildAdminPanel();
-        } else if(code !== null){
-          alert('✗ كود خاطئ');
-        }
+/* ═══ 1) ربط كل أزرار فتح لوحة المشرف ═══ */
+function wireAdminOpenButtons($){
+  /* قائمة منسدلة: menu-admin-btn */
+  const menuAdminBtn = $('menu-admin-btn');
+  if(menuAdminBtn && !menuAdminBtn._bound){
+    menuAdminBtn._bound = true;
+    menuAdminBtn.addEventListener('click', () => {
+      /* close home menu أولاً */
+      const hm = document.getElementById('home-menu');
+      if(hm) hm.classList.remove('open');
+
+      showScreen('s-admin');
+      if(typeof buildAdminPanel === 'function') buildAdminPanel();
+      if(typeof Admin !== 'undefined' && Admin){
+        if(!Admin.initialized) Admin.init();
+        Admin.refreshAll();
       }
+      Sfx.tap(); haptic(8);
+    });
+  }
+
+  /* زر قديم محتمل: admin-btn */
+  const legacyBtn = $('admin-btn');
+  if(legacyBtn && !legacyBtn._bound){
+    legacyBtn._bound = true;
+    legacyBtn.addEventListener('click', () => {
+      showScreen('s-admin');
+      if(typeof buildAdminPanel === 'function') buildAdminPanel();
+      if(typeof Admin !== 'undefined' && Admin){
+        if(!Admin.initialized) Admin.init();
+        Admin.refreshAll();
+      }
+      Sfx.tap(); haptic(8);
+    });
+  }
+
+  /* عنصر قائمة data-menu="admin" */
+  document.querySelectorAll('[data-menu="admin"]').forEach(item => {
+    if(item._bound) return;
+    item._bound = true;
+    item.addEventListener('click', () => {
+      const hm = document.getElementById('home-menu');
+      if(hm) hm.classList.remove('open');
+
+      showScreen('s-admin');
+      if(typeof buildAdminPanel === 'function') buildAdminPanel();
+      if(typeof Admin !== 'undefined' && Admin){
+        if(!Admin.initialized) Admin.init();
+        Admin.refreshAll();
+      }
+      Sfx.tap(); haptic(8);
+    });
+  });
+}
+
+/* ═══ 2) فتح نموذج إضافة عنصر ═══ */
+function openAdminItemForm(){
+  const $ = id => document.getElementById(id);
+
+  /* ═══ تحديد التصنيف الحالي (توحيد المرجعين) ═══ */
+  const cat = (typeof Admin !== 'undefined' && Admin && Admin.contentTab)
+    ? Admin.contentTab
+    : currentAdminTab;
+
+  currentAdminTab = cat;
+
+  /* ═══ تصفير الحقول ═══ */
+  const reset = (id, val) => { const el = $(id); if(el) el.value = val; };
+  reset('af-name',       '');
+  reset('af-name-en',    '');
+  reset('af-rarity',     'common');
+  reset('af-enabled',    'true');
+  reset('af-color',      '#E07A3F');
+  reset('af-color2',     '#E8B34E');
+  reset('af-image-path', '');
+
+  /* ═══ تصفير المعاينة ═══ */
+  const preview = $('af-path-preview');
+  if(preview){
+    preview.innerHTML = '<span>لا توجد معاينة</span>';
+    preview.classList.remove('err');
+  }
+
+  /* ═══ تصفير الحالة ═══ */
+  const status = $('af-status');
+  if(status){
+    status.textContent = '';
+    status.className = 'af-status';
+  }
+
+  /* ═══ تحديث التسميات ═══ */
+  const catLabel = $('af-cat-label');
+  if(catLabel){
+    catLabel.textContent =
+      (typeof CATEGORY_LABELS !== 'undefined' && CATEGORY_LABELS[cat]) || cat;
+  }
+
+  const pathCat = $('af-path-cat');
+  if(pathCat){
+    pathCat.textContent =
+      (typeof CATEGORY_FOLDERS !== 'undefined' && CATEGORY_FOLDERS[cat]) || 'misc';
+  }
+
+  /* ═══ بناء محرر المصادر ═══ */
+  if(typeof PLACEMENT_TYPES === 'undefined' || !PLACEMENT_TYPES ||
+     Object.keys(PLACEMENT_TYPES).length === 0){
+    if(typeof buildPlacementTypes === 'function'){
+      PLACEMENT_TYPES = buildPlacementTypes();
+    }
+  }
+
+  if(typeof buildSourcesEditor === 'function') buildSourcesEditor();
+
+  /* ═══ إظهار النموذج ═══ */
+  const form = $('admin-form');
+  if(form){
+    form.style.display = 'block';
+    requestAnimationFrame(() => {
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
+  Sfx.tap(); haptic(6);
+}
+
+/* ═══ 3) إغلاق نموذج إضافة عنصر ═══ */
+function closeAdminItemForm(){
+  const form = document.getElementById('admin-form');
+  if(form) form.style.display = 'none';
+}
+
+/* ═══ 4) ربط حقول النموذج (معاينة الصورة) ═══ */
+function wireAdminFormFields($){
+  const pathInput = $('af-image-path');
+  if(pathInput && !pathInput._bound){
+    pathInput._bound = true;
+
+    /* debounce بسيط */
+    let timer = null;
+    pathInput.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => updateAdminImagePreview(), 180);
+    });
+  }
+}
+
+/* ═══ 5) تحديث معاينة الصورة ═══ */
+function updateAdminImagePreview(){
+  const $ = id => document.getElementById(id);
+
+  const pathInput = $('af-image-path');
+  const preview   = $('af-path-preview');
+  if(!pathInput || !preview) return;
+
+  const val = pathInput.value.trim();
+
+  if(!val){
+    preview.innerHTML = '<span>لا توجد معاينة</span>';
+    preview.classList.remove('err');
+    return;
+  }
+
+  /* ═══ تحديد المصدر الكامل ═══ */
+  const folder = (typeof CATEGORY_FOLDERS !== 'undefined' && CATEGORY_FOLDERS[currentAdminTab]) || 'misc';
+
+  let src;
+  if(val.startsWith('assets/') || val.startsWith('http') || val.startsWith('data:')){
+    src = val;
+  } else {
+    src = 'assets/custom/' + folder + '/' + val.replace(/^\/+/, '');
+  }
+
+  /* ═══ اختبار التحميل ═══ */
+  const testImg = new Image();
+  testImg.onload = () => {
+    preview.innerHTML = `<img src="${src}" alt="">`;
+    preview.classList.remove('err');
+  };
+  testImg.onerror = () => {
+    preview.innerHTML = '<span>⚠ لم يتم العثور على الملف</span>';
+    preview.classList.add('err');
+  };
+  testImg.src = src;
+}
+
+/* ═══ 6) حفظ عنصر جديد (مع منع النقر المزدوج) ═══ */
+let _adminSaving = false;
+
+async function handleAdminItemSave(){
+  if(_adminSaving) return;
+  _adminSaving = true;
+
+  const $ = id => document.getElementById(id);
+  const status = $('af-status');
+  const saveBtn = $('af-save');
+
+  /* تعطيل الزر أثناء الحفظ */
+  if(saveBtn){
+    saveBtn.disabled = true;
+    saveBtn.dataset._origText = saveBtn.textContent;
+    saveBtn.textContent = '⏳ ...';
+  }
+
+  const setStatus = (msg, cls = '') => {
+    if(status){
+      status.textContent = msg;
+      status.className = 'af-status ' + cls;
+    }
+  };
+
+  try {
+    /* ═══ جمع البيانات ═══ */
+    const name      = ($('af-name')       ? $('af-name').value.trim()       : '');
+    const nameEn    = ($('af-name-en')    ? $('af-name-en').value.trim()    : '') || name.toUpperCase();
+    const rarity    = ($('af-rarity')     ? $('af-rarity').value            : 'common');
+    const enabled   = ($('af-enabled')    ? $('af-enabled').value === 'true' : true);
+    const color     = ($('af-color')      ? $('af-color').value             : '#E07A3F');
+    const color2    = ($('af-color2')     ? $('af-color2').value            : '#E8B34E');
+    const imagePath = ($('af-image-path') ? $('af-image-path').value.trim() : '');
+
+    /* ═══ التحقق ═══ */
+    if(!name){
+      setStatus('✗ الاسم العربي مطلوب', 'err');
+      Sfx.play(220, 0.15, 'sine', 0.05, 180); haptic(20);
+      return;
+    }
+    if(!imagePath){
+      setStatus('✗ مسار الصورة مطلوب', 'err');
+      Sfx.play(220, 0.15, 'sine', 0.05, 180); haptic(20);
+      return;
+    }
+
+    /* ═══ جمع الأماكن ═══ */
+    const placements = (typeof collectPlacements === 'function')
+      ? collectPlacements()
+      : [];
+
+    if(placements.length === 0){
+      setStatus('✗ اختر مكاناً واحداً على الأقل', 'err');
+      Sfx.play(220, 0.15, 'sine', 0.05, 180); haptic(20);
+      return;
+    }
+
+    /* ═══ بناء العنصر ═══ */
+    const cat = currentAdminTab;
+    const item = {
+      id:        'c_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+      category:  cat,
+      name,
+      nameEn,
+      rarity,
+      color,
+      color2,
+      imagePath,
+      enabled,
+      placements,
+      createdBy: (typeof Cloud !== 'undefined' && Cloud.user) ? Cloud.user.uid : 'local',
+      createdAt: Date.now()
+    };
+
+    /* ═══ تحديد المفتاح ═══ */
+    const key = ADMIN_KEY_MAP[cat];
+    if(!key){
+      setStatus('✗ تصنيف غير معروف: ' + cat, 'err');
+      return;
+    }
+
+    if(!Save.data.admin[key]) Save.data.admin[key] = [];
+    Save.data.admin[key].push(item);
+    Save.save();
+
+    /* ═══ حالة النشر ═══ */
+    setStatus('⏳ جارٍ النشر لكل اللاعبين...', '');
+
+    /* ═══ النشر للسحابة ═══ */
+    let r = { ok: false, msg: 'pushAdminContent غير متاحة' };
+    if(typeof pushAdminContent === 'function'){
+      r = await pushAdminContent();
+    }
+
+    if(r.ok){
+      setStatus('✓ تم النشر بنجاح لكل الحسابات', 'ok');
+      Sfx.reward(); haptic(20);
+    } else {
+      setStatus('⚠ حُفظ محلياً — فشل النشر: ' + (r.msg || 'غير معروف'), 'err');
+      haptic(20);
+    }
+
+    /* ═══ تحديث القوائم ═══ */
+    if(typeof Admin !== 'undefined' && Admin){
+      if(Admin.initialized){
+        Admin.renderContentList();
+        Admin.renderContentStats();
+        Admin.addActivity?.('🎨', `إضافة "${name}"`);
+        Admin.logAudit?.('content', 'created', `➕ إضافة عنصر: ${name}`);
+      }
+    }
+    if(typeof buildAdminContentList === 'function') buildAdminContentList();
+    if(typeof refreshContentEverywhere === 'function') refreshContentEverywhere();
+
+    /* ═══ إغلاق النموذج بعد فترة ═══ */
+    setTimeout(() => closeAdminItemForm(), 1100);
+
+  } catch(e){
+    console.error('[handleAdminItemSave] Error:', e);
+    setStatus('✗ خطأ: ' + (e.message || 'غير معروف'), 'err');
+    haptic(20);
+  } finally {
+    _adminSaving = false;
+    if(saveBtn){
+      saveBtn.disabled = false;
+      saveBtn.textContent = saveBtn.dataset._origText || '💾 حفظ ونشر';
+    }
+  }
+}
+
+/* ═══ 7) الكود السري (يُسجّل مرة واحدة) ═══ */
+function wireAdminSecretCode(){
+  let buffer = '';
+
+  window.addEventListener('keydown', e => {
+    /* تجاهل الكتابة داخل الحقول */
+    const tag = (e.target && e.target.tagName || '').toLowerCase();
+    if(tag === 'input' || tag === 'textarea') return;
+
+    if(e.key.length !== 1) return;
+
+    buffer += e.key;
+    if(buffer.length > 40) buffer = buffer.slice(-40);
+
+    /* ═══ تحقق من الكود ═══ */
+    const secretCode = (typeof ADMIN_CONFIG !== 'undefined' && ADMIN_CONFIG.secretCode) || '';
+    if(!secretCode || !buffer.endsWith(secretCode)) return;
+
+    buffer = '';
+
+    const entered = prompt('أدخل كود المشرف:');
+    if(entered === null) return;
+
+    if(entered === secretCode){
+      if(typeof grantAdminAccess === 'function') grantAdminAccess();
+      alert('✓ تم تفعيل صلاحية المشرف');
+      showScreen('s-admin');
+      if(typeof buildAdminPanel === 'function') buildAdminPanel();
+      if(typeof Admin !== 'undefined' && Admin){
+        if(!Admin.initialized) Admin.init();
+        Admin.refreshAll();
+      }
+    } else {
+      alert('✗ كود خاطئ');
     }
   });
 }
@@ -18702,11 +20057,17 @@ function getAllSkins(){
 
 function getAllCosmetics(cat){
   const base = COSMETICS[cat] || [];
-  const keyMap = {
-    spark:'customSpark', eyes:'customEyes', companion:'customCompanion',
-    footstep:'customFootstep', trail:'customTrail', jump:'customJump',
-    death:'customDeath', aura:'customAura', crown:'customCrown', cape:'customCape'
-  };
+const keyMap = {
+  skin:'customSkins', eyes:'customEyes', companion:'customCompanion',
+  footstep:'customFootstep', spark:'customSpark', trail:'customTrail',
+  jump:'customJump', death:'customDeath', aura:'customAura',
+  crown:'customCrown', cape:'customCape',
+  /* ✨ جديدة */
+  headItem:'customHeadItem', backItem:'customBackItem', heldItem:'customHeldItem',
+  groundMark:'customGroundMark', nameTag:'customNameTag', badge:'customBadge',
+  avatarFrame:'customAvatarFrame', banner:'customBanner',
+  spawnEffect:'customSpawnEffect', reviveEffect:'customReviveEffect', hitEffect:'customHitEffect'
+};
   const key = keyMap[cat];
   const custom = (Save.data.admin[key] || [])
     .filter(c => c.enabled !== false)
@@ -20308,6 +21669,1338 @@ window.addEventListener('beforeunload', () => {
   }
 });
 
+/* ═══ تحميل مسبق لأي عنصر مخصص ═══ */
+async function preloadCustomItem(item){
+  if(!item) return { ok: false };
+  const src = ASSET.resolve(item);
+  if(!src) return { ok: false };
+  return ASSET.preload([src]);
+}
+
+/* ═══ تحميل كل محتوى المشرف دفعة واحدة (يُستدعى بعد pullAdminContent) ═══ */
+async function preloadAdminContent(){
+  const sources = [];
+  const items = getAllCustomItems();
+  for(const item of items){
+    const src = ASSET.resolve(item);
+    if(src) sources.push(src);
+  }
+  if(sources.length === 0) return { ok: 0, fail: 0 };
+  console.log(`[Preload] Loading ${sources.length} custom assets...`);
+  return ASSET.preload(sources);
+}
+
+/* ============================================================
+   ═══════════════ ADMIN PANEL v3 — FULL ENGINE ══════════════
+   ============================================================ */
+
+/* ═══════════════ الحالة العامة ═══════════════ */
+const Admin = {
+  /* ═══ الحالة ═══ */
+  tab: 'dashboard',
+  contentTab: 'skin',
+  currentFilter: 'all',
+  searchQuery: '',
+  auditFilter: 'all',
+
+  /* ═══ البيانات المؤقتة ═══ */
+  players: [],
+  auditLog: [],
+  activity: [],
+  liveStats: null,
+
+  /* ═══ الطوابير ═══ */
+  pendingUpload: null,
+
+  /* ═══ الحد الأقصى ═══ */
+  MAX_AUDIT: 200,
+  MAX_ACTIVITY: 20,
+
+  /* ═══ حالة التهيئة ═══ */
+  initialized: false,
+  refreshTimer: null,
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══════════════ INITIALIZATION ═══════════════
+     ═══════════════════════════════════════════════════════════ */
+  init(){
+    if(this.initialized) return;
+    this.initialized = true;
+
+    /* تحميل السجل من الذاكرة */
+    this.loadAuditFromStorage();
+
+    /* ربط التبويبات */
+    this.bindTabs();
+
+    /* ربط الأدوات */
+    this.bindToolbar();
+    this.bindQuickActions();
+    this.bindTools();
+    this.bindSearch();
+    this.bindKeyboard();
+    this.bindAudit();
+    this.bindToggles();
+    this.bindCoins();
+    this.bindPlayers();
+
+    /* حالة النظام */
+    this.renderSystemPanel();
+
+    /* بدء التحديث التلقائي */
+    this.startAutoRefresh();
+  },
+
+  /* ═══════════════ التبويبات ═══════════════ */
+  bindTabs(){
+    document.querySelectorAll('.admin-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const t = tab.dataset.tab;
+        if(!t) return;
+        this.switchTab(t);
+      });
+    });
+  },
+
+  switchTab(tabName){
+    this.tab = tabName;
+    document.querySelectorAll('.admin-tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.tab === tabName);
+    });
+    document.querySelectorAll('.admin-tab-content').forEach(c => {
+      c.classList.toggle('active', c.dataset.tab === tabName);
+    });
+    Sfx.tap(); haptic(4);
+
+    /* تنفيذ مهام التبويب */
+    if(tabName === 'dashboard') this.refreshDashboard();
+    else if(tabName === 'content') this.renderContent();
+    else if(tabName === 'players') this.renderPlayers();
+    else if(tabName === 'economy') this.renderEconomy();
+    else if(tabName === 'events') this.renderEvents();
+    else if(tabName === 'preview') this.initPreview();
+    else if(tabName === 'system') this.renderSystemPanel();
+    else if(tabName === 'audit') this.renderAudit();
+  },
+
+  /* ═══════════════ Dashboard ═══════════════ */
+  refreshDashboard(){
+    this.loadLiveStats();
+    this.renderActivityFeed();
+  },
+
+  async loadLiveStats(){
+    const stats = {
+      players: '—', online: '—', coins: '—',
+      content: '—', sessions: '—', ping: '—'
+    };
+
+    /* عناصر مخصصة */
+    try {
+      stats.content = this.countCustomItems();
+    } catch(e) {}
+
+    /* عملاتي */
+    if(Save.data){
+      stats.coins = Save.data.coins.toLocaleString();
+      stats.sessions = Save.data.stats.totalPlays || 0;
+    }
+
+    /* ping */
+    if(typeof MP !== 'undefined' && MP.ping){
+      stats.ping = MP.ping + 'ms';
+    } else {
+      stats.ping = '—';
+    }
+
+    /* من Firebase */
+    if(typeof Cloud !== 'undefined' && Cloud.db && Cloud.user){
+      try {
+        const snap = await Cloud.db.collection('players').count().get();
+        stats.players = snap.data().count || 0;
+
+        /* متصلون الآن — آخر 5 دقائق */
+        const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
+        const onlineSnap = await Cloud.db.collection('players')
+          .where('lastSeen', '>', fiveMinAgo)
+          .count().get();
+        stats.online = onlineSnap.data().count || 0;
+      } catch(e){ /* تجاهل */ }
+    }
+
+    /* تحديث UI */
+    Object.entries(stats).forEach(([key, value]) => {
+      const el = document.getElementById('stat-' + key);
+      if(el) el.textContent = value;
+    });
+  },
+
+  countCustomItems(){
+    let total = 0;
+    if(!Save.data.admin) return 0;
+    for(const key in Save.data.admin){
+      if(key.startsWith('custom') && Array.isArray(Save.data.admin[key])){
+        total += Save.data.admin[key].length;
+      }
+    }
+    return total;
+  },
+
+  /* ═══════════════ Activity Feed ═══════════════ */
+  addActivity(icon, title){
+    this.activity.unshift({
+      icon, title,
+      time: Date.now()
+    });
+    if(this.activity.length > this.MAX_ACTIVITY){
+      this.activity = this.activity.slice(0, this.MAX_ACTIVITY);
+    }
+    this.renderActivityFeed();
+  },
+
+  renderActivityFeed(){
+    const feed = document.getElementById('admin-activity-feed');
+    if(!feed) return;
+
+    if(this.activity.length === 0){
+      feed.innerHTML = '<div class="aaf-empty">لا يوجد نشاط بعد — ابدأ بتعديل المحتوى أو اللاعبين</div>';
+      return;
+    }
+
+    feed.innerHTML = this.activity.map(a => `
+      <div class="aaf-item">
+        <div class="aaf-icon">${a.icon}</div>
+        <div class="aaf-body">
+          <div class="aaf-title">${this.escape(a.title)}</div>
+          <div class="aaf-time">${this.timeAgo(a.time)}</div>
+        </div>
+      </div>
+    `).join('');
+  },
+
+  /* ═══════════════ Content Tab ═══════════════ */
+  renderContent(){
+    /* إحصاءات المحتوى */
+    this.renderContentStats();
+
+    /* شريط التبويبات */
+    this.bindContentTabs();
+
+    /* القائمة */
+    this.renderContentList();
+  },
+
+  renderContentStats(){
+    const el = document.getElementById('admin-content-stats');
+    if(!el) return;
+
+    const cats = [
+      'skin','eyes','companion','footstep','spark','trail','jump','death','aura','crown','cape',
+      'headItem','backItem','heldItem','groundMark','nameTag','badge',
+      'avatarFrame','banner','spawnEffect','reviveEffect','hitEffect'
+    ];
+
+    let total = 0;
+    let enabled = 0;
+    let withImage = 0;
+
+    for(const cat of cats){
+      const key = 'custom' + cat.charAt(0).toUpperCase() + cat.slice(1);
+      const list = (Save.data.admin[key] || []);
+      total += list.length;
+      enabled += list.filter(x => x.enabled !== false).length;
+      withImage += list.filter(x => x.imagePath || x.imageData).length;
+    }
+
+    el.innerHTML = `
+      <div class="acs-item">
+        <div class="n">${total}</div>
+        <div class="l">الكل</div>
+      </div>
+      <div class="acs-item">
+        <div class="n" style="color:#6B9B6B;">${enabled}</div>
+        <div class="l">مُفعّل</div>
+      </div>
+      <div class="acs-item">
+        <div class="n" style="color:#4A88C8;">${withImage}</div>
+        <div class="l">بصورة</div>
+      </div>
+      <div class="acs-item">
+        <div class="n" style="color:#E85838;">${total - enabled}</div>
+        <div class="l">مُخفي</div>
+      </div>
+    `;
+  },
+
+  bindContentTabs(){
+    const tabs = document.querySelectorAll('#admin-content-tabs .act-chip');
+    tabs.forEach(chip => {
+      /* تجنّب الربط المتكرر */
+      if(chip._bound) return;
+      chip._bound = true;
+
+      chip.addEventListener('click', () => {
+        this.contentTab = chip.dataset.act;
+        document.querySelectorAll('#admin-content-tabs .act-chip').forEach(c => {
+          c.classList.toggle('active', c === chip);
+        });
+        this.renderContentList();
+        Sfx.tap(); haptic(4);
+      });
+    });
+  },
+
+  renderContentList(){
+    const list = document.getElementById('admin-content-list');
+    if(!list) return;
+
+    const keyMap = {
+      skin:'customSkins', eyes:'customEyes', companion:'customCompanion',
+      footstep:'customFootstep', spark:'customSpark', trail:'customTrail',
+      jump:'customJump', death:'customDeath', aura:'customAura',
+      crown:'customCrown', cape:'customCape',
+      headItem:'customHeadItem', backItem:'customBackItem', heldItem:'customHeldItem',
+      groundMark:'customGroundMark', nameTag:'customNameTag', badge:'customBadge',
+      avatarFrame:'customAvatarFrame', banner:'customBanner',
+      spawnEffect:'customSpawnEffect', reviveEffect:'customReviveEffect', hitEffect:'customHitEffect'
+    };
+
+    const key = keyMap[this.contentTab];
+    const items = (Save.data.admin[key] || []);
+
+    if(items.length === 0){
+      list.innerHTML = `
+        <div style="text-align:center;padding:40px 20px;color:var(--ink-mute);">
+          <div style="font-size:40px;opacity:.3;margin-bottom:10px;">📦</div>
+          <div style="font-size:13px;font-weight:700;">لا توجد عناصر في هذا التصنيف</div>
+          <div style="font-size:11px;margin-top:6px;">اضغط "إضافة عنصر جديد" للبدء</div>
+        </div>
+      `;
+      return;
+    }
+
+    list.innerHTML = '';
+    items.forEach((item, idx) => {
+      const el = document.createElement('div');
+      el.className = 'admin-content-item';
+      el.style.position = 'relative';
+
+      const src = this.resolveItemSrc(item);
+      const thumb = src
+        ? `<img src="${src}" alt="" onerror="this.style.display='none';this.parentElement.innerHTML='⚠'">`
+        : `<div style="width:100%;height:100%;background:${item.color || '#E07A3F'};display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:800;">${(item.name||'?').charAt(0)}</div>`;
+
+      const disabled = item.enabled === false;
+
+      el.innerHTML = `
+        <div class="aci-thumb">${thumb}</div>
+        <div class="aci-info">
+          <div class="aci-name">
+            ${this.escape(item.name || 'بدون اسم')}
+            ${disabled ? '<span style="color:#C14A4A;font-size:10px;"> · مُخفي</span>' : ''}
+          </div>
+          <div class="aci-meta">${item.rarity || 'common'} · ${src ? '🖼️' : '⚠ بلا صورة'}</div>
+        </div>
+        <button class="aci-del" data-del="${idx}" title="حذف">🗑</button>
+      `;
+
+      el.querySelector('[data-del]').addEventListener('click', e => {
+        e.stopPropagation();
+        this.confirmDelete(key, idx, item);
+      });
+
+      list.appendChild(el);
+    });
+  },
+
+  async confirmDelete(key, idx, item){
+    if(!confirm(`حذف "${item.name}" نهائياً من جميع اللاعبين؟`)) return;
+
+    Save.data.admin[key].splice(idx, 1);
+    Save.save();
+
+    this.logAudit('content', 'deleted', `🗑 حذف عنصر: ${item.name}`);
+    this.addActivity('🗑', `حذف "${item.name}"`);
+
+    /* مزامنة مع السحابة */
+    if(typeof pushAdminContent === 'function'){
+      await pushAdminContent();
+    }
+
+    this.renderContentList();
+    this.renderContentStats();
+    Sfx.reward(); haptic(15);
+  },
+
+  resolveItemSrc(item){
+    if(!item) return null;
+    if(item.imageData) return item.imageData;
+    if(item.imagePath){
+      const p = String(item.imagePath).trim();
+      if(!p) return null;
+      if(p.startsWith('http') || p.startsWith('data:')) return p;
+      if(p.startsWith('assets/')) return p;
+
+      const folder = this.getFolderForCategory(item.category || this.contentTab);
+      return `assets/custom/${folder}/${p.replace(/^\/+/, '')}`;
+    }
+    return null;
+  },
+
+  getFolderForCategory(cat){
+    const folders = {
+      skin: 'skins', eyes: 'eyes', companion: 'companion', footstep: 'footstep',
+      spark: 'spark', trail: 'trail', jump: 'jump', death: 'death',
+      aura: 'aura', crown: 'crown', cape: 'cape',
+      headItem: 'head', backItem: 'back', heldItem: 'held',
+      groundMark: 'marks', nameTag: 'tags', badge: 'badges',
+      avatarFrame: 'frames', banner: 'banners',
+      spawnEffect: 'spawn', reviveEffect: 'revive', hitEffect: 'hit'
+    };
+    return folders[cat] || 'misc';
+  },
+
+  /* ═══════════════ Players Tab ═══════════════ */
+  renderPlayers(){
+    const list = document.getElementById('admin-players-list');
+    if(!list) return;
+
+    if(this.players.length === 0){
+      list.innerHTML = `
+        <div style="text-align:center;padding:30px;color:var(--ink-mute);font-size:12px;">
+          اضغط "تحميل اللاعبين" لعرض القائمة
+        </div>
+      `;
+      return;
+    }
+
+    const filtered = this.filterPlayers(this.players);
+    if(filtered.length === 0){
+      list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--ink-mute);font-size:12px;">لا نتائج مطابقة</div>';
+      return;
+    }
+
+    list.innerHTML = '';
+    filtered.slice(0, 50).forEach(player => {
+      const el = document.createElement('div');
+      el.className = 'admin-player-item';
+
+      const photo = player.photoURL || '';
+      const av = photo
+        ? `<img src="${photo}" alt="">`
+        : '👤';
+
+      const username = player.username || player.displayName || 'لاعب';
+      const coins = (player.saveData && player.saveData.coins || 0).toLocaleString();
+      const plays = (player.saveData && player.saveData.stats && player.saveData.stats.totalPlays) || 0;
+
+      el.innerHTML = `
+        <div class="api-av">${av}</div>
+        <div class="api-info">
+          <div class="api-name">${this.escape(username)}</div>
+          <div class="api-uid">◆ ${coins} · 🎮 ${plays}</div>
+        </div>
+      `;
+
+      el.addEventListener('click', () => {
+        this.showPlayerActions(player);
+      });
+
+      list.appendChild(el);
+    });
+  },
+
+  filterPlayers(players){
+    let result = [...players];
+
+    /* فلترة */
+    if(this.currentFilter === 'online'){
+      const fiveMinAgo = Date.now() - 5 * 60 * 1000;
+      result = result.filter(p => {
+        const lastSeen = p.lastSeen && p.lastSeen.toMillis ? p.lastSeen.toMillis() : 0;
+        return lastSeen > fiveMinAgo;
+      });
+    } else if(this.currentFilter === 'top'){
+      result.sort((a, b) => {
+        const ca = (a.saveData && a.saveData.coins) || 0;
+        const cb = (b.saveData && b.saveData.coins) || 0;
+        return cb - ca;
+      });
+    } else if(this.currentFilter === 'recent'){
+      result.sort((a, b) => {
+        const ta = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0;
+        const tb = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0;
+        return tb - ta;
+      });
+    }
+
+    /* بحث */
+    if(this.searchQuery){
+      const q = this.searchQuery.toLowerCase();
+      result = result.filter(p =>
+        (p.username || '').toLowerCase().includes(q) ||
+        (p.uid || '').toLowerCase().includes(q)
+      );
+    }
+
+    return result;
+  },
+
+  showPlayerActions(player){
+    const name = player.username || player.displayName || 'لاعب';
+    const uid = player.uid || '';
+    const coins = (player.saveData && player.saveData.coins) || 0;
+
+    const action = prompt(
+      `اللاعب: ${name}\nمعرف: ${uid.slice(0, 12)}…\nالرصيد: ◆ ${coins}\n\n` +
+      `اكتب:\n` +
+      `1 — منح 1000 عملة\n` +
+      `2 — منح 10000 عملة\n` +
+      `3 — تصفير الرصيد\n` +
+      `4 — نسخ المعرّف\n` +
+      `5 — حذف الحساب`
+    );
+
+    if(!action) return;
+
+    if(action === '1') this.grantPlayerCoins(uid, 1000);
+    else if(action === '2') this.grantPlayerCoins(uid, 10000);
+    else if(action === '3') this.setPlayerCoins(uid, 0);
+    else if(action === '4') this.copyToClipboard(uid);
+    else if(action === '5') this.deletePlayer(uid);
+  },
+
+  async grantPlayerCoins(uid, amount){
+    if(!Cloud.db) return;
+    try {
+      const ref = Cloud.db.collection('players').doc(uid);
+      const snap = await ref.get();
+      if(!snap.exists) return;
+
+      const data = snap.data();
+      const saveData = data.saveData || {};
+      saveData.coins = (saveData.coins || 0) + amount;
+
+      await ref.update({ saveData });
+      this.logAudit('economy', 'granted', `💸 منح ◆${amount} للاعب ${uid.slice(0, 8)}`);
+      this.addActivity('💸', `منح ${amount} عملة`);
+      alert(`✓ تم منح ◆${amount}`);
+    } catch(e){
+      alert('فشل: ' + e.message);
+    }
+  },
+
+  async setPlayerCoins(uid, amount){
+    if(!Cloud.db) return;
+    try {
+      const ref = Cloud.db.collection('players').doc(uid);
+      const snap = await ref.get();
+      if(!snap.exists) return;
+
+      const saveData = snap.data().saveData || {};
+      saveData.coins = amount;
+
+      await ref.update({ saveData });
+      this.logAudit('economy', 'reset', `🔄 تصفير رصيد ${uid.slice(0, 8)}`);
+      alert(`✓ تم التصفير`);
+    } catch(e){
+      alert('فشل: ' + e.message);
+    }
+  },
+
+  async deletePlayer(uid){
+    if(!confirm('حذف حساب اللاعب نهائياً؟ لا يمكن التراجع!')) return;
+    if(!Cloud.db) return;
+    try {
+      await Cloud.db.collection('players').doc(uid).delete();
+      this.logAudit('player', 'deleted', `🗑 حذف لاعب ${uid.slice(0, 8)}`);
+      this.addActivity('🗑', 'حذف لاعب');
+      this.players = this.players.filter(p => p.uid !== uid);
+      this.renderPlayers();
+    } catch(e){
+      alert('فشل: ' + e.message);
+    }
+  },
+
+  /* ═══════════════ Economy Tab ═══════════════ */
+  renderEconomy(){
+    const coinsValue = document.getElementById('admin-coins-value');
+    if(coinsValue) coinsValue.textContent = Save.data.coins.toLocaleString();
+  },
+
+  /* ═══════════════ Events Tab ═══════════════ */
+  renderEvents(){
+    const grid = document.getElementById('admin-events-grid');
+    if(!grid) return;
+
+    if(typeof EVENTS === 'undefined' || !Array.isArray(EVENTS) || EVENTS.length === 0){
+      grid.innerHTML = '<div class="aeg-empty">لا توجد أحداث مُعرّفة</div>';
+      return;
+    }
+
+    const now = new Date().toISOString().slice(0, 10);
+
+    grid.innerHTML = EVENTS.map(ev => {
+      const isActive = now >= ev.start && now <= ev.end;
+      return `
+        <div class="atg-btn" style="cursor:default;">
+          <span class="atg-ic">${ev.icon || '🎪'}</span>
+          <div class="atg-body">
+            <div class="atg-title">${ev.name}</div>
+            <div class="atg-desc">${ev.en} · ${isActive ? '🟢 نشط' : '⏸ متوقف'}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  /* ═══════════════ System Panel ═══════════════ */
+  renderSystemPanel(){
+    const panel = document.getElementById('admin-system-panel');
+    if(!panel) return;
+
+    const items = [
+      {
+        label: 'Firebase',
+        status: (typeof Cloud !== 'undefined' && Cloud.enabled) ? 'ok' : 'err',
+        value: (typeof Cloud !== 'undefined' && Cloud.enabled) ? 'متصل' : 'غير متصل'
+      },
+      {
+        label: 'المستخدم',
+        status: (typeof Cloud !== 'undefined' && Cloud.user) ? 'ok' : 'warn',
+        value: (typeof Cloud !== 'undefined' && Cloud.user) ? 'مسجّل' : 'ضيف'
+      },
+      {
+        label: 'المزامنة',
+        status: (typeof Cloud !== 'undefined' && Cloud.syncState === 'synced') ? 'ok' :
+                (Cloud.syncState === 'error') ? 'err' : 'warn',
+        value: (typeof Cloud !== 'undefined' && Cloud.syncState) || '—'
+      },
+      {
+        label: 'الأصول المحمّلة',
+        status: 'ok',
+        value: (typeof ASSET !== 'undefined' && ASSET._cache) ? ASSET._cache.size : 0
+      },
+      {
+        label: 'عناصر مخصصة',
+        status: 'ok',
+        value: this.countCustomItems()
+      },
+      {
+        label: 'النسخة',
+        status: 'ok',
+        value: 'v10.3'
+      }
+    ];
+
+    panel.innerHTML = items.map(it => `
+      <div class="asp-item">
+        <div class="asp-status ${it.status}"></div>
+        <div class="asp-label">${it.label}</div>
+        <div class="asp-val">${it.value}</div>
+      </div>
+    `).join('');
+  },
+
+  /* ═══════════════ Audit Log ═══════════════ */
+  logAudit(category, action, message){
+    this.auditLog.unshift({
+      category, action, message,
+      timestamp: Date.now()
+    });
+    if(this.auditLog.length > this.MAX_AUDIT){
+      this.auditLog = this.auditLog.slice(0, this.MAX_AUDIT);
+    }
+    this.saveAuditToStorage();
+  },
+
+  saveAuditToStorage(){
+    try {
+      const data = this.auditLog.slice(0, 50);
+      sessionStorage.setItem('admin_audit', JSON.stringify(data));
+    } catch(e){}
+  },
+
+  loadAuditFromStorage(){
+    try {
+      const data = sessionStorage.getItem('admin_audit');
+      if(data){
+        this.auditLog = JSON.parse(data);
+      }
+    } catch(e){}
+  },
+
+  renderAudit(){
+    const list = document.getElementById('admin-audit-list');
+    if(!list) return;
+
+    let filtered = this.auditLog;
+    if(this.auditFilter !== 'all'){
+      filtered = filtered.filter(a => a.category === this.auditFilter);
+    }
+
+    if(filtered.length === 0){
+      list.innerHTML = '<div class="aal-empty">لا يوجد سجل بعد</div>';
+      return;
+    }
+
+    const icons = { content: '🎨', economy: '💰', player: '👤' };
+
+    list.innerHTML = filtered.map(a => `
+      <div class="aal-item">
+        <div class="aal-ic ${a.category}">${icons[a.category] || '📝'}</div>
+        <div class="aal-body">
+          <div class="aal-msg">${this.escape(a.message)}</div>
+          <div class="aal-meta">${this.formatTime(a.timestamp)}</div>
+        </div>
+      </div>
+    `).join('');
+  },
+
+  bindAudit(){
+    document.querySelectorAll('[data-audit-filter]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.auditFilter = btn.dataset.auditFilter;
+        document.querySelectorAll('[data-audit-filter]').forEach(b => {
+          b.classList.toggle('active', b === btn);
+        });
+        this.renderAudit();
+        Sfx.tap();
+      });
+    });
+
+    const clear = document.getElementById('admin-clear-audit');
+    if(clear){
+      clear.addEventListener('click', () => {
+        if(!confirm('مسح كل سجل التدقيق؟')) return;
+        this.auditLog = [];
+        this.saveAuditToStorage();
+        this.renderAudit();
+        Sfx.tap();
+      });
+    }
+  },
+
+  /* ═══════════════ Toolbar ═══════════════ */
+  bindToolbar(){
+    const refreshBtn = document.getElementById('admin-refresh-btn');
+    if(refreshBtn){
+      refreshBtn.addEventListener('click', () => {
+        this.refreshAll();
+        Sfx.tap(); haptic(6);
+      });
+    }
+
+    const searchBtn = document.getElementById('admin-search-btn');
+    if(searchBtn){
+      searchBtn.addEventListener('click', () => {
+        this.openSearchModal();
+      });
+    }
+
+    const helpBtn = document.getElementById('admin-help-btn');
+    if(helpBtn){
+      helpBtn.addEventListener('click', () => {
+        this.openHelpModal();
+      });
+    }
+  },
+
+  refreshAll(){
+    if(this.tab === 'dashboard') this.refreshDashboard();
+    else if(this.tab === 'content') this.renderContent();
+    else if(this.tab === 'players') this.renderPlayers();
+    else if(this.tab === 'economy') this.renderEconomy();
+    else if(this.tab === 'system') this.renderSystemPanel();
+    else if(this.tab === 'audit') this.renderAudit();
+    else if(this.tab === 'preview') this.initPreview();
+  },
+
+  /* ═══════════════ Quick Actions ═══════════════ */
+  bindQuickActions(){
+    document.querySelectorAll('[data-quick]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const action = btn.dataset.quick;
+        if(action === 'grant-coins-all') this.bulkGrantCoins();
+        else if(action === 'unlock-all') this.unlockAllContent();
+        else if(action === 'broadcast') this.broadcastMessage();
+        else if(action === 'reset-daily') this.resetDailyMissions();
+      });
+    });
+  },
+
+  async bulkGrantCoins(){
+    const amount = prompt('كم عملة تريد منح كل لاعب؟', '1000');
+    if(!amount || isNaN(amount)) return;
+
+    const amt = parseInt(amount);
+    if(amt <= 0 || amt > 1000000){
+      alert('يجب أن تكون القيمة بين 1 و 1,000,000');
+      return;
+    }
+
+    if(!confirm(`منح ◆${amt} لكل اللاعبين في السحابة؟`)) return;
+
+    if(!Cloud.db){
+      alert('غير متصل');
+      return;
+    }
+
+    try {
+      const snap = await Cloud.db.collection('players').limit(500).get();
+      let count = 0;
+      const batch = Cloud.db.batch();
+
+      snap.forEach(doc => {
+        const data = doc.data();
+        const saveData = data.saveData || {};
+        saveData.coins = (saveData.coins || 0) + amt;
+        batch.update(doc.ref, { saveData });
+        count++;
+      });
+
+      await batch.commit();
+      this.logAudit('economy', 'bulk-grant', `💸 منح ◆${amt} لـ ${count} لاعب`);
+      this.addActivity('💸', `منح ${amt} عملة لكل اللاعبين`);
+      alert(`✓ تم منح ◆${amt} لـ ${count} لاعب`);
+    } catch(e){
+      alert('فشل: ' + e.message);
+    }
+  },
+
+  unlockAllContent(){
+    if(!confirm('تفعيل "فتح كل المقتنيات" للمشرف؟')) return;
+    Save.data.admin.unlimitedUnlock = true;
+    Save.save();
+    this.refreshAll();
+    const sw = document.getElementById('sw-unlimitedUnlock');
+    if(sw) sw.classList.add('on');
+    this.logAudit('content', 'unlock-all', '🔓 فتح كل المحتوى');
+    this.addActivity('🔓', 'تفعيل فتح الكل');
+    Sfx.reward();
+  },
+
+  broadcastMessage(){
+    const msg = prompt('نص الإشعار الجماعي:');
+    if(!msg) return;
+    this.logAudit('player', 'broadcast', `📢 إشعار: ${msg}`);
+    this.addActivity('📢', `إشعار: ${msg.slice(0, 30)}…`);
+    alert('✓ (محلياً — يتطلب Cloud Functions للإرسال الفعلي)');
+  },
+
+  resetDailyMissions(){
+    if(!confirm('إعادة تعيين كل المهام اليومية؟')) return;
+    if(!Save.data.missions) return;
+    Save.data.missions.dailyReset = null;
+    Save.save();
+    if(typeof ensureMissions === 'function') ensureMissions();
+    this.logAudit('player', 'reset-missions', '🔄 إعادة المهام اليومية');
+    alert('✓ تمت إعادة التعيين');
+  },
+
+  /* ═══════════════ Tools ═══════════════ */
+  bindTools(){
+    document.querySelectorAll('[data-tool]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tool = btn.dataset.tool;
+        if(tool === 'bulk-coins') this.bulkGrantCoins();
+        else if(tool === 'bulk-content') this.bulkGrantContent();
+        else if(tool === 'reset-economy') this.resetEconomy();
+        else if(tool === 'export-data') this.exportData();
+        else if(tool === 'import-data') this.importData();
+        else if(tool === 'full-reset') this.fullReset();
+      });
+    });
+  },
+
+  bulkGrantContent(){ alert('قريباً — اختر عنصراً من المحتوى ثم اضغط "نشر للجميع"'); },
+  resetEconomy(){ alert('⚠ للإيقاف — يتطلب Cloud Functions'); },
+
+  exportData(){
+    try {
+      const data = JSON.stringify(Save.data, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `shift-save-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      this.logAudit('system', 'export', '📤 تصدير بيانات');
+      this.addActivity('📤', 'تصدير البيانات');
+    } catch(e){
+      alert('فشل: ' + e.message);
+    }
+  },
+
+  importData(){
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async e => {
+      const file = e.target.files[0];
+      if(!file) return;
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        if(!confirm('استيراد هذه البيانات؟ سيتم استبدال تقدمك الحالي')) return;
+        Save.data = parsed;
+        Save.runMigrations();
+        Save.save();
+        alert('✓ تم الاستيراد — أعد تحميل الصفحة');
+        this.logAudit('system', 'import', '📥 استيراد بيانات');
+      } catch(err){
+        alert('فشل: ' + err.message);
+      }
+    };
+    input.click();
+  },
+
+  fullReset(){
+    if(!confirm('⚠️ حذف كل شيء؟ لا يمكن التراجع!')) return;
+    if(!confirm('تأكيد نهائي: هل أنت متأكد؟')) return;
+    Save.reset();
+    location.reload();
+  },
+
+  /* ═══════════════ Toggles ═══════════════ */
+  bindToggles(){
+    document.querySelectorAll('[data-toggle]').forEach(t => {
+      /* تجنّب الربط المتكرر */
+      if(t._bound) return;
+      t._bound = true;
+
+      t.addEventListener('click', () => {
+        const k = t.dataset.toggle;
+        Save.data.admin[k] = !Save.data.admin[k];
+        Save.save();
+        const sw = document.getElementById('sw-' + k);
+        if(sw) sw.classList.toggle('on', Save.data.admin[k]);
+        if(typeof applyAdminEffects === 'function') applyAdminEffects();
+        this.logAudit('system', 'toggle', `⚙ ${k} → ${Save.data.admin[k]}`);
+        Sfx.tap(); haptic(6);
+      });
+    });
+  },
+
+  /* ═══════════════ Coins ═══════════════ */
+  bindCoins(){
+    document.querySelectorAll('[data-add-coins]').forEach(b => {
+      if(b._bound) return;
+      b._bound = true;
+
+      b.addEventListener('click', () => {
+        const amount = parseInt(b.dataset.addCoins, 10);
+        Save.data.coins += amount;
+        Save.save();
+        const cv = document.getElementById('admin-coins-value');
+        if(cv) cv.textContent = Save.data.coins.toLocaleString();
+        if(typeof updateCoinsUI === 'function') updateCoinsUI();
+        this.logAudit('economy', 'change', `💰 ${amount > 0 ? '+' : ''}${amount} عملة`);
+        Sfx.coin(); haptic(10);
+      });
+    });
+
+    const resetCoins = document.getElementById('admin-reset-coins');
+    if(resetCoins && !resetCoins._bound){
+      resetCoins._bound = true;
+      resetCoins.addEventListener('click', () => {
+        if(!confirm('تصفير رصيدك؟')) return;
+        Save.data.coins = 0;
+        Save.save();
+        const cv = document.getElementById('admin-coins-value');
+        if(cv) cv.textContent = '0';
+        if(typeof updateCoinsUI === 'function') updateCoinsUI();
+        this.logAudit('economy', 'reset', '🔄 تصفير الرصيد');
+        Sfx.tap();
+      });
+    }
+  },
+
+  /* ═══════════════ Players Binding ═══════════════ */
+  bindPlayers(){
+    const loadBtn = document.getElementById('admin-load-players');
+    if(loadBtn && !loadBtn._bound){
+      loadBtn._bound = true;
+      loadBtn.addEventListener('click', () => this.loadPlayers());
+    }
+
+    const search = document.getElementById('admin-players-search');
+    if(search && !search._bound){
+      search._bound = true;
+      let timer;
+      search.addEventListener('input', () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          this.searchQuery = search.value.trim();
+          this.renderPlayers();
+        }, 250);
+      });
+    }
+
+    const filter = document.getElementById('admin-players-filter');
+    if(filter && !filter._bound){
+      filter._bound = true;
+      filter.addEventListener('change', () => {
+        this.currentFilter = filter.value;
+        this.renderPlayers();
+      });
+    }
+  },
+
+  async loadPlayers(){
+    const list = document.getElementById('admin-players-list');
+    if(!list) return;
+
+    list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-mute);font-size:12px;">⏳ جارٍ التحميل...</div>';
+
+    if(!Cloud.db){
+      list.innerHTML = '<div style="text-align:center;padding:20px;color:#C14A4A;font-size:12px;">⚠ Firebase غير متصل</div>';
+      return;
+    }
+
+    try {
+      const snap = await Cloud.db.collection('players').limit(100).get();
+      this.players = [];
+      snap.forEach(doc => {
+        const data = doc.data();
+        data.uid = doc.id;
+        this.players.push(data);
+      });
+      this.renderPlayers();
+      this.logAudit('player', 'loaded', `👥 تحميل ${this.players.length} لاعب`);
+      Sfx.tap(); haptic(6);
+    } catch(e){
+      list.innerHTML = `<div style="text-align:center;padding:20px;color:#C14A4A;font-size:12px;">⚠ فشل: ${e.message}</div>`;
+    }
+  },
+
+  /* ═══════════════ Search Modal ═══════════════ */
+  bindSearch(){
+    const modal = document.getElementById('admin-search-modal');
+    if(!modal || modal._bound) return;
+    modal._bound = true;
+
+    const input = document.getElementById('admin-search-input');
+    const results = document.getElementById('admin-search-results');
+    const backdrop = modal.querySelector('.admin-modal-backdrop');
+
+    backdrop.addEventListener('click', () => this.closeSearchModal());
+
+    input.addEventListener('input', () => {
+      const q = input.value.trim().toLowerCase();
+      if(!q){
+        results.innerHTML = '';
+        return;
+      }
+      this.searchEverywhere(q, results);
+    });
+  },
+
+  openSearchModal(){
+    const modal = document.getElementById('admin-search-modal');
+    if(!modal) return;
+    modal.classList.add('active');
+    const input = document.getElementById('admin-search-input');
+    if(input){
+      input.value = '';
+      setTimeout(() => input.focus(), 100);
+    }
+  },
+
+  closeSearchModal(){
+    const modal = document.getElementById('admin-search-modal');
+    if(modal) modal.classList.remove('active');
+  },
+
+  searchEverywhere(q, container){
+    const matches = [];
+
+    /* الأقسام */
+    const sections = [
+      { id: 'dashboard', title: 'لوحة التحكم', icon: '📊' },
+      { id: 'content', title: 'المحتوى المخصص', icon: '🎨' },
+      { id: 'players', title: 'اللاعبون', icon: '👥' },
+      { id: 'economy', title: 'الاقتصاد', icon: '💰' },
+      { id: 'events', title: 'الأحداث', icon: '🎪' },
+      { id: 'preview', title: 'المعاينة الحية', icon: '👁️' },
+      { id: 'system', title: 'حالة النظام', icon: '⚙️' },
+      { id: 'audit', title: 'سجل التدقيق', icon: '📜' }
+    ];
+    sections.forEach(s => {
+      if(s.title.includes(q) || s.id.includes(q)){
+        matches.push({ type: 'tab', id: s.id, title: s.title, icon: s.icon });
+      }
+    });
+
+    /* الفئات */
+    const contentTabs = document.querySelectorAll('#admin-content-tabs .act-chip');
+    contentTabs.forEach(chip => {
+      const text = chip.textContent.toLowerCase();
+      if(text.includes(q)){
+        matches.push({
+          type: 'content-tab',
+          id: chip.dataset.act,
+          title: chip.textContent.trim(),
+          icon: '🎨'
+        });
+      }
+    });
+
+    if(matches.length === 0){
+      container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--ink-mute);font-size:12px;">لا نتائج</div>';
+      return;
+    }
+
+    container.innerHTML = matches.slice(0, 15).map(m => `
+      <div class="asr-item" data-type="${m.type}" data-id="${m.id}">
+        ${m.icon} ${this.escape(m.title)}
+      </div>
+    `).join('');
+
+    container.querySelectorAll('.asr-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const type = el.dataset.type;
+        const id = el.dataset.id;
+        if(type === 'tab') this.switchTab(id);
+        else if(type === 'content-tab'){
+          this.switchTab('content');
+          const chip = document.querySelector(`#admin-content-tabs [data-act="${id}"]`);
+          if(chip) chip.click();
+        }
+        this.closeSearchModal();
+      });
+    });
+  },
+
+  /* ═══════════════ Help Modal ═══════════════ */
+  openHelpModal(){
+    const modal = document.getElementById('admin-help-modal');
+    if(!modal) return;
+    modal.classList.add('active');
+    const backdrop = modal.querySelector('.admin-modal-backdrop');
+    if(backdrop && !backdrop._bound){
+      backdrop._bound = true;
+      backdrop.addEventListener('click', () => modal.classList.remove('active'));
+    }
+  },
+
+  /* ═══════════════ Keyboard ═══════════════ */
+  bindKeyboard(){
+    if(window._adminKbBound) return;
+    window._adminKbBound = true;
+
+    window.addEventListener('keydown', e => {
+      /* تجاهل إذا نكتب في حقل */
+      const tag = (e.target && e.target.tagName || '').toLowerCase();
+      if(tag === 'input' || tag === 'textarea') return;
+
+      /* فتح البحث */
+      if(e.key === '/' && !e.ctrlKey && !e.metaKey){
+        e.preventDefault();
+        this.openSearchModal();
+        return;
+      }
+
+      /* المساعدة */
+      if(e.key === '?'){
+        this.openHelpModal();
+        return;
+      }
+
+      /* إغلاق المودالات */
+      if(e.key === 'Escape'){
+        this.closeSearchModal();
+        const hm = document.getElementById('admin-help-modal');
+        if(hm) hm.classList.remove('active');
+        const fm = document.getElementById('admin-form');
+        if(fm) fm.classList.remove('active');
+        return;
+      }
+
+      /* التنقل بين التبويبات */
+      if(e.key >= '1' && e.key <= '8'){
+        const tabs = ['dashboard','content','players','economy','events','preview','system','audit'];
+        const idx = parseInt(e.key, 10) - 1;
+        if(tabs[idx]) this.switchTab(tabs[idx]);
+      }
+    });
+  },
+
+  /* ═══════════════ Auto Refresh ═══════════════ */
+  startAutoRefresh(){
+    if(this.refreshTimer) clearInterval(this.refreshTimer);
+    this.refreshTimer = setInterval(() => {
+      const screen = document.getElementById('s-admin');
+      if(!screen || !screen.classList.contains('active')) return;
+      if(this.tab === 'dashboard') this.loadLiveStats();
+    }, 15000); // كل 15 ثانية
+  },
+
+  /* ═══════════════ Live Preview ═══════════════ */
+  initPreview(){
+    const canvas = document.getElementById('admin-preview-canvas');
+    if(!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = 240, h = 320;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    /* رسم خلفية */
+    const bg = ctx.createRadialGradient(w/2, h/2, 10, w/2, h/2, w/2);
+    bg.addColorStop(0, '#FBF7F0');
+    bg.addColorStop(1, '#E8E0D2');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, w, h);
+
+    /* رسم الشخصية */
+    ctx.save();
+    ctx.translate(w/2, h/2);
+    try {
+      if(typeof renderCharacter === 'function'){
+        renderCharacter(ctx, 40, currentSkin(), {
+          mode: 'FLIP', rot: 0, alpha: 1, skipExtras: false
+        });
+      }
+    } catch(e){
+      console.warn('[Preview] renderCharacter failed:', e);
+    }
+    ctx.restore();
+
+    /* بناء عناصر التحكم */
+    this.buildPreviewControls();
+  },
+
+  buildPreviewControls(){
+    const container = document.getElementById('admin-preview-controls');
+    if(!container) return;
+
+    const cats = [
+      { id: 'skin', label: 'الزي' },
+      { id: 'aura', label: 'الهالة' },
+      { id: 'crown', label: 'الرأسية' },
+      { id: 'cape', label: 'العباءة' },
+      { id: 'headItem', label: 'غطاء الرأس' },
+      { id: 'backItem', label: 'الظهر' },
+      { id: 'heldItem', label: 'المحمول' },
+      { id: 'groundMark', label: 'الأرضية' },
+      { id: 'eyes', label: 'العيون' },
+      { id: 'companion', label: 'الرفيق' }
+    ];
+
+    container.innerHTML = cats.map(c => {
+      const isSkin = c.id === 'skin';
+      const current = isSkin ? Save.data.currentSkin : (Save.data.cosmetics.current[c.id] || '');
+
+      let items;
+      if(isSkin){
+        items = (typeof getAllSkins === 'function' ? getAllSkins() : []).map(s => ({ id: s.id, name: s.ar }));
+      } else {
+        items = (typeof getAllCosmetics === 'function' ? getAllCosmetics(c.id) : []).map(s => ({ id: s.id, name: s.name }));
+      }
+
+      return `
+        <div class="apc-row">
+          <div class="apc-label">${c.label}</div>
+          <select class="apc-select" data-preview-cat="${c.id}">
+            ${items.map(it => `<option value="${it.id}"${it.id === current ? ' selected' : ''}>${it.name}</option>`).join('')}
+          </select>
+        </div>
+      `;
+    }).join('');
+
+    /* ربط التغيير */
+    container.querySelectorAll('[data-preview-cat]').forEach(sel => {
+      sel.addEventListener('change', () => {
+        const cat = sel.dataset.previewCat;
+        const val = sel.value;
+        if(cat === 'skin'){
+          Save.data.currentSkin = val;
+        } else {
+          Save.data.cosmetics.current[cat] = val;
+        }
+        Save.save();
+        this.initPreview();
+        Sfx.tap(); haptic(4);
+      });
+    });
+  },
+
+  /* ═══════════════ Helpers ═══════════════ */
+  escape(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+    }[c]));
+  },
+
+  timeAgo(ts){
+    const diff = Math.floor((Date.now() - ts) / 1000);
+    if(diff < 60) return 'الآن';
+    if(diff < 3600) return `${Math.floor(diff/60)} د`;
+    if(diff < 86400) return `${Math.floor(diff/3600)} س`;
+    return `${Math.floor(diff/86400)} يوم`;
+  },
+
+  formatTime(ts){
+    const d = new Date(ts);
+    return d.toLocaleString('ar-EG', {
+      hour: '2-digit',
+      minute: '2-digit',
+      day: '2-digit',
+      month: '2-digit'
+    });
+  },
+
+  copyToClipboard(text){
+    try {
+      navigator.clipboard.writeText(text);
+      alert('✓ تم النسخ');
+    } catch(e){
+      alert('فشل النسخ: ' + text);
+    }
+  }
+};
+
+/* ═══════════════════════════════════════════════════════════
+   ═══════════════ AUTO-INTEGRATION ═══════════════
+   ═══════════════════════════════════════════════════════════ */
+
+/* ═══ تهيئة تلقائية عند فتح لوحة المشرف ═══ */
+(function patchAdminPanel(){
+  const originalBuild = window.buildAdminPanel;
+  if(typeof originalBuild === 'function'){
+    window.buildAdminPanel = function(){
+      originalBuild.apply(this, arguments);
+      if(!Admin.initialized) Admin.init();
+      Admin.refreshAll();
+    };
+  }
+})();
+
+/* ═══ إضافة زر Admin في القائمة الرئيسية ═══ */
+(function patchHomeMenu(){
+  document.addEventListener('DOMContentLoaded', () => {
+    const adminBtn = document.getElementById('menu-admin-btn');
+    if(adminBtn && !adminBtn._adminBound){
+      adminBtn._adminBound = true;
+      adminBtn.addEventListener('click', () => {
+        setTimeout(() => {
+          if(!Admin.initialized) Admin.init();
+          Admin.refreshAll();
+        }, 100);
+      });
+    }
+  });
+})();
+
+/* ═══ تصدير للاستخدام الخارجي ═══ */
+window.Admin = Admin;
+
 /* ============================================================
    ==================== BOOT =================================
    ============================================================ */
@@ -20374,6 +23067,17 @@ updateAdminUI();
     console.warn('[Cloud] Init crashed:', e);
     firebaseOk = false;
   }
+
+/* ✅ تحميل مسبق لأصول اللاعب الحالية */
+setTimeout(() => {
+  if(typeof ASSET !== 'undefined' && ASSET.preloadPlayerAssets){
+    ASSET.preloadPlayerAssets().then(r => {
+      console.log('[Boot] Assets preloaded:', r);
+    }).catch(e => {
+      console.warn('[Boot] Preload failed:', e);
+    });
+  }
+}, 500);
 
   if (!firebaseOk) {
     Cloud.setState('offline');

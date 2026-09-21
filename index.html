@@ -141,169 +141,462 @@
       </div>
     </div>
 
-    <!-- ============ ADMIN PANEL ============ -->
-    <div class="screen" id="s-admin">
-      <div class="sub">
-        <div class="sub-top">
-          <button class="back-btn" data-back>←</button>
-          <div>
-            <div class="sub-title">لوحة المشرف</div>
-            <div class="sub-eyebrow">ADMIN PANEL</div>
-          </div>
-          <div class="sub-spacer"></div>
-        </div>
+<!-- ============================================================
+     ADMIN PANEL v3 — إدارة شاملة
+     ============================================================ -->
+<div class="screen" id="s-admin">
+  <div class="sub admin-v3">
 
-        <div class="admin-hero">
-          <div class="admin-hero-title">👑 ADMIN MODE</div>
-          <div class="admin-hero-sub" id="admin-hero-user">—</div>
-          <div class="admin-hero-actions">
-            <button class="admin-toggle-btn" id="admin-logout">إنهاء صلاحية المشرف</button>
-          </div>
-        </div>
-
-        <div class="section-head"><div class="section-title">تحكم سريع</div><div class="section-sub">QUICK</div></div>
-        <div class="admin-toggles">
-          <button class="admin-toggle" data-toggle="unlimitedCoins">
-            <span class="at-ic">◆</span>
-            <span class="at-lbl">نقود لا نهائية</span>
-            <span class="at-sw" id="sw-unlimitedCoins"></span>
-          </button>
-          <button class="admin-toggle" data-toggle="unlimitedUnlock">
-            <span class="at-ic">🔓</span>
-            <span class="at-lbl">فتح كل المقتنيات</span>
-            <span class="at-sw" id="sw-unlimitedUnlock"></span>
-          </button>
-          <button class="admin-toggle" data-toggle="godMode">
-            <span class="at-ic">🛡️</span>
-            <span class="at-lbl">وضع الخلود</span>
-            <span class="at-sw" id="sw-godMode"></span>
-          </button>
-        </div>
-
-        <div class="section-head"><div class="section-title">إدارة النقود</div><div class="section-sub">ECONOMY</div></div>
-        <div class="admin-coins-panel">
-          <div class="admin-coins-display">
-            <span class="c">◆</span>
-            <span id="admin-coins-value">0</span>
-          </div>
-          <div class="admin-coins-quick">
-            <button data-add-coins="1000">+1K</button>
-            <button data-add-coins="10000">+10K</button>
-            <button data-add-coins="100000">+100K</button>
-            <button data-add-coins="1000000">+1M</button>
-          </div>
-          <button class="admin-btn-full danger" id="admin-reset-coins">تصفير النقود</button>
-        </div>
-
-        <div class="section-head"><div class="section-title">المحتوى المخصص</div><div class="section-sub">CONTENT</div></div>
-        <div class="admin-content-tabs">
-          <button class="act-chip active" data-act="skin">الأزياء</button>
-          <button class="act-chip" data-act="eyes">العيون</button>
-          <button class="act-chip" data-act="companion">الرفاق</button>
-          <button class="act-chip" data-act="footstep">آثار الأقدام</button>
-          <button class="act-chip" data-act="spark">الشرار</button>
-          <button class="act-chip" data-act="trail">خط السير</button>
-          <button class="act-chip" data-act="jump">القفز</button>
-          <button class="act-chip" data-act="death">النهاية</button>
-          <button class="act-chip" data-act="aura">الهالات</button>
-          <button class="act-chip" data-act="crown">الرأسيات</button>
-          <button class="act-chip" data-act="cape">الأوشحة</button>
-        </div>
-
-        <button class="admin-btn-full gold" id="admin-add-content">➕ إضافة عنصر جديد</button>
-        <div id="admin-content-list" class="admin-content-list"></div>
-
-        <div class="admin-form" id="admin-form" style="display:none;">
-          <div class="af-title">عنصر جديد — <span id="af-cat-label">أزياء</span></div>
-
-          <div class="af-section-head">
-            <span class="af-sh-ic">📝</span>
-            <span class="af-sh-lbl">البيانات الأساسية</span>
-          </div>
-
-          <div class="af-group">
-            <label class="af-label">الاسم بالعربية *</label>
-            <input class="af-input" id="af-name" type="text" maxlength="24" placeholder="التنين الذهبي">
-          </div>
-
-          <div class="af-group">
-            <label class="af-label">الاسم بالإنجليزية</label>
-            <input class="af-input" id="af-name-en" type="text" maxlength="24" placeholder="GOLDEN DRAGON">
-          </div>
-
-          <div class="af-row-2">
-            <div class="af-group">
-              <label class="af-label">الندرة</label>
-              <select class="af-input" id="af-rarity">
-                <option value="common">عادي</option>
-                <option value="rare">نادر</option>
-                <option value="epic">ملحمي</option>
-                <option value="legend">أسطوري</option>
-                <option value="mythic">خرافي</option>
-              </select>
-            </div>
-            <div class="af-group">
-              <label class="af-label">الحالة</label>
-              <select class="af-input" id="af-enabled">
-                <option value="true">مُفعّل</option>
-                <option value="false">مُخفي</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="af-section-head">
-            <span class="af-sh-ic">🖼️</span>
-            <span class="af-sh-lbl">الصورة</span>
-          </div>
-          <div class="af-hint">
-            ضع ملف PNG في المجلد:
-            <code>assets/custom/<span id="af-path-cat">skins</span>/</code>
-            <br>ثم اكتب اسم الملف فقط (مثال: <code>dragon-gold.png</code>)
-          </div>
-          <input class="af-input" id="af-image-path" type="text"
-                 placeholder="dragon-gold.png"
-                 autocomplete="off" spellcheck="false">
-          <div class="af-path-preview" id="af-path-preview">
-            <span>لا توجد معاينة</span>
-          </div>
-
-          <div class="af-section-head">
-            <span class="af-sh-ic">🎨</span>
-            <span class="af-sh-lbl">الألوان الاحتياطية</span>
-          </div>
-          <div class="af-row-2">
-            <div class="af-group">
-              <label class="af-label">اللون الأساسي</label>
-              <input class="af-input color" id="af-color" type="color" value="#E07A3F">
-            </div>
-            <div class="af-group">
-              <label class="af-label">اللون الثانوي</label>
-              <input class="af-input color" id="af-color2" type="color" value="#E8B34E">
-            </div>
-          </div>
-
-          <div class="af-section-head">
-            <span class="af-sh-ic">🎯</span>
-            <span class="af-sh-lbl">أماكن الحصول على العنصر</span>
-          </div>
-          <div class="af-hint">
-            اختر مصدراً واحداً على الأقل — سيظهر العنصر في كل مكان تحدده،
-            ويُزامَن فوراً لكل اللاعبين عند النشر.
-          </div>
-          <div id="sources-editor" class="sources-editor"></div>
-
-          <div class="af-actions">
-            <button class="admin-btn-full soft" id="af-cancel">إلغاء</button>
-            <button class="admin-btn-full gold" id="af-save">حفظ ونشر للجميع</button>
-          </div>
-          <div class="af-status" id="af-status"></div>
-        </div>
-
-        <div class="section-head"><div class="section-title">اللاعبون</div><div class="section-sub">PLAYERS</div></div>
-        <button class="admin-btn-full soft" id="admin-load-players">🔄 تحميل قائمة اللاعبين</button>
-        <div id="admin-players-list" class="admin-players-list"></div>
+    <!-- ═══════════════ TOP BAR ═══════════════ -->
+    <div class="sub-top admin-topbar">
+      <button class="back-btn" data-back>←</button>
+      <div style="flex:1;">
+        <div class="sub-title">لوحة المشرف</div>
+        <div class="sub-eyebrow">ADMIN CONSOLE · v3</div>
+      </div>
+      <div class="admin-topbar-actions">
+        <button class="admin-mini-btn" id="admin-search-btn" title="بحث سريع (/)">🔍</button>
+        <button class="admin-mini-btn" id="admin-help-btn" title="مساعدة (؟)">?</button>
+        <button class="admin-mini-btn" id="admin-refresh-btn" title="تحديث">↻</button>
       </div>
     </div>
+
+    <!-- ═══════════════ TABS ═══════════════ -->
+    <div class="admin-tabs" id="admin-tabs">
+      <button class="admin-tab active" data-tab="dashboard">📊 الرئيسية</button>
+      <button class="admin-tab" data-tab="content">🎨 المحتوى</button>
+      <button class="admin-tab" data-tab="players">👥 اللاعبون</button>
+      <button class="admin-tab" data-tab="economy">💰 الاقتصاد</button>
+      <button class="admin-tab" data-tab="events">🎪 الأحداث</button>
+      <button class="admin-tab" data-tab="preview">👁️ معاينة</button>
+      <button class="admin-tab" data-tab="system">⚙️ النظام</button>
+      <button class="admin-tab" data-tab="audit">📜 السجل</button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         TAB 1: DASHBOARD
+         ═══════════════════════════════════════════════════════ -->
+    <div class="admin-tab-content active" data-tab="dashboard">
+
+      <!-- Hero -->
+      <div class="admin-hero-v3">
+        <div class="ahv3-glow"></div>
+        <div class="ahv3-content">
+          <div class="ahv3-title">👑 ADMIN CONSOLE</div>
+          <div class="ahv3-user" id="admin-hero-user">—</div>
+          <div class="ahv3-actions">
+            <button class="admin-logout-btn" id="admin-logout">إنهاء الصلاحية</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Stats Grid -->
+      <div class="admin-stats-grid" id="admin-stats-grid">
+        <div class="astat" data-stat="players">
+          <div class="astat-icon">👥</div>
+          <div class="astat-val" id="stat-players">—</div>
+          <div class="astat-label">اللاعبون</div>
+        </div>
+        <div class="astat" data-stat="online">
+          <div class="astat-icon">🟢</div>
+          <div class="astat-val" id="stat-online">—</div>
+          <div class="astat-label">متصلون الآن</div>
+        </div>
+        <div class="astat" data-stat="coins">
+          <div class="astat-icon">💰</div>
+          <div class="astat-val" id="stat-coins">—</div>
+          <div class="astat-label">مجموع العملات</div>
+        </div>
+        <div class="astat" data-stat="content">
+          <div class="astat-icon">🎨</div>
+          <div class="astat-val" id="stat-content">—</div>
+          <div class="astat-label">عناصر مخصصة</div>
+        </div>
+        <div class="astat" data-stat="sessions">
+          <div class="astat-icon">🎮</div>
+          <div class="astat-val" id="stat-sessions">—</div>
+          <div class="astat-label">جولات اليوم</div>
+        </div>
+        <div class="astat" data-stat="ping">
+          <div class="astat-icon">📡</div>
+          <div class="astat-val" id="stat-ping">—</div>
+          <div class="astat-label">زمن الاتصال</div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="admin-section-head">
+        <div class="admin-section-title">إجراءات سريعة</div>
+        <div class="admin-section-sub">QUICK ACTIONS</div>
+      </div>
+
+      <div class="admin-quick-grid">
+        <button class="aqg-btn" data-quick="grant-coins-all">
+          <span class="aqg-ic">💸</span>
+          <span class="aqg-lbl">منح عملات للجميع</span>
+        </button>
+        <button class="aqg-btn" data-quick="unlock-all">
+          <span class="aqg-ic">🔓</span>
+          <span class="aqg-lbl">فتح كل المحتوى</span>
+        </button>
+        <button class="aqg-btn" data-quick="broadcast">
+          <span class="aqg-ic">📢</span>
+          <span class="aqg-lbl">إشعار جماعي</span>
+        </button>
+        <button class="aqg-btn" data-quick="reset-daily">
+          <span class="aqg-ic">🔄</span>
+          <span class="aqg-lbl">إعادة المهام اليومية</span>
+        </button>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="admin-section-head">
+        <div class="admin-section-title">النشاط الأخير</div>
+        <div class="admin-section-sub">RECENT ACTIVITY</div>
+      </div>
+      <div class="admin-activity-feed" id="admin-activity-feed">
+        <div class="aaf-empty">لا يوجد نشاط بعد</div>
+      </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         TAB 2: CONTENT
+         ═══════════════════════════════════════════════════════ -->
+    <div class="admin-tab-content" data-tab="content">
+
+      <div class="admin-section-head">
+        <div class="admin-section-title">إدارة المحتوى المخصص</div>
+        <div class="admin-section-sub">CUSTOM CONTENT</div>
+      </div>
+
+      <!-- Content Stats -->
+      <div class="admin-content-stats" id="admin-content-stats"></div>
+
+      <!-- Category Chips -->
+      <div class="admin-content-tabs" id="admin-content-tabs">
+        <button class="act-chip active" data-act="skin">🎨 أزياء</button>
+        <button class="act-chip" data-act="eyes">👁️ عيون</button>
+        <button class="act-chip" data-act="companion">🐾 رفاق</button>
+        <button class="act-chip" data-act="footstep">👣 آثار</button>
+        <button class="act-chip" data-act="spark">✨ شرار</button>
+        <button class="act-chip" data-act="trail">➰ خط سير</button>
+        <button class="act-chip" data-act="jump">⬆️ قفز</button>
+        <button class="act-chip" data-act="death">💀 نهاية</button>
+        <button class="act-chip" data-act="aura">🌟 هالات</button>
+        <button class="act-chip" data-act="crown">👑 رأسيات</button>
+        <button class="act-chip" data-act="cape">🦸 عباءات</button>
+        <button class="act-chip" data-act="headItem">🎩 رأس</button>
+        <button class="act-chip" data-act="backItem">🦋 ظهر</button>
+        <button class="act-chip" data-act="heldItem">⚔️ محمول</button>
+        <button class="act-chip" data-act="groundMark">⭕ أرضية</button>
+        <button class="act-chip" data-act="nameTag">🏷️ أسماء</button>
+        <button class="act-chip" data-act="badge">⭐ شارات</button>
+        <button class="act-chip" data-act="avatarFrame">🖼️ إطارات</button>
+        <button class="act-chip" data-act="banner">🎨 خلفيات</button>
+        <button class="act-chip" data-act="spawnEffect">🚀 بداية</button>
+        <button class="act-chip" data-act="reviveEffect">💫 إحياء</button>
+        <button class="act-chip" data-act="hitEffect">💥 ارتطام</button>
+      </div>
+
+      <!-- Add New Button -->
+      <button class="admin-add-btn" id="admin-add-content">
+        <span style="font-size:18px;">➕</span>
+        <span>إضافة عنصر جديد</span>
+      </button>
+
+      <!-- Content List -->
+      <div id="admin-content-list" class="admin-content-list"></div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         TAB 3: PLAYERS
+         ═══════════════════════════════════════════════════════ -->
+    <div class="admin-tab-content" data-tab="players">
+
+      <div class="admin-section-head">
+        <div class="admin-section-title">إدارة اللاعبين</div>
+        <div class="admin-section-sub">PLAYERS MANAGEMENT</div>
+      </div>
+
+      <!-- Search & Filter -->
+      <div class="admin-players-toolbar">
+        <div class="ap-search-wrap">
+          <span class="ap-search-ic">🔍</span>
+          <input type="text" class="ap-search" id="admin-players-search" placeholder="ابحث بالاسم أو UID...">
+        </div>
+        <select class="ap-filter" id="admin-players-filter">
+          <option value="all">الكل</option>
+          <option value="online">متصلون</option>
+          <option value="top">الأعلى</option>
+          <option value="recent">حديثون</option>
+        </select>
+      </div>
+
+      <!-- Players List -->
+      <button class="admin-add-btn" id="admin-load-players">
+        <span>🔄</span>
+        <span>تحميل اللاعبين</span>
+      </button>
+      <div id="admin-players-list" class="admin-players-list"></div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         TAB 4: ECONOMY
+         ═══════════════════════════════════════════════════════ -->
+    <div class="admin-tab-content" data-tab="economy">
+
+      <div class="admin-section-head">
+        <div class="admin-section-title">إدارة الاقتصاد</div>
+        <div class="admin-section-sub">ECONOMY MANAGEMENT</div>
+      </div>
+
+      <!-- Own Coins -->
+      <div class="admin-coins-panel-v3">
+        <div class="acpv3-label">رصيدك</div>
+        <div class="acpv3-value">
+          <span class="acpv3-c">◆</span>
+          <span id="admin-coins-value">0</span>
+        </div>
+        <div class="acpv3-quick">
+          <button data-add-coins="1000">+1K</button>
+          <button data-add-coins="10000">+10K</button>
+          <button data-add-coins="100000">+100K</button>
+          <button data-add-coins="1000000">+1M</button>
+          <button data-add-coins="-1000" class="danger">-1K</button>
+        </div>
+        <button class="admin-btn-full danger" id="admin-reset-coins">تصفير رصيدي</button>
+      </div>
+
+      <!-- Economy Tools -->
+      <div class="admin-section-head">
+        <div class="admin-section-title">أدوات الاقتصاد</div>
+        <div class="admin-section-sub">TOOLS</div>
+      </div>
+
+      <div class="admin-tools-grid">
+        <button class="atg-btn" data-tool="bulk-coins">
+          <span class="atg-ic">💸</span>
+          <div class="atg-body">
+            <div class="atg-title">منح عملات جماعية</div>
+            <div class="atg-desc">لكل اللاعبين في السحابة</div>
+          </div>
+        </button>
+        <button class="atg-btn" data-tool="bulk-content">
+          <span class="atg-ic">🎁</span>
+          <div class="atg-body">
+            <div class="atg-title">منح عنصر للجميع</div>
+            <div class="atg-desc">سيصلك في مخزون كل لاعب</div>
+          </div>
+        </button>
+        <button class="atg-btn" data-tool="reset-economy">
+          <span class="atg-ic">⚠️</span>
+          <div class="atg-body">
+            <div class="atg-title">تصفير الاقتصاد</div>
+            <div class="atg-desc">احذر — لا يمكن التراجع</div>
+          </div>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         TAB 5: EVENTS
+         ═══════════════════════════════════════════════════════ -->
+    <div class="admin-tab-content" data-tab="events">
+
+      <div class="admin-section-head">
+        <div class="admin-section-title">إدارة الأحداث</div>
+        <div class="admin-section-sub">EVENTS</div>
+      </div>
+
+      <div class="admin-events-grid" id="admin-events-grid">
+        <div class="aeg-empty">لا توجد أحداث نشطة</div>
+      </div>
+
+      <button class="admin-add-btn" id="admin-add-event">
+        <span>➕</span>
+        <span>إنشاء حدث جديد</span>
+      </button>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         TAB 6: LIVE PREVIEW
+         ═══════════════════════════════════════════════════════ -->
+    <div class="admin-tab-content" data-tab="preview">
+
+      <div class="admin-section-head">
+        <div class="admin-section-title">معاينة حية</div>
+        <div class="admin-section-sub">LIVE PREVIEW</div>
+      </div>
+
+      <div class="admin-preview-stage">
+        <canvas id="admin-preview-canvas" width="240" height="320"></canvas>
+      </div>
+
+      <!-- Preview Controls -->
+      <div class="admin-preview-controls" id="admin-preview-controls">
+        <!-- يُبنى ديناميكياً -->
+      </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         TAB 7: SYSTEM
+         ═══════════════════════════════════════════════════════ -->
+    <div class="admin-tab-content" data-tab="system">
+
+      <div class="admin-section-head">
+        <div class="admin-section-title">حالة النظام</div>
+        <div class="admin-section-sub">SYSTEM HEALTH</div>
+      </div>
+
+      <div class="admin-system-panel" id="admin-system-panel">
+        <!-- يُبنى ديناميكياً -->
+      </div>
+
+      <div class="admin-section-head">
+        <div class="admin-section-title">مفاتيح سريعة</div>
+        <div class="admin-section-sub">TOGGLES</div>
+      </div>
+
+      <div class="admin-toggles">
+        <button class="admin-toggle" data-toggle="unlimitedCoins">
+          <span class="at-ic">◆</span>
+          <span class="at-lbl">نقود لا نهائية</span>
+          <span class="at-sw" id="sw-unlimitedCoins"></span>
+        </button>
+        <button class="admin-toggle" data-toggle="unlimitedUnlock">
+          <span class="at-ic">🔓</span>
+          <span class="at-lbl">فتح كل المقتنيات</span>
+          <span class="at-sw" id="sw-unlimitedUnlock"></span>
+        </button>
+        <button class="admin-toggle" data-toggle="godMode">
+          <span class="at-ic">🛡️</span>
+          <span class="at-lbl">وضع الخلود</span>
+          <span class="at-sw" id="sw-godMode"></span>
+        </button>
+      </div>
+
+      <div class="admin-section-head">
+        <div class="admin-section-title">البيانات</div>
+        <div class="admin-section-sub">DATA</div>
+      </div>
+
+      <div class="admin-tools-grid">
+        <button class="atg-btn" data-tool="export-data">
+          <span class="atg-ic">📤</span>
+          <div class="atg-body">
+            <div class="atg-title">تصدير بياناتي</div>
+            <div class="atg-desc">حفظ نسخة احتياطية</div>
+          </div>
+        </button>
+        <button class="atg-btn" data-tool="import-data">
+          <span class="atg-ic">📥</span>
+          <div class="atg-body">
+            <div class="atg-title">استيراد بيانات</div>
+            <div class="atg-desc">من ملف JSON</div>
+          </div>
+        </button>
+        <button class="atg-btn danger" data-tool="full-reset">
+          <span class="atg-ic">🗑️</span>
+          <div class="atg-body">
+            <div class="atg-title">حذف كامل</div>
+            <div class="atg-desc">تصفير كل شيء</div>
+          </div>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         TAB 8: AUDIT LOG
+         ═══════════════════════════════════════════════════════ -->
+    <div class="admin-tab-content" data-tab="audit">
+
+      <div class="admin-section-head">
+        <div class="admin-section-title">سجل التدقيق</div>
+        <div class="admin-section-sub">AUDIT LOG</div>
+      </div>
+
+      <div class="admin-audit-toolbar">
+        <button class="admin-mini-btn" data-audit-filter="all">الكل</button>
+        <button class="admin-mini-btn" data-audit-filter="content">محتوى</button>
+        <button class="admin-mini-btn" data-audit-filter="economy">اقتصاد</button>
+        <button class="admin-mini-btn" data-audit-filter="player">لاعبون</button>
+        <button class="admin-mini-btn danger" id="admin-clear-audit">مسح السجل</button>
+      </div>
+
+      <div class="admin-audit-list" id="admin-audit-list">
+        <div class="aal-empty">لا يوجد سجل بعد</div>
+      </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         CONTENT FORM MODAL
+         ═══════════════════════════════════════════════════════ -->
+<div class="admin-form-v3" id="admin-form" style="display:none;">
+  <div class="afv3-backdrop" id="afv3-backdrop"></div>
+  <div class="afv3-panel">
+    <div class="afv3-head">
+      <div class="afv3-title">عنصر جديد — <span id="af-cat-label">أزياء</span></div>
+      <button class="afv3-close" id="afv3-close">✕</button>
+    </div>
+    <div class="afv3-body">
+      <!-- 📝 الاسم عربي / إنجليزي -->
+      <input id="af-name">
+      <input id="af-name-en">
+      <!-- ⭐ الندرة + الحالة -->
+      <select id="af-rarity">...</select>
+      <select id="af-enabled">...</select>
+      <!-- 🖼️ مسار الصورة -->
+      <input id="af-image-path" placeholder="dragon-gold.png">
+      <div class="af-path-preview" id="af-path-preview"></div>
+      <!-- 🎨 الألوان الاحتياطية -->
+      <input id="af-color" type="color">
+      <input id="af-color2" type="color">
+      <!-- 🎯 أماكن الحصول (تُبنى ديناميكياً) -->
+      <div id="sources-editor" class="sources-editor"></div>
+    </div>
+    <div class="afv3-foot">
+      <div class="af-status" id="af-status"></div>
+      <button id="af-cancel">إلغاء</button>
+      <button id="af-save">💾 حفظ ونشر</button>
+    </div>
+  </div>
+</div>
+
+    <!-- ═══════════════ SEARCH MODAL ═══════════════ -->
+    <div class="admin-modal" id="admin-search-modal">
+      <div class="admin-modal-backdrop"></div>
+      <div class="admin-modal-panel">
+        <input type="text" class="admin-search-input" id="admin-search-input" placeholder="ابحث...">
+        <div class="admin-search-results" id="admin-search-results"></div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ HELP MODAL ═══════════════ -->
+    <div class="admin-modal" id="admin-help-modal">
+      <div class="admin-modal-backdrop"></div>
+      <div class="admin-modal-panel">
+        <div class="admin-help-title">⌨️ اختصارات لوحة المفاتيح</div>
+        <div class="admin-help-list">
+          <div><kbd>/</kbd> بحث سريع</div>
+          <div><kbd>Esc</kbd> إغلاق</div>
+          <div><kbd>1</kbd>-<kbd>8</kbd> تبديل التبويبات</div>
+          <div><kbd>Ctrl</kbd>+<kbd>S</kbd> حفظ النموذج</div>
+          <div><kbd>Ctrl</kbd>+<kbd>E</kbd> تصدير</div>
+          <div><kbd>?</kbd> المساعدة</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
 
     <!-- ============================================================
          HOME
@@ -679,18 +972,30 @@
           </div>
           <div class="sub-spacer"></div>
         </div>
-        <div class="tab-row" id="cos-tabs">
-          <button class="tab-chip active" data-cat="spark">الشرار</button>
-          <button class="tab-chip" data-cat="eyes">العيون</button>
-          <button class="tab-chip" data-cat="companion">الرفاق</button>
-          <button class="tab-chip" data-cat="footstep">الآثار</button>
-          <button class="tab-chip" data-cat="trail">خط السير</button>
-          <button class="tab-chip" data-cat="jump">القفز</button>
-          <button class="tab-chip" data-cat="death">النهاية</button>
-          <button class="tab-chip" data-cat="aura">الهالات</button>
-          <button class="tab-chip" data-cat="crown">الرأسيات</button>
-          <button class="tab-chip" data-cat="cape">الأوشحة</button>
-        </div>
+<div class="tab-row" id="cos-tabs">
+  <button class="tab-chip active" data-cat="spark">الشرار</button>
+  <button class="tab-chip" data-cat="eyes">العيون</button>
+  <button class="tab-chip" data-cat="companion">الرفاق</button>
+  <button class="tab-chip" data-cat="footstep">الآثار</button>
+  <button class="tab-chip" data-cat="trail">خط السير</button>
+  <button class="tab-chip" data-cat="jump">القفز</button>
+  <button class="tab-chip" data-cat="death">النهاية</button>
+  <button class="tab-chip" data-cat="aura">الهالات</button>
+  <button class="tab-chip" data-cat="crown">الرأسيات</button>
+  <button class="tab-chip" data-cat="cape">العباءات</button>
+  <!-- ✨ جديدة -->
+  <button class="tab-chip" data-cat="headItem">🧢 غطاء الرأس</button>
+  <button class="tab-chip" data-cat="backItem">🦋 الظهر</button>
+  <button class="tab-chip" data-cat="heldItem">⚔️ المحمول</button>
+  <button class="tab-chip" data-cat="groundMark">⭕ أرضية</button>
+  <button class="tab-chip" data-cat="nameTag">🏷️ بطاقة الاسم</button>
+  <button class="tab-chip" data-cat="badge">⭐ شارة</button>
+  <button class="tab-chip" data-cat="avatarFrame">🖼️ إطار</button>
+  <button class="tab-chip" data-cat="banner">🎨 خلفية</button>
+  <button class="tab-chip" data-cat="spawnEffect">🚀 البداية</button>
+  <button class="tab-chip" data-cat="reviveEffect">💫 الإحياء</button>
+  <button class="tab-chip" data-cat="hitEffect">💥 الارتطام</button>
+</div>
         <div class="cos-grid" id="cos-grid"></div>
       </div>
     </div>
@@ -990,6 +1295,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
 
+<script src="assets.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
