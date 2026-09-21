@@ -17021,11 +17021,46 @@ init() {
   },
 
   async _signIn(provider) {
+    /* ═══════════════ 1) اكتشف نوع الجهاز/المتصفح ═══════════════ */
+    const ua = navigator.userAgent || '';
+    const isMobile = /Android|iPhone|iPad|iPod|Mobile|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+
+    /* متصفحات داخل التطبيقات — Google يحجب فيها OAuth أصلاً */
+    const isInAppBrowser = /FBAN|FBAV|FB_IAB|Instagram|Twitter|Line\/|WhatsApp|MicroMessenger|Snapchat|Pinterest/i.test(ua);
+
+    /* ═══════════════ 2) متصفح داخل تطبيق — لا يمكن تسجيل الدخول ═══════════════ */
+    if (isInAppBrowser) {
+      return {
+        ok: false,
+        code: 'in-app-browser',
+        error: 'افتح اللعبة في متصفح خارجي (Chrome أو Safari) لتسجيل الدخول بـ Google'
+      };
+    }
+
+    /* ═══════════════ 3) على الهاتف: استخدم redirect مباشرة (popup محجوب) ═══════════════ */
+    if (isMobile) {
+      try {
+        await this.auth.signInWithRedirect(provider);
+        return { ok: true, redirect: true };
+      } catch (e) {
+        return this._handleAuthError(e);
+      }
+    }
+
+    /* ═══════════════ 4) على سطح المكتب: جرّب popup أولاً ═══════════════ */
     try {
       const cred = await this.auth.signInWithPopup(provider);
       return { ok: true, user: cred.user };
     } catch (e) {
-      if (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
+      const fallbackCodes = [
+        'auth/popup-blocked',
+        'auth/popup-closed-by-user',
+        'auth/cancelled-popup-request',
+        'auth/operation-not-supported-in-this-environment',
+        'auth/web-storage-unsupported'
+      ];
+
+      if (fallbackCodes.includes(e.code)) {
         try {
           await this.auth.signInWithRedirect(provider);
           return { ok: true, redirect: true };
@@ -17676,7 +17711,35 @@ function setupAuthWiring() {
 /* ============================================================
    ==================== Auth state listener ==================
    ============================================================ */
-function setupAuthListener() {
+async function setupAuthListener() {
+
+  /* ═══════════════ ✅ 1) استرجع نتيجة redirect إن وُجدت ═══════════════ */
+  try {
+    const redirectResult = await Cloud.auth.getRedirectResult();
+    if (redirectResult && redirectResult.user) {
+      console.log('[Cloud] Redirect sign-in succeeded:', redirectResult.user.uid);
+      /* ستُعالج تلقائياً عبر onAuthStateChanged أدناه */
+    }
+  } catch (e) {
+    console.warn('[Cloud] getRedirectResult error:', e);
+    /* أظهر خطأ إذا فشلت عملية الـ redirect */
+    const errCode = (e && e.code) || '';
+    if (errCode && errCode !== 'auth/no-auth-event') {
+      let msg = 'تعذّر إكمال تسجيل الدخول';
+      if (errCode.includes('unauthorized-domain')) {
+        msg = 'النطاق الحالي غير مصرّح في Firebase';
+      } else if (errCode.includes('network-request-failed')) {
+        msg = 'فشل الاتصال بالشبكة';
+      } else if (errCode.includes('account-exists-with-different-credential')) {
+        msg = 'هذا البريد مسجّل بطريقة دخول أخرى';
+      }
+      setTimeout(() => {
+        try { showLoginError(msg); } catch(_){}
+      }, 500);
+    }
+  }
+
+  /* ═══════════════ 2) مستمع حالة الدخول (كما هو) ═══════════════ */
   Cloud.auth.onAuthStateChanged(async (user) => {
     if (user) {
       /* ✅ إصلاح: كشف تغيير المستخدم وتصفير البيانات القديمة فوراً */
