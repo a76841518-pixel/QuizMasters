@@ -60,18 +60,17 @@
   <div id="mp-leaderboard" class="mp-leaderboard" style="display:none;"></div>
 
   <!-- مقياس الارتفاع العمودي -->
-  <div id="altitude-gauge">
-    <div class="gauge-track">
-      <div class="gauge-zone zone-sky"></div>
-      <div class="gauge-zone zone-ground"></div>
-      <div class="gauge-zone zone-under"></div>
-      <div class="gauge-marker" id="gauge-marker"></div>
-    </div>
-    <div class="gauge-readout" id="gauge-readout">
-      <span class="readout-val" id="gauge-val">0</span>
-      <span class="readout-unit">م</span>
-    </div>
+<div id="altitude-gauge">
+  <div class="gauge-track" id="gauge-track">
+    <!-- ✅ المناطق تُبنى ديناميكياً بواسطة JS -->
+    <div class="gauge-marker" id="gauge-marker"></div>
   </div>
+  <div class="gauge-readout" id="gauge-readout">
+    <span class="readout-val" id="gauge-val">0</span>
+    <span class="readout-unit">م</span>
+  </div>
+  <div class="gauge-zone-name" id="gauge-zone-label">🌍 GROUND</div>
+</div>
 
   <div id="hint"></div>
 
@@ -463,23 +462,28 @@
         <div class="admin-section-sub">TOGGLES</div>
       </div>
 
-      <div class="admin-toggles">
-        <button class="admin-toggle" data-toggle="unlimitedCoins">
-          <span class="at-ic">◆</span>
-          <span class="at-lbl">نقود لا نهائية</span>
-          <span class="at-sw" id="sw-unlimitedCoins"></span>
-        </button>
-        <button class="admin-toggle" data-toggle="unlimitedUnlock">
-          <span class="at-ic">🔓</span>
-          <span class="at-lbl">فتح كل المقتنيات</span>
-          <span class="at-sw" id="sw-unlimitedUnlock"></span>
-        </button>
-        <button class="admin-toggle" data-toggle="godMode">
-          <span class="at-ic">🛡️</span>
-          <span class="at-lbl">وضع الخلود</span>
-          <span class="at-sw" id="sw-godMode"></span>
-        </button>
-      </div>
+<div class="admin-toggles">
+  <button class="admin-toggle" data-toggle="unlimitedCoins">
+    <span class="at-ic">◆</span>
+    <span class="at-lbl">نقود لا نهائية</span>
+    <span class="at-sw" id="sw-unlimitedCoins"></span>
+  </button>
+  <button class="admin-toggle" data-toggle="unlimitedUnlock">
+    <span class="at-ic">🔓</span>
+    <span class="at-lbl">فتح كل المقتنيات</span>
+    <span class="at-sw" id="sw-unlimitedUnlock"></span>
+  </button>
+  <button class="admin-toggle" data-toggle="godMode">
+    <span class="at-ic">🛡️</span>
+    <span class="at-lbl">وضع الخلود</span>
+    <span class="at-sw" id="sw-godMode"></span>
+  </button>
+    <button class="admin-toggle" data-toggle="infiniteJump">
+    <span class="at-ic">✈️</span>
+    <span class="at-lbl">طيران / قفز أبدي</span>
+    <span class="at-sw" id="sw-infiniteJump"></span>
+  </button>
+</div>
 
       <div class="admin-section-head">
         <div class="admin-section-title">البيانات</div>
@@ -1364,8 +1368,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
-
-<script src="assets.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

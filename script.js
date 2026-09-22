@@ -1784,6 +1784,15 @@ const POWERUP_DEFS = {
     instant:true,
     effect:'teleport', distance:100
   },
+    infiniteJump: {
+    id:'infiniteJump', icon:'∞', color:'#C080FF', label:'قفزات لا نهائية',
+    desc:'قفزات غير محدودة في الهواء بلا حدود',
+    category:'movement', rarity:'legendary',
+    modes:['WALK','ASCEND','SKY_JUMP'],
+    basePrice:1200, priceStep:600,
+    baseDuration:5, durationStep:3,
+    effect:'infiniteJump'
+  },
 
   /* ═══════════════════════════════════════════════════════
      ═══════════════ 4) TIME (زمنية) ═══════════════
@@ -2213,6 +2222,7 @@ cosmetics: {
     unlimitedCoins: false,
     unlimitedUnlock: false,
     godMode: false,
+    infiniteJump: false,
 customSkins: [], customSpark: [], customTrail: [], customJump: [],
 customDeath: [], customAura: [], customCrown: [], customCape: [],
 customEyes: [], customCompanion: [], customFootstep: [],
@@ -2347,6 +2357,9 @@ const Save = {
     /* ═══ admin ═══ */
     if(!this.data.admin){
       this.data.admin = JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA.admin));
+    }
+    if(typeof this.data.admin.infiniteJump !== 'boolean'){
+    this.data.admin.infiniteJump = false;
     }
     if(!Array.isArray(this.data.admin.sources) || this.data.admin.sources.length === 0){
       this.data.admin.sources = JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA.admin.sources));
@@ -3244,6 +3257,10 @@ const UNDER_REALM = {
 const PLANET_REALM_ENTER = 3600;   /* الارتفاع المطلوب فوق آخر طبقة سماء */
 const PLANET_SPACING = 1400;       /* المسافة بين كل كوكبين */
 
+/* ✅ نقطة دخول عالم الكواكب الكاملة (آخر طبقة سماء + الهامش) */
+const PLANET_ENTER_ALT = SKY_REALM.layers[SKY_REALM.layers.length - 1].from + PLANET_REALM_ENTER;
+/* = 2600 + 3600 = 6200 */
+
 const PLANETS = [
   {
     id: 'mercury', name: 'MERCURY', ar: 'عطارد', icon: '☿',
@@ -3315,8 +3332,9 @@ function getPlanetByIndex(idx){
 }
 
 function getPlanetByAltitude(alt){
-  const band = Math.floor((alt - PLANET_REALM_ENTER) / PLANET_SPACING);
-  return getPlanetByIndex(band);
+  /* ✅ الآن عند alt = 6200 → band = 0 → عطارد */
+  const band = Math.floor((alt - PLANET_ENTER_ALT) / PLANET_SPACING);
+  return getPlanetByIndex(Math.max(0, band));
 }
 
 /* ============================================================
@@ -3719,6 +3737,7 @@ const G = {
   camY: 0,
   camTargetY: 0,
   extraJumps: 0,
+  infiniteJump: 0,
   glideActive: false,
   rocketActive: false,
   megaJumpActive: 0,
@@ -6178,36 +6197,57 @@ function handleTap(cx, cy){
     P.vy = -5.2; P.gravityDir = 1;
     burst(P.x,P.y+6,'#FFFFFF',4,2.5);
     shake(2); Sfx.tap(); haptic(6);
-  } else if(G.mode==='WALK'){
-    if(P.onGround || P.coyoteTimer > 0){
-      P.vy = -12.5;
-      P.onGround = false;
-      P.coyoteTimer = 0;
-      P.jumps = 1;
-      P.jumpHeld = true;
-      P.jumpHoldTimer = 0;
-      spawnJumpEffect(P.x, P.y + P.r, G.currentScene.groundDark);
-      Sfx.tap(); haptic(8);
-    } else if(P.jumps < 2 + (G.extraJumps > 0 ? 2 : 0)){
-      P.vy = G.megaJumpActive > 0 ? -16 : -10.5;
-      P.jumps++;
-      P.jumpHeld = true;
-      P.jumpHoldTimer = 0;
-      spawnJumpEffect(P.x, P.y + P.r, G.currentScene.accent);
-      for(let i=0;i<8;i++){
-        const a = (i/8)*Math.PI*2;
-        particles.push({
-          x: P.x, y: P.y,
-          vx: Math.cos(a)*3.5, vy: Math.sin(a)*3.5,
-          life: 0.9, decay: 0.035, color: G.currentScene.accent, size: 3
-        });
-      }
-      Sfx.play(660, 0.12, 'sine', 0.04, 990);
-      haptic(8);
-    } else {
-      P.jumpBufferTimer = 8;
+} else if(G.mode==='WALK'){
+  const adminFly = hasAdminAccess() && Save.data.admin.infiniteJump;
+  const hasInf   = G.infiniteJump > 0 || adminFly;
+
+  if(P.onGround || P.coyoteTimer > 0){
+    /* قفزة أرضية عادية */
+    P.vy = -12.5;
+    P.onGround = false;
+    P.coyoteTimer = 0;
+    P.jumps = 1;
+    P.jumpHeld = true;
+    P.jumpHoldTimer = 0;
+    spawnJumpEffect(P.x, P.y + P.r, G.currentScene.groundDark);
+    Sfx.tap(); haptic(8);
+  } else if(hasInf){
+    /* قفزة لا نهائية */
+    P.vy = G.megaJumpActive > 0 ? -16 : -11;
+    P.jumps = 1;
+    P.jumpHeld = true;
+    P.jumpHoldTimer = 0;
+    spawnJumpEffect(P.x, P.y + P.r, '#C080FF');
+    for(let i=0;i<8;i++){
+      const a = (i/8)*Math.PI*2;
+      particles.push({
+        x: P.x, y: P.y,
+        vx: Math.cos(a)*3.5, vy: Math.sin(a)*3.5,
+        life: 0.9, decay: 0.035, color: '#C080FF', size: 3
+      });
     }
-  } else if(G.mode==='FLIP_WALK'){
+    Sfx.play(660, 0.12, 'sine', 0.04, 990);
+    haptic(8);
+  } else if(P.jumps < 2 + (G.extraJumps > 0 ? 2 : 0)){
+    P.vy = G.megaJumpActive > 0 ? -16 : -10.5;
+    P.jumps++;
+    P.jumpHeld = true;
+    P.jumpHoldTimer = 0;
+    spawnJumpEffect(P.x, P.y + P.r, G.currentScene.accent);
+    for(let i=0;i<8;i++){
+      const a = (i/8)*Math.PI*2;
+      particles.push({
+        x: P.x, y: P.y,
+        vx: Math.cos(a)*3.5, vy: Math.sin(a)*3.5,
+        life: 0.9, decay: 0.035, color: G.currentScene.accent, size: 3
+      });
+    }
+    Sfx.play(660, 0.12, 'sine', 0.04, 990);
+    haptic(8);
+  } else {
+    P.jumpBufferTimer = 8;
+  }
+} else if(G.mode==='FLIP_WALK'){
     if(P.onGround){
       P.vy = 13.0; P.onGround=false; P.jumps=1;
       spawnJumpEffect(P.x, P.y + P.r, G.currentScene.accent);
@@ -6217,15 +6257,18 @@ function handleTap(cx, cy){
       spawnJumpEffect(P.x, P.y, G.currentScene.accent);
       Sfx.tap(); haptic(8);
     }
-  } else if(G.mode==='SKY_JUMP'){
-    if(!P.onGround && P.jumps < 2){
-      P.vy = Math.min(P.vy, -9.5);
-      P.jumps++;
-      spawnJumpEffect(P.x, P.y + P.r, G.currentScene.accent);
-      Sfx.tap(); haptic(8);
-      shake(3);
-    }
+} else if(G.mode==='SKY_JUMP'){
+  const adminFly = hasAdminAccess() && Save.data.admin.infiniteJump;
+  const hasInf   = G.infiniteJump > 0 || adminFly;
+
+  if(!P.onGround && (hasInf || P.jumps < 2)){
+    P.vy = Math.min(P.vy, -9.5);
+    if(!hasInf) P.jumps++;
+    spawnJumpEffect(P.x, P.y + P.r, G.currentScene.accent);
+    Sfx.tap(); haptic(8);
+    shake(3);
   }
+}
 }
 /* ═══════════════ ASCEND 3-WAY JUMP ═══════════════ */
 /* ═══════════════ ASCEND 3-WAY JUMP (مناطق الشاشة) ═══════════════ */
@@ -6254,6 +6297,11 @@ function handleAscendTap(cx, cy){
 
 function ascendCanJump(){
   if(G.ascendJumpCooldown > 0) return false;
+
+  const adminFly = hasAdminAccess() && Save.data.admin.infiniteJump;
+  const hasInf   = G.infiniteJump > 0 || adminFly;
+
+  if(hasInf) return true;   /* طيران مطلق */
   return P.onGround || P.coyoteTimer > 0 || P.jumps < 2;
 }
 
@@ -6375,6 +6423,7 @@ function updatePowerups(){
       delete G.activePowerups[id];
 
       /* تنظيف الحالات الخاصة */
+      if(id === 'infiniteJump') G.infiniteJump = 0;
       if(id === 'extraJump') G.extraJumps = 0;
       if(id === 'glide') G.glideActive = false;
       if(id === 'rocket'){ G.rocketActive = false; G.rocketFrames = 0; }
@@ -6587,6 +6636,12 @@ function collectPowerup(p){
     G.extraJumps = p.duration;
     G.activePowerups.extraJump = { remaining:p.duration, color:type.color, icon:type.icon };
   }
+  /* ═══ قفزات لا نهائية ═══ */
+else if(id === 'infiniteJump'){
+  G.infiniteJump = p.duration;
+  G.activePowerups.infiniteJump = { remaining:p.duration, color:type.color, icon:type.icon };
+  addFloat(P.x, P.y - 55, '∞ قفزات لا نهائية', '#C080FF', 16);
+}
 
   /* ═══ انزلاق ═══ */
   else if(id === 'glide'){
@@ -6929,52 +6984,173 @@ function updateContextBanner(){
   el.classList.add('show');
 }
 
-/* ─────────────────────────────────────────────────────────────
-   مقياس الارتفاع العمودي
-   يظهر في WALK فقط عندما يبتعد اللاعب عن مستوى الأرض
-   ───────────────────────────────────────────────────────────── */
-const GAUGE_RANGE = { min: -50, max: 50 };
+/* ═══════════════════════════════════════════════════════════
+   ═══════════ ALTITUDE GAUGE v2 — ALL WORLDS ════════════════
+   ═══════════════════════════════════════════════════════════ */
 
+/* ═══ نقاط الانكسار: [ارتفاع بالبكسل، نسبة على المؤشر 0..1] ═══ */
+const GAUGE_BREAKPOINTS = [
+  [-3000, 0.00],   /* أعمق نقطة في الأعماق */
+  [-2600, 0.05],   /* بداية الفراغ */
+  [-1800, 0.10],
+  [-1100, 0.16],
+  [-500,  0.22],   /* بداية الكهوف */
+  [-100,  0.30],   /* حافة سطح الأرض */
+  [0,     0.38],   /* الأرض */
+  [900,   0.46],   /* بداية السماء */
+  [1400,  0.52],
+  [2000,  0.58],
+  [2700,  0.63],
+  [3500,  0.68],   /* البوابة الذهبية */
+  [6200,  0.76],   /* بداية الكواكب */
+  [16000, 0.97]    /* نهاية نبتون */
+];
+
+/* ═══ تعريف المناطق (للرسم والقراءة) ═══ */
+const GAUGE_ZONE_DEFS = [
+  { from: -Infinity, to: -2600, c1: '#4A0810', c2: '#1A0208', label: 'CORE',       icon: '⚫', accent: '#FFD060' },
+  { from: -2600, to: -1800,     c1: '#040208', c2: '#000000', label: 'VOID',       icon: '🌑', accent: '#C080FF' },
+  { from: -1800, to: -1100,     c1: '#1A0838', c2: '#0A0420', label: 'ABYSS',      icon: '👁',  accent: '#A080FF' },
+  { from: -1100, to: -500,      c1: '#8E2018', c2: '#3A1010', label: 'MAGMA',      icon: '🌋', accent: '#FF5020' },
+  { from: -500,  to: -100,      c1: '#5E4028', c2: '#2A1810', label: 'CAVES',      icon: '🕳',  accent: '#8E6A48' },
+  { from: -100,  to: 900,       c1: '#6B9B37', c2: '#5E3223', label: 'GROUND',     icon: '🌍', accent: '#E86A2E' },
+  { from: 900,   to: 1400,      c1: '#E8F4FF', c2: '#A8D8FF', label: 'CLOUDS',     icon: '☁',  accent: '#FFFFFF' },
+  { from: 1400,  to: 2000,      c1: '#8E7A68', c2: '#4A5878', label: 'RUINS',      icon: '🏛', accent: '#C8B8A0' },
+  { from: 2000,  to: 2700,      c1: '#5A5A70', c2: '#2A2A40', label: 'STORM',      icon: '⛈',  accent: '#FFE060' },
+  { from: 2700,  to: 3500,      c1: '#B080E8', c2: '#6040A8', label: 'CRYSTAL',    icon: '💎', accent: '#E0D0FF' },
+  { from: 3500,  to: 6200,      c1: '#E8B34E', c2: '#A07028', label: 'GOLDEN GATE',icon: '✨', accent: '#FFF4C0' },
+  { from: 6200,  to: 16000,     c1: '#80C0FF', c2: '#2030A0', label: 'PLANETS',    icon: '🪐', accent: '#80C0FF' },
+  { from: 16000, to: Infinity,  c1: '#0A0420', c2: '#02000A', label: 'DEEP SPACE', icon: '🌟', accent: '#FFD060' }
+];
+
+/* ═══ حساب موضع المؤشر على المقياس (0 = أسفل، 1 = أعلى) ═══ */
+function altitudeToGaugePct(alt){
+  const bp = GAUGE_BREAKPOINTS;
+
+  if(alt <= bp[0][0]) return bp[0][1];
+  if(alt >= bp[bp.length - 1][0]) return bp[bp.length - 1][1];
+
+  for(let i = 0; i < bp.length - 1; i++){
+    const [a1, p1] = bp[i];
+    const [a2, p2] = bp[i + 1];
+    if(alt >= a1 && alt <= a2){
+      const span = a2 - a1;
+      if(span <= 0) return p1;
+      const t = (alt - a1) / span;
+      return p1 + (p2 - p1) * t;
+    }
+  }
+  return 0.5;
+}
+
+/* ═══ الحصول على المنطقة الحالية ═══ */
+function getCurrentGaugeZone(alt){
+  for(const z of GAUGE_ZONE_DEFS){
+    if(alt >= z.from && alt < z.to) return z;
+  }
+  return GAUGE_ZONE_DEFS[5]; /* GROUND */
+}
+
+/* ═══ ارتفاع "افتراضي" لمؤشر الارتفاع (يدعم كل العوالم) ═══ */
+function getGaugeAltitudePx(){
+  /* ═══ في عالم الكواكب: نستخدم ارتفاعاً افتراضياً حسب ترتيب الكوكب ═══ */
+  if(G.realm === REALM.PLANET && G.planet){
+    return PLANET_ENTER_ALT + (G.planetIdx + 0.5) * PLANET_SPACING;
+  }
+  /* ═══ الأنماط الأخرى: الارتفاع الحقيقي للاعب ═══ */
+  return getPlayerAltitude();
+}
+
+/* ═══ بناء مناطق المؤشر مرة واحدة عند الإقلاع ═══ */
+function buildGaugeZones(){
+  const track = document.getElementById('gauge-track');
+  if(!track){
+    console.warn('[Gauge] #gauge-track NOT FOUND');
+    return;
+  }
+  if(track._built) return;
+  track._built = true;
+
+  const marker = document.getElementById('gauge-marker');
+  if(!marker){
+    console.warn('[Gauge] #gauge-marker NOT FOUND');
+    return;
+  }
+
+  /* احذف أي مناطق قديمة (باستثناء المؤشر) */
+  Array.from(track.children).forEach(child => {
+    if(child.id !== 'gauge-marker') child.remove();
+  });
+
+  /* أضف المناطق */
+  for(const z of GAUGE_ZONE_DEFS){
+    const fromPct = altitudeToGaugePct(z.from === -Infinity ? -3000 : z.from);
+    const toPct   = altitudeToGaugePct(z.to === Infinity ? 16000 : z.to);
+
+    const el = document.createElement('div');
+    el.className = 'gauge-zone';
+    el.style.bottom = (fromPct * 100) + '%';
+    el.style.height = Math.max(0.5, (toPct - fromPct) * 100) + '%';
+    el.style.background = `linear-gradient(180deg, ${z.c1}, ${z.c2})`;
+    el.title = z.label;
+    el.setAttribute('data-zone', z.label);
+
+    track.insertBefore(el, marker);
+  }
+}
+
+/* ═══ التحديث الديناميكي للمؤشر ═══ */
 function updateAltitudeGauge(){
   const gauge = document.getElementById('altitude-gauge');
   if(!gauge) return;
 
-  /* إخفاء في الأنماط غير الأرضية وفي ASCEND */
-  if(G.mode !== 'WALK'){
+  /* إخفاء في ASCEND (له بيئته الخاصة) */
+  if(G.mode === 'ASCEND'){
     gauge.classList.remove('show');
     return;
   }
 
-  const altM = getPlayerAltitude() / PIXELS_PER_METER;
+  /* في PLANET: يُظهر دائماً */
+  const inPlanet = (G.realm === REALM.PLANET);
 
-  /* إخفاء عندما نكون قريبين جداً من 0 */
-  if(Math.abs(altM) < 3){
+  /* في WALK العادي: نخفي إذا كنا قريبين جداً من 0 */
+  const altPx = getGaugeAltitudePx();
+  const altM  = altPx / PIXELS_PER_METER;
+
+  if(!inPlanet && Math.abs(altM) < 3){
     gauge.classList.remove('show');
     return;
   }
 
   gauge.classList.add('show');
 
-  /* حساب موضع المؤشر (0 = أسفل، 1 = أعلى) */
-  const t = clamp((altM - GAUGE_RANGE.min) / (GAUGE_RANGE.max - GAUGE_RANGE.min), 0, 1);
+  /* ═══ موضع المؤشر على المقياس ═══ */
+  const pct = clamp(altitudeToGaugePct(altPx), 0, 1);
   const marker = document.getElementById('gauge-marker');
-  if(marker) marker.style.bottom = (t * 100) + '%';
+  if(marker){
+    marker.style.bottom = (pct * 100) + '%';
+  }
 
-  /* قراءة الارتفاع */
+  /* ═══ قراءة الارتفاع بالأمتار ═══ */
   const valEl = document.getElementById('gauge-val');
   if(valEl){
     const rounded = Math.round(altM);
     valEl.textContent = (rounded > 0 ? '+' : '') + rounded;
   }
 
-  /* لون مؤشر حسب المنطقة */
+  /* ═══ اسم المنطقة + الأيقونة ═══ */
+  const zone = getCurrentGaugeZone(altPx);
+  const zoneLabel = document.getElementById('gauge-zone-label');
+  if(zoneLabel && zone){
+    zoneLabel.textContent = zone.icon + ' ' + zone.label;
+    zoneLabel.style.color = zone.accent;
+  }
+
+  /* ═══ لون إطار القراءة حسب المنطقة ═══ */
   const readout = document.getElementById('gauge-readout');
-  if(readout){
-    let col = '#FFFFFF';
-    if(altM >= 20) col = '#A8D8FF';
-    else if(altM <= -20) col = '#FF8060';
-    readout.style.borderColor = col + '80';
-    readout.style.boxShadow = `0 4px 14px rgba(0,0,0,.25), 0 0 0 1px ${col}40`;
+  if(readout && zone){
+    readout.style.borderColor = zone.accent + '80';
+    readout.style.boxShadow = `0 4px 14px rgba(0,0,0,.25), 0 0 0 1px ${zone.accent}40`;
   }
 }
 
@@ -7350,11 +7526,12 @@ function checkRealmTransition(){
       }
     }
   }
-    /* ═══ دخول عالم الكوكب ═══ */
-  if(G.realm === REALM.SKY && alt >= SKY_REALM.layers[SKY_REALM.layers.length-1].from + PLANET_REALM_ENTER){
-    const planet = getPlanetByAltitude(alt);
-    enterPlanetRealm(planet);
-  }
+/* ═══ دخول عالم الكوكب ═══ */
+if(G.realm === REALM.SKY && alt >= PLANET_ENTER_ALT){
+  /* ✅ ابدأ دائماً بعطارد عند أول دخول */
+  const planet = getPlanetByAltitude(alt);
+  enterPlanetRealm(planet);
+}
 }
 
 /* ============================================================
@@ -7496,8 +7673,10 @@ if(G.mode === 'ASCEND'){
 }
   /* تأثير التبطيء + تشويه الزمن */
   let slowMul = 1;
-  if(G.activePowerups.slow)     slowMul *= 0.55;
-  if(G.activePowerups.timeWarp) slowMul *= 0.35;
+  if(G.activePowerups.slow)       slowMul *= 0.55;
+  if(G.activePowerups.timeWarp)   slowMul *= 0.35;
+  if(G.activePowerups.bulletTime) slowMul *= (G.activePowerups.bulletTime.worldMul || 0.15);
+  if(G.activePowerups.haste)      slowMul *= (G.activePowerups.haste.hasteMul || 1.6);
 
   G.speed = lerp(G.speed, targetSpeed * slowMul, 0.035);
   G.dist += G.speed;
@@ -7699,6 +7878,14 @@ else if(G.mode !== 'ASCEND' && G.camY > 0.5){   // ✅ استثناء ASCEND
     /* نطاق 0-40% مخفية، 40-100% ظاهرة */
   }
 
+  /* ✅✅✅ ضع الكود الجديد هنا ✅✅✅ */
+  /* ✅ إعادة ضبط العدّاد في الطيران المستمر */
+  const ascendAdminFly = hasAdminAccess() && Save.data.admin.infiniteJump;
+  if((G.infiniteJump > 0 || ascendAdminFly) && P.onGround){
+    P.jumps = 0;
+  }
+  /* ✅✅✅ نهاية الكود الجديد ✅✅✅ */
+
   /* ═══ الكاميرا: اللاعب دائماً عند 40% من الشاشة (يُرى أكثر فوقه) ═══ */
   const CAM_ANCHOR = 0.42;
   const targetCamY = H * CAM_ANCHOR - P.y;
@@ -7778,26 +7965,51 @@ else if(G.mode !== 'ASCEND' && G.camY > 0.5){   // ✅ استثناء ASCEND
       }
 
       /* السقوط من خلال حفرة → الخروج من الكوكب */
-      if(!landed){
-        const feetY = P.y + P.r;
-        let overHole = false;
-        for(const f of G.planetFloors){
-          if(f.dead || !f.isPlanetHole) continue;
-          if(P.x >= f.x && P.x <= f.x + f.w) { overHole = true; break; }
-        }
-        if(!overHole && feetY >= GROUND_Y){
-          P.y = GROUND_Y - P.r;
-          P.vy = 0;
-          P.onGround = true;
-          P.jumps = 0;
-        } else if(overHole){
-          P.onGround = false;
-          if(P.y > H + 200){
-            exitPlanetRealm();
-            return;
-          }
-        }
+/* السقوط من خلال حفرة → الكوكب التالي */
+if(!landed){
+  const feetY = P.y + P.r;
+  let overHole = false;
+  for(const f of G.planetFloors){
+    if(f.dead || !f.isPlanetHole) continue;
+    if(P.x >= f.x && P.x <= f.x + f.w) { overHole = true; break; }
+  }
+  if(!overHole && feetY >= GROUND_Y){
+    P.y = GROUND_Y - P.r;
+    P.vy = 0;
+    P.onGround = true;
+    P.jumps = 0;
+  } else if(overHole){
+    P.onGround = false;
+    if(P.y > H + 200){
+      /* ✅✅✅ التقدم للكوكب التالي ✅✅✅ */
+      const nextIdx = G.planetIdx + 1;
+      
+      if(nextIdx >= PLANETS.length){
+        /* أكملت كل الكواكب! → عد للأرض كبداية جديدة */
+        showBanner('🏆 ALL PLANETS CLEARED', 'أكملت المجموعة الشمسية!');
+        Sfx.reward(); haptic(50); shake(30);
+        exitPlanetRealm();
+      } else {
+        /* ✅ انتقل للكوكب التالي */
+        const nextPlanet = PLANETS[nextIdx];
+        showBanner('🪐 ' + nextPlanet.name, 
+                   nextPlanet.ar + ' · كوكب ' + (nextIdx + 1) + ' / ' + PLANETS.length);
+        Sfx.reward(); haptic(30); shake(15);
+        
+        /* ✅ احفظ عدد النقاط المكتسبة قبل المسح */
+        const preservedCoins = G.runCoins;
+        const preservedOrbs = G.orbCount;
+        
+        enterPlanetRealm(nextPlanet);
+        
+        /* استرجع النقاط */
+        G.runCoins = preservedCoins;
+        G.orbCount = preservedOrbs;
       }
+      return;
+    }
+  }
+}
 
       P.x = P.baseX;
       P.rot = 0;
@@ -7827,6 +8039,36 @@ else if(G.mode !== 'ASCEND' && G.camY > 0.5){   // ✅ استثناء ASCEND
         });
       }
     }
+
+/* ═══ Jetpack: طيران مستمر عند الإمساك ═══ */
+if(G.jetpackActive > 0 && P.jumpHeld){
+  P.vy = Math.min(P.vy, -6.5);
+  P.onGround = false;
+  P.jumps = 0;
+  if(G.t % 2 === 0){
+    particles.push({
+      x: P.x + rand(-6,6), y: P.y + P.r + rand(0,12),
+      vx: rand(-1.5,1.5), vy: rand(3,6),
+      life: 0.75, decay: 0.032,
+      color: ['#FF8040','#FFD060','#FFF8C0'][Math.floor(Math.random()*3)],
+      size: rand(3,5)
+    });
+  }
+}
+
+/* ═══ Hover: إلغاء الجاذبية مؤقتاً ═══ */
+if(G.hoverActive > 0){
+  P.vy *= 0.4;
+  if(Math.abs(P.vy) < 0.8) P.vy = 0;
+  if(G.t % 5 === 0){
+    particles.push({
+      x: P.x + rand(-8,8), y: P.y + P.r + 4,
+      vx: rand(-0.5,0.5), vy: rand(0.5,1.5),
+      life: 0.7, decay: 0.03,
+      color: '#A8D8E8', size: rand(2,3.5)
+    });
+  }
+}
 
     if(G.rocketActive){
       const topLimit = CEILING_H + P.r + 50;
@@ -8464,8 +8706,10 @@ if(G.spawnCd <= 0){
 
   /* ═══════════════ العملات ═══════════════ */
   const magnetOn = G.activePowerups.magnet !== undefined;
-  const doubleOn = G.activePowerups.double !== undefined;
-  const coinMul = doubleOn ? 2 : 1;
+  let coinMul = 1;
+  if(G.activePowerups.double)      coinMul *= 2;
+  if(G.activePowerups.multiplier)  coinMul *= (G.activePowerups.multiplier.mul || 3);
+  if(G.activePowerups.goldenTouch) coinMul *= (G.activePowerups.goldenTouch.coinMul || 5);
 
   for(let i=coins.length-1;i>=0;i--){
     const c = coins[i];
@@ -11648,6 +11892,20 @@ if(G.mode === 'WALK'){
   ctx.save();
   ctx.translate(P.x, P.y);
   renderCharacter(ctx, r, skin, { mode: G.mode, rot: P.rot, alpha });
+
+  /* ✅✅✅ ضع الكود الجديد هنا ✅✅✅ */
+  /* ═══ نسخة مرئية عند تفعيل تعزيز Clone ═══ */
+  if(G.cloneActive > 0){
+    ctx.save();
+    ctx.globalAlpha = 0.35 + Math.sin(G.t * 0.1) * 0.15;
+    const offsetX = Math.cos(G.t * 0.04) * 30;
+    const offsetY = Math.sin(G.t * 0.05) * 20;
+    ctx.translate(offsetX, offsetY);
+    renderCharacter(ctx, P.r * 0.9, currentSkin(), {
+      mode: G.mode, rot: P.rot, alpha: 0.5, skipExtras: true
+    });
+    ctx.restore();
+  }
   ctx.restore();
 
   if(G.shield){
@@ -14657,6 +14915,14 @@ function drawOverlayEffects(){
     if(G.flash < 0) G.flash = 0;
   }
   if(G.activePowerups.slow){ ctx.fillStyle = 'rgba(143,184,216,0.08)'; ctx.fillRect(0,0,W,H); }
+    if(G.activePowerups.bulletTime){
+    ctx.fillStyle = 'rgba(160,120,255,0.10)';
+    ctx.fillRect(0,0,W,H);
+  }
+  if(G.activePowerups.haste){
+    ctx.fillStyle = 'rgba(255,208,64,0.06)';
+    ctx.fillRect(0,0,W,H);
+  }
   if(G.activePowerups.magnet){
     ctx.strokeStyle = 'rgba(201,154,201,0.15)';
     ctx.lineWidth = 40;
@@ -17499,6 +17765,7 @@ function resetRun(){
   G.ghost = 0;
   G.activePowerups = {};
   G.combo = 0; G.comboTimer = 0; G.comboMax = 0;
+  G.infiniteJump = 0;
   G.extraJumps = 0;
   G.glideActive = false;
   G.rocketActive = false;
@@ -19233,8 +19500,7 @@ function buildAdminPanel(){
   if(heroUser) heroUser.textContent =
     u ? (u.email || u.displayName || u.uid.slice(0,12)) : 'غير مسجّل';
 
-  ['unlimitedCoins','unlimitedUnlock','godMode'].forEach(k=>{
-    const sw = document.getElementById('sw-' + k);
+['unlimitedCoins','unlimitedUnlock','godMode','infiniteJump'].forEach(k=>{    const sw = document.getElementById('sw-' + k);
     if(sw) sw.classList.toggle('on', !!Save.data.admin[k]);
   });
 
@@ -23171,6 +23437,251 @@ window.Admin = Admin;
 })();
 
 /* ============================================================
+   ASSET SYSTEM v3 — IMAGE-FIRST
+   ============================================================
+   يدعم:
+   - صورة واحدة (PNG / WebP / Data URL)
+   - Sprite Sheet أفقي (frames متساوية)
+   - نقاط ارتكاز (anchor)
+   - تحميل مسبق مع progress
+   - Cache ذكي مع رفض الصور المعطوبة
+   ============================================================ */
+
+const ASSET = {
+  _cache: new Map(),        /* src → HTMLImageElement */
+  _failed: new Set(),       /* srcs فشل تحميلها */
+  _sprites: new Map(),      /* src → {frames, w, h} */
+  _preloadQueue: [],
+
+  /* ═══ جلب أو تحميل صورة ═══ */
+  get(src){
+    if(!src || typeof src !== 'string') return null;
+    if(this._failed.has(src)) return null;
+    if(this._cache.has(src)) return this._cache.get(src);
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img._ready = false;
+    img._errored = false;
+
+    img.onload = () => {
+      img._ready = true;
+      /* تسجيل كـ sprite إذا كان لديه metadata */
+      if(img.dataset && img.dataset.frames){
+        this._sprites.set(src, {
+          frames: parseInt(img.dataset.frames, 10) || 1,
+          w: img.naturalWidth,
+          h: img.naturalHeight
+        });
+      }
+    };
+    img.onerror = () => {
+      img._errored = true;
+      this._failed.add(src);
+      console.warn('[Asset] Failed:', src);
+    };
+    img.src = src;
+    this._cache.set(src, img);
+    return img;
+  },
+
+  /* ═══ Preload مسبق مع progress ═══ */
+  preload(sources, onProgress){
+    return new Promise(resolve => {
+      const list = (sources || []).filter(Boolean);
+      if(!list.length){ resolve({ ok: 0, fail: 0 }); return; }
+
+      let done = 0, ok = 0, fail = 0;
+      const check = (success) => {
+        done++;
+        if(success) ok++; else fail++;
+        if(onProgress) onProgress(done, list.length);
+        if(done === list.length) resolve({ ok, fail });
+      };
+
+      for(const src of list){
+        const cached = this._cache.get(src);
+        if(cached){
+          if(cached._ready) check(true);
+          else if(cached._errored) check(false);
+          else {
+            cached.addEventListener('load', () => check(true), { once: true });
+            cached.addEventListener('error', () => check(false), { once: true });
+          }
+          continue;
+        }
+        const img = this.get(src);
+        if(!img){ check(false); continue; }
+        img.addEventListener('load', () => check(true), { once: true });
+        img.addEventListener('error', () => check(false), { once: true });
+      }
+    });
+  },
+
+  /* ═══ استخراج صورة عنصر ═══ */
+resolve(item){
+  if(!item) return null;
+  if(item.imageData) return item.imageData;
+
+  if(item.imagePath){
+    const p = String(item.imagePath).trim();
+    if(!p) return null;
+
+    /* مسار كامل أو data URL */
+    if(p.startsWith('http') || p.startsWith('data:')) return p;
+    if(p.startsWith('assets/')) return p;
+
+    /* ✅ تحديد المجلد: من العنصر أو من التصنيف */
+    let folder = item._folder;
+    if(!folder && item.category && typeof CATEGORY_FOLDERS !== 'undefined'){
+      folder = CATEGORY_FOLDERS[item.category];
+    }
+    if(!folder && item._sourceCat && typeof CATEGORY_FOLDERS !== 'undefined'){
+      folder = CATEGORY_FOLDERS[item._sourceCat];
+    }
+    if(!folder) folder = 'misc';
+
+    return 'assets/custom/' + folder + '/' + p.replace(/^\/+/, '');
+  }
+  return null;
+},
+
+  /* ═══ الحصول على عنصر الصورة (للاستخدام المباشر) ═══ */
+  getImage(item){
+    const src = this.resolve(item);
+    if(!src) return null;
+    const img = this.get(src);
+    if(!img || !img._ready) return null;
+    return img;
+  },
+
+  /* ═══ رسم عنصر كصورة كاملة (مع anchor) ═══ */
+  drawItem(ctx, item, opts = {}){
+    const img = this.getImage(item);
+    if(!img) return false;
+
+    const {
+      x = 0, y = 0,
+      size = 64,
+      scale = 1,
+      rotation = 0,
+      alpha = 1,
+      anchorX = 0.5,      /* 0..1 نسبة داخل الصورة */
+      anchorY = 0.5,
+      flipX = false,
+      flipY = false,
+      tint = null,        /* لون تلوين اختياري */
+      blend = 'source-over'
+    } = opts;
+
+    const w = size * scale;
+    const h = size * scale * (item.aspectRatio || (img.naturalHeight / img.naturalWidth || 1));
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.globalCompositeOperation = blend;
+    ctx.translate(x, y);
+    if(rotation) ctx.rotate(rotation);
+    if(flipX || flipY) ctx.scale(flipX ? -1 : 1, flipY ? -1 : 1);
+
+    /* تلوين عبر canvas مؤقت */
+    if(tint){
+      const tmp = document.createElement('canvas');
+      tmp.width = img.naturalWidth;
+      tmp.height = img.naturalHeight;
+      const tctx = tmp.getContext('2d');
+      tctx.drawImage(img, 0, 0);
+      tctx.globalCompositeOperation = 'multiply';
+      tctx.fillStyle = tint;
+      tctx.fillRect(0, 0, tmp.width, tmp.height);
+      tctx.globalCompositeOperation = 'destination-in';
+      tctx.drawImage(img, 0, 0);
+      ctx.drawImage(tmp, -w * anchorX, -h * anchorY, w, h);
+    } else {
+      ctx.drawImage(img, -w * anchorX, -h * anchorY, w, h);
+    }
+    ctx.restore();
+    return true;
+  },
+
+  /* ═══ رسم sprite (مع إطار متحرك) ═══ */
+  drawSprite(ctx, item, opts = {}){
+    const src = this.resolve(item);
+    if(!src) return false;
+    const img = this.get(src);
+    if(!img || !img._ready) return false;
+
+    const {
+      x = 0, y = 0,
+      size = 64,
+      frame = 0,
+      frames = item.frames || 1,
+      frameRow = 0,         /* لو كان Sprite Sheet 2D */
+      rows = item.rows || 1,
+      rotation = 0,
+      alpha = 1,
+      anchorX = 0.5,
+      anchorY = 0.5,
+      flipX = false
+    } = opts;
+
+    const fw = img.naturalWidth / frames;
+    const fh = img.naturalHeight / rows;
+    const sx = (frame % frames) * fw;
+    const sy = frameRow * fh;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(x, y);
+    if(rotation) ctx.rotate(rotation);
+    if(flipX) ctx.scale(-1, 1);
+    ctx.drawImage(
+      img,
+      sx, sy, fw, fh,
+      -size * anchorX, -size * anchorY,
+      size, size * (fh / fw)
+    );
+    ctx.restore();
+    return true;
+  },
+
+  /* ═══ التحميل المسبق لمحتوى اللاعب الحالي ═══ */
+  async preloadPlayerAssets(){
+    const sources = [];
+    const add = (item) => {
+      const s = this.resolve(item);
+      if(s) sources.push(s);
+    };
+
+    add(currentSkin());
+    add(currentEyes());
+    add(currentCrown());
+    add(currentCape());
+    add(currentCompanion());
+    add(currentAura());
+    add(currentTrail());
+    add(currentSpark());
+    add(currentJump());
+    add(currentDeath());
+    add(currentFootstep());
+    if(typeof currentHeadItem === 'function') add(currentHeadItem());
+    if(typeof currentBackItem === 'function') add(currentBackItem());
+    if(typeof currentHeldItem === 'function') add(currentHeldItem());
+    if(typeof currentNameTag === 'function') add(currentNameTag());
+
+    return this.preload(sources);
+  }
+};
+
+/* ═══ helper: رسم مع fallback برمجي ═══ */
+function drawWithFallback(ctx, item, drawFallbackFn, opts = {}){
+  if(item && ASSET.drawItem(ctx, item, opts)) return true;
+  if(item && item.frames > 1 && ASSET.drawSprite(ctx, item, opts)) return true;
+  if(drawFallbackFn) drawFallbackFn(ctx);
+  return false;
+}
+
+/* ============================================================
    ==================== BOOT =================================
    ============================================================ */
 function boot() {
@@ -23211,7 +23722,10 @@ if(gg) gg.classList.remove('show');
   P.x = W * 0.5;
   P.y = H * 0.5;
 
-  initSkyDecor();
+initSkyDecor();
+
+/* ✅ بناء مناطق مؤشر الارتفاع */
+buildGaugeZones();
 
 /* تهيئة نظام المصادر */
 PLACEMENT_TYPES = buildPlacementTypes();

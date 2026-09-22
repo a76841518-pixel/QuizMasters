@@ -180,7 +180,6 @@ canvas{display:block;width:100%;height:100%;}
   opacity:.75;
 }
 
-/* ============ Altitude Gauge ============ */
 #altitude-gauge{
   position:absolute;
   right:14px;top:50%;transform:translateY(-50%);
@@ -192,24 +191,27 @@ canvas{display:block;width:100%;height:100%;}
 
 .gauge-track{
   position:relative;
-  width:8px;height:180px;border-radius:100px;
+  width:10px;height:220px;          /* ✅ أطول وأعرض قليلاً */
+  border-radius:100px;
   background:rgba(26,21,18,.15);
   border:1px solid rgba(255,255,255,.25);
   overflow:hidden;
   box-shadow:0 4px 14px rgba(26,21,18,.15);
 }
-.gauge-zone{position:absolute;left:0;right:0;}
-.zone-sky{top:0;height:38%;background:linear-gradient(180deg,#A8D8FF,#70A8E0);}
-.zone-ground{top:38%;height:24%;background:linear-gradient(180deg,#E8D0A8,#C8A878);}
-.zone-under{top:62%;bottom:0;background:linear-gradient(180deg,#8E4A2A,#3A1810);}
+.gauge-zone{
+  position:absolute;
+  left:0;right:0;
+  /* bottom/height/background تُبنى ديناميكياً بواسطة JS */
+}
 
 .gauge-marker{
   position:absolute;
-  left:-4px;right:-4px;height:3px;
+  left:-5px;right:-5px;height:3px;
   background:#FFFFFF;
   border-radius:100px;
-  box-shadow:0 0 10px #fff, 0 0 4px rgba(0,0,0,.4);
-  transition:bottom .12s linear;
+  box-shadow:0 0 12px #fff, 0 0 4px rgba(0,0,0,.4);
+  transition:bottom .15s ease-out;
+  z-index: 2;
 }
 .gauge-marker::before,
 .gauge-marker::after{
@@ -218,13 +220,13 @@ canvas{display:block;width:100%;height:100%;}
   width:0;height:0;border-style:solid;
 }
 .gauge-marker::before{
-  left:-6px;
-  border-width:5px 6px 5px 0;
+  left:-7px;
+  border-width:5px 7px 5px 0;
   border-color:transparent #fff transparent transparent;
 }
 .gauge-marker::after{
-  right:-6px;
-  border-width:5px 0 5px 6px;
+  right:-7px;
+  border-width:5px 0 5px 7px;
   border-color:transparent transparent transparent #fff;
 }
 
@@ -244,6 +246,24 @@ canvas{display:block;width:100%;height:100%;}
 .gauge-readout .readout-unit{
   font-size:8.5px;font-weight:800;color:rgba(255,255,255,.65);
   letter-spacing:1px;
+}
+
+/* ✅ اسم المنطقة الحالية */
+.gauge-zone-name{
+  font-family:'Space Grotesk', sans-serif;
+  font-size:9.5px;
+  font-weight:800;
+  letter-spacing:1.2px;
+  padding:3px 9px;
+  border-radius:100px;
+  background:rgba(26,21,18,.78);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  color:#fff;
+  border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 3px 10px rgba(0,0,0,.25);
+  white-space:nowrap;
+  transition:color .25s;
 }
 
 #wrap.in-ascend #altitude-gauge{opacity:0;}
