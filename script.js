@@ -9107,58 +9107,51 @@ function drawCharacterFeet(c, r, mode, legPhase, walkAnim, onGround, rot){
   /* ✅ لا أرجل في أنماط المركبة */
   if(mode === 'FLIP' || mode === 'FLAP' || mode === 'DRIFT') return;
 
-  /* الألوان حسب الجسم */
-  const footColor = '#2A2018';
-  const footLight = 'rgba(255,255,255,0.18)';
-  const footShadow = 'rgba(0,0,0,0.25)';
+  const footColor  = '#2A2018';
+  const footLight  = 'rgba(255,255,255,0.22)';
+  const footShadow = 'rgba(0,0,0,0.35)';
 
-  const footY = r * 0.88;
-  const footW = r * 0.34;
-  const footH = r * 0.16;
+  /* ✅ موضع الأقدام: أسفل مركز الجسم قليلاً */
+  const footY = r * 1.02;
+  const footW = r * 0.44;
+  const footH = r * 0.24;
 
   /* موضع افتراضي */
-  let lx = -r * 0.38;
-  let rx = r * 0.38;
+  let lx = -r * 0.42;
+  let rx =  r * 0.42;
   let ly = 0;
   let ry = 0;
 
   if(onGround && (mode === 'WALK' || mode === 'FLIP_WALK')){
     /* ═══ أنيميشن المشي ═══ */
     const cycle = Math.sin(walkAnim * 0.5);
-    const swing = r * 0.14;
-
+    const swing = r * 0.18;
     lx += cycle * swing;
     rx -= cycle * swing;
-    ly -= Math.max(0, cycle) * r * 0.10;
-    ry -= Math.max(0, -cycle) * r * 0.10;
-
-  } else if(mode === 'WALK' || mode === 'ASCEND' || mode === 'SKY_JUMP'){
-    /* ═══ في الهواء: القدمان متباعدتان قليلاً ═══ */
-    const t = Math.min(1, Math.abs(rot || 0) * 2);
-    lx -= r * 0.08 + t * r * 0.05;
-    rx += r * 0.08 + t * r * 0.05;
-    ly -= r * 0.06;
-    ry -= r * 0.06;
+    ly -= Math.max(0, cycle) * r * 0.14;
+    ry -= Math.max(0, -cycle) * r * 0.14;
+  } else {
+    /* ═══ في الهواء: متباعدتان قليلاً ═══ */
+    lx -= r * 0.12;
+    rx += r * 0.12;
+    ly -= r * 0.10;
+    ry -= r * 0.10;
   }
 
-  /* ═══ ظل القدم اليسرى ═══ */
+  /* ═══ ظل القدمين ═══ */
   c.fillStyle = footShadow;
   c.beginPath();
-  c.ellipse(lx, footY + ly + 1.5, footW * 1.05, footH * 1.05, 0, 0, Math.PI * 2);
+  c.ellipse(lx, footY + ly + 2.5, footW * 1.08, footH * 1.08, 0, 0, Math.PI * 2);
   c.fill();
-
-  /* ═══ ظل القدم اليمنى ═══ */
   c.beginPath();
-  c.ellipse(rx, footY + ry + 1.5, footW * 1.05, footH * 1.05, 0, 0, Math.PI * 2);
+  c.ellipse(rx, footY + ry + 2.5, footW * 1.08, footH * 1.08, 0, 0, Math.PI * 2);
   c.fill();
 
-  /* ═══ القدم اليسرى ═══ */
+  /* ═══ القدمين ═══ */
   c.fillStyle = footColor;
   c.beginPath();
   c.ellipse(lx, footY + ly, footW, footH, 0, 0, Math.PI * 2);
   c.fill();
-
-  /* ═══ القدم اليمنى ═══ */
   c.beginPath();
   c.ellipse(rx, footY + ry, footW, footH, 0, 0, Math.PI * 2);
   c.fill();
@@ -9166,22 +9159,22 @@ function drawCharacterFeet(c, r, mode, legPhase, walkAnim, onGround, rot){
   /* ═══ لمعة علوية ═══ */
   c.fillStyle = footLight;
   c.beginPath();
-  c.ellipse(lx, footY + ly - footH * 0.35, footW * 0.6, footH * 0.28, 0, 0, Math.PI * 2);
+  c.ellipse(lx, footY + ly - footH * 0.35, footW * 0.55, footH * 0.32, 0, 0, Math.PI * 2);
   c.fill();
   c.beginPath();
-  c.ellipse(rx, footY + ry - footH * 0.35, footW * 0.6, footH * 0.28, 0, 0, Math.PI * 2);
+  c.ellipse(rx, footY + ry - footH * 0.35, footW * 0.55, footH * 0.32, 0, 0, Math.PI * 2);
   c.fill();
 
-  /* ═══ أصابع قدم بسيطة (خطان رقيقان) ═══ */
-  c.strokeStyle = 'rgba(0,0,0,0.35)';
-  c.lineWidth = 1;
+  /* ═══ خط أصابع القدم ═══ */
+  c.strokeStyle = 'rgba(0,0,0,0.45)';
+  c.lineWidth = 1.2;
   c.beginPath();
-  c.moveTo(lx - footW * 0.5, footY + ly + footH * 0.2);
-  c.lineTo(lx + footW * 0.5, footY + ly + footH * 0.2);
+  c.moveTo(lx - footW * 0.55, footY + ly + footH * 0.3);
+  c.lineTo(lx + footW * 0.55, footY + ly + footH * 0.3);
   c.stroke();
   c.beginPath();
-  c.moveTo(rx - footW * 0.5, footY + ry + footH * 0.2);
-  c.lineTo(rx + footW * 0.5, footY + ry + footH * 0.2);
+  c.moveTo(rx - footW * 0.55, footY + ry + footH * 0.3);
+  c.lineTo(rx + footW * 0.55, footY + ry + footH * 0.3);
   c.stroke();
 }
 
@@ -9206,7 +9199,6 @@ function renderCharacter(c, r, skin, opts){
   const skipExtras = opts.skipExtras || false;
   const t = G.t;
 
-  /* ✅ قراءة حالة الأرجل من opts (مع قيم افتراضية آمنة) */
   const legPhase  = opts.legPhase  ?? (typeof P !== 'undefined' ? P.legPhase  : 0);
   const walkAnim  = opts.walkAnim  ?? (typeof P !== 'undefined' ? P.walkAnim  : 0);
   const onGround  = opts.onGround  ?? (typeof P !== 'undefined' ? P.onGround  : true);
@@ -9235,15 +9227,19 @@ function renderCharacter(c, r, skin, opts){
   if(isFlippedWalk) c.rotate(Math.PI);
 
   /* ═══════════════════════════════════════════════════════
-     ✅ جديد: ارسم الأقدام قبل الجسم بقليل (في المستوى الأدنى)
+     ✅ طبقة 1: الجسم (صورة الزي)
+     ═══════════════════════════════════════════════════════ */
+  drawCharacterBody(c, r, skin, t);
+
+  /* ═══════════════════════════════════════════════════════
+     ✅✅✅ الجديد: طبقة 1.5 — الأقدام بعد الجسم لتظهر فوقه
      ═══════════════════════════════════════════════════════ */
   const hasFeet = (mode === 'WALK' || mode === 'ASCEND' ||
                    mode === 'SKY_JUMP' || mode === 'FLIP_WALK');
   if(hasFeet){
-    /* ارسم الأرجل داخل نفس نظام الإحداثيات المُدوَّر */
     c.save();
     if(isFlippedWalk){
-      /* في FLIP_WALK، ارسم الأرجل قبل الدوران العكسي */
+      /* في FLIP_WALK، ارجع الدوران مؤقتاً لرسم الأرجل بشكل صحيح */
       c.rotate(-Math.PI);
       drawCharacterFeet(c, r, mode, legPhase, walkAnim, onGround, facingRot);
       c.rotate(Math.PI);
@@ -9252,9 +9248,6 @@ function renderCharacter(c, r, skin, opts){
     }
     c.restore();
   }
-
-  /* ═══ طبقة 1: الجسم ═══ */
-  drawCharacterBody(c, r, skin, t);
 
   /* ═══ طبقة 2: العيون ═══ */
   const skinIsImage = hasItemImage(skin);
@@ -17395,18 +17388,98 @@ const ALL_CUSTOM_KEYS = [
 ];
 
 async function pushAdminContent(){
-  if(!Cloud.user || !Cloud.db) return { ok: false, msg: 'غير متصل' };
-  try {
-    const payload = { updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: Cloud.user.uid };
-    for(const k of ALL_CUSTOM_KEYS) payload[k] = Save.data.admin[k] || [];
+  if(!Cloud.user || !Cloud.db){
+    return { ok: false, msg: 'غير متصل بـ Firebase' };
+  }
 
+  try {
+    const payload = {
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedBy: Cloud.user.uid
+    };
+
+    /* ═══════════════════════════════════════════════════════
+       ✅ 1) نسخ نظيفة للبيانات — إزالة imageData (base64)
+       لأن Firestore يرفض أي وثيقة > 1MB
+       ═══════════════════════════════════════════════════════ */
+    const cleaned = {};
+    let totalItems = 0;
+
+    for(const k of ALL_CUSTOM_KEYS){
+      const list = Save.data.admin[k] || [];
+      totalItems += list.length;
+
+      cleaned[k] = list.map(item => {
+        const copy = { ...item };
+        /* احذف الحقول الثقيلة — تُحفظ محلياً فقط */
+        delete copy.imageData;
+        delete copy.compressedData;
+        return copy;
+      });
+    }
+
+    /* اجمع في payload */
+    Object.assign(payload, cleaned);
+
+    /* ═══════════════════════════════════════════════════════
+       ✅ 2) فحص الحجم قبل الإرسال
+       ═══════════════════════════════════════════════════════ */
+    let jsonStr = '';
+    try {
+      jsonStr = JSON.stringify(payload, (key, value) => {
+        /* تجاهل serverTimestamp (لا يمكن تسلسله) */
+        if(value && typeof value === 'object' && value._methodName){
+          return '__SERVER_TS__';
+        }
+        return value;
+      });
+    } catch(e){
+      return { ok: false, msg: 'فشل تسلسل البيانات: ' + e.message };
+    }
+
+    const sizeKB = Math.round(jsonStr.length / 1024);
+    const MAX_KB = 900;
+    console.log(`[pushAdminContent] 📦 عناصر: ${totalItems} · الحجم: ${sizeKB}KB`);
+
+    if(sizeKB > MAX_KB){
+      return {
+        ok: false,
+        msg: `حجم البيانات كبير جداً (${sizeKB}KB > ${MAX_KB}KB) — احذف بعض العناصر القديمة أو استخدم صوراً خارجية بدل base64`
+      };
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       ✅ 3) الكتابة للسحابة
+       ═══════════════════════════════════════════════════════ */
     await Cloud.db.collection('admin_content').doc('global').set(payload, { merge: false });
+
     Save.data.admin.lastContentSync = Date.now();
     Save.save();
-    return { ok: true };
+
+    console.log('[pushAdminContent] ✅ نجح النشر');
+    return { ok: true, sizeKB, totalItems };
+
   } catch(e){
-    console.error('[pushAdminContent]', e);
-    return { ok: false, msg: e.message };
+    console.error('[pushAdminContent] ❌ فشل:', e);
+
+    /* ═══ رسالة خطأ مفصّلة حسب السبب ═══ */
+    let msg = e.message || 'خطأ غير معروف';
+    const code = e.code || '';
+
+    if(code === 'permission-denied'){
+      msg = '⚠ قواعد Firestore تمنع الكتابة — افتح Firebase Console → Firestore → Rules وأضف:\n' +
+            `allow write: if request.auth != null;`;
+    } else if(code === 'unavailable'){
+      msg = '⚠ فشل الاتصال بـ Firestore — تحقق من الإنترنت';
+    } else if(code === 'invalid-argument'){
+      msg = '⚠ بيانات غير صالحة: ' + e.message;
+    } else if(code === 'resource-exhausted'){
+      msg = '⚠ تجاوز حد Firestore — البيانات كبيرة جداً';
+    } else if(code === 'unauthenticated'){
+      msg = '⚠ الجلسة منتهية — أعد تسجيل الدخول';
+    }
+
+    return { ok: false, msg, code };
   }
 }
 
@@ -18047,19 +18120,33 @@ async function handleAdminItemSave(){
     /* ═══ حالة النشر ═══ */
     setStatus('⏳ جارٍ النشر لكل اللاعبين...', '');
 
-    /* ═══ النشر للسحابة ═══ */
-    let r = { ok: false, msg: 'pushAdminContent غير متاحة' };
-    if(typeof pushAdminContent === 'function'){
-      r = await pushAdminContent();
-    }
+/* ═══ النشر للسحابة ═══ */
+let r = { ok: false, msg: 'pushAdminContent غير متاحة' };
+if(typeof pushAdminContent === 'function'){
+  r = await pushAdminContent();
+}
 
-    if(r.ok){
-      setStatus('✓ تم النشر بنجاح لكل الحسابات', 'ok');
-      Sfx.reward(); haptic(20);
-    } else {
-      setStatus('⚠ حُفظ محلياً — فشل النشر: ' + (r.msg || 'غير معروف'), 'err');
-      haptic(20);
-    }
+if(r.ok){
+  setStatus(`✓ تم النشر (${r.totalItems || 0} عنصر · ${r.sizeKB || 0}KB)`, 'ok');
+  Sfx.reward(); haptic(20);
+} else {
+  /* ═══ اعرض الخطأ الفعلي في الـ status ═══ */
+  const errMsg = (r.msg || 'غير معروف').split('\n')[0];
+  setStatus('⚠ حُفظ محلياً — ' + errMsg, 'err');
+  console.error('[handleAdminItemSave] Publish failed:', r);
+  haptic(20);
+
+  /* ═══ إذا كانت المشكلة في القواعد، اعرض toast مع زر نسخ ═══ */
+  if(r.code === 'permission-denied' && typeof Toast !== 'undefined'){
+    Toast.error('فشل النشر', 'تحقق من قواعد Firestore', {
+      duration: 6000,
+      action: {
+        label: 'تفاصيل',
+        callback: () => alert(r.msg)
+      }
+    });
+  }
+}
 
     /* ═══ تحديث القوائم ═══ */
     if(typeof Admin !== 'undefined' && Admin){
