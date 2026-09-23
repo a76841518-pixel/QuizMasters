@@ -347,98 +347,6 @@ function buildAchievementsV2(){
 }
 
 /* ============================================================
-   ============ الإحصائيات v2 ===============================
-   ============================================================ */
-function buildStatsV2(){
-  const container = document.getElementById('stats-list');
-  if(!container) return;
-
-  const s = Save.data.stats;
-  const totalM = getGlobalMeters();
-  const glvl = getGlobalLevel() + 1;
-
-  container.innerHTML = `
-    <div class="stats-hero">
-      <div class="sh-title">TOTAL DISTANCE</div>
-      <div class="sh-big">
-        ${Math.floor(totalM).toLocaleString()}<span class="unit">م</span>
-      </div>
-      <div class="sh-sub">عبر ${s.totalPlays || 0} جولة</div>
-    </div>
-
-    <div class="section-head">
-      <div class="section-title">أرقام قياسية</div>
-      <div class="section-sub">RECORDS</div>
-    </div>
-    <div class="stats-grid">
-      <div class="stat-box">
-        <div class="sb-icon">🏆</div>
-        <div class="sb-val">${Math.floor(s.bestMeters || 0)}</div>
-        <div class="sb-label">أفضل مسافة</div>
-      </div>
-      <div class="stat-box">
-        <div class="sb-icon">🔥</div>
-        <div class="sb-val">x${s.bestCombo || 0}</div>
-        <div class="sb-label">أفضل سلسلة</div>
-      </div>
-      <div class="stat-box">
-        <div class="sb-icon">🎯</div>
-        <div class="sb-val">${glvl}</div>
-        <div class="sb-label">المستوى العام</div>
-      </div>
-      <div class="stat-box">
-        <div class="sb-icon">🎮</div>
-        <div class="sb-val">${s.totalPlays || 0}</div>
-        <div class="sb-label">إجمالي الجولات</div>
-      </div>
-    </div>
-
-    <div class="section-head" style="margin-top:18px;">
-      <div class="section-title">حسب النمط</div>
-      <div class="section-sub">BY MODE</div>
-    </div>
-    <div class="stats-grid">
-      ${['FLIP','FLAP','DRIFT','WALK','MIXED'].map(m => {
-        const md = MODES.find(x => x.id === m);
-        const best = Save.data.bestMeters[m] || 0;
-        return `<div class="stat-box">
-          <div class="sb-icon">${md ? md.icon : '◆'}</div>
-          <div class="sb-val">${best}</div>
-          <div class="sb-label">${md ? md.ar : m}</div>
-        </div>`;
-      }).join('')}
-    </div>
-
-    <div class="section-head" style="margin-top:18px;">
-      <div class="section-title">التقدم</div>
-      <div class="section-sub">PROGRESS</div>
-    </div>
-    <div class="stats-grid">
-      <div class="stat-box">
-        <div class="sb-icon">◆</div>
-        <div class="sb-val">${(Save.data.coins || 0).toLocaleString()}</div>
-        <div class="sb-label">مجموع العملات</div>
-      </div>
-      <div class="stat-box">
-        <div class="sb-icon">🏅</div>
-        <div class="sb-val">${(Save.data.season.points || 0).toLocaleString()}</div>
-        <div class="sb-label">نقاط الموسم</div>
-      </div>
-      <div class="stat-box">
-        <div class="sb-icon">◆</div>
-        <div class="sb-val">${s.shiftRuns || 0}</div>
-        <div class="sb-label">SHIFT Runs</div>
-      </div>
-      <div class="stat-box">
-        <div class="sb-icon">🎨</div>
-        <div class="sb-val">${(Save.data.ownedSkins || []).length}</div>
-        <div class="sb-label">الأزياء المملوكة</div>
-      </div>
-    </div>
-  `;
-}
-
-/* ============================================================
    ============ الإعدادات v2 =================================
    ============================================================ */
 function buildSettingsV2(){
@@ -597,248 +505,6 @@ function buildSeasonV2(){
   if(el3 && nextRank){
     el3.style.width = clamp((pts - rank.points) / (nextRank.points - rank.points), 0, 1) * 100 + '%';
   }
-}
-
-/* ============================================================
-   ============ الباتل باس v2 (مع المطالبة) ================
-   ============================================================ */
-let currentBPTrack = 'free';
-
-function buildBattlePassV2(){
-  const tier = getBPTier();
-  const pts = Save.data.season.points || 0;
-  const nextTierPts = (tier + 1) * BP_TIER_POINTS;
-  const currentTierPts = tier * BP_TIER_POINTS;
-  const progInTier = clamp((pts - currentTierPts) / BP_TIER_POINTS, 0, 1);
-
-  /* Hero */
-  const hero = document.getElementById('bp-hero');
-  if(hero){
-    hero.innerHTML = `
-      <div class="bp-hero-top">
-        <div>
-          <div class="bp-hero-title">BATTLE PASS</div>
-          <div class="bp-hero-sub">SEASON 1 · ORIGINS</div>
-        </div>
-        <div class="bp-tier-badge">
-          <span class="k">TIER</span>
-          <span class="v">${tier}</span>
-        </div>
-      </div>
-      <div class="bp-progress-wrap">
-        <div class="bp-progress-labels">
-          <span>المستوى ${tier}</span>
-          <span>${pts.toLocaleString()} / ${nextTierPts.toLocaleString()}</span>
-        </div>
-        <div class="bp-progress-bar">
-          <div class="bp-progress-fill" style="width:${progInTier * 100}%"></div>
-        </div>
-      </div>
-    `;
-  }
-
-  /* Track toggle */
-  const trackToggle = document.getElementById('bp-track-toggle');
-  if(trackToggle){
-    trackToggle.querySelectorAll('button').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.track === currentBPTrack);
-      if(btn.dataset.track === 'premium') btn.classList.add('premium');
-    });
-  }
-
-  /* Tiers list */
-  const list = document.getElementById('bp-tiers');
-  if(!list) return;
-  list.innerHTML = '';
-
-  /* اعرض فقط 3 مستويات قبل الحالي و 7 بعده */
-  const startTier = Math.max(1, tier - 2);
-  const endTier = Math.min(BP_TIERS, tier + 8);
-
-  if(startTier > 1){
-    const sep = document.createElement('div');
-    sep.style.cssText = 'text-align:center;padding:10px;color:var(--ink-mute);font-size:11px;font-weight:700;letter-spacing:2px;';
-    sep.textContent = '··· المستويات السابقة ···';
-    list.appendChild(sep);
-  }
-
-  for(let i = startTier; i <= endTier; i++){
-    const unlocked = i <= tier;
-    const isCurrent = i === tier;
-    const claimedFree = (Save.data.battlePass.claimedFree || []).includes(i);
-    const claimedPrem = (Save.data.battlePass.claimedPremium || []).includes(i);
-
-    const freeItems = getBattlePassItems(i, 'free');
-    const premItems = getBattlePassItems(i, 'premium');
-
-    const el = document.createElement('div');
-    el.className = 'bp-tier-row-v2' + 
-      (unlocked ? ' unlocked' : '') + 
-      (isCurrent ? ' current' : '') +
-      ((currentBPTrack === 'free' && claimedFree) || (currentBPTrack === 'premium' && claimedPrem) ? ' claimed' : '');
-
-    const coinReward = 5 + i * 2;
-
-    /* المكافآت المعروضة حسب المسار المختار */
-    let rewardHtml = '';
-    if(currentBPTrack === 'free'){
-      const canClaim = unlocked && !claimedFree;
-      rewardHtml = `
-        <div class="bp-reward-row free">
-          <div class="bp-reward-icon">◆</div>
-          <div class="bp-reward-info">
-            <div class="bp-reward-name">${coinReward} عملة</div>
-            <div class="bp-reward-meta">FREE REWARD</div>
-          </div>
-          ${claimedFree 
-            ? '<button class="bp-claim-btn done">✓</button>'
-            : unlocked 
-              ? '<button class="bp-claim-btn" data-tier="' + i + '" data-track="free">استلام</button>'
-              : '<button class="bp-claim-btn locked">🔒</button>'
-          }
-        </div>
-      `;
-      /* عناصر مخصصة */
-      freeItems.forEach(({item}) => {
-        rewardHtml += `
-          <div class="bp-reward-row premium">
-            <div class="bp-reward-icon">🎁</div>
-            <div class="bp-reward-info">
-              <div class="bp-reward-name">${item.name}</div>
-              <div class="bp-reward-meta">CUSTOM ITEM</div>
-            </div>
-            ${unlocked 
-              ? '<button class="bp-claim-btn gold" data-tier="' + i + '" data-track="free" data-custom="' + item.id + '">استلام</button>'
-              : '<button class="bp-claim-btn locked">🔒</button>'
-            }
-          </div>
-        `;
-      });
-    } else {
-      /* Premium track */
-      const hasPrem = Save.data.battlePass.premiumOwned;
-      const canClaim = unlocked && hasPrem && !claimedPrem;
-
-      rewardHtml = `
-        <div class="bp-reward-row premium">
-          <div class="bp-reward-icon">👑</div>
-          <div class="bp-reward-info">
-            <div class="bp-reward-name">${coinReward * 3} عملة</div>
-            <div class="bp-reward-meta">PREMIUM REWARD</div>
-          </div>
-          ${claimedPrem 
-            ? '<button class="bp-claim-btn done">✓</button>'
-            : !hasPrem 
-              ? '<button class="bp-claim-btn premium-locked">قفل مميز</button>'
-              : unlocked 
-                ? '<button class="bp-claim-btn gold" data-tier="' + i + '" data-track="premium">استلام</button>'
-                : '<button class="bp-claim-btn locked">🔒</button>'
-          }
-        </div>
-      `;
-
-      premItems.forEach(({item}) => {
-        rewardHtml += `
-          <div class="bp-reward-row premium">
-            <div class="bp-reward-icon">💎</div>
-            <div class="bp-reward-info">
-              <div class="bp-reward-name">${item.name}</div>
-              <div class="bp-reward-meta">PREMIUM ITEM</div>
-            </div>
-            ${hasPrem && unlocked 
-              ? '<button class="bp-claim-btn gold" data-tier="' + i + '" data-track="premium" data-custom="' + item.id + '">استلام</button>'
-              : '<button class="bp-claim-btn locked">🔒</button>'
-            }
-          </div>
-        `;
-      });
-    }
-
-    el.innerHTML = `
-      <div class="bp-tier-side">
-        <div class="bp-tier-num-v2">${i}</div>
-        <div class="bp-tier-label">TIER</div>
-      </div>
-      <div class="bp-rewards-v2">${rewardHtml}</div>
-    `;
-
-    list.appendChild(el);
-  }
-
-  /* Event listeners */
-  list.querySelectorAll('.bp-claim-btn[data-tier]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const tierNum = parseInt(btn.dataset.tier);
-      const track = btn.dataset.track;
-      claimBPReward(tierNum, track, btn.dataset.custom);
-    });
-  });
-}
-
-function claimBPReward(tier, track, customItemId){
-  const tierProgress = getBPTier();
-  if(tier > tierProgress){
-    Sfx.play(220, 0.15, 'sine', 0.05, 180);
-    haptic(20);
-    return;
-  }
-
-  const claimedArr = track === 'free' ? 'claimedFree' : 'claimedPremium';
-  if(!Save.data.battlePass[claimedArr]) Save.data.battlePass[claimedArr] = [];
-  if(Save.data.battlePass[claimedArr].includes(tier)) return;
-
-  /* فحص Premium */
-  if(track === 'premium' && !Save.data.battlePass.premiumOwned){
-    Sfx.play(220, 0.15, 'sine', 0.05, 180);
-    haptic(20);
-    return;
-  }
-
-  /* أعط المكافأة */
-  const coinReward = track === 'free' ? (5 + tier * 2) : ((5 + tier * 2) * 3);
-
-  /* إذا كانت المكافأة عنصر مخصص، أعطه */
-  if(customItemId){
-    /* ابحث عن العنصر وأضفه للمخزون */
-const allCats = [
-  'spark','eyes','companion','footstep','trail','jump','death','aura','crown','cape',
-  /* ✨ جديدة */
-  'headItem','backItem','heldItem','groundMark',
-  'nameTag','badge','avatarFrame','banner',
-  'spawnEffect','reviveEffect','hitEffect'
-];
-    let found = false;
-    for(const cat of allCats){
-      const all = getAllCosmetics(cat);
-      const item = all.find(x => x.id === customItemId);
-      if(item){
-        if(!Save.data.cosmetics.owned[cat]) Save.data.cosmetics.owned[cat] = [];
-        if(!Save.data.cosmetics.owned[cat].includes(customItemId)){
-          Save.data.cosmetics.owned[cat].push(customItemId);
-        }
-        found = true;
-        break;
-      }
-    }
-    /* تحقق في الأزياء */
-    if(!found){
-      const allSkins = getAllSkins();
-      const skin = allSkins.find(x => x.id === customItemId);
-      if(skin && !Save.data.ownedSkins.includes(customItemId)){
-        Save.data.ownedSkins.push(customItemId);
-      }
-    }
-  } else {
-    Save.data.coins += coinReward;
-    Save.data.stats.totalCoins += coinReward;
-  }
-
-  Save.data.battlePass[claimedArr].push(tier);
-  Save.save();
-
-  Sfx.reward(); haptic(20);
-  updateCoinsUI();
-  buildBattlePassV2();
 }
 
 /* ============================================================
@@ -2835,83 +2501,6 @@ function getSourceTypeInfo(type){
   return { label: p.label, icon: p.icon, color: p.color };
 }
 
-/* ═══ قائمة العناصر في لوحة المشرف ═══ */
-function buildAdminContentList(){
-  const list = document.getElementById('admin-content-list');
-  if(!list) return;
-  list.innerHTML = '';
-
-const keyMap = {
-  skin:'customSkins', eyes:'customEyes', companion:'customCompanion',
-  footstep:'customFootstep', spark:'customSpark', trail:'customTrail',
-  jump:'customJump', death:'customDeath', aura:'customAura',
-  crown:'customCrown', cape:'customCape',
-  /* ✨ جديدة */
-  headItem:'customHeadItem', backItem:'customBackItem', heldItem:'customHeldItem',
-  groundMark:'customGroundMark', nameTag:'customNameTag', badge:'customBadge',
-  avatarFrame:'customAvatarFrame', banner:'customBanner',
-  spawnEffect:'customSpawnEffect', reviveEffect:'customReviveEffect', hitEffect:'customHitEffect'
-};
-
-  const key = keyMap[currentAdminTab];
-  const items = Save.data.admin[key] || [];
-
-  if(items.length === 0){
-    list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--ink-mute);font-size:12px;">لا توجد عناصر في هذا التصنيف بعد</div>';
-    return;
-  }
-
-  items.forEach((item, idx)=>{
-    const el = document.createElement('div');
-    el.className = 'admin-content-item';
-
-    const src = resolveImageSrc(item);
-    const thumb = src
-      ? `<img src="${src}" alt="" onerror="this.style.display='none';this.parentElement.innerHTML='⚠'">`
-      : `<div style="width:100%;height:100%;background:${item.color || '#E07A3F'};display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:800;">${(item.name||'?').charAt(0)}</div>`;
-
-    const placements = item.placements || [];
-    const placementsHtml = placements.length
-      ? placements.map(p => {
-          const info = getSourceTypeInfo(p.type);
-          let extra = '';
-          if(p.type === 'shop')         extra = ` ◆${p.price}`;
-          if(p.type === 'battle_pass')  extra = ` L${p.tier} · ${p.track === 'premium' ? 'مميز' : 'مجاني'}`;
-          if(p.type === 'season_rank')  extra = ` ${SEASON_RANKS[p.rankId]?.name || ''}`;
-          if(p.type === 'daily_login')  extra = ` يوم ${p.day}`;
-          if(p.type === 'chest')        extra = ` ${p.chestType}`;
-          if(p.type === 'lucky_wheel')  extra = ` قطاع ${p.segment}`;
-          if(p.type === 'event')        extra = ` ${p.eventId}`;
-          return `<span class="aci-place" style="--pc:${info.color};">${info.icon} ${info.label}${extra}</span>`;
-        }).join('')
-      : '<span class="aci-place" style="--pc:#C14A4A;">⚠ بدون مصدر</span>';
-
-    const imgBadge = item.imagePath
-      ? `<span class="aci-source" style="color:#4A88C8;">📁 ${item.imagePath}</span>`
-      : '<span class="aci-source" style="color:#C14A4A;">⚠ بلا صورة</span>';
-
-    const disabled = item.enabled === false;
-
-    el.innerHTML = `
-      <div class="aci-thumb">${thumb}</div>
-      <div class="aci-info">
-        <div class="aci-name">
-          ${item.name || 'بدون اسم'}
-          ${disabled ? '<span style="color:#C14A4A;font-size:10px;"> (مُخفي)</span>' : ''}
-        </div>
-        <div class="aci-meta">${item.rarity || 'common'} · ${imgBadge}</div>
-        <div class="aci-placements">${placementsHtml}</div>
-      </div>
-      <button class="aci-del" data-del="${idx}">🗑</button>
-    `;
-    el.querySelector('[data-del]').addEventListener('click', ()=>{
-      if(!confirm('حذف هذا العنصر نهائياً من جميع اللاعبين؟')) return;
-      deleteCustomItem(currentAdminTab, idx);
-    });
-    list.appendChild(el);
-  });
-}
-
 /* ============================================================
    ==================== Audio ================================
    ============================================================ */
@@ -3261,69 +2850,302 @@ const PLANET_SPACING = 1400;       /* المسافة بين كل كوكبين */
 const PLANET_ENTER_ALT = SKY_REALM.layers[SKY_REALM.layers.length - 1].from + PLANET_REALM_ENTER;
 /* = 2600 + 3600 = 6200 */
 
+/* ============================================================
+   ════════════════ PLANETS v2 — مُمتدة بالكامل ══════════════
+   ============================================================ */
 const PLANETS = [
+  /* ═══════════════ 1) MERCURY — عطارد ═══════════════ */
   {
     id: 'mercury', name: 'MERCURY', ar: 'عطارد', icon: '☿',
     from: 0, to: 1,
     sky: '#1A1A1A', skyBot: '#3A2A20',
     ground: '#6A5040', groundDark: '#3A2820', groundTop: '#8A7060',
     accent: '#FFA060', haze: 'rgba(255,160,96,0.08)',
-    sunBrightness: 1.4, gravity: 0.65, hazard: 'crater',
-    tempText: '+430°'
+
+    /* ═══ الفيزياء ═══ */
+    sunBrightness: 1.4,
+    gravity: 0.65,          /* جاذبية منخفضة → قفزات أعلى */
+    wind: 0,
+    temperature: '+430°',
+    pressure: '0 atm',
+    radiation: 0.3,         /* إشعاع منخفض */
+
+    /* ═══ المرئيات ═══ */
+    rings: null,            /* لا حلقات */
+    moons: [],
+    volcanoActivity: 0,
+    craterDensity: 1.0,
+    atmosphere: null,       /* لا غلاف جوي */
+    sunSize: 1.6,
+    earthVisible: true,
+
+    /* ═══ العوائق ═══ */
+    hazards: ['crater', 'rock', 'meteor'],
+    hazardWeights: [0.4, 0.35, 0.25],
+    weather: { type: 'meteor', rate: 0.002 },
+
+    /* ═══ التقدم ═══ */
+    tier: 1,
+    rewardMultiplier: 1.0,
+    orbValueBonus: 0
   },
+
+  /* ═══════════════ 2) VENUS — الزهرة ═══════════════ */
   {
     id: 'venus', name: 'VENUS', ar: 'الزهرة', icon: '♀',
     from: 1, to: 2,
     sky: '#E8A050', skyBot: '#FFD080',
     ground: '#A07030', groundDark: '#5A3818', groundTop: '#C8A050',
-    accent: '#FFD060', haze: 'rgba(255,200,96,0.15)',
-    sunBrightness: 1.0, gravity: 0.9, hazard: 'lava',
-    tempText: '+465°'
+    accent: '#FFD060', haze: 'rgba(255,200,96,0.18)',
+
+    gravity: 0.9,
+    wind: 0.15,
+    temperature: '+465°',
+    pressure: '92 atm',
+    radiation: 0.1,
+
+    rings: null,
+    moons: [],
+    volcanoActivity: 0.3,
+    craterDensity: 0.4,
+    atmosphere: {
+      color: '#FFD080',
+      density: 0.35,
+      layers: 3
+    },
+    sunSize: 1.0,
+    earthVisible: true,
+
+    hazards: ['lava', 'acidRain', 'geyser', 'rock'],
+    hazardWeights: [0.3, 0.25, 0.25, 0.2],
+    weather: { type: 'acidRain', rate: 0.008 },
+
+    tier: 2,
+    rewardMultiplier: 1.2,
+    orbValueBonus: 2
   },
+
+  /* ═══════════════ 3) MARS — المريخ ═══════════════ */
   {
     id: 'mars', name: 'MARS', ar: 'المريخ', icon: '♂',
     from: 2, to: 3,
     sky: '#8A3A20', skyBot: '#E8A070',
     ground: '#9E4A28', groundDark: '#5A2810', groundTop: '#C86A40',
     accent: '#FF7030', haze: 'rgba(255,112,48,0.12)',
-    sunBrightness: 0.7, gravity: 0.85, hazard: 'dust',
-    tempText: '-63°'
+
+    gravity: 0.85,
+    wind: 0.25,
+    temperature: '-63°',
+    pressure: '0.006 atm',
+    radiation: 0.4,
+
+    rings: null,
+    moons: [
+      { name: 'Phobos', r: 4, dist: 80, speed: 0.0015, color: '#A08060' },
+      { name: 'Deimos', r: 3, dist: 130, speed: 0.001, color: '#8A7060' }
+    ],
+    volcanoActivity: 0.1,
+    craterDensity: 0.7,
+    atmosphere: {
+      color: '#E8A070',
+      density: 0.15,
+      layers: 2
+    },
+    sunSize: 0.7,
+    earthVisible: true,
+
+    hazards: ['rock', 'crater', 'dustDevil', 'canyon'],
+    hazardWeights: [0.35, 0.3, 0.2, 0.15],
+    weather: { type: 'dustStorm', rate: 0.012 },
+
+    tier: 3,
+    rewardMultiplier: 1.4,
+    orbValueBonus: 4
   },
+
+  /* ═══════════════ 4) JUPITER — المشتري ═══════════════ */
   {
     id: 'jupiter', name: 'JUPITER', ar: 'المشتري', icon: '♃',
     from: 3, to: 4,
     sky: '#6A4A30', skyBot: '#D8A880',
     ground: '#8A6A48', groundDark: '#4A3020', groundTop: '#B89A70',
-    accent: '#E8B890', haze: 'rgba(232,184,144,0.18)',
-    sunBrightness: 0.5, gravity: 1.6, hazard: 'storm',
-    tempText: '-110°'
+    accent: '#E8B890', haze: 'rgba(232,184,144,0.22)',
+
+    gravity: 1.6,           /* جاذبية ثقيلة → قفزات أقل */
+    wind: 0.4,
+    temperature: '-110°',
+    pressure: '1000 atm',
+    radiation: 0.7,
+
+    rings: {
+      innerR: 90, outerR: 160,
+      colors: ['#C09070', '#E8B890', '#A07050'],
+      tilt: 0.3,
+      alpha: 0.5
+    },
+    moons: [
+      { name: 'Io',       r: 5, dist: 110, speed: 0.0020, color: '#E8C050', volcanic: true },
+      { name: 'Europa',   r: 4, dist: 150, speed: 0.0015, color: '#C0D0E0', icy: true },
+      { name: 'Ganymede', r: 6, dist: 200, speed: 0.0010, color: '#A08870' },
+      { name: 'Callisto', r: 5, dist: 260, speed: 0.0007, color: '#6A5850' }
+    ],
+    volcanoActivity: 0.4,
+    craterDensity: 0.2,
+    atmosphere: {
+      color: '#E8B890',
+      density: 0.5,
+      layers: 4,
+      bands: true         /* شرائط أفقية مميزة */
+    },
+    sunSize: 0.5,
+    earthVisible: true,
+    hasGreatSpot: true,   /* البقعة الحمراء الكبرى */
+
+    hazards: ['storm', 'lightning', 'gasCloud', 'turbulence'],
+    hazardWeights: [0.35, 0.25, 0.25, 0.15],
+    weather: { type: 'jupiterStorm', rate: 0.015 },
+
+    tier: 4,
+    rewardMultiplier: 1.7,
+    orbValueBonus: 6
   },
+
+  /* ═══════════════ 5) SATURN — زحل ═══════════════ */
   {
     id: 'saturn', name: 'SATURN', ar: 'زحل', icon: '♄',
     from: 4, to: 5,
     sky: '#A88060', skyBot: '#F0D8A8',
     ground: '#C0A878', groundDark: '#6A5838', groundTop: '#E0C8A0',
-    accent: '#FFE8B0', haze: 'rgba(255,232,176,0.20)',
-    sunBrightness: 0.45, gravity: 1.4, hazard: 'rings',
-    tempText: '-140°'
+    accent: '#FFE8B0', haze: 'rgba(255,232,176,0.25)',
+
+    gravity: 1.4,
+    wind: 0.35,
+    temperature: '-140°',
+    pressure: '1.5 atm',
+    radiation: 0.5,
+
+    rings: {
+      innerR: 100, outerR: 280,
+      colors: ['#F0E0C0', '#E8C890', '#C0A070', '#F8F0D8', '#D8B880'],
+      tilt: 0.55,           /* ميل واضح */
+      alpha: 0.75,
+      detailed: true        /* حلقات مفصلة */
+    },
+    moons: [
+      { name: 'Titan',   r: 7, dist: 180, speed: 0.0015, color: '#E8A050', atmosphere: '#FFB060' },
+      { name: 'Rhea',    r: 4, dist: 240, speed: 0.0010, color: '#C8C0B0' },
+      { name: 'Iapetus', r: 4, dist: 300, speed: 0.0007, color: '#8A7060' }
+    ],
+    volcanoActivity: 0,
+    craterDensity: 0.3,
+    atmosphere: {
+      color: '#FFE8B0',
+      density: 0.3,
+      layers: 3,
+      bands: true
+    },
+    sunSize: 0.45,
+    earthVisible: true,
+
+    hazards: ['ringDebris', 'iceChunk', 'windShear', 'crystal'],
+    hazardWeights: [0.35, 0.25, 0.2, 0.2],
+    weather: { type: 'ringParticles', rate: 0.018 },
+
+    tier: 5,
+    rewardMultiplier: 2.0,
+    orbValueBonus: 8
   },
+
+  /* ═══════════════ 6) URANUS — أورانوس ═══════════════ */
   {
     id: 'uranus', name: 'URANUS', ar: 'أورانوس', icon: '♅',
     from: 5, to: 6,
     sky: '#40A0A8', skyBot: '#A0E8E0',
     ground: '#4A8890', groundDark: '#244850', groundTop: '#70B0B8',
-    accent: '#80FFFF', haze: 'rgba(128,255,255,0.18)',
-    sunBrightness: 0.3, gravity: 1.2, hazard: 'ice',
-    tempText: '-195°'
+    accent: '#80FFFF', haze: 'rgba(128,255,255,0.22)',
+
+    gravity: 1.2,
+    wind: 0.6,              /* رياح جانبية قوية */
+    temperature: '-195°',
+    pressure: '1.2 atm',
+    radiation: 0.6,
+
+    rings: {
+      innerR: 80, outerR: 140,
+      colors: ['#80D0E8', '#A0F0FF', '#60B0C0'],
+      tilt: 1.5,            /* حلقات عمودية! */
+      alpha: 0.4,
+      vertical: true        /* ميل 98° — حلقات شبه عمودية */
+    },
+    moons: [
+      { name: 'Titania', r: 4, dist: 150, speed: 0.0015, color: '#A0B8C0', icy: true },
+      { name: 'Oberon',  r: 4, dist: 200, speed: 0.0010, color: '#8AA0A8', icy: true },
+      { name: 'Miranda', r: 3, dist: 250, speed: 0.0008, color: '#C0D8E0', icy: true }
+    ],
+    volcanoActivity: 0,
+    craterDensity: 0.5,
+    atmosphere: {
+      color: '#80FFFF',
+      density: 0.4,
+      layers: 3,
+      aurora: true           /* شفق قطبي */
+    },
+    sunSize: 0.3,
+    earthVisible: true,
+
+    hazards: ['iceSpike', 'windBlast', 'crystal', 'frost'],
+    hazardWeights: [0.3, 0.3, 0.25, 0.15],
+    weather: { type: 'iceCrystals', rate: 0.014 },
+
+    tier: 6,
+    rewardMultiplier: 2.4,
+    orbValueBonus: 10
   },
+
+  /* ═══════════════ 7) NEPTUNE — نبتون ═══════════════ */
   {
     id: 'neptune', name: 'NEPTUNE', ar: 'نبتون', icon: '♆',
     from: 6, to: 7,
     sky: '#2030A0', skyBot: '#6080E0',
     ground: '#2A3888', groundDark: '#101840', groundTop: '#5068C0',
-    accent: '#80C0FF', haze: 'rgba(128,192,255,0.20)',
-    sunBrightness: 0.25, gravity: 1.3, hazard: 'storm',
-    tempText: '-200°'
+    accent: '#80C0FF', haze: 'rgba(128,192,255,0.28)',
+
+    gravity: 1.3,
+    wind: 0.8,              /* أقوى رياح في المجموعة الشمسية */
+    temperature: '-200°',
+    pressure: '1.3 atm',
+    radiation: 0.8,
+
+    rings: {
+      innerR: 70, outerR: 130,
+      colors: ['#4060C0', '#6080E0', '#3050A0'],
+      tilt: 0.4,
+      alpha: 0.35,
+      segmented: true       /* حلقات مقسمة */
+    },
+    moons: [
+      { name: 'Triton', r: 5, dist: 180, speed: -0.0015, color: '#C0D8E8', retrograde: true },
+      { name: 'Proteus', r: 3, dist: 240, speed: 0.001, color: '#8A98A0' }
+    ],
+    volcanoActivity: 0.15,
+    craterDensity: 0.3,
+    atmosphere: {
+      color: '#6080E0',
+      density: 0.55,
+      layers: 4,
+      aurora: true,
+      bands: true
+    },
+    sunSize: 0.25,
+    earthVisible: false,
+
+    hazards: ['megaStorm', 'lightning', 'windBlast', 'iceSpike', 'void'],
+    hazardWeights: [0.25, 0.2, 0.2, 0.2, 0.15],
+    weather: { type: 'neptuneStorm', rate: 0.020 },
+
+    tier: 7,
+    rewardMultiplier: 2.8,
+    orbValueBonus: 12
   }
 ];
 
@@ -3335,6 +3157,52 @@ function getPlanetByAltitude(alt){
   /* ✅ الآن عند alt = 6200 → band = 0 → عطارد */
   const band = Math.floor((alt - PLANET_ENTER_ALT) / PLANET_SPACING);
   return getPlanetByIndex(Math.max(0, band));
+}
+
+/* ═══ اختيار عائق عشوائي حسب الأوزان ═══ */
+function pickPlanetHazard(planet){
+  const weights = planet.hazardWeights || planet.hazards.map(() => 1);
+  const total = weights.reduce((a, b) => a + b, 0);
+  let roll = Math.random() * total;
+  for(let i = 0; i < weights.length; i++){
+    roll -= weights[i];
+    if(roll <= 0) return planet.hazards[i];
+  }
+  return planet.hazards[0];
+}
+
+/* ═══ هل الكوكب يحتوي هذه الميزة؟ ═══ */
+function planetHas(planet, feature){
+  if(!planet) return false;
+  if(feature === 'rings') return !!planet.rings;
+  if(feature === 'moons') return planet.moons && planet.moons.length > 0;
+  if(feature === 'atmosphere') return !!planet.atmosphere;
+  if(feature === 'aurora') return planet.atmosphere && planet.atmosphere.aurora;
+  if(feature === 'volcano') return (planet.volcanoActivity || 0) > 0.1;
+  if(feature === 'greatSpot') return !!planet.hasGreatSpot;
+  return false;
+}
+
+/* ═══ إحداثيات القمر في مداره ═══ */
+function getMoonPosition(moon, time, cx, cy){
+  const angle = time * moon.speed + (moon.phase || 0);
+  return {
+    x: cx + Math.cos(angle) * moon.dist,
+    y: cy + Math.sin(angle) * moon.dist * 0.4,   /* ضغط رأسي = منظور */
+    z: 0.5 + Math.sin(angle) * 0.5               /* للترتيب */
+  };
+}
+
+/* ═══ شدة تأثير الجاذبية على القفز ═══ */
+function getPlanetGravityScale(){
+  if(!G.planet) return 1;
+  return G.planet.gravity || 1;
+}
+
+/* ═══ قوة الرياح الحالية ═══ */
+function getPlanetWindStrength(){
+  if(!G.planet) return 0;
+  return G.planet.wind || 0;
 }
 
 /* ============================================================
@@ -3923,8 +3791,9 @@ function spawnJumpEffect(x, y, color){
   const cos = currentJump();
 
   /* ✅ قفزة مخصصة بصورة */
-  if(hasItemImage(cos)){
-    const img = getItemImgOrNull(cos);
+// ✅ جديد
+if(hasItemImage(cos)){
+  const img = getItemImgOrNull(cos) || getItemImageEl(cos);
     /* نضيف 3 جسيمات صور صغيرة متناثرة */
     for(let i = 0; i < 5; i++){
       const a = (i/5) * Math.PI * 2;
@@ -4618,9 +4487,21 @@ function updateCombo(){
    ==================== Weather ==============================
    ============================================================ */
 function updateWeather(){
+  /* ═══════════════════════════════════════════════════════
+     ✅ إصلاح: في الكواكب، عطّل طقس الأرض تماماً
+     ═══════════════════════════════════════════════════════ */
+  if(G.realm === REALM.PLANET){
+    /* ═══ تفريغ أي طقس أرضي متبقٍ ═══ */
+    if(G.weather.length > 0){
+      G.weather.length = 0;
+    }
+    return;   /* ← لا مطر أرضي، لا ثلج، لا بتلات */
+  }
+
   const s = G.currentScene;
   if(!s.weather) return;
 
+  /* ... باقي الكود كما هو بدون تغيير ... */
   if(s.wind && G.state === 'PLAYING'){
     if(G.mode === 'DRIFT' || G.mode === 'WALK'){
       P.x += s.wind * 0.15;
@@ -4708,6 +4589,39 @@ function updateWeather(){
 }
 
 function drawWeather(){
+  /* ═══════════════════════════════════════════════════════
+     ✅ في الكواكب: ارسم جسيمات الكوكب فقط + وميض البرق
+     ═══════════════════════════════════════════════════════ */
+  if(G.realm === REALM.PLANET){
+    /* ═══ 1) ارسم جسيمات الطقس الكوكبية ═══ */
+    for(const p of G.weather){
+      /* نفس كود drawWeather لكن بدون أي فلترة أرضية */
+      const life = p.life / (p.maxLife || 1);
+      const fade = Math.min(1, life * 3, (1 - life) * 5) * 0.85;
+      if(fade <= 0) continue;
+
+      ctx.globalAlpha = fade;
+      ctx.fillStyle = p.color || '#FFFFFF';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    /* ═══ 2) وميض البرق ═══ */
+    if(G.lightningFlash > 0){
+      ctx.fillStyle = `rgba(255,255,255,${G.lightningFlash * 0.5})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    /* ═══ 3) ضباب الكوكب ═══ */
+    if(G.planet && G.planet.haze){
+      ctx.fillStyle = G.planet.haze;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    return;   /* ← لا ضباب أرضي، لا مطر أرضي */
+  }
   for(const p of G.weather){
     const life = p.life/p.maxLife;
     const fade = Math.min(1, life*3, (1-life)*5) * 0.85;
@@ -4865,54 +4779,686 @@ function initSkyDecor(){
   }
 }
 
+/* ============================================================
+   ═══════════════ SPAWN PLANET OBSTACLE v3.1 ══════════════
+   ═══════════════════════════════════════════════════════════
+   المنطق المُحدَّث:
+   - البوابات نادرة: كل 25-40 عائق
+   - حد أقصى صارم: 50 عائق بدون بوابة (حماية فقط)
+   - الباقي عوائق عشوائية حسب أوزان الكوكب
+   ============================================================ */
+
+/* ═══ حالة المولّد ═══ */
+let _planetSpawnState = {
+  obstacleCount: 0,
+  lastHoleCount: 0,
+  forcedHoleInterval: 30,   /* بوابة كل 25-40 عائق */
+  maxWithoutHole: 50        /* حد أقصى صارم (حماية من التعليق) */
+};
+
+function resetPlanetSpawnState(){
+  _planetSpawnState.obstacleCount = 0;
+  _planetSpawnState.lastHoleCount = 0;
+  /* عشوائي بين 25-40 */
+  _planetSpawnState.forcedHoleInterval = 25 + Math.floor(Math.random() * 16);
+}
+
 function spawnPlanetObstacle(){
   const planet = G.planet || PLANETS[0];
+  const state = _planetSpawnState;
+
+  state.obstacleCount++;
+
+  /* ═══════════════════════════════════════════════════════
+     ═══ 1) فحص إجباري: هل يجب توليد بوابة الآن؟ ═══
+     ═══════════════════════════════════════════════════════ */
+  const obstaclesSinceHole = state.obstacleCount - state.lastHoleCount;
+  const mustSpawnHole =
+    obstaclesSinceHole >= state.forcedHoleInterval ||
+    obstaclesSinceHole >= state.maxWithoutHole;
+
+  if(mustSpawnHole){
+    /* اختيار نوع البوابة */
+    const isLastPlanet = (G.planetIdx >= PLANETS.length - 1);
+    const returnChance = isLastPlanet ? 1.0 : 0.3;
+    const isReturnPortal = Math.random() < returnChance;
+
+    spawnPlanetPortalHole(isReturnPortal);
+
+    state.lastHoleCount = state.obstacleCount;
+    /* جدول جديد: 25-40 عائق للبوابة التالية */
+    state.forcedHoleInterval = 25 + Math.floor(Math.random() * 16);
+
+    /* مكافأة تشجيعية قرب البوابة */
+    if(Math.random() < 0.6){
+      spawnPlanetPortalReward(planet);
+    }
+    return;
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     ═══ 2) عائق عشوائي حسب أوزان الكوكب ═══
+     ═══════════════════════════════════════════════════════ */
+  const hazard = pickPlanetHazard(planet);
+
+  switch(hazard){
+    case 'crater':      spawnPlanetCrater(planet);      break;
+    case 'rock':        spawnPlanetRock(planet);        break;
+    case 'meteor':      spawnPlanetMeteor(planet);      break;
+    case 'lava':        spawnPlanetLavaPool(planet);    break;
+    case 'acidRain':    spawnPlanetAcidRain(planet);    break;
+    case 'geyser':      spawnPlanetGeyser(planet);      break;
+    case 'dustDevil':   spawnPlanetDustDevil(planet);   break;
+    case 'canyon':      spawnPlanetCanyon(planet);      break;
+    case 'storm':       spawnPlanetStorm(planet);       break;
+    case 'lightning':   spawnPlanetLightning(planet);   break;
+    case 'gasCloud':    spawnPlanetGasCloud(planet);    break;
+    case 'turbulence':  spawnPlanetTurbulence(planet);  break;
+    case 'ringDebris':  spawnPlanetRingDebris(planet);  break;
+    case 'iceChunk':    spawnPlanetIceChunk(planet);    break;
+    case 'windShear':   spawnPlanetWindShear(planet);   break;
+    case 'crystal':     spawnPlanetCrystal(planet);     break;
+    case 'iceSpike':    spawnPlanetIceSpike(planet);    break;
+    case 'windBlast':   spawnPlanetWindBlast(planet);   break;
+    case 'frost':       spawnPlanetFrost(planet);       break;
+    case 'megaStorm':   spawnPlanetMegaStorm(planet);   break;
+    case 'void':        spawnPlanetVoid(planet);        break;
+    default:            spawnPlanetRock(planet);        break;
+  }
+}
+
+
+/* ============================================================
+   ═══════════ SPAWN PORTAL HOLE (البوابة) ════════════════
+   ═══════════════════════════════════════════════════════════ */
+function spawnPlanetPortalHole(isReturn){
+  const w = isReturn ? 170 : rand(140, 200);
+
+  G.planetFloors.push({
+    x: W + rand(300, 700),
+    w,
+    y: GROUND_Y,
+    h: 400,
+    type: isReturn ? 'planetReturnHole' : 'planetNextHole',
+    isPlanetHole: true,
+    isPlanetReturn: isReturn,
+    isPlanetNext: !isReturn,
+    t: 0, passed: false, dead: false
+  });
+
+  /* ✅ مؤشر بصري في الأعلى لتنبيه اللاعب */
+  const indicatorColor = isReturn ? '#40E8FF' : '#FFD060';
+  particles.push({
+    x: W + 300 + w / 2,
+    y: 60,
+    vx: 0, vy: 0,
+    life: 2.5, decay: 0.005,
+    color: indicatorColor,
+    size: 8,
+    isPortalIndicator: true,
+    indicatorText: isReturn ? '☁ RETURN' : '▶ NEXT PLANET'
+  });
+}
+
+
+/* ============================================================
+   ═══════════ SPAWN PORTAL REWARD (مكافأة قرب البوابة) ═══
+   ═══════════════════════════════════════════════════════════ */
+function spawnPlanetPortalReward(planet){
+  const rewardX = W + 200;   /* قبل البوابة بقليل */
+
+  /* اختيار نوع المكافأة */
   const roll = Math.random();
 
-  if(roll < 0.35){
-    /* صخرة/صواعد كوكبية */
-    const w = rand(40, 90);
-    const h = rand(50, 120);
-    obstacles.push({
-      x: W + 40, w, h, type: 'block',
-      isWalk: true,
-      color: planet.ground, colorDark: planet.groundDark, accent: planet.accent,
-      t: 0, passed: false, dead: false
-    });
-  } else if(roll < 0.55){
-    /* فتحة أرضية إضافية */
-    G.planetFloors.push({
-      x: W + rand(300, 700),
-      w: rand(120, 180),
-      y: GROUND_Y,
-      h: 400,
-      type: 'planetHole',
-      isPlanetHole: true,
-      t: 0, passed: false, dead: false
-    });
-  } else if(roll < 0.75){
-    /* أرضية عائمة تسقط */
-    G.planetFloors.push({
-      x: W + 40,
-      w: rand(80, 150),
-      y: GROUND_Y - rand(140, 320),
-      h: 14,
-      type: 'planetFloat',
-      isWalk: true, isPlatform: true,
-      isPlanetFloat: true,
-      fallTimer: 90 + Math.floor(Math.random() * 180),
-      fallDelay: 0, falling: false, fallVy: 0,
-      solid: false,
-      t: 0, passed: false, dead: false
-    });
-    spawnCoinCluster(W + 100, GROUND_Y - 200, 4);
-  } else if(roll < 0.90){
-    /* مجموعة عملات */
-    spawnCoinCluster(W + 100, GROUND_Y - 80, Math.floor(rand(4, 8)));
-  } else {
-    /* تعزيز */
-    spawnPowerup(W + 100, GROUND_Y - 100);
+  if(roll < 0.4){
+    /* كتلة عملات على شكل قوس */
+    const count = 4 + Math.floor(Math.random() * 3);
+    for(let i = 0; i < count; i++){
+      const t = i / (count - 1);
+      coins.push({
+        x: rewardX + i * 35,
+        y: GROUND_Y - 120 - Math.sin(t * Math.PI) * 50,
+        r: 10,
+        t: 0, dead: false,
+        isSkyCoin: true
+      });
+    }
   }
+  else if(roll < 0.7){
+    /* كرة طاقة قيمتها عالية */
+    orbs.push({
+      x: rewardX + 80,
+      y: GROUND_Y - 150,
+      r: 16, t: 0, dead: false,
+      color: '#FFD700',
+      isSkyOrb: true,
+      value: (planet.orbValueBonus || 0) + 15
+    });
+  }
+  else {
+    /* تعزيز */
+    const pu = makePowerup(rewardX + 60, GROUND_Y - 140, {
+      r: 16,
+      isSkyReward: true
+    });
+    if(pu) powerups.push(pu);
+  }
+}
+
+
+/* ============================================================
+   ═══════════ RESET عند دخول كوكب جديد ════════════════════
+   ═══════════════════════════════════════════════════════════
+   ⚠️ استدعِ هذه الدالة داخل enterPlanetRealm()
+   ============================================================ */
+/* في enterPlanetRealm()، بعد السطر:
+     G.planetFloors = [];
+   أضف:
+     resetPlanetSpawnState();
+*/
+
+/* ════════════════ العوائق الفردية ════════════════ */
+
+/* ═══ فوهة (Mercury) ═══ */
+function spawnPlanetCrater(planet){
+  const w = rand(100, 160);
+  G.planetFloors.push({
+    x: W + rand(300, 700),
+    w,
+    y: GROUND_Y,
+    h: 400,
+    type: 'planetHole',
+    isPlanetHole: true,
+    t: 0, passed: false, dead: false
+  });
+
+  /* مكافأة داخل الفوهة */
+  if(Math.random() < 0.4){
+    coins.push({
+      x: W + 400 + w / 2, y: GROUND_Y - 150,
+      r: 10, t: 0, dead: false,
+      isSkyCoin: true
+    });
+  }
+}
+
+/* ═══ صخرة (Mercury / Mars) ═══ */
+function spawnPlanetRock(planet){
+  const w = rand(50, 100);
+  const h = rand(60, 140);
+  obstacles.push({
+    x: W + 40, w, h,
+    type: 'block',
+    isWalk: true,
+    color: planet.ground,
+    colorDark: planet.groundDark,
+    accent: planet.accent,
+    isPlanetRock: true,
+    t: 0, passed: false, dead: false
+  });
+
+  /* منصة صغيرة للقفز */
+  if(Math.random() < 0.4){
+    obstacles.push({
+      x: W + 40, w: rand(80, 120), h: 12,
+      y: GROUND_Y - h - 40,
+      type: 'platform',
+      isWalk: true, isPlatform: true,
+      platformType: 'static',
+      baseY: GROUND_Y - h - 40,
+      baseX: W + 40,
+      amp: 0, phase: 0,
+      color: planet.groundTop,
+      colorDark: planet.ground,
+      accent: planet.accent,
+      glow: planet.accent,
+      t: 0, passed: false, dead: false,
+      solid: false,
+      crumbleTimer: 0, crumbled: false,
+      bounceBoost: 0
+    });
+  }
+}
+
+/* ═══ نيزك (Mercury) ═══ */
+function spawnPlanetMeteor(planet){
+  const w = 40, h = 40;
+  obstacles.push({
+    x: W + rand(200, 600),
+    y: -50,
+    w, h,
+    type: 'meteor',
+    isWalk: true,
+    isFallingRock: true,
+    isPlanetMeteor: true,
+    baseY: -50,
+    targetY: GROUND_Y - h,
+    falling: false,
+    warned: false,
+    landed: false,
+    triggerDistance: rand(180, 260),
+    color: '#8A4838',
+    colorDark: '#4A2018',
+    accent: planet.accent,
+    t: 0, passed: false, dead: false
+  });
+}
+
+/* ═══ بحيرة حمم (Venus) ═══ */
+function spawnPlanetLavaPool(planet){
+  const w = rand(140, 220);
+  obstacles.push({
+    x: W + 40,
+    y: GROUND_Y - 12,
+    w, h: 12,
+    type: 'lavaPool',
+    isWalk: true,
+    isLavaPool: true,
+    isPlanetLava: true,
+    poolColor: '#FF5020',
+    poolGlow: '#FFD060',
+    color: '#FF5020',
+    colorDark: planet.groundDark,
+    accent: '#FFD060',
+    t: 0, passed: false, dead: false
+  });
+
+  /* مكافأة فوق الحمم */
+  if(Math.random() < 0.5){
+    coins.push({
+      x: W + 40 + w / 2, y: GROUND_Y - 100,
+      r: 10, t: 0, dead: false,
+      isSkyCoin: true
+    });
+  }
+}
+
+/* ═══ مطر حمضي (Venus) ═══ */
+function spawnPlanetAcidRain(planet){
+  /* مطر حمضي كعائق قتالي — يتساقط بكثافة */
+  for(let i = 0; i < 8; i++){
+    obstacles.push({
+      x: W + 40 + i * 35,
+      y: -60 - i * 20,
+      w: 4, h: 30,
+      type: 'acidDrop',
+      isWalk: true,
+      isUnderSpike: true,
+      isAcidDrop: true,
+      color: '#E8FF80',
+      colorDark: '#A0B040',
+      accent: '#FFFF80',
+      t: 0, passed: false, dead: false
+    });
+  }
+}
+
+/* ═══ ينبوع (Venus) ═══ */
+function spawnPlanetGeyser(planet){
+  const w = 50;
+  obstacles.push({
+    x: W + 40,
+    y: GROUND_Y - 60,
+    w, h: 60,
+    type: 'geyser',
+    isWalk: true,
+    isPiston: true,
+    isPlanetGeyser: true,
+    isTop: false,
+    cycle: rand(0, 90),
+    period: 90,
+    extendDist: rand(80, 130),
+    extend: 0,
+    color: planet.ground,
+    colorDark: planet.groundDark,
+    accent: '#FF5020',
+    t: 0, passed: false, dead: false
+  });
+}
+
+/* ═══ إعصار غباري (Mars) ═══ */
+function spawnPlanetDustDevil(planet){
+  const w = 60, h = 120;
+  obstacles.push({
+    x: W + 40,
+    y: GROUND_Y - h,
+    w, h,
+    type: 'dustDevil',
+    isWalk: true,
+    isSaw: true,
+    isPlanetDustDevil: true,
+    cx: W + 40 + w / 2,
+    cy: GROUND_Y - h / 2,
+    r: w / 2,
+    angle: 0,
+    angleSpd: 0.08,
+    movingY: true,
+    amp: 60,
+    phase: rand(0, Math.PI * 2),
+    color: '#A07040',
+    colorDark: '#5A3818',
+    accent: planet.accent,
+    t: 0, passed: false, dead: false
+  });
+}
+
+/* ═══ وادي (Mars) ═══ */
+function spawnPlanetCanyon(planet){
+  /* وادي عميق مع منصة عبور */
+  const w = rand(150, 220);
+  obstacles.push({
+    x: W + 40, w, h: 400,
+    y: GROUND_Y,
+    type: 'canyon',
+    isWalk: false,
+    isCanyon: true,
+    t: 0, passed: false, dead: false
+  });
+
+  /* منصة عبور */
+  obstacles.push({
+    x: W + 40 + w / 2 - 60,
+    w: 120, h: 12,
+    y: GROUND_Y - 90,
+    type: 'platform',
+    isWalk: true, isPlatform: true,
+    isCanyonBridge: true,
+    platformType: 'static',
+    baseY: GROUND_Y - 90,
+    baseX: W + 40 + w / 2 - 60,
+    amp: 0, phase: 0,
+    color: '#C86A40',
+    colorDark: planet.groundDark,
+    accent: planet.accent,
+    glow: planet.accent,
+    t: 0, passed: false, dead: false,
+    solid: false,
+    crumbleTimer: 0, crumbled: false,
+    bounceBoost: 0
+  });
+}
+
+/* ═══ عاصفة (Jupiter) ═══ */
+function spawnPlanetStorm(planet){
+  const w = 100, h = 100;
+  obstacles.push({
+    x: W + 40,
+    y: GROUND_Y - rand(200, 300),
+    w, h,
+    type: 'storm',
+    isWalk: true,
+    isVortex: true,
+    isPlanetStorm: true,
+    cx: W + 40 + w / 2,
+    cy: GROUND_Y - rand(200, 300) + h / 2,
+    r: w / 2,
+    pullForce: 0.7,
+    angle: 0,
+    color: '#D04030',
+    colorDark: '#802010',
+    accent: planet.accent,
+    t: 0, passed: false, dead: false
+  });
+}
+
+/* ═══ برق (Jupiter / Neptune) ═══ */
+function spawnPlanetLightning(planet){
+  /* صاعقة رأسية */
+  const x = W + rand(200, 600);
+  const topH = rand(200, 300);
+
+  obstacles.push({
+    x,
+    y: 0,
+    w: 4,
+    h: topH,
+    type: 'lightning',
+    isWalk: true,
+    isLaser: true,
+    isPlanetLightning: true,
+    isVertical: true,
+    segments: [{ y: 0, h: topH }],
+    pulse: 0,
+    color: '#FFE060',
+    accent: '#FFFFFF',
+    t: 0, passed: false, dead: false
+  });
+}
+
+/* ═══ سحابة غازية (Jupiter) ═══ */
+function spawnPlanetGasCloud(planet){
+  const count = rand(3, 6);
+  for(let i = 0; i < count; i++){
+    obstacles.push({
+      x: W + 40 + i * rand(60, 100),
+      y: rand(100, H * 0.6),
+      w: rand(60, 100),
+      h: rand(60, 100),
+      type: 'gasCloud',
+      isWalk: false,
+      isPlanetCloud: true,
+      radius: rand(40, 60),
+      color: '#E8B890',
+      colorDark: '#A07850',
+      accent: planet.accent,
+      t: 0, passed: false, dead: false
+    });
+  }
+}
+
+/* ═══ اضطراب جوي (Jupiter) ═══ */
+function spawnPlanetTurbulence(planet){
+  /* تأثير قوى دفع عشوائي */
+  const w = rand(80, 140);
+  obstacles.push({
+    x: W + 40,
+    y: GROUND_Y - rand(200, 350),
+    w, h: 80,
+    type: 'turbulence',
+    isWalk: false,
+    isTurbulence: true,
+    pushForce: rand(8, 14),
+    color: 'rgba(255,240,200,0.15)',
+    accent: planet.accent,
+    t: 0, passed: false, dead: false
+  });
+}
+
+/* ═══ حطام الحلقات (Saturn) ═══ */
+function spawnPlanetRingDebris(planet){
+  const count = rand(3, 6);
+  for(let i = 0; i < count; i++){
+    obstacles.push({
+      x: W + 40 + i * 60,
+      y: rand(60, GROUND_Y - 100),
+      w: rand(20, 40),
+      h: rand(20, 40),
+      type: 'ringDebris',
+      isWalk: true,
+      isSaw: true,
+      isPlanetDebris: true,
+      cx: W + 40 + i * 60 + 15,
+      cy: rand(60, GROUND_Y - 100) + 15,
+      r: rand(15, 25),
+      angle: rand(0, Math.PI * 2),
+      angleSpd: rand(-0.06, 0.06),
+      movingY: true,
+      amp: rand(30, 60),
+      phase: rand(0, Math.PI * 2),
+      color: '#E8C890',
+      colorDark: '#A07840',
+      accent: '#FFF0C0',
+      t: 0, passed: false, dead: false
+    });
+  }
+}
+
+/* ═══ كتلة جليدية (Saturn / Uranus / Neptune) ═══ */
+function spawnPlanetIceChunk(planet){
+  const w = rand(50, 90);
+  const h = rand(50, 100);
+  obstacles.push({
+    x: W + 40,
+    w, h,
+    type: 'block',
+    isWalk: true,
+    isPlanetIce: true,
+    y: GROUND_Y - h - rand(40, 150),
+    color: '#A0E0F8',
+    colorDark: '#4080B0',
+    accent: '#E0F8FF',
+    t: 0, passed: false, dead: false
+  });
+}
+
+/* ═══ قص الرياح (Saturn) ═══ */
+function spawnPlanetWindShear(planet){
+  const w = rand(100, 180);
+  obstacles.push({
+    x: W + 40,
+    y: GROUND_Y - rand(120, 250),
+    w, h: 40,
+    type: 'windShear',
+    isWalk: true,
+    isRotBar: true,
+    isPlanetWind: true,
+    cx: W + 40 + w / 2,
+    cy: GROUND_Y - rand(120, 250) + 20,
+    length: w,
+    thickness: 8,
+    angle: 0,
+    angleSpd: rand(-0.02, 0.02),
+    warmupTimer: 30,
+    color: 'rgba(255,240,200,0.7)',
+    colorDark: planet.groundDark,
+    accent: planet.accent,
+    t: 0, passed: false, dead: false
+  });
+}
+
+/* ═══ بلورة (Saturn / Uranus) ═══ */
+function spawnPlanetCrystal(planet){
+  const r = rand(25, 40);
+  obstacles.push({
+    x: W + 40 - r,
+    y: GROUND_Y - rand(150, 300) - r,
+    w: r * 2, h: r * 2,
+    type: 'crystal',
+    isWalk: true,
+    isCrystal: true,
+    isPlanetCrystal: true,
+    cx: W + 40,
+    cy: GROUND_Y - rand(150, 300),
+    r,
+    color: planet.id === 'uranus' ? '#80FFFF' : '#E0D0FF',
+    colorDark: planet.groundDark,
+    accent: '#FFFFFF',
+    glow: planet.accent,
+    t: 0, passed: false, dead: false
+  });
+
+  /* بلورة تعطي مكافأة عند اللمس */
+  if(Math.random() < 0.4){
+    orbs.push({
+      x: W + 40, y: GROUND_Y - 250,
+      r: 14, t: 0, dead: false,
+      color: '#FFD700',
+      isSkyOrb: true,
+      value: planet.orbValueBonus + 10
+    });
+  }
+}
+
+/* ═══ شوكة جليدية (Uranus / Neptune) ═══ */
+function spawnPlanetIceSpike(planet){
+  const count = rand(2, 5);
+  const spacing = 45;
+  for(let i = 0; i < count; i++){
+    obstacles.push({
+      x: W + 40 + i * spacing,
+      y: GROUND_Y - 50,
+      w: 28, h: 50,
+      type: 'iceSpike',
+      isWalk: true,
+      isUnderSpike: true,
+      isPlanetIceSpike: true,
+      color: '#C0E8F8',
+      colorDark: '#5090B8',
+      accent: '#FFFFFF',
+      t: 0, passed: false, dead: false
+    });
+  }
+}
+
+/* ═══ انفجار رياح (Uranus / Neptune) ═══ */
+function spawnPlanetWindBlast(planet){
+  /* منطقة تدفع اللاعب للخلف */
+  obstacles.push({
+    x: W + 40,
+    y: GROUND_Y - 200,
+    w: 100, h: 300,
+    type: 'windBlast',
+    isWalk: false,
+    isWindBlast: true,
+    pushBack: rand(0.8, 1.5),
+    color: 'rgba(128,192,255,0.15)',
+    accent: planet.accent,
+    t: 0, passed: false, dead: false
+  });
+}
+
+/* ═══ صقيع (Uranus) ═══ */
+function spawnPlanetFrost(planet){
+  /* طبقة جليدية تُبطئ اللاعب */
+  obstacles.push({
+    x: W + 40, w: rand(180, 260), h: 4,
+    y: GROUND_Y - 4,
+    type: 'frost',
+    isWalk: true,
+    isFrost: true,
+    color: '#C0E8FF',
+    colorDark: '#5090B8',
+    accent: '#FFFFFF',
+    t: 0, passed: false, dead: false
+  });
+}
+
+/* ═══ عاصفة عملاقة (Neptune) ═══ */
+function spawnPlanetMegaStorm(planet){
+  const w = 140;
+  obstacles.push({
+    x: W + 40,
+    y: GROUND_Y - 250,
+    w, h: 140,
+    type: 'megaStorm',
+    isWalk: true,
+    isVortex: true,
+    isPlanetMegaStorm: true,
+    cx: W + 40 + w / 2,
+    cy: GROUND_Y - 250 + 70,
+    r: w / 2,
+    pullForce: 1.0,
+    angle: 0,
+    color: '#3050A0',
+    colorDark: '#102040',
+    accent: '#80C0FF',
+    t: 0, passed: false, dead: false
+  });
+}
+
+/* ═══ فجوة فراغ (Neptune) ═══ */
+function spawnPlanetVoid(planet){
+  const w = 120;
+  G.planetFloors.push({
+    x: W + rand(300, 700),
+    w,
+    y: GROUND_Y,
+    h: 400,
+    type: 'planetHole',
+    isPlanetHole: true,
+    isVoidHole: true,
+    t: 0, passed: false, dead: false
+  });
 }
 
 /* ============================================================
@@ -5498,143 +6044,6 @@ const direction = Math.random() < 0.5 ? -1 : 1;
   }
 }
 
-function spawnSkyElevator(prog, s){
-  const w = 110;
-  const h = 16;
-  const maxRise = WR(300, 700);
-  const startY = GROUND_Y - WR(90, 150);
-
-  /* ═══ المصعد نفسه ═══ */
-  obstacles.push({
-    x: W + 40, w, h, type:'platform',
-    isWalk: true, isPlatform: true,
-    isElevator: true,
-    isSingleElevator: true,
-    platformType: 'static',
-    y: startY, baseY: startY, baseX: W + 40,
-    riseSpeed: WR(1.4, 2.0),
-    maxRise: maxRise,
-    risen: 0,
-    isCarryingPlayer: false,
-    exhausted: false,
-    warmupTimer: 0,
-    color: '#B8E8F0', colorDark: '#5090A0', accent: '#E0FFFF',
-    glow: '#80E8FF',
-    isSkyPlatform: true,
-    skyTier: 3,
-    amp: 0, phase: 0,
-    t: 0, passed: false, dead: false,
-    solid: false,
-    crumbleTimer: 0, crumbled: false,
-    bounceBoost: 0
-  });
-
-  /* ═══ أعلى نقطة يصل إليها المصعد ═══ */
-  const topY = startY - maxRise - 30;
-  const elevatorCenterX = W + 40 + w/2;
-
-  /* ═══ سلسلة العملات على طول الصعود ═══ */
-  const coinCount = Math.floor(maxRise / 60);
-  for(let i = 1; i <= coinCount; i++){
-    if(Math.random() < 0.7){
-      coins.push({
-        x: elevatorCenterX + rand(-30, 30),
-        y: startY - i * 60,
-        r: 8, t: 0, dead: false
-      });
-    }
-  }
-
-  /* ═══ كرة الطاقة في القمة ═══ */
-  orbs.push({
-    x: elevatorCenterX,
-    y: topY,
-    r: 16, t: 0, dead: false,
-    color: '#FFD700',
-    isSkyOrb: true,
-    value: 15
-  });
-
-  /* ═══ مكافأة إضافية (تعزيز) أحياناً ═══ */
-  if(Math.random() < 0.3){
-    const skyPU = makePowerup(
-      elevatorCenterX + 50,
-      topY,
-      { r: 16, isSkyReward: true }
-    );
-    if(skyPU) powerups.push(skyPU);
-  }
-
-  Sfx.play(660, 0.3, 'sine', 0.04, 1320);
-}
-
-function spawnSkyElevatorChain(prog, s){
-  const count = Math.floor(WR(3, 6));
-  const startX = W + 60;
-const spacing = WR(180, 240) * getSpeedScale();
-const baseRise = 200;
-
-  let lastY = GROUND_Y - 100;
-
-  for(let i = 0; i < count; i++){
-    const w = 100 - i * 5;
-    const h = 14;
-    const riseAmount = baseRise + i * 60;
-
-    obstacles.push({
-      x: startX + i * spacing,
-      w, h,
-      type:'platform',
-      isWalk: true,
-      isPlatform: true,
-      isElevator: true,
-      isChainElevator: true,
-      chainIndex: i,
-      platformType: 'static',
-      y: lastY,
-      baseY: lastY,
-      baseX: startX + i * spacing,
-      riseSpeed: 1.5 + i * 0.15,
-      maxRise: riseAmount,
-      risen: 0,
-      isCarryingPlayer: false,
-      exhausted: false,
-      warmupTimer: 0,
-      color: i === count-1 ? '#FFD060' : (i % 2 === 0 ? '#B8E8F0' : '#C0A0E8'),
-      colorDark: i === count-1 ? '#A07028' : (i % 2 === 0 ? '#5090A0' : '#6040A8'),
-      accent: i === count-1 ? '#FFF4C0' : '#E0FFFF',
-      glow: i === count-1 ? '#FFE080' : '#80E8FF',
-      isSkyPlatform: true,
-      skyTier: 3 + i,
-      amp: 0, phase: 0,
-      t: 0, passed: false, dead: false,
-      solid: false,
-      crumbleTimer: 0, crumbled: false,
-      bounceBoost: 0
-    });
-
-    lastY -= 60;
-  }
-
-  const endX = startX + (count - 1) * spacing + 200;
-  const topY = lastY - baseRise - (count - 1) * 60 - 80;
-
-  orbs.push({ x: endX, y: topY, r: 18, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 25 });
-  orbs.push({ x: endX + 60, y: topY, r: 18, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 25 });
-
-/* ✅ جديد */
-const skyPU = makePowerup(W + 40 + w/2 + 50, topY, { r: 16, isSkyReward: true });
-if(skyPU) powerups.push(skyPU);
-
-  for(let i = 0; i < count - 1; i++){
-    const midX = startX + i * spacing + spacing / 2;
-    const midY = lastY + (i * 60) - 80;
-    spawnCoinCluster(midX, midY, 4);
-  }
-
-  Sfx.play(880, 0.4, 'sine', 0.04, 1320);
-}
-
 function spawnSkyPlatform(prog, s){
   const m = getMeters();
   let maxTier = 1;
@@ -5691,112 +6100,6 @@ function spawnSkyPlatform(prog, s){
   } else {
     spawnCoinCluster(W+40+w/2, rewardY, 3 + tier);
   }
-}
-
-function spawnStaircase(prog, s){
-  const count = Math.floor(WR(4, 15));
-  const isLong = count >= 9;
-
-  const startX = W + 60;
-  const startY = GROUND_Y - 100;
-
-  const speedScale = getSpeedScale();
-  const stepX = (isLong ? WR(85, 115) : WR(75, 105)) * speedScale;
-  const stepY = isLong ? WR(60, 85) : WR(55, 75);
-
-  const colors = [
-    { color:'#80C0E8', dark:'#4080B0', accent:'#C0E0FF', glow:'#80D0FF' },
-    { color:'#80D0A8', dark:'#408068', accent:'#C0FFE0', glow:'#80FFD0' },
-    { color:'#B080E8', dark:'#6040A8', accent:'#E0C0FF', glow:'#D080FF' },
-    { color:'#E8B34E', dark:'#A07028', accent:'#FFF4C0', glow:'#FFD060' },
-    { color:'#FF80C0', dark:'#A03060', accent:'#FFD0E8', glow:'#FFA0D8' }
-  ];
-
-  let currentX = startX;
-  let currentY = startY;
-  let lastWidth = 90;   /* ✅ نتذكّر آخر عرض لاستخدامه في المكافأة العلوية */
-
-  for(let i = 0; i < count; i++){
-    const w = isLong ? WR(70, 90) - i * 1.2 : WR(75, 100) - i * 2;
-    const h = 12;
-    lastWidth = w;   /* ✅ خزّن العرض */
-
-    currentX += i === 0 ? 0 : stepX;
-    currentY -= stepY;
-    currentY = Math.max(currentY, GROUND_Y - 1200);
-
-    const colIdx = Math.min(Math.floor((i / count) * colors.length), colors.length - 1);
-    const col = colors[colIdx];
-
-    const isBouncy = isLong && i > 0 && i % 4 === 0;
-    const isCrumble = isLong && i > 2 && !isBouncy && Math.random() < 0.15;
-    const isMoving = !isLong && i > 2 && Math.random() < 0.2;
-
-    obstacles.push({
-      x: currentX, w, h,
-      type: 'platform',
-      isWalk: true, isPlatform: true,
-      isStaircase: true,
-      isStaircaseLong: isLong,
-      stairIndex: i,
-      stairTotal: count,
-      platformType: isBouncy ? 'bouncy' : (isCrumble ? 'crumble' : (isMoving ? 'moving_x' : 'static')),
-      y: currentY, baseY: currentY, baseX: currentX,
-      amp: isMoving ? WR(15, 30) : 0,
-      phase: WR(0, Math.PI*2),
-      color: isBouncy ? '#E89B4C' : (isCrumble ? '#A88868' : col.color),
-      colorDark: isBouncy ? '#A06028' : (isCrumble ? '#6A4838' : col.dark),
-      accent: col.accent,
-      glow: col.glow,
-      isSkyPlatform: true,
-      skyTier: Math.min(Math.floor((i / count) * 5) + 1, 5),
-      t: 0, passed: false, dead: false,
-      solid: isBouncy || isCrumble,
-      crumbleTimer: 0, crumbled: false,
-      bounceBoost: isBouncy ? -24 : 0
-    });
-
-    if(i < count - 1){
-      const midX = currentX + stepX / 2;
-      const midY = currentY - stepY / 2 - 15;
-      spawnCoinCluster(midX, midY, i % 3 === 0 ? 4 : 3);
-    }
-
-    if(isLong && i > 0 && i % 4 === 2){
-      spawnPowerup(currentX + w/2, currentY - 30);
-    }
-  }
-
-  /* ═══ المكافأة العلوية بعد آخر منصة ═══ */
-  const topX = currentX + stepX + 20;
-  const topY = currentY - 50;
-  const topCenterX = topX + lastWidth / 2;   /* ✅ استخدم آخر عرض */
-
-  if(isLong){
-    orbs.push({ x: topX, y: topY, r: 18, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 20 });
-    orbs.push({ x: topX + 55, y: topY, r: 16, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 15 });
-    orbs.push({ x: topX - 55, y: topY, r: 16, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 15 });
-
-    /* ✅ تعزيز اختياري في القمة */
-    const stairPU = makePowerup(topCenterX, topY - 60, { r: 18, isSkyReward: true });
-    if(stairPU) powerups.push(stairPU);
-  } else {
-    const rewardRoll = Math.random();
-    if(rewardRoll < 0.35){
-      /* ✅ تعزيز في القمة */
-      const stairPU = makePowerup(topCenterX, topY, { r: 16, isSkyReward: true });
-      if(stairPU) powerups.push(stairPU);
-    } else if(rewardRoll < 0.75){
-      orbs.push({
-        x: topX, y: topY, r: 16, t: 0, dead: false,
-        color: '#FFD700', isSkyOrb: true, value: 12
-      });
-    } else {
-      spawnCoinCluster(topX, topY, 8);
-    }
-  }
-
-  Sfx.play(660, 0.3, 'sine', 0.03, 990);
 }
 
 function spawnSpring(prog, s){
@@ -6985,62 +7288,49 @@ function updateContextBanner(){
 }
 
 /* ═══════════════════════════════════════════════════════════
-   ═══════════ ALTITUDE GAUGE v2 — ALL WORLDS ════════════════
+   ═══════════ ALTITUDE GAUGE v3 — SCROLLING WINDOW ══════════
    ═══════════════════════════════════════════════════════════ */
 
-/* ═══ نقاط الانكسار: [ارتفاع بالبكسل، نسبة على المؤشر 0..1] ═══ */
-const GAUGE_BREAKPOINTS = [
-  [-3000, 0.00],   /* أعمق نقطة في الأعماق */
-  [-2600, 0.05],   /* بداية الفراغ */
-  [-1800, 0.10],
-  [-1100, 0.16],
-  [-500,  0.22],   /* بداية الكهوف */
-  [-100,  0.30],   /* حافة سطح الأرض */
-  [0,     0.38],   /* الأرض */
-  [900,   0.46],   /* بداية السماء */
-  [1400,  0.52],
-  [2000,  0.58],
-  [2700,  0.63],
-  [3500,  0.68],   /* البوابة الذهبية */
-  [6200,  0.76],   /* بداية الكواكب */
-  [16000, 0.97]    /* نهاية نبتون */
-];
+/* ✅ حجم النافذة (بالبكسل العالمي) — كل ما تراه في المؤشر */
+const GAUGE_WINDOW_PX = 2400;
 
-/* ═══ تعريف المناطق (للرسم والقراءة) ═══ */
+/* ═══ تعريف المناطق (تمتد على المحور العالمي) ═══ */
 const GAUGE_ZONE_DEFS = [
+  /* ═══ UNDERGROUND ═══ */
   { from: -Infinity, to: -2600, c1: '#4A0810', c2: '#1A0208', label: 'CORE',       icon: '⚫', accent: '#FFD060' },
   { from: -2600, to: -1800,     c1: '#040208', c2: '#000000', label: 'VOID',       icon: '🌑', accent: '#C080FF' },
   { from: -1800, to: -1100,     c1: '#1A0838', c2: '#0A0420', label: 'ABYSS',      icon: '👁',  accent: '#A080FF' },
   { from: -1100, to: -500,      c1: '#8E2018', c2: '#3A1010', label: 'MAGMA',      icon: '🌋', accent: '#FF5020' },
   { from: -500,  to: -100,      c1: '#5E4028', c2: '#2A1810', label: 'CAVES',      icon: '🕳',  accent: '#8E6A48' },
+
+  /* ═══ GROUND ═══ */
   { from: -100,  to: 900,       c1: '#6B9B37', c2: '#5E3223', label: 'GROUND',     icon: '🌍', accent: '#E86A2E' },
+
+  /* ═══ SKY ═══ */
   { from: 900,   to: 1400,      c1: '#E8F4FF', c2: '#A8D8FF', label: 'CLOUDS',     icon: '☁',  accent: '#FFFFFF' },
   { from: 1400,  to: 2000,      c1: '#8E7A68', c2: '#4A5878', label: 'RUINS',      icon: '🏛', accent: '#C8B8A0' },
   { from: 2000,  to: 2700,      c1: '#5A5A70', c2: '#2A2A40', label: 'STORM',      icon: '⛈',  accent: '#FFE060' },
   { from: 2700,  to: 3500,      c1: '#B080E8', c2: '#6040A8', label: 'CRYSTAL',    icon: '💎', accent: '#E0D0FF' },
   { from: 3500,  to: 6200,      c1: '#E8B34E', c2: '#A07028', label: 'GOLDEN GATE',icon: '✨', accent: '#FFF4C0' },
-  { from: 6200,  to: 16000,     c1: '#80C0FF', c2: '#2030A0', label: 'PLANETS',    icon: '🪐', accent: '#80C0FF' },
+
+  /* ═══ PLANETS — كل كوكب منفصل ═══ */
+  { from: 6200,  to: 7600,      c1: '#6A5040', c2: '#1A1A1A', label: 'MERCURY',    icon: '☿', accent: '#FFA060' },
+  { from: 7600,  to: 9000,      c1: '#E8A050', c2: '#8A3A20', label: 'VENUS',      icon: '♀', accent: '#FFD060' },
+  { from: 9000,  to: 10400,     c1: '#9E4A28', c2: '#5A2810', label: 'MARS',       icon: '♂', accent: '#FF7030' },
+  { from: 10400, to: 11800,     c1: '#8A6A48', c2: '#4A3020', label: 'JUPITER',    icon: '♃', accent: '#E8B890' },
+  { from: 11800, to: 13200,     c1: '#C0A878', c2: '#6A5838', label: 'SATURN',     icon: '♄', accent: '#FFE8B0' },
+  { from: 13200, to: 14600,     c1: '#4A8890', c2: '#244850', label: 'URANUS',     icon: '♅', accent: '#80FFFF' },
+  { from: 14600, to: 16000,     c1: '#2A3888', c2: '#101840', label: 'NEPTUNE',    icon: '♆', accent: '#80C0FF' },
   { from: 16000, to: Infinity,  c1: '#0A0420', c2: '#02000A', label: 'DEEP SPACE', icon: '🌟', accent: '#FFD060' }
 ];
 
-/* ═══ حساب موضع المؤشر على المقياس (0 = أسفل، 1 = أعلى) ═══ */
-function altitudeToGaugePct(alt){
-  const bp = GAUGE_BREAKPOINTS;
-
-  if(alt <= bp[0][0]) return bp[0][1];
-  if(alt >= bp[bp.length - 1][0]) return bp[bp.length - 1][1];
-
-  for(let i = 0; i < bp.length - 1; i++){
-    const [a1, p1] = bp[i];
-    const [a2, p2] = bp[i + 1];
-    if(alt >= a1 && alt <= a2){
-      const span = a2 - a1;
-      if(span <= 0) return p1;
-      const t = (alt - a1) / span;
-      return p1 + (p2 - p1) * t;
-    }
+/* ═══ ارتفاع افتراضي (يدعم عالم الكواكب) ═══ */
+function getGaugeAltitudePx(){
+  if(G.realm === REALM.PLANET && G.planet){
+    /* نضع كل كوكب في منتصف نطاقه */
+    return PLANET_ENTER_ALT + (G.planetIdx + 0.5) * PLANET_SPACING;
   }
-  return 0.5;
+  return getPlayerAltitude();
 }
 
 /* ═══ الحصول على المنطقة الحالية ═══ */
@@ -7048,28 +7338,17 @@ function getCurrentGaugeZone(alt){
   for(const z of GAUGE_ZONE_DEFS){
     if(alt >= z.from && alt < z.to) return z;
   }
-  return GAUGE_ZONE_DEFS[5]; /* GROUND */
+  return GAUGE_ZONE_DEFS[5];  /* GROUND */
 }
 
-/* ═══ ارتفاع "افتراضي" لمؤشر الارتفاع (يدعم كل العوالم) ═══ */
-function getGaugeAltitudePx(){
-  /* ═══ في عالم الكواكب: نستخدم ارتفاعاً افتراضياً حسب ترتيب الكوكب ═══ */
-  if(G.realm === REALM.PLANET && G.planet){
-    return PLANET_ENTER_ALT + (G.planetIdx + 0.5) * PLANET_SPACING;
-  }
-  /* ═══ الأنماط الأخرى: الارتفاع الحقيقي للاعب ═══ */
-  return getPlayerAltitude();
-}
-
-/* ═══ بناء مناطق المؤشر مرة واحدة عند الإقلاع ═══ */
-function buildGaugeZones(){
+/* ═══ إنشاء بركة DOM للمناطق مرة واحدة ═══ */
+function ensureGaugeZonePool(){
   const track = document.getElementById('gauge-track');
   if(!track){
     console.warn('[Gauge] #gauge-track NOT FOUND');
     return;
   }
-  if(track._built) return;
-  track._built = true;
+  if(track._pool) return;  /* موجود مسبقاً */
 
   const marker = document.getElementById('gauge-marker');
   if(!marker){
@@ -7077,46 +7356,72 @@ function buildGaugeZones(){
     return;
   }
 
-  /* احذف أي مناطق قديمة (باستثناء المؤشر) */
+  /* احذف المناطق الثابتة القديمة (إن وُجدت في HTML) */
   Array.from(track.children).forEach(child => {
     if(child.id !== 'gauge-marker') child.remove();
   });
 
-  /* أضف المناطق */
-  for(const z of GAUGE_ZONE_DEFS){
-    const fromPct = altitudeToGaugePct(z.from === -Infinity ? -3000 : z.from);
-    const toPct   = altitudeToGaugePct(z.to === Infinity ? 16000 : z.to);
-
+  /* ابنِ pool من عناصر قابلة لإعادة الاستخدام */
+  const pool = [];
+  for(const def of GAUGE_ZONE_DEFS){
     const el = document.createElement('div');
     el.className = 'gauge-zone';
-    el.style.bottom = (fromPct * 100) + '%';
-    el.style.height = Math.max(0.5, (toPct - fromPct) * 100) + '%';
-    el.style.background = `linear-gradient(180deg, ${z.c1}, ${z.c2})`;
-    el.title = z.label;
-    el.setAttribute('data-zone', z.label);
-
+    el.style.display = 'none';
+    el.setAttribute('data-zone', def.label);
+    el.title = def.label;
     track.insertBefore(el, marker);
+    pool.push({ el, def });
+  }
+  track._pool = pool;
+}
+
+/* ═══ رسم المناطق داخل النافذة ═══ */
+function renderGaugeZones(windowMin, windowSpan){
+  const track = document.getElementById('gauge-track');
+  if(!track || !track._pool) return;
+
+  for(const { el, def } of track._pool){
+    const zFrom = (def.from === -Infinity) ? -999999 : def.from;
+    const zTo   = (def.to   === Infinity)  ?  999999 : def.to;
+
+    /* ═══ اقصر المنطقة على النافذة ═══ */
+    const visFrom = Math.max(zFrom, windowMin);
+    const visTo   = Math.min(zTo,   windowMin + windowSpan);
+
+    if(visFrom >= visTo){
+      if(el.style.display !== 'none') el.style.display = 'none';
+      continue;
+    }
+
+    /* ═══ نسب على الشريط (0 = أسفل، 1 = أعلى) ═══ */
+    const fromPct = (visFrom - windowMin) / windowSpan;
+    const toPct   = (visTo   - windowMin) / windowSpan;
+
+    el.style.display = 'block';
+    el.style.bottom = (fromPct * 100) + '%';
+    el.style.height = ((toPct - fromPct) * 100) + '%';
+    el.style.background = `linear-gradient(180deg, ${def.c1}, ${def.c2})`;
   }
 }
 
-/* ═══ التحديث الديناميكي للمؤشر ═══ */
+/* ═══ التحديث الديناميكي ═══ */
 function updateAltitudeGauge(){
   const gauge = document.getElementById('altitude-gauge');
   if(!gauge) return;
 
-  /* إخفاء في ASCEND (له بيئته الخاصة) */
+  /* ASCEND له نظامه الخاص */
   if(G.mode === 'ASCEND'){
     gauge.classList.remove('show');
     return;
   }
 
-  /* في PLANET: يُظهر دائماً */
-  const inPlanet = (G.realm === REALM.PLANET);
+  /* في ASCEND نستخدم sky colors، لا نحتاج المؤشر */
 
-  /* في WALK العادي: نخفي إذا كنا قريبين جداً من 0 */
+  const inPlanet = (G.realm === REALM.PLANET);
   const altPx = getGaugeAltitudePx();
   const altM  = altPx / PIXELS_PER_METER;
 
+  /* إخفاء عندما نكون قريبين جداً من الأرض (ولسنا في الكوكب) */
   if(!inPlanet && Math.abs(altM) < 3){
     gauge.classList.remove('show');
     return;
@@ -7124,21 +7429,27 @@ function updateAltitudeGauge(){
 
   gauge.classList.add('show');
 
-  /* ═══ موضع المؤشر على المقياس ═══ */
-  const pct = clamp(altitudeToGaugePct(altPx), 0, 1);
+  /* ═══════════════════════════════════════════════════════
+     ✅ النافذة تتمركز حول موضع اللاعب
+     ═══════════════════════════════════════════════════════ */
+  const windowMin = altPx - GAUGE_WINDOW_PX / 2;
+
+  renderGaugeZones(windowMin, GAUGE_WINDOW_PX);
+
+  /* ═══ المؤشر دائماً في المنتصف (النافذة تتحرك مع اللاعب) ═══ */
   const marker = document.getElementById('gauge-marker');
   if(marker){
-    marker.style.bottom = (pct * 100) + '%';
+    marker.style.bottom = '50%';
   }
 
-  /* ═══ قراءة الارتفاع بالأمتار ═══ */
+  /* ═══ قراءة الارتفاع ═══ */
   const valEl = document.getElementById('gauge-val');
   if(valEl){
     const rounded = Math.round(altM);
     valEl.textContent = (rounded > 0 ? '+' : '') + rounded;
   }
 
-  /* ═══ اسم المنطقة + الأيقونة ═══ */
+  /* ═══ المنطقة الحالية ═══ */
   const zone = getCurrentGaugeZone(altPx);
   const zoneLabel = document.getElementById('gauge-zone-label');
   if(zoneLabel && zone){
@@ -7146,7 +7457,7 @@ function updateAltitudeGauge(){
     zoneLabel.style.color = zone.accent;
   }
 
-  /* ═══ لون إطار القراءة حسب المنطقة ═══ */
+  /* ═══ لون الإطار ═══ */
   const readout = document.getElementById('gauge-readout');
   if(readout && zone){
     readout.style.borderColor = zone.accent + '80';
@@ -7160,6 +7471,52 @@ function updateAltitudeGauge(){
 function updateHudOverlays(){
   updateContextBanner();
   updateAltitudeGauge();
+  updatePlanetHUD();
+}
+
+function updatePlanetHUD(){
+  if(G.realm !== REALM.PLANET || !G.planet){
+    const el = document.getElementById('planet-hud');
+    if(el) el.style.opacity = '0';
+    return;
+  }
+
+  let el = document.getElementById('planet-hud');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'planet-hud';
+    el.style.cssText = `
+      position:absolute;top:112px;right:14px;
+      display:flex;flex-direction:column;gap:4px;
+      padding:8px 10px;border-radius:12px;
+      background:rgba(15,12,10,.78);
+      backdrop-filter:blur(12px);
+      border:1px solid rgba(255,255,255,.12);
+      color:#fff;font-family:'Space Grotesk',sans-serif;
+      font-size:9.5px;font-weight:700;letter-spacing:.5px;
+      z-index:6;pointer-events:none;
+      transition:opacity .3s;
+    `;
+    document.getElementById('wrap').appendChild(el);
+  }
+
+  el.style.opacity = '1';
+  const p = G.planet;
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+      <span style="font-size:14px;">${p.icon}</span>
+      <span style="color:${p.accent};font-weight:800;letter-spacing:1.5px;">${p.name}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;gap:12px;opacity:.75;">
+      <span>🌡 ${p.temperature}</span>
+      <span>⚖ ${p.gravity.toFixed(2)}g</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;gap:12px;opacity:.75;margin-top:2px;">
+      <span>💨 ${(p.wind * 100).toFixed(0)}%</span>
+      <span>☢ ${(p.radiation * 100).toFixed(0)}%</span>
+    </div>
+  `;
 }
 
 function updateLevelUI(){
@@ -7383,6 +7740,12 @@ function enterPlanetRealm(planet){
   obstacles = []; orbs = []; coins = []; powerups = [];
   particles = []; floats = [];
   G.planetFloors = [];
+  /* ✅ إصلاح: تصفير الطقس الأرضي عند دخول الكوكب */
+G.weather = [];
+
+/* ✅ إصلاح: إيقاف أي برق أرضي */
+G.lightningFlash = 0;
+G.lightningTimer = 0;
 
   /* ضع اللاعب على سطح الكوكب */
   P.x = P.baseX;
@@ -7448,7 +7811,47 @@ function enterPlanetRealm(planet){
   }
 
   showBanner('🪐 ' + planet.name, planet.ar + ' · ' + planet.tempText);
-  Sfx.play(660, 0.8, 'sine', 0.08, 1760);
+/* ═══ تأثير Warp — شاشة بيضاء + جسيمات ═══ */
+G.flash = 1.0;
+shake(35);
+haptic(60);
+
+/* ═══ انفجار جسيمات ملونة ═══ */
+for(let i = 0; i < 100; i++){
+  const a = (i / 100) * Math.PI * 2;
+  const speed = rand(8, 22);
+  particles.push({
+    x: P.x, y: P.y,
+    vx: Math.cos(a) * speed,
+    vy: Math.sin(a) * speed,
+    life: 1.8, decay: 0.014,
+    color: i % 3 === 0 ? planet.accent : (i % 3 === 1 ? '#FFFFFF' : planet.groundTop),
+    size: rand(3, 8)
+  });
+}
+
+/* ═══ حلقات صدمية متعددة ═══ */
+for(let ring = 0; ring < 5; ring++){
+  const ringDelay = ring * 80;
+  setTimeout(() => {
+    for(let i = 0; i < 24; i++){
+      const a = (i / 24) * Math.PI * 2;
+      const speed = 6 + ring * 2;
+      particles.push({
+        x: P.x, y: P.y,
+        vx: Math.cos(a) * speed,
+        vy: Math.sin(a) * speed,
+        life: 1.2, decay: 0.02,
+        color: planet.accent,
+        size: 3 + ring
+      });
+    }
+  }, ringDelay);
+}
+
+/* ═══ بانر ═══ */
+showBanner('🪐 ' + planet.name, planet.ar + ' · ' + planet.temperature);
+Sfx.play(660, 0.8, 'sine', 0.08, 1760);
   shake(25); haptic(45);
 
   /* انفجار بصري */
@@ -7475,6 +7878,154 @@ function exitPlanetRealm(){
   G.realmTransition = 0;
   G.camY = 0;
   G.camTargetY = 0;
+}
+
+/* ═══ التقدم للكوكب التالي ═══ */
+function advanceToNextPlanet(){
+  if(G.realm !== REALM.PLANET) return;
+
+  const nextIdx = G.planetIdx + 1;
+
+  /* ═══ أنجزت كل الكواكب ═══ */
+  if(nextIdx >= PLANETS.length){
+    showBanner('🏆 ALL PLANETS CLEARED', 'أكملت المجموعة الشمسية!');
+    Sfx.reward(); haptic(50); shake(30);
+    G.flash = 1;
+    /* احتفظ بالعملات والكرات */
+    const preservedCoins = G.runCoins;
+    const preservedOrbs  = G.orbCount;
+    returnToEarth();
+    G.runCoins = preservedCoins;
+    G.orbCount = preservedOrbs;
+    return;
+  }
+
+  /* ═══ انتقل للكوكب التالي ═══ */
+  const nextPlanet = PLANETS[nextIdx];
+
+  /* احفظ المكاسب */
+  const preservedCoins = G.runCoins;
+  const preservedOrbs  = G.orbCount;
+
+  showBanner('🪐 ' + nextPlanet.name,
+             nextPlanet.ar + ' · كوكب ' + (nextIdx + 1) + ' / ' + PLANETS.length);
+  Sfx.reward(); haptic(35); shake(20);
+  G.flash = 0.6;
+
+  enterPlanetRealm(nextPlanet);
+
+  /* استرجع المكاسب */
+  G.runCoins = preservedCoins;
+  G.orbCount = preservedOrbs;
+}
+
+/* ============================================================
+   ═══════════ TRANSITION TO NEXT PLANET ═══════════════════
+   انتقال سينمائي ناعم بين الكواكب
+   ============================================================ */
+function transitionToNextPlanet(){
+  if(G.realm !== REALM.PLANET || G._transitioning) return;
+  G._transitioning = true;
+
+  const nextIdx = G.planetIdx + 1;
+
+  /* ═══ آخر كوكب: أكملت المجموعة الشمسية! ═══ */
+  if(nextIdx >= PLANETS.length){
+    showBanner('🏆 ALL PLANETS CLEARED', 'أكملت المجموعة الشمسية!');
+    Sfx.reward(); haptic(80); shake(40);
+    G.flash = 1;
+
+    /* احتفظ بالمكاسب */
+    const preservedCoins = G.runCoins;
+    const preservedOrbs  = G.orbCount;
+
+    setTimeout(() => {
+      returnToEarth();
+      G.runCoins = preservedCoins;
+      G.orbCount = preservedOrbs;
+      G._transitioning = false;
+    }, 1200);
+    return;
+  }
+
+  const nextPlanet = PLANETS[nextIdx];
+  const preservedCoins = G.runCoins;
+  const preservedOrbs  = G.orbCount;
+
+  /* ═══ 1) تأثير Warp بصري مكثّف ═══ */
+  G.flash = 1;
+  shake(30);
+  haptic(50);
+
+  /* ═══ 2) انفجار جسيمات متسلسل ═══ */
+  for(let wave = 0; wave < 3; wave++){
+    setTimeout(() => {
+      for(let i = 0; i < 60; i++){
+        const a = (i / 60) * Math.PI * 2;
+        const speed = rand(6, 16) + wave * 4;
+        particles.push({
+          x: P.x, y: P.y,
+          vx: Math.cos(a) * speed,
+          vy: Math.sin(a) * speed,
+          life: 1.6, decay: 0.014,
+          color: wave % 2 === 0 ? nextPlanet.accent : '#FFFFFF',
+          size: rand(3, 7)
+        });
+      }
+    }, wave * 150);
+  }
+
+  /* ═══ 3) صوت الانتقال ═══ */
+  Sfx.play(440, 0.6, 'sine', 0.08, 1320);
+
+  /* ═══ 4) بانر الكوكب الجديد ═══ */
+  showBanner('🪐 ' + nextPlanet.name,
+             nextPlanet.ar + ' · كوكب ' + (nextIdx + 1) + '/' + PLANETS.length);
+
+  /* ═══ 5) تأخير قصير ثم الانتقال الفعلي ═══ */
+  setTimeout(() => {
+    enterPlanetRealm(nextPlanet);
+
+    /* استرجع المكاسب */
+    G.runCoins = preservedCoins;
+    G.orbCount = preservedOrbs;
+    G._transitioning = false;
+  }, 700);
+}
+
+/* ═══ العودة للأرض (عبر السقوط في السماء) ═══ */
+function returnToEarth(){
+  if(G.realm !== REALM.PLANET) return;
+
+  /* ═══ رجّع اللاعب لعالم السماء على ارتفاع منخفض ═══ */
+  G.realmFrom = REALM.PLANET;
+  G.realmTo = REALM.SKY;
+  G.realm = REALM.SKY;
+  G.realmTransition = 0;
+  G.skyLayerIdx = 0;
+
+  /* نظّف بيانات الكوكب */
+  G.planet = null;
+  G.planetIdx = 0;
+  G.planetFloors = [];
+  G.planetEntering = 0;
+
+  /* ضع اللاعب في السماء قريباً من الأرض */
+  P.x = P.baseX;
+  P.y = GROUND_Y - 800;    // فوق عتبة الخروج (700) بقليل
+  P.vx = 0;
+  P.vy = 3;                 // ابدأ السقوط بسرعة
+  P.onGround = false;
+  P.jumps = 0;
+  P.trail = [];
+
+  /* ✅ إعادة الكاميرا لتتبع الارتفاع */
+  G.camY = 800 - 220;       // TRIGGER = 220
+  G.camTargetY = G.camY;
+  G.camYUnder = 0;
+
+  showBanner('🏠 RETURNING', 'تسقط نحو الأرض...');
+  Sfx.reward(); haptic(25);
 }
 
 /* التحقق من الانتقال بين العوالم */
@@ -7698,6 +8249,8 @@ if(G.mode === 'ASCEND'){
 
   updateSceneTransition();
   updateWeather();
+
+if(G.realm === REALM.PLANET) updatePlanetEffects();
 
   if(G.mode === 'WALK') checkSkyZoneSpawn();
 if(G.mode === 'WALK') updateCamera();
@@ -7965,7 +8518,7 @@ else if(G.mode !== 'ASCEND' && G.camY > 0.5){   // ✅ استثناء ASCEND
       }
 
       /* السقوط من خلال حفرة → الخروج من الكوكب */
-/* السقوط من خلال حفرة → الكوكب التالي */
+/* السقوط من خلال حفرة → الخروج من الكوكب */
 if(!landed){
   const feetY = P.y + P.r;
   let overHole = false;
@@ -7978,37 +8531,32 @@ if(!landed){
     P.vy = 0;
     P.onGround = true;
     P.jumps = 0;
-  } else if(overHole){
-    P.onGround = false;
-    if(P.y > H + 200){
-      /* ✅✅✅ التقدم للكوكب التالي ✅✅✅ */
-      const nextIdx = G.planetIdx + 1;
-      
-      if(nextIdx >= PLANETS.length){
-        /* أكملت كل الكواكب! → عد للأرض كبداية جديدة */
-        showBanner('🏆 ALL PLANETS CLEARED', 'أكملت المجموعة الشمسية!');
-        Sfx.reward(); haptic(50); shake(30);
-        exitPlanetRealm();
-      } else {
-        /* ✅ انتقل للكوكب التالي */
-        const nextPlanet = PLANETS[nextIdx];
-        showBanner('🪐 ' + nextPlanet.name, 
-                   nextPlanet.ar + ' · كوكب ' + (nextIdx + 1) + ' / ' + PLANETS.length);
-        Sfx.reward(); haptic(30); shake(15);
-        
-        /* ✅ احفظ عدد النقاط المكتسبة قبل المسح */
-        const preservedCoins = G.runCoins;
-        const preservedOrbs = G.orbCount;
-        
-        enterPlanetRealm(nextPlanet);
-        
-        /* استرجع النقاط */
-        G.runCoins = preservedCoins;
-        G.orbCount = preservedOrbs;
-      }
-      return;
-    }
+} else if(overHole){
+  P.onGround = false;
+
+  /* ═══ تحديد نوع الحفرة ═══ */
+  let activeHole = null;
+  for(const f of G.planetFloors){
+    if(f.dead || !f.isPlanetHole) continue;
+    if(P.x >= f.x && P.x <= f.x + f.w){ activeHole = f; break; }
   }
+
+  if(P.y > H + 200){
+    /* ═══ العبور للكوكب التالي ═══ */
+    if(activeHole && activeHole.isPlanetNext){
+      transitionToNextPlanet();
+    }
+    /* ═══ العودة للأرض ═══ */
+    else if(activeHole && activeHole.isPlanetReturn){
+      returnToEarth();
+    }
+    /* ═══ احتياطي: إن لم تُحدَّد ═══ */
+    else {
+      transitionToNextPlanet();
+    }
+    return;
+  }
+}
 }
 
       P.x = P.baseX;
@@ -8673,14 +9221,15 @@ if(G.spawnCd <= 0){
   }
 
   /* ═══ تحديث أرضيات الكوكب العائمة ═══ */
-  if(G.realm === REALM.PLANET){
-    for(const f of G.planetFloors){
-      if(f.dead) continue;
-      f.t++;
+if(G.realm === REALM.PLANET){
+  for(const f of G.planetFloors){
+    if(f.dead) continue;
+    f.t++;
 
-      if(!f.isPlanetHole){
-        f.x -= G.speed;
-      }
+    /* ✅ كل شيء يتحرك إلا الأرضية الرئيسية */
+    if(!f.isPlanetFloor){
+      f.x -= G.speed;
+    }
 
       if(f.isPlanetFloat && f.falling){
         f.fallVy += 0.8;
@@ -11984,6 +12533,171 @@ function getRealmSkyBlend(){
 /* ============================================================
    ==================== Scenery ==============================
    ============================================================ */
+/* ============================================================
+   ═══════════════ PLANET RINGS — الحلقات ══════════════════
+   ============================================================ */
+function drawPlanetRings(){
+  if(G.realm !== REALM.PLANET || !G.planet) return;
+  const p = G.planet;
+  if(!p.rings) return;
+
+  const r = p.rings;
+  const cx = W * 0.5;
+  const cy = H * 0.75;          /* الحلقات تظهر في الأفق */
+  const t = G.t;
+
+  ctx.save();
+
+  /* ═══ الحلقات العمودية (أورانوس) ═══ */
+  if(r.vertical){
+    ctx.translate(cx, cy);
+    ctx.rotate(Math.PI * 0.4 + Math.sin(t * 0.005) * 0.05);
+
+    for(let ring = 0; ring < 5; ring++){
+      const innerR = r.innerR + ring * 15;
+      const outerR = innerR + 10;
+      ctx.strokeStyle = r.colors[ring % r.colors.length];
+      ctx.globalAlpha = r.alpha * (1 - ring * 0.1);
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, outerR, outerR * 0.15, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+    return;
+  }
+
+  /* ═══ الحلقات الأفقية (المشتري، زحل، نبتون) ═══ */
+  ctx.translate(cx, cy);
+  ctx.rotate(-r.tilt * 0.3 + Math.sin(t * 0.003) * 0.02);
+
+  const segmentCount = r.segmented ? 4 : 1;
+  for(let seg = 0; seg < segmentCount; seg++){
+    const gapAngle = (seg / segmentCount) * Math.PI * 2;
+    const arcLength = (Math.PI * 2 / segmentCount) * 0.9;
+
+    for(let ring = 0; ring < r.colors.length; ring++){
+      const ringRatio = ring / r.colors.length;
+      const innerR = r.innerR + (r.outerR - r.innerR) * ringRatio;
+      const outerR = innerR + (r.outerR - r.innerR) * 0.15;
+
+      ctx.strokeStyle = r.colors[ring];
+      ctx.globalAlpha = r.alpha * (1 - ringRatio * 0.3);
+
+      if(r.detailed){
+        /* حلقات مفصلة: نقاط صغيرة على المسار */
+        ctx.lineWidth = 2;
+        const dotCount = 60;
+        for(let d = 0; d < dotCount; d++){
+          const a = (d / dotCount) * Math.PI * 2 + gapAngle;
+          const rr = (innerR + outerR) / 2;
+          const px = Math.cos(a) * rr;
+          const py = Math.sin(a) * rr * 0.28;
+          ctx.beginPath();
+          ctx.arc(px, py, 1.2, 0, Math.PI * 2);
+          ctx.fillStyle = r.colors[ring];
+          ctx.fill();
+        }
+      } else {
+        /* حلقات بسيطة: أقواس */
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, outerR, outerR * 0.28, 0, gapAngle, gapAngle + arcLength);
+        ctx.stroke();
+      }
+    }
+  }
+
+  ctx.restore();
+}
+
+/* ============================================================
+   ═══════════════ PLANET MOONS — الأقمار ══════════════════
+   ============================================================ */
+function drawPlanetMoons(){
+  if(G.realm !== REALM.PLANET || !G.planet) return;
+  const p = G.planet;
+  if(!p.moons || p.moons.length === 0) return;
+
+  const cx = W * 0.5;
+  const cy = H * 0.3;
+  const t = G.t;
+
+  /* ترتيب حسب z للرسم من الخلف للأمام */
+  const sorted = p.moons.map(m => ({
+    moon: m,
+    pos: getMoonPosition(m, t, cx, cy)
+  })).sort((a, b) => a.pos.z - b.pos.z);
+
+  for(const item of sorted){
+    const { moon, pos } = item;
+
+    /* حجم حسب المسافة */
+    const scale = 1 - (moon.dist / 400) * 0.5;
+    const r = moon.r * scale;
+
+    /* ═══ هالة القمر (إن وُجد غلاف جوي) ═══ */
+    if(moon.atmosphere){
+      const halo = ctx.createRadialGradient(pos.x, pos.y, r * 0.5, pos.x, pos.y, r * 3);
+      halo.addColorStop(0, moon.atmosphere + '60');
+      halo.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, r * 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    /* ═══ جسم القمر ═══ */
+    const grad = ctx.createRadialGradient(
+      pos.x - r * 0.3, pos.y - r * 0.3, r * 0.1,
+      pos.x, pos.y, r
+    );
+    grad.addColorStop(0, mixColor(moon.color, '#FFFFFF', 0.4));
+    grad.addColorStop(0.6, moon.color);
+    grad.addColorStop(1, mixColor(moon.color, '#000000', 0.4));
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* ═══ تفاصيل سطحية ═══ */
+    if(!moon.icy && r > 3){
+      ctx.fillStyle = 'rgba(0,0,0,0.15)';
+      const craters = [
+        { x: -r * 0.3, y: -r * 0.2, r: r * 0.2 },
+        { x: r * 0.25, y: r * 0.3, r: r * 0.15 },
+        { x: -r * 0.1, y: r * 0.4, r: r * 0.12 }
+      ];
+      for(const c of craters){
+        ctx.beginPath();
+        ctx.arc(pos.x + c.x, pos.y + c.y, c.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    /* ═══ براكين (Io) ═══ */
+    if(moon.volcanic && Math.random() < 0.02){
+      const vx = pos.x + rand(-r * 0.5, r * 0.5);
+      const vy = pos.y + rand(-r * 0.5, r * 0.5);
+      ctx.fillStyle = '#FF5020';
+      ctx.shadowColor = '#FF5020';
+      ctx.shadowBlur = 6;
+      ctx.beginPath();
+      ctx.arc(vx, vy, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    /* ═══ اسم القمر (للقمر الرئيسي) ═══ */
+    if(p.moons.indexOf(moon) === 0 && p.tier >= 3){
+      ctx.font = 'bold 8px "Space Grotesk", sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.textAlign = 'center';
+      ctx.fillText(moon.name, pos.x, pos.y + r + 10);
+    }
+  }
+}
+
 function drawSky(){
   const s = G.currentScene;
 
@@ -12018,45 +12732,202 @@ function drawSky(){
   }
 
     /* ═══ PLANET SKY ═══ */
-  if(G.realm === REALM.PLANET && G.planet){
-    const p = G.planet;
-    const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, p.sky);
-    g.addColorStop(1, p.skyBot);
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
+/* ═══ PLANET SKY v2 — مطوّر بالكامل ═══ */
+if(G.realm === REALM.PLANET && G.planet){
+  const p = G.planet;
+  const t = G.t;
 
-    /* هالة الكوكب */
-    if(p.haze){
-      ctx.fillStyle = p.haze;
-      ctx.fillRect(0, 0, W, H);
+  /* ═══ 1) تدرج السماء الأساسي ═══ */
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, p.sky);
+  g.addColorStop(1, p.skyBot);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  /* ═══ 2) طبقات الغلاف الجوي ═══ */
+  if(p.atmosphere){
+    const atm = p.atmosphere;
+    const layers = atm.layers || 3;
+    for(let i = 0; i < layers; i++){
+      const layerAlpha = atm.density * 0.18 * (1 - i * 0.25);
+      const yOffset = i * (H / layers);
+      const atmGrad = ctx.createLinearGradient(0, yOffset, 0, yOffset + H / layers);
+      atmGrad.addColorStop(0, 'rgba(0,0,0,0)');
+      atmGrad.addColorStop(0.5, atm.color);
+      atmGrad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalAlpha = layerAlpha;
+      ctx.fillStyle = atmGrad;
+      ctx.fillRect(0, yOffset, W, H / layers);
+    }
+    ctx.globalAlpha = 1;
+
+    /* ═══ 2b) الشرائط الأفقية (للمشتري وزحل) ═══ */
+    if(atm.bands){
+      ctx.save();
+      ctx.globalAlpha = 0.15;
+      for(let i = 0; i < 8; i++){
+        const bandY = (i / 8) * H + Math.sin(t * 0.002 + i) * 12;
+        const bandH = 20 + Math.sin(i * 1.7) * 12;
+        ctx.fillStyle = i % 2 === 0 ? atm.color : mixColor(atm.color, '#FFFFFF', 0.3);
+        ctx.fillRect(0, bandY, W, bandH);
+      }
+      ctx.restore();
     }
 
-    /* الشمس البعيدة */
-    const sunX = W * 0.85;
-    const sunY = H * 0.15;
-    const sunSize = 20 * p.sunBrightness;
-    const sunGrad = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunSize * 8);
-    sunGrad.addColorStop(0, '#FFF8E0');
-    sunGrad.addColorStop(0.3, p.accent);
-    sunGrad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = sunGrad;
-    ctx.beginPath(); ctx.arc(sunX, sunY, sunSize * 8, 0, Math.PI*2); ctx.fill();
+    /* ═══ 2c) الشفق القطبي (لأورانوس ونبتون) ═══ */
+    if(atm.aurora){
+      ctx.save();
+      ctx.globalAlpha = 0.35 + Math.sin(t * 0.03) * 0.15;
+      const auroraGrad = ctx.createLinearGradient(0, 0, 0, H * 0.4);
+      const hue = (t * 0.5) % 360;
+      auroraGrad.addColorStop(0, `hsla(${140 + Math.sin(t*0.02)*30}, 90%, 60%, 0.6)`);
+      auroraGrad.addColorStop(0.5, `hsla(${180 + Math.sin(t*0.03)*30}, 80%, 55%, 0.35)`);
+      auroraGrad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = auroraGrad;
 
-    ctx.fillStyle = '#FFFFFF';
-    ctx.beginPath(); ctx.arc(sunX, sunY, sunSize * 0.3, 0, Math.PI*2); ctx.fill();
-
-    /* نجمة الأرض البعيدة */
-    const earthX = W * 0.2;
-    const earthY = H * 0.25;
-    ctx.fillStyle = '#4080FF';
-    ctx.shadowColor = '#80C0FF';
-    ctx.shadowBlur = 12;
-    ctx.beginPath(); ctx.arc(earthX, earthY, 5, 0, Math.PI*2); ctx.fill();
-    ctx.shadowBlur = 0;
-
-    return;
+      /* موجات شفق متعددة */
+      for(let wave = 0; wave < 4; wave++){
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        for(let x = 0; x <= W; x += 20){
+          const wy = Math.sin(x * 0.02 + t * 0.02 + wave) * 30
+                    + Math.sin(x * 0.05 + t * 0.03 + wave * 1.5) * 15
+                    + wave * 25 + 20;
+          ctx.lineTo(x, wy);
+        }
+        ctx.lineTo(W, 0);
+        ctx.closePath();
+        ctx.globalAlpha = 0.1;
+        ctx.fill();
+      }
+      ctx.restore();
+    }
   }
+
+  /* ═══ 3) النجوم (كلما بعدنا عن الشمس) ═══ */
+  const starDensity = 1 - Math.min(1, p.sunBrightness);
+  if(starDensity > 0.2){
+    for(let i = 0; i < 80; i++){
+      const sx = (i * 137) % W;
+      const sy = (i * 89) % (H * 0.7);
+      const twinkle = 0.5 + Math.sin(t * 0.03 + i) * 0.5;
+      ctx.globalAlpha = starDensity * twinkle * 0.7;
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath();
+      ctx.arc(sx, sy, 1 + (i % 3) * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /* ═══ 4) الشمس البعيدة ═══ */
+  const sunX = W * 0.85;
+  const sunY = H * 0.15;
+  const sunSize = 20 * (p.sunSize || 1);
+  const sunGrad = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunSize * 8);
+  sunGrad.addColorStop(0, '#FFF8E0');
+  sunGrad.addColorStop(0.3, p.accent);
+  sunGrad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = sunGrad;
+  ctx.beginPath();
+  ctx.arc(sunX, sunY, sunSize * 8, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.shadowColor = '#FFF8E0';
+  ctx.shadowBlur = 20;
+  ctx.beginPath();
+  ctx.arc(sunX, sunY, sunSize * 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  /* ═══ 5) الأرض البعيدة (إن كانت مرئية) ═══ */
+  if(p.earthVisible){
+    const earthX = W * 0.18;
+    const earthY = H * 0.22;
+    const earthSize = 4 + p.tier * 0.3;
+
+    ctx.shadowColor = '#80C0FF';
+    ctx.shadowBlur = 14;
+    ctx.fillStyle = '#4080FF';
+    ctx.beginPath();
+    ctx.arc(earthX, earthY, earthSize, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* القارات */
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#40C080';
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath();
+    ctx.arc(earthX - 1, earthY - 1, earthSize * 0.4, 0, Math.PI * 2);
+    ctx.arc(earthX + 2, earthY + 1, earthSize * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    /* تسمية صغيرة */
+    if(p.tier >= 3){
+      ctx.font = 'bold 8px "Space Grotesk", sans-serif';
+      ctx.fillStyle = 'rgba(128,192,255,0.6)';
+      ctx.textAlign = 'center';
+      ctx.fillText('EARTH', earthX, earthY + earthSize + 10);
+    }
+  }
+
+  /* ═══ 6) البقعة الحمراء الكبرى (المشتري) ═══ */
+  if(p.hasGreatSpot){
+    const spotX = W * 0.72;
+    const spotY = H * 0.42;
+    const spotR = 42;
+    const spotGrad = ctx.createRadialGradient(spotX, spotY, 5, spotX, spotY, spotR);
+    spotGrad.addColorStop(0, '#D04030');
+    spotGrad.addColorStop(0.5, '#C03020');
+    spotGrad.addColorStop(1, 'rgba(160,48,32,0)');
+
+    ctx.save();
+    ctx.globalAlpha = 0.55 + Math.sin(t * 0.01) * 0.1;
+    ctx.fillStyle = spotGrad;
+
+    /* شكل بيضاوي للبقعة */
+    ctx.translate(spotX, spotY);
+    ctx.scale(1.6, 1);
+    ctx.beginPath();
+    ctx.arc(0, 0, spotR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /* ═══ 7) النيازك المتساقطة (عطارد والزهرة) ═══ */
+  if(p.weather && (p.weather.type === 'meteor' || p.weather.type === 'acidRain')){
+    if(Math.random() < (p.weather.rate || 0.005) * 3){
+      const mx = rand(0, W);
+      const my = -20;
+      const mlen = rand(60, 140);
+      const mangle = rand(0.4, 0.8);
+      const grad = ctx.createLinearGradient(mx, my, mx - Math.cos(mangle) * mlen, my + Math.sin(mangle) * mlen);
+      grad.addColorStop(0, p.weather.type === 'acidRain' ? '#E8FF80' : '#FFE080');
+      grad.addColorStop(1, 'rgba(255,200,100,0)');
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(mx, my);
+      ctx.lineTo(mx - Math.cos(mangle) * mlen, my + Math.sin(mangle) * mlen);
+      ctx.stroke();
+    }
+  }
+
+  /* ═══ 8) هالة الغلاف الجوي ═══ */
+  if(p.haze){
+    ctx.fillStyle = p.haze;
+    ctx.fillRect(0, 0, W, H);
+  }
+}
+
+/* بعد انتهاء كتلة الكوكب في drawSky() */
+if(G.realm === REALM.PLANET){
+  drawPlanetRings();
+  drawPlanetMoons();
+}
 
   /* ═══ UNDERGROUND ═══ */
   if(G.realm === REALM.UNDERGROUND || G.camYUnder > 20){
@@ -13247,7 +14118,10 @@ function drawClouds(){
   }
 
   const altN = G.camY / 900;
-  if(G.realm === REALM.UNDERGROUND || G.realm === REALM.SKY) return;
+  /* ✅ إصلاح: لا سحب أرضية في الكواكب */
+  if(G.realm === REALM.UNDERGROUND ||
+     G.realm === REALM.SKY ||
+     G.realm === REALM.PLANET) return;
   if(G.camYUnder > 20) return;
   let cloudAlpha;
   if(altN < 0.5){
@@ -13294,9 +14168,13 @@ function drawClouds(){
 }
 
 function drawSkyDecor(){
+  /* ✅ إصلاح: لا ديكور سماء أرضية في الكواكب */
+  if(G.realm === REALM.PLANET) return;
+  if(G.realm === REALM.UNDERGROUND) return;
+
   const altN = clamp((G.camY - 100) / 500, 0, 1);
   if(altN <= 0.01) return;
-  if(G.camYUnder > 20) return;   /* ⬅️ أضف هذا السطر */
+  if(G.camYUnder > 20) return;
 
   for(const d of G.skyDecor){
     ctx.save();
@@ -14646,6 +15524,163 @@ function drawUnderObstacle(o){
   }
 }
 
+/* ============================================================
+   ═══════════════ PLANET EFFECTS UPDATE ════════════════════
+   ============================================================ */
+function updatePlanetEffects(){
+  if(G.realm !== REALM.PLANET || !G.planet) return;
+
+  const p = G.planet;
+  const t = G.t;
+
+  /* ═══ 1) الرياح الجانبية ═══ */
+  if(p.wind > 0 && G.state === 'PLAYING'){
+    const windForce = Math.sin(t * 0.02) * p.wind * 0.3;
+    P.x = clamp(P.x + windForce, P.r, W - P.r);
+  }
+
+  /* ═══ 2) الطقس النشط ═══ */
+  if(p.weather && Math.random() < p.weather.rate){
+    spawnPlanetWeatherParticle(p.weather.type, p);
+  }
+
+  /* ✅ 3) تحديث جسيمات الطقس الكوكبي */
+  updatePlanetWeatherParticles();
+
+  /* ═══ 4) الإشعاع ═══ */
+  if(p.radiation > 0.5){
+    const flicker = 0.02 + Math.sin(t * 0.15) * 0.01;
+    G.flash = Math.max(G.flash, flicker * p.radiation);
+  }
+
+  /* ═══ 5) جسيمات الغلاف الجوي ═══ */
+  if(p.atmosphere && p.atmosphere.density > 0.4 && t % 6 === 0){
+    particles.push({
+      x: rand(0, W),
+      y: rand(0, H),
+      vx: rand(-0.3, 0.3) + p.wind * 0.5,
+      vy: rand(-0.2, 0.2),
+      life: 2,
+      decay: 0.008,
+      color: p.atmosphere.color,
+      size: rand(1.5, 3)
+    });
+  }
+}
+
+function spawnPlanetWeatherParticle(type, planet){
+  if(G.weather.length > 80) return;   /* حد أقصى */
+
+  const startX = rand(0, W);
+  let p;
+
+  switch(type){
+    case 'meteor':
+      p = {
+        x: startX, y: -20,
+        vx: rand(-3, 3) - 2,
+        vy: rand(6, 10),
+        life: 150, maxLife: 150,
+        color: '#FFB060',
+        size: 4
+      };
+      break;
+
+    case 'acidRain':
+      for(let i = 0; i < 2; i++){
+        G.weather.push({
+          x: rand(0, W), y: -10,
+          vx: rand(-0.5, 0.5),
+          vy: rand(8, 12),
+          life: 120, maxLife: 120,
+          color: '#E8FF80',
+          size: 2
+        });
+      }
+      return;
+
+    case 'dustStorm':
+      p = {
+        x: -10, y: rand(0, H),
+        vx: rand(6, 10),
+        vy: rand(-1, 1),
+        life: 180, maxLife: 180,
+        color: '#C86A40',
+        size: rand(2, 4)
+      };
+      break;
+
+    case 'jupiterStorm': {
+      const angle = rand(0, Math.PI * 2);
+      p = {
+        x: startX, y: rand(0, H),
+        vx: Math.cos(angle) * 3,
+        vy: Math.sin(angle) * 3,
+        life: 200, maxLife: 200,
+        color: '#D04030',
+        size: rand(4, 8)
+      };
+      break;
+    }
+
+    case 'ringParticles':
+      p = {
+        x: startX, y: rand(0, H * 0.5),
+        vx: rand(-1, 1),
+        vy: rand(0.5, 2),
+        life: 250, maxLife: 250,
+        color: '#F0E0C0',
+        size: rand(1, 3)
+      };
+      break;
+
+    case 'iceCrystals':
+      p = {
+        x: startX, y: -10,
+        vx: rand(-1, 1),
+        vy: rand(2, 5),
+        life: 200, maxLife: 200,
+        color: '#C0E8FF',
+        size: rand(2, 4)
+      };
+      break;
+
+    case 'neptuneStorm': {
+      const angle = rand(0, Math.PI * 2);
+      p = {
+        x: startX, y: rand(0, H),
+        vx: Math.cos(angle) * 6,
+        vy: Math.sin(angle) * 4,
+        life: 180, maxLife: 180,
+        color: '#80C0FF',
+        size: rand(3, 6)
+      };
+      break;
+    }
+
+    default:
+      return;
+  }
+
+  if(p) G.weather.push(p);
+}
+
+
+/* ═══ تحديث جسيمات الكوكب (ضعها داخل updatePlanetEffects) ═══ */
+function updatePlanetWeatherParticles(){
+  for(let i = G.weather.length - 1; i >= 0; i--){
+    const p = G.weather[i];
+    p.x += p.vx || 0;
+    p.y += p.vy || 0;
+    p.life--;
+
+    /* حذف عند الخروج أو انتهاء الحياة */
+    if(p.life <= 0 || p.x < -50 || p.x > W + 50 || p.y > H + 50){
+      G.weather.splice(i, 1);
+    }
+  }
+}
+
 function drawPlanetFloors(){
   if(!G.planet) return;
   const p = G.planet;
@@ -14653,32 +15688,94 @@ function drawPlanetFloors(){
   for(const f of G.planetFloors){
     if(f.dead) continue;
 
-    if(f.isPlanetHole){
-      /* حفرة في أرضية الكوكب */
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(f.x, GROUND_Y, f.w, GROUND_H + 40);
+if(f.isPlanetHole){
+  const isReturn = !!f.isPlanetReturn;
+  const isNext   = !!f.isPlanetNext;
+  const isVoid   = !!f.isVoidHole;
 
-      /* حواف مضيئة */
-      ctx.fillStyle = p.accent;
-      ctx.globalAlpha = 0.6;
-      ctx.fillRect(f.x - 3, GROUND_Y, 3, GROUND_H);
-      ctx.fillRect(f.x + f.w, GROUND_Y, 3, GROUND_H);
-      ctx.globalAlpha = 1;
+  /* ═══ تمييز لوني واضح ═══ */
+  let portalColor, portalGlow, portalLabel, portalText;
+  if(isReturn){
+    portalColor = '#40E8FF';   /* أزرق سماوي = عودة للأرض */
+    portalGlow  = '#A0F0FF';
+    portalLabel = '☁';
+    portalText  = 'RETURN';
+  } else if(isVoid){
+    portalColor = '#A040FF';
+    portalGlow  = '#D0A0FF';
+    portalLabel = '◉';
+    portalText  = 'VOID';
+  } else {
+    /* البوابة للكوكب التالي — ذهبية/برتقالية */
+    portalColor = '#FFD060';
+    portalGlow  = '#FFE8A0';
+    portalLabel = '▶';
+    portalText  = 'NEXT PLANET';
+  }
 
-      /* سهم ▼ */
-      const pulse = 0.6 + Math.sin(G.t * 0.12) * 0.35;
-      ctx.globalAlpha = pulse;
-      ctx.fillStyle = p.accent;
-      ctx.shadowColor = p.accent;
-      ctx.shadowBlur = 15;
-      ctx.font = 'bold 24px "Space Grotesk", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('▼', f.x + f.w/2, GROUND_Y - 40 + Math.sin(G.t*0.1)*4);
-      ctx.shadowBlur = 0;
-      ctx.globalAlpha = 1;
-      continue;
+  /* ═══ الجسم ═══ */
+  if(isReturn){
+    const grad = ctx.createLinearGradient(0, GROUND_Y - 4, 0, GROUND_Y + GROUND_H + 40);
+    grad.addColorStop(0, '#40E8FF');
+    grad.addColorStop(0.4, 'rgba(64,232,255,0.6)');
+    grad.addColorStop(1, 'rgba(64,232,255,0.1)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(f.x, GROUND_Y - 4, f.w, GROUND_H + 40);
+  } else if(isVoid){
+    const grad = ctx.createLinearGradient(0, GROUND_Y - 4, 0, GROUND_Y + GROUND_H + 40);
+    grad.addColorStop(0, '#A040FF');
+    grad.addColorStop(0.4, 'rgba(80,20,160,0.8)');
+    grad.addColorStop(1, '#000000');
+    ctx.fillStyle = grad;
+    ctx.fillRect(f.x, GROUND_Y - 4, f.w, GROUND_H + 40);
+
+    /* نجوم داخل الفراغ */
+    for(let i = 0; i < 8; i++){
+      const sx = f.x + ((i * 37 + G.t * 0.5) % f.w);
+      const sy = GROUND_Y + 20 + (i * 53 % 100);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.globalAlpha = 0.4 + Math.sin(G.t * 0.1 + i) * 0.4;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 1.5, 0, Math.PI * 2);
+      ctx.fill();
     }
+    ctx.globalAlpha = 1;
+  } else {
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(f.x, GROUND_Y, f.w, GROUND_H + 40);
+  }
+
+  /* ═══ الحواف المضيئة ═══ */
+  const edgePulse = 0.6 + Math.sin(G.t * 0.12) * 0.4;
+  ctx.fillStyle = portalColor;
+  ctx.globalAlpha = edgePulse;
+  ctx.shadowColor = portalGlow;
+  ctx.shadowBlur = 15;
+  ctx.fillRect(f.x - 3, GROUND_Y, 3, GROUND_H);
+  ctx.fillRect(f.x + f.w, GROUND_Y, 3, GROUND_H);
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
+
+  /* ═══ الأيقونة ═══ */
+  const pulse = 0.6 + Math.sin(G.t * 0.12) * 0.35;
+  ctx.globalAlpha = pulse;
+  ctx.fillStyle = portalColor;
+  ctx.shadowColor = portalGlow;
+  ctx.shadowBlur = 18;
+  ctx.font = 'bold 26px "Space Grotesk", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(portalLabel, f.x + f.w / 2, GROUND_Y - 40 + Math.sin(G.t * 0.1) * 5);
+
+  /* ═══ النص التوضيحي ═══ */
+  ctx.font = 'bold 10px "Space Grotesk", sans-serif';
+  ctx.fillStyle = portalColor;
+  ctx.fillText(portalText, f.x + f.w / 2, GROUND_Y - 14);
+
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
+  continue;
+}
 
     if(f.isPlanetFloat){
       /* مؤقت قبل السقوط */
@@ -15205,39 +16302,6 @@ function buildSeason(){
    ==================== Battle Pass ==========================
    ============================================================ */
 function getBPTier(){ return Math.min(Math.floor(Save.data.season.points / BP_TIER_POINTS), BP_TIERS); }
-function buildBP(){
-  const tier = getBPTier();
-  const pts = Save.data.season.points;
-  document.getElementById('bp-tier').textContent = tier + '/' + BP_TIERS;
-  document.getElementById('bp-points').textContent = pts;
-  const prog = clamp((pts % BP_TIER_POINTS) / BP_TIER_POINTS, 0, 1) * 100;
-  document.getElementById('bp-prog').style.width = (tier >= BP_TIERS ? 100 : prog) + '%';
-
-  const list = document.getElementById('bp-tiers');
-  list.innerHTML = '';
-  for(let i=1;i<=BP_TIERS;i++){
-    const unlocked = i <= tier;
-    const claimedFree = Save.data.battlePass.claimedFree.includes(i);
-    const claimedPrem = Save.data.battlePass.claimedPremium.includes(i);
-    const el = document.createElement('div');
-    el.className = 'bp-tier-row' + (unlocked ? ' unlocked' : ' locked');
-    el.innerHTML = `
-      <div class="bp-tier-num">${i}</div>
-      <div class="bp-rewards">
-        <div class="bp-reward${claimedFree ? ' claimed' : ''}">
-          <span class="ic">◆</span>
-          <span>${5 + i*2}</span>
-          <span class="k">FREE</span>
-        </div>
-        <div class="bp-reward premium${claimedPrem ? ' claimed' : ''}">
-          <span class="ic">🎁</span>
-          <span>SOON</span>
-          <span class="k">PREMIUM</span>
-        </div>
-      </div>`;
-    list.appendChild(el);
-  }
-}
 
 /* ============================================================
    ==================== Daily login ==========================
@@ -16521,86 +17585,6 @@ function spawnSkyRealmObstacle(){
   else if(roll < 0.72) spawnSkyElevatorChain(layer);
   else if(roll < 0.92) spawnStaircase(getProgression(), G.currentScene);
   else                 spawnSkyRing(layer);
-}
-
-/* جزيرة عائمة — 90 إلى 260 بكسل فوق اللاعب (مدى قفزة مزدوجة) */
-function spawnSkyIsland(layer){
-  const w = rand(120, 190);
-  const h = 16;
-  const y = P.y - rand(90, 260);
-
-  obstacles.push({
-    x: W + 40, w, h, type:'platform',
-    isWalk: true, isPlatform: true,
-    isSkyPlatform: true,
-    skyTier: G.skyLayerIdx + 1,
-    platformType: 'static',
-    y, baseY: y, baseX: W + 40,
-    amp: 0, phase: 0,
-    color: layer.wall, colorDark: layer.wallDark, accent: layer.accent,
-    glow: layer.accent,
-    t: 0, passed: false, dead: false,
-    solid: false, crumbleTimer: 0, crumbled: false, bounceBoost: 0
-  });
-
-  const r = Math.random();
-  if(r < 0.25) orbs.push({ x: W + 40 + w/2, y: y - 30, r: 16, t:0, dead:false, color:'#FFD700', isSkyOrb:true, value: 15 });
-  else if(r < 0.65) spawnCoinCluster(W + 40 + w/2, y - 25, Math.floor(rand(4,7)));
-}
-
-/* عمود أطلال */
-function spawnSkyRuinColumn(layer){
-  const w = rand(50, 80);
-  const h = rand(120, 220);
-  const y = P.y - rand(120, 260);
-  const isWall = Math.random() < 0.5;
-
-  if(isWall){
-    obstacles.push({
-      x: W + 40, w, h, type:'block',
-      isWalk: true,
-      y, baseY: y,
-      t:0, passed:false, dead:false,
-      color: layer.wall, colorDark: layer.wallDark, accent: layer.accent,
-      isSkyRuins: true
-    });
-  } else {
-    obstacles.push({
-      x: W + 40, w: 90, h: 14, type:'platform',
-      isWalk: true, isPlatform: true,
-      isSkyPlatform: true,
-      skyTier: G.skyLayerIdx + 1,
-      platformType: 'static',
-      y, baseY: y, baseX: W + 40,
-      amp: 0, phase: 0,
-      color: layer.wall, colorDark: layer.wallDark, accent: layer.accent,
-      glow: layer.accent,
-      t:0, passed:false, dead:false,
-      solid: false, crumbleTimer: 0, crumbled: false, bounceBoost: 0
-    });
-    spawnCoinCluster(W + 40 + 45, y - 30, 4);
-  }
-}
-
-/* حلقة كونية */
-function spawnSkyRing(layer){
-  const r = 50;
-  const y = P.y - rand(140, 280);
-
-  obstacles.push({
-    x: W + 40, w: r*2, h: r*2, type:'skyRing',
-    isWalk: true,
-    isSkyRing: true,
-    isPlatform: false,
-    y, baseY: y,
-    cx: W + 40 + r, cy: y + r, r,
-    angle: 0,
-    t:0, passed:false, dead:false,
-    color: layer.accent, colorDark: layer.wall, accent: layer.accent,
-    glow: layer.accent
-  });
-
-  orbs.push({ x: W + 40 + r, y: y + r, r: 16, t: 0, dead: false, color: '#FFD700', isSkyOrb: true, value: 20 });
 }
 
 /* مصعد سماوي — نسبي للاعب */
@@ -19646,20 +20630,6 @@ function populateSourceSelect(selectedId){
   }
 }
 
-async function deleteCustomItem(cat, idx){
-  if(cat === 'skin'){
-    Save.data.admin.customSkins.splice(idx, 1);
-  } else {
-    const key = 'custom' + cat.charAt(0).toUpperCase() + cat.slice(1);
-    Save.data.admin[key].splice(idx, 1);
-  }
-  Save.save();
-  await pushAdminContent();
-  buildAdminContentList();
-  buildAdminSourcesList();
-  Sfx.tap();
-}
-
 const ALL_CUSTOM_KEYS = [
   'customSkins','customEyes','customCompanion','customFootstep',
   'customSpark','customTrail','customJump','customDeath',
@@ -20147,12 +21117,6 @@ function closeAdminItemForm(){
     form.classList.remove('active');
     form.style.display = 'none';       /* ⬅️ أبقِ هذا للتوافق */
   }
-}
-
-/* ═══ 3) إغلاق نموذج إضافة عنصر ═══ */
-function closeAdminItemForm(){
-  const form = document.getElementById('admin-form');
-  if(form) form.style.display = 'none';
 }
 
 /* ═══ 4) ربط حقول النموذج (معاينة الصورة) ═══ */
@@ -23682,6 +24646,5122 @@ function drawWithFallback(ctx, item, drawFallbackFn, opts = {}){
 }
 
 /* ============================================================
+   ═══════════════════════════════════════════════════════════
+   ═══════════ SHIFT v2 — HOME & PAGES ENGINE ═══════════════
+   ═══════════════════════════════════════════════════════════
+   يضيف:
+   - بطاقة لاعب ديناميكية في الأعلى
+   - معاينة شخصية حية (canvas)
+   - زر اختيار النمط كصفحة منفصلة
+   - أزرار أفقية Scrollable
+   - صفحات: Level, Stats v2, Settings v2, Battle Pass v2,
+     Ranks v2, Events v2, Shop v2 (Merged), Missions v2,
+     Chests, Lucky Wheel, Friends, Leaderboard,
+     Achievements v2, Profile v2
+   ============================================================ */
+
+/* ═══════════════ المتغيرات العامة ═══════════════ */
+let currentShopTab = 'skins';
+let currentStatsTab = 'overview';
+let currentMissionTab = 'daily';
+let currentLbTab = 'coins';
+let currentProfileTab = 'info';
+let currentAchCat = 'all';
+let currentBPTrack2 = 'free';
+
+let _previewRAF = null;
+let _statsChartData = null;
+
+/* ============================================================
+   ═══════════════ HOME v2 — CORE ════════════════════════════
+   ============================================================ */
+
+function buildHomeV2(){
+  updatePlayerCard();
+  drawPlayerPreview();
+  updateModeSelectorBtn();
+  updateHomeBadges();
+
+  /* تلميح عن أول تشغيل */
+  if(!Save.data._seenHomeV2){
+    Save.data._seenHomeV2 = true;
+    Save.save();
+  }
+}
+
+/* ═══ بطاقة اللاعب ═══ */
+function updatePlayerCard(){
+  const user = Cloud.user;
+  const profile = Cloud.profile;
+  const title = getPlayerTitle(Save.data);
+
+  const name = (profile && profile.username) || (user && user.displayName) || 'لاعب';
+  const photo = (user && user.photoURL) || null;
+
+  /* الاسم */
+  const nameEl = document.getElementById('pch-name');
+  if(nameEl) nameEl.textContent = name;
+
+  /* اللقب */
+  const titleEl = document.getElementById('pch-title');
+  if(titleEl){
+    titleEl.textContent = title.icon + ' ' + title.name;
+    titleEl.style.color = title.color;
+  }
+
+  /* الصورة/الإيموجي */
+  const emojiEl = document.getElementById('pch-emoji');
+  const imgEl = document.getElementById('pch-img');
+  if(emojiEl && imgEl){
+    if(photo){
+      emojiEl.style.display = 'none';
+      imgEl.src = photo;
+      imgEl.style.display = 'block';
+      imgEl.onerror = () => {
+        imgEl.style.display = 'none';
+        emojiEl.style.display = 'inline';
+        emojiEl.textContent = name.charAt(0).toUpperCase() || '👤';
+      };
+    } else {
+      emojiEl.style.display = 'inline';
+      emojiEl.textContent = name.charAt(0).toUpperCase() || '👤';
+      imgEl.style.display = 'none';
+    }
+  }
+
+  /* إطار الصورة الرمزية */
+  const frameEl = document.getElementById('pch-frame');
+  if(frameEl){
+    frameEl.innerHTML = '';
+    const frame = currentAvatarFrame();
+    if(frame && frame.id !== 'none'){
+      if(typeof hasItemImage === 'function' && hasItemImage(frame)){
+        const img = document.createElement('img');
+        img.src = ASSET.resolve(frame);
+        frameEl.appendChild(img);
+      } else {
+        frameEl.style.border = `3px solid ${frame.color || '#E8B34E'}`;
+        frameEl.style.boxShadow = `0 0 20px ${frame.color || '#E8B34E'}80`;
+      }
+    } else {
+      frameEl.style.border = '';
+      frameEl.style.boxShadow = '';
+    }
+  }
+
+  /* شارة صغيرة */
+  const badgeEl = document.getElementById('pch-badge');
+  if(badgeEl){
+    badgeEl.innerHTML = '';
+    const badge = currentBadge();
+    if(badge && badge.id !== 'none'){
+      if(typeof hasItemImage === 'function' && hasItemImage(badge)){
+        const img = document.createElement('img');
+        img.src = ASSET.resolve(badge);
+        badgeEl.appendChild(img);
+      } else {
+        badgeEl.textContent = '⭐';
+      }
+    }
+  }
+
+  /* المستوى */
+  const totalM = getGlobalMeters();
+  const lvl = getGlobalLevel() + 1;
+  const prog = levelProgress(totalM, GLOBAL_LEVEL_THRESHOLDS) * 100;
+
+  const lvlNum = document.getElementById('pch-lvl-num');
+  const lvlMeters = document.getElementById('pch-lvl-meters');
+  const lvlRing = document.querySelector('.pch-lvl-ring');
+  const progFill = document.getElementById('pch-progress-fill');
+
+  if(lvlNum) lvlNum.textContent = lvl;
+  if(lvlMeters) lvlMeters.textContent = Math.floor(totalM).toLocaleString() + 'م';
+  if(lvlRing) lvlRing.style.setProperty('--p', prog);
+  if(progFill) progFill.style.width = prog + '%';
+
+  /* ربط زر المستوى */
+  const lvlBtn = document.getElementById('pch-level-btn');
+  if(lvlBtn && !lvlBtn._bound){
+    lvlBtn._bound = true;
+    lvlBtn.addEventListener('click', () => {
+      buildLevelPage();
+      showScreen('s-level');
+      Sfx.tap(); haptic(6);
+    });
+  }
+}
+
+function drawPlayerPreview(){
+  const canvas = document.getElementById('player-preview-canvas');
+  if(!canvas) return;
+
+  /* ✅ الأبعاد الجديدة للدمج (140×170) */
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = 140;
+  const h = 170;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width = '100%';
+  canvas.style.height = '100%';
+
+  const pctx = canvas.getContext('2d');
+  pctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const drawFrame = () => {
+    pctx.clearRect(0, 0, w, h);
+
+    /* أرضية خفيفة */
+    const groundY = h * 0.82;
+    const grad = pctx.createLinearGradient(0, groundY - 20, 0, h);
+    grad.addColorStop(0, 'rgba(232,179,78,0.08)');
+    grad.addColorStop(1, 'rgba(232,179,78,0)');
+    pctx.fillStyle = grad;
+    pctx.fillRect(0, groundY, w, h - groundY);
+
+    /* ظل الشخصية */
+    pctx.fillStyle = 'rgba(0,0,0,.25)';
+    pctx.beginPath();
+    pctx.ellipse(w/2, groundY + 4, 32, 6, 0, 0, Math.PI*2);
+    pctx.fill();
+
+    /* الشخصية */
+    pctx.save();
+    pctx.translate(w/2, groundY - 45);
+    if(typeof renderCharacter === 'function'){
+      try {
+        renderCharacter(pctx, 30, currentSkin(), {
+          mode: 'WALK', rot: 0, alpha: 1, skipExtras: false
+        });
+      } catch(e){}
+    }
+    pctx.restore();
+  };
+
+  drawFrame();
+
+  /* رسم متحرك للتأثيرات */
+  if(_previewRAF) cancelAnimationFrame(_previewRAF);
+  let frames = 0;
+  const animate = () => {
+    drawFrame();
+    frames++;
+    if(frames < 300 && document.getElementById('s-home').classList.contains('active')){
+      _previewRAF = requestAnimationFrame(animate);
+    } else {
+      _previewRAF = null;
+    }
+  };
+  animate();
+
+  /* زر تعديل المظهر */
+  const editBtn = document.getElementById('pps-edit-btn');
+  if(editBtn && !editBtn._bound){
+    editBtn._bound = true;
+    editBtn.addEventListener('click', () => {
+      currentCosTab = 'spark';
+      buildCosmetics();
+      showScreen('s-cosmetics');
+      Sfx.tap(); haptic(6);
+    });
+  }
+}
+
+/* ═══ زر اختيار النمط ═══ */
+function updateModeSelectorBtn(){
+  const mode = Save.data.mode || 'FLIP';
+  const modeData = MODES.find(m => m.id === mode);
+  if(!modeData) return;
+
+  const iconEl = document.getElementById('msb-icon');
+  const nameEl = document.getElementById('msb-name');
+  const bestEl = document.getElementById('msb-best');
+
+  if(iconEl){
+    iconEl.textContent = modeData.icon;
+    iconEl.style.background = modeData.color;
+  }
+  if(nameEl) nameEl.textContent = modeData.ar;
+  if(bestEl) bestEl.textContent = (Save.data.bestMeters[mode] || 0) + 'م';
+
+  /* ربط الزر */
+  const btn = document.getElementById('mode-selector-btn');
+  if(btn && !btn._bound){
+    btn._bound = true;
+    btn.addEventListener('click', () => {
+      buildModeSelectorPage();
+      showScreen('s-mode-select');
+      Sfx.tap(); haptic(6);
+    });
+  }
+}
+
+/* ═══ شارات الصفحة الرئيسية ═══ */
+function updateHomeBadges(){
+  /* مهام */
+  const missionsBadge = document.getElementById('missions-badge');
+  if(missionsBadge){
+    const hasReadyMission = ['daily','weekly','monthly'].some(tier => {
+      const active = Save.data.missions[tier] || [];
+      return active.some(id => {
+        const d = getMissionData(tier, id);
+        if(!d) return false;
+        const claimKey = `claimed_${tier}_${id}`;
+        return d.done && !Save.data.missions[claimKey];
+      });
+    });
+    missionsBadge.style.display = hasReadyMission ? 'flex' : 'none';
+  }
+
+  /* إنجازات */
+  const achBadge = document.getElementById('hm-ach-badge');
+  if(achBadge){
+    const total = ACHIEVEMENTS.length;
+    const unlocked = ACHIEVEMENTS.filter(a => Save.data.achievements[a.id]).length;
+    const rem = total - unlocked;
+    achBadge.style.display = rem > 0 ? 'flex' : 'none';
+    achBadge.textContent = rem;
+  }
+
+  /* جوائز يومية */
+  const dailyBadge = document.getElementById('hm-daily-badge');
+  if(dailyBadge){
+    const canClaim = typeof canClaimDaily === 'function' ? canClaimDaily() : false;
+    dailyBadge.style.display = canClaim ? 'flex' : 'none';
+  }
+}
+
+/* ============================================================
+   ═══════════════ MODE SELECTOR PAGE ════════════════════════
+   ============================================================ */
+
+function buildModeSelectorPage(){
+  const grid = document.getElementById('mode-grid-v2');
+  if(!grid) return;
+  grid.innerHTML = '';
+
+  const selectedMode = Save.data.mode || 'FLIP';
+
+  MODES.forEach(m => {
+    const el = document.createElement('button');
+    el.className = 'mode-card-v2' + (m.id === selectedMode ? ' sel' : '');
+    el.style.setProperty('--mc', m.color);
+
+    const best = Save.data.bestMeters[m.id] || 0;
+    const lvl = getModeLevel(m.id) + 1;
+
+    el.innerHTML = `
+      <div class="mcv2-icon">${m.icon}</div>
+      <div class="mcv2-info">
+        <div class="mcv2-name">${m.ar}</div>
+        <div class="mcv2-en">${m.en}</div>
+        <div class="mcv2-desc">${m.desc}</div>
+      </div>
+      <div class="mcv2-best">
+        <div class="mcv2-best-val">${best}م</div>
+        <div class="mcv2-best-lvl">LVL ${lvl}</div>
+      </div>
+      <div class="mcv2-check">✓</div>
+    `;
+
+    el.addEventListener('click', () => {
+      Save.data.mode = m.id;
+      Save.save();
+      Sfx.reward(); haptic(12);
+      buildModeSelectorPage();
+      updateModeSelectorBtn();
+      setTimeout(() => showScreen('s-home'), 250);
+    });
+
+    grid.appendChild(el);
+  });
+}
+
+/* ============================================================
+   ═══════════════ LEVEL PAGE ════════════════════════════════
+   ============================================================ */
+
+function buildLevelPage(){
+  const totalM = getGlobalMeters();
+  const lvl = getGlobalLevel();
+  const lvlDisplay = lvl + 1;
+  const prog = levelProgress(totalM, GLOBAL_LEVEL_THRESHOLDS);
+  const currentThreshold = GLOBAL_LEVEL_THRESHOLDS[lvl] || 0;
+  const nextThreshold = GLOBAL_LEVEL_THRESHOLDS[lvl + 1] || (currentThreshold + 10000);
+
+  /* الرقم */
+  const numEl = document.getElementById('level-page-num');
+  if(numEl) numEl.textContent = lvlDisplay;
+
+  /* الحلقة الدائرية */
+  const ringProg = document.getElementById('level-ring-progress');
+  if(ringProg){
+    const circumference = 2 * Math.PI * 52;
+    const offset = circumference * (1 - prog);
+    ringProg.style.strokeDashoffset = offset;
+    ringProg.style.transition = 'stroke-dashoffset .8s cubic-bezier(.34,1.56,.64,1)';
+  }
+
+  /* المسافات */
+  const currentEl = document.getElementById('level-current-m');
+  const nextEl = document.getElementById('level-next-m');
+  if(currentEl) currentEl.textContent = Math.floor(totalM).toLocaleString();
+  if(nextEl) nextEl.textContent = Math.max(0, nextThreshold - Math.floor(totalM)).toLocaleString();
+
+  /* قائمة المكافآت القادمة */
+  buildLevelRewardsList(lvl);
+
+  /* قائمة كل المستويات */
+  buildAllLevelsList(lvl);
+}
+
+function buildLevelRewardsList(currentLvl){
+  const list = document.getElementById('level-rewards-list');
+  if(!list) return;
+  list.innerHTML = '';
+
+  for(let i = currentLvl; i < currentLvl + 5; i++){
+    const threshold = GLOBAL_LEVEL_THRESHOLDS[i] || (currentLvl * 5000);
+    const reward = levelRewardFor(i);
+    const isUnlocked = currentLvl >= i;
+    const isClaimed = (Save.data.claimedGlobalLevels || []).includes(i);
+    const isNext = (i === currentLvl + 1);
+
+    const el = document.createElement('div');
+    el.className = 'lvl-reward-card' +
+      (isUnlocked ? ' unlocked' : '') +
+      (isClaimed ? ' claimed' : '');
+
+    el.innerHTML = `
+      <div class="lrc-lvl">${i + 1}</div>
+      <div class="lrc-info">
+        <div class="lrc-title">المستوى ${i + 1}${isNext ? ' · القادم' : ''}</div>
+        <div class="lrc-sub">${threshold.toLocaleString()} متر</div>
+      </div>
+      <div class="lrc-reward">◆ ${reward.coins}</div>
+      ${isUnlocked && !isClaimed
+        ? `<button class="lrc-claim-btn" data-lvl="${i}">استلام</button>`
+        : isClaimed
+          ? `<span style="color:var(--sage);font-size:12px;font-weight:700;">✓</span>`
+          : `<span style="color:var(--ink-mute);font-size:11px;">🔒</span>`
+      }
+    `;
+
+    const btn = el.querySelector('[data-lvl]');
+    if(btn){
+      btn.addEventListener('click', () => {
+        const lvlNum = parseInt(btn.dataset.lvl, 10);
+        if((Save.data.claimedGlobalLevels || []).includes(lvlNum)) return;
+        const rw = levelRewardFor(lvlNum);
+        Save.data.coins += rw.coins;
+        Save.data.stats.totalCoins += rw.coins;
+        if(!Save.data.claimedGlobalLevels) Save.data.claimedGlobalLevels = [];
+        Save.data.claimedGlobalLevels.push(lvlNum);
+        Save.save();
+        updateCoinsUI();
+        Sfx.reward(); haptic(20);
+        buildLevelPage();
+      });
+    }
+
+    list.appendChild(el);
+  }
+}
+
+function buildAllLevelsList(currentLvl){
+  const list = document.getElementById('level-all-list');
+  if(!list) return;
+  list.innerHTML = '';
+
+  /* عرض آخر 10 مستويات حول المستوى الحالي */
+  const start = Math.max(0, currentLvl - 3);
+  const end = currentLvl + 7;
+
+  for(let i = start; i < end; i++){
+    const threshold = GLOBAL_LEVEL_THRESHOLDS[i] || (i * 5000);
+    const isCurrent = i === currentLvl;
+    const isUnlocked = currentLvl >= i;
+    const isClaimed = (Save.data.claimedGlobalLevels || []).includes(i);
+
+    const el = document.createElement('div');
+    el.className = 'lvl-reward-card' + (isUnlocked ? ' unlocked' : '');
+    if(isCurrent){
+      el.style.borderColor = 'var(--gold)';
+      el.style.boxShadow = '0 6px 22px rgba(232,179,78,.35)';
+    }
+
+    el.innerHTML = `
+      <div class="lrc-lvl">${i + 1}</div>
+      <div class="lrc-info">
+        <div class="lrc-title">${isCurrent ? '▶ ' : ''}المستوى ${i + 1}</div>
+        <div class="lrc-sub">${threshold.toLocaleString()} متر</div>
+      </div>
+      <div class="lrc-reward">◆ ${levelRewardFor(i).coins}</div>
+      ${isClaimed ? '<span style="color:var(--sage);font-size:12px;font-weight:700;">✓</span>' : ''}
+    `;
+
+    list.appendChild(el);
+  }
+}
+
+/* ============================================================
+   ═══════════════ STATS v2 ══════════════════════════════════
+   ============================================================ */
+
+function buildStatsV2(){
+  const totalM = getGlobalMeters();
+  const s = Save.data.stats;
+
+  /* Hero */
+  const totalEl = document.getElementById('stats-total-m');
+  const playsEl = document.getElementById('stats-total-plays');
+  if(totalEl) totalEl.textContent = Math.floor(totalM).toLocaleString();
+  if(playsEl) playsEl.textContent = s.totalPlays || 0;
+
+  /* Chart */
+  drawStatsChart();
+
+  /* Tabs binding */
+  document.querySelectorAll('#stats-tabs .tab-chip').forEach(tab => {
+    if(tab._bound) return;
+    tab._bound = true;
+    tab.addEventListener('click', () => {
+      currentStatsTab = tab.dataset.statstab;
+      document.querySelectorAll('#stats-tabs .tab-chip').forEach(t =>
+        t.classList.toggle('active', t === tab));
+      renderStatsContent();
+      Sfx.tap();
+    });
+  });
+
+  renderStatsContent();
+}
+
+function drawStatsChart(){
+  const canvas = document.getElementById('stats-chart');
+  if(!canvas) return;
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = 320, h = 100;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width = '100%';
+  canvas.style.height = h + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+
+  /* بيانات وهمية محاكاة (يمكن استبدالها بتتبع فعلي) */
+  const data = [0.2, 0.4, 0.35, 0.6, 0.5, 0.75, 0.9];
+  const labels = ['F', 'F', 'D', 'W', 'M', 'A', 'S'];
+
+  const barW = w / data.length - 12;
+  const maxH = h - 20;
+
+  data.forEach((val, i) => {
+    const x = i * (w / data.length) + 8;
+    const barH = val * maxH;
+    const y = h - barH - 8;
+
+    const grad = ctx.createLinearGradient(0, y, 0, h);
+    grad.addColorStop(0, '#E8B34E');
+    grad.addColorStop(1, '#E07A3F');
+
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.roundRect(x, y, barW, barH, 4);
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(255,255,255,.5)';
+    ctx.font = 'bold 9px "Space Grotesk", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(labels[i], x + barW/2, h - 1);
+  });
+}
+
+function renderStatsContent(){
+  const container = document.getElementById('stats-content');
+  if(!container) return;
+  container.innerHTML = '';
+
+  const s = Save.data.stats;
+
+  if(currentStatsTab === 'overview'){
+    container.innerHTML = `
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="sb-icon">🎮</div>
+          <div class="sb-val">${s.totalPlays || 0}</div>
+          <div class="sb-label">إجمالي الجولات</div>
+        </div>
+        <div class="stat-box">
+          <div class="sb-icon">📏</div>
+          <div class="sb-val">${Math.floor(getGlobalMeters()).toLocaleString()}</div>
+          <div class="sb-label">مجموع الأمتار</div>
+        </div>
+        <div class="stat-box">
+          <div class="sb-icon">◆</div>
+          <div class="sb-val">${(s.totalCoins || 0).toLocaleString()}</div>
+          <div class="sb-label">عملات مكتسبة</div>
+        </div>
+        <div class="stat-box">
+          <div class="sb-icon">🔥</div>
+          <div class="sb-val">x${s.bestCombo || 0}</div>
+          <div class="sb-label">أفضل سلسلة</div>
+        </div>
+      </div>
+    `;
+  } else if(currentStatsTab === 'modes'){
+    const modeRows = ['FLIP','FLAP','DRIFT','WALK','MIXED'].map(m => {
+      const md = MODES.find(x => x.id === m);
+      const best = Save.data.bestMeters[m] || 0;
+      const lvl = getModeLevel(m) + 1;
+      return `
+        <div class="lvl-reward-card">
+          <div class="lrc-lvl" style="background:${md ? md.color : '#888'};color:#fff;">${md ? md.icon : '◆'}</div>
+          <div class="lrc-info">
+            <div class="lrc-title">${md ? md.ar : m}</div>
+            <div class="lrc-sub">المستوى ${lvl}</div>
+          </div>
+          <div class="lrc-reward">${best}م</div>
+        </div>
+      `;
+    }).join('');
+    container.innerHTML = modeRows;
+  } else if(currentStatsTab === 'records'){
+    const records = [
+      { icon: '🏆', title: 'أفضل مسافة', value: Math.floor(s.bestMeters || 0) + 'م' },
+      { icon: '🔥', title: 'أفضل سلسلة', value: 'x' + (s.bestCombo || 0) },
+      { icon: '🎯', title: 'المستوى العام', value: (getGlobalLevel() + 1) },
+      { icon: '◆', title: 'SHIFT Runs', value: (s.shiftRuns || 0) },
+      { icon: '🔮', title: 'كرات الطاقة', value: (s.orbCount || 0) }
+    ];
+    container.innerHTML = records.map(r => `
+      <div class="lvl-reward-card">
+        <div class="lrc-lvl">${r.icon}</div>
+        <div class="lrc-info">
+          <div class="lrc-title">${r.title}</div>
+        </div>
+        <div class="lrc-reward">${r.value}</div>
+      </div>
+    `).join('');
+  } else if(currentStatsTab === 'progress'){
+    const season = Save.data.season || {};
+    const items = [
+      { icon: '🏅', title: 'نقاط الموسم', value: (season.points || 0).toLocaleString() },
+      { icon: '🎨', title: 'الأزياء المملوكة', value: (Save.data.ownedSkins || []).length },
+      { icon: '✨', title: 'التأثيرات المملوكة', value: Save.getTotalCosmeticsOwned() },
+      { icon: '🏆', title: 'الإنجازات', value: ACHIEVEMENTS.filter(a => Save.data.achievements[a.id]).length + '/' + ACHIEVEMENTS.length }
+    ];
+    container.innerHTML = items.map(it => `
+      <div class="lvl-reward-card">
+        <div class="lrc-lvl">${it.icon}</div>
+        <div class="lrc-info">
+          <div class="lrc-title">${it.title}</div>
+        </div>
+        <div class="lrc-reward">${it.value}</div>
+      </div>
+    `).join('');
+  }
+}
+
+/* ============================================================
+   ═══════════════ SETTINGS v2 ═══════════════════════════════
+   ============================================================ */
+
+function buildSettingsV2(){
+  const container = document.getElementById('settings-content');
+  if(!container) return;
+  container.innerHTML = '';
+
+  const sections = [
+    {
+      title: 'الحساب',
+      icon: '👤',
+      items: [
+        { type: 'action', icon: '✏️', title: 'تغيير الاسم', desc: 'بدّل اسمك الظاهر', action: () => {
+          const inp = document.getElementById('change-username');
+          if(inp) inp.value = (Cloud.profile && Cloud.profile.username) || '';
+          const ctr = document.getElementById('change-counter');
+          if(ctr) ctr.textContent = inp.value.length + '/16';
+          showScreen('s-change-name');
+        }},
+        { type: 'action', icon: '🎖️', title: 'الملف الشخصي', desc: 'اعرض بطاقتك الكاملة', action: () => {
+          buildProfileV2();
+          showScreen('s-profile-v2');
+        }},
+        { type: 'action', icon: '🚪', title: 'تسجيل الخروج', desc: 'سيتم حفظ تقدمك في السحابة', color: '#C14A4A', action: async () => {
+          if(!confirm('تسجيل الخروج؟')) return;
+          await Cloud.signOut();
+          showScreen('s-login');
+        }}
+      ]
+    },
+    {
+      title: 'الصوت',
+      icon: '🔊',
+      items: [
+        { type: 'toggle', key: 'sound', icon: '🔊', title: 'المؤثرات الصوتية', desc: 'SOUND EFFECTS' },
+        { type: 'toggle', key: 'haptics', icon: '📳', title: 'الاهتزاز', desc: 'HAPTIC FEEDBACK' },
+        { type: 'toggle', key: 'music', icon: '🎵', title: 'الموسيقى', desc: 'BACKGROUND MUSIC' }
+      ]
+    },
+    {
+      title: 'الرسوميات',
+      icon: '🎨',
+      items: [
+        { type: 'toggle', key: 'particles', icon: '✨', title: 'الجسيمات', desc: 'PARTICLE EFFECTS', default: true },
+        { type: 'toggle', key: 'shadows', icon: '🌑', title: 'الظلال', desc: 'SHADOWS', default: true },
+        { type: 'toggle', key: 'weatherEffects', icon: '🌧️', title: 'تأثيرات الطقس', desc: 'WEATHER FX', default: true }
+      ]
+    },
+    {
+      title: 'منطقة الخطر',
+      icon: '⚠️',
+      items: [
+        { type: 'action', icon: '🗑️', title: 'حذف التقدم المحلي', desc: 'سيتم حذفه من Firebase أيضاً', color: '#C14A4A', action: async () => {
+          if(!confirm('⚠️ سيتم حذف تقدمك من Firebase نهائياً. متابعة؟')) return;
+          if(!confirm('تأكيد أخير؟')) return;
+          Save.reset();
+          Sfx.tap(); haptic(20);
+          alert('✓ تم الحذف');
+          location.reload();
+        }}
+      ]
+    }
+  ];
+
+  sections.forEach(sec => {
+    const head = document.createElement('div');
+    head.className = 'admin-section-head';
+    head.innerHTML = `
+      <div class="admin-section-title">${sec.icon} ${sec.title}</div>
+      <div class="admin-section-sub">${sec.title.toUpperCase()}</div>
+    `;
+    container.appendChild(head);
+
+    sec.items.forEach(item => {
+      if(item.type === 'toggle'){
+        const on = Save.data.settings[item.key] !== false;
+        const row = document.createElement('div');
+        row.className = 'admin-toggle';
+        row.style.cursor = 'pointer';
+        row.innerHTML = `
+          <span class="at-ic">${item.icon}</span>
+          <div style="flex:1;text-align:right;">
+            <div class="at-lbl">${item.title}</div>
+            <div style="font-size:10px;color:var(--ink-mute);margin-top:2px;">${item.desc}</div>
+          </div>
+          <span class="at-sw ${on ? 'on' : ''}"></span>
+        `;
+        row.addEventListener('click', () => {
+          Save.data.settings[item.key] = !Save.data.settings[item.key];
+          Save.save();
+          row.querySelector('.at-sw').classList.toggle('on', Save.data.settings[item.key]);
+          Sfx.tap(); haptic(6);
+        });
+        container.appendChild(row);
+      } else {
+        const btn = document.createElement('button');
+        btn.className = 'admin-toggle';
+        btn.style.width = '100%';
+        btn.style.cursor = 'pointer';
+        btn.innerHTML = `
+          <span class="at-ic">${item.icon}</span>
+          <div style="flex:1;text-align:right;">
+            <div class="at-lbl" ${item.color ? `style="color:${item.color};"` : ''}>${item.title}</div>
+            <div style="font-size:10px;color:var(--ink-mute);margin-top:2px;">${item.desc}</div>
+          </div>
+          <span style="color:var(--ink-mute);font-size:18px;">‹</span>
+        `;
+        btn.addEventListener('click', () => { item.action && item.action(); Sfx.tap(); });
+        container.appendChild(btn);
+      }
+    });
+  });
+}
+
+function buildBattlePassV2(){
+  const tier = getBPTier();
+  const pts = Save.data.season.points || 0;
+  const tierProgress = ((pts % BP_TIER_POINTS) / BP_TIER_POINTS) * 100;
+
+  /* ═══ Hero ═══ */
+  const tierEl = document.getElementById('bp-v2-tier');
+  const fillEl = document.getElementById('bp-v2-fill');
+  const ptsEl = document.getElementById('bp-v2-points');
+
+  if(tierEl) tierEl.textContent = tier;
+  if(fillEl){
+    fillEl.style.width = (tier >= BP_TIERS ? 100 : tierProgress) + '%';
+  }
+  if(ptsEl){
+    const nextTierPts = (tier + 1) * BP_TIER_POINTS;
+    ptsEl.textContent = pts.toLocaleString() + ' / ' + nextTierPts.toLocaleString();
+  }
+
+  /* ═══ عرض المكافآت القادمة على المسار ═══ */
+  renderBPTierMilestones(tier);
+
+  /* ═══ Track toggle ═══ */
+  document.querySelectorAll('.bpt-btn').forEach(btn => {
+    if(btn._bound) return;
+    btn._bound = true;
+    btn.addEventListener('click', () => {
+      currentBPTrack2 = btn.dataset.track;
+      document.querySelectorAll('.bpt-btn').forEach(b =>
+        b.classList.toggle('active', b === btn));
+      renderBPTiersV2();
+      Sfx.tap();
+    });
+  });
+  document.querySelectorAll('.bpt-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.track === currentBPTrack2);
+  });
+
+  renderBPTiersV2();
+}
+
+/* ═══ شريط المعالم الأفقية (Milestones) ═══ */
+function renderBPTierMilestones(currentTier){
+  const container = document.getElementById('bp-v2-tier-milestones');
+  if(!container){
+    /* أنشئ العنصر إن لم يكن موجوداً */
+    const hero = document.querySelector('.bp-hero-v2');
+    if(!hero) return;
+    const el = document.createElement('div');
+    el.id = 'bp-v2-tier-milestones';
+    el.className = 'bp-milestones';
+    hero.appendChild(el);
+    return renderBPTierMilestones(currentTier);
+  }
+
+  const milestones = [
+    { tier: 5,  icon: '🎁', label: 'عنصر' },
+    { tier: 10, icon: '💎', label: 'جواهر' },
+    { tier: 15, icon: '🎨', label: 'زي' },
+    { tier: 20, icon: '⚡', label: 'تعزيز' },
+    { tier: 25, icon: '👑', label: 'Premium' },
+    { tier: 30, icon: '🏆', label: 'أسطورة' }
+  ];
+
+  container.innerHTML = milestones.map(m => {
+    const reached = currentTier >= m.tier;
+    return `
+      <div class="bp-ms${reached ? ' reached' : ''}">
+        <div class="bp-ms-ic">${m.icon}</div>
+        <div class="bp-ms-tier">T${m.tier}</div>
+        <div class="bp-ms-lbl">${m.label}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+/* ═══ قائمة المستويات (Tiers List) ═══ */
+function renderBPTiersV2(){
+  const list = document.getElementById('bp-v2-tiers');
+  if(!list) return;
+  list.innerHTML = '';
+
+  const tier = getBPTier();
+  const track = currentBPTrack2;
+  const claimedArr = track === 'free'
+    ? (Save.data.battlePass.claimedFree || [])
+    : (Save.data.battlePass.claimedPremium || []);
+
+  const startTier = Math.max(1, tier - 2);
+  const endTier = Math.min(BP_TIERS, tier + 12);
+
+  /* ═══ فاصل المستويات السابقة ═══ */
+  if(startTier > 1){
+    const sep = document.createElement('div');
+    sep.className = 'bp-tier-sep';
+    sep.innerHTML = `
+      <div class="bp-sep-line"></div>
+      <span>··· ${startTier - 1} مستوى سابق ···</span>
+      <div class="bp-sep-line"></div>
+    `;
+    list.appendChild(sep);
+  }
+
+  /* ═══ عرض المستويات ═══ */
+  for(let i = startTier; i <= endTier; i++){
+    const unlocked = i <= tier;
+    const isCurrent = i === tier;
+    const claimed = claimedArr.includes(i);
+    const coinReward = 5 + i * 2;
+    const rewardAmount = track === 'free' ? coinReward : coinReward * 3;
+
+    /* عناصر مخصصة لهذا المستوى */
+    const customItems = track === 'free'
+      ? (typeof getBattlePassItems === 'function' ? getBattlePassItems(i, 'free') : [])
+      : (typeof getBattlePassItems === 'function' ? getBattlePassItems(i, 'premium') : []);
+
+    const el = document.createElement('div');
+    el.className = 'bp-tier-row-v2' +
+      (unlocked ? ' unlocked' : '') +
+      (isCurrent ? ' current' : '');
+
+    /* badge "أنت هنا" */
+    const hereBadge = isCurrent
+      ? '<div class="bp-here-badge">📍 أنت هنا</div>'
+      : '';
+
+    el.innerHTML = `
+      ${hereBadge}
+      <div class="bp-tier-num-v2">
+        <span class="bp-tier-num-val">${i}</span>
+        <span class="bp-tier-num-k">TIER</span>
+      </div>
+      <div class="bp-rewards-v2">
+        <div class="bp-reward-row ${track === 'premium' ? 'premium' : ''}">
+          <div class="bp-reward-icon">${track === 'free' ? '◆' : '👑'}</div>
+          <div class="bp-reward-info">
+            <div class="bp-reward-name">${rewardAmount.toLocaleString()} عملة</div>
+            <div class="bp-reward-meta">${track === 'free' ? 'FREE REWARD' : 'PREMIUM REWARD'}</div>
+          </div>
+          ${claimed
+            ? '<button class="bp-claim-btn done" disabled>✓</button>'
+            : unlocked && (track === 'free' || Save.data.battlePass.premiumOwned)
+              ? `<button class="bp-claim-btn ${track === 'premium' ? 'gold' : ''}" data-tier="${i}">استلام</button>`
+              : !unlocked
+                ? '<button class="bp-claim-btn locked" disabled>🔒</button>'
+                : '<button class="bp-claim-btn premium-locked" disabled>قفل مميز</button>'
+          }
+        </div>
+        ${customItems.map(({item}) => `
+          <div class="bp-custom-item" style="--bc:${item.color || '#E8B34E'};">
+            <span class="bp-ci-ic">🎁</span>
+            <span class="bp-ci-name">${item.name}</span>
+            ${unlocked
+              ? `<button class="bp-claim-btn small gold" data-tier="${i}" data-custom="${item.id}">استلام</button>`
+              : '<span style="font-size:10px;opacity:.5;">🔒</span>'
+            }
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    list.appendChild(el);
+  }
+
+  /* ═══ أزرار الاستلام ═══ */
+  list.querySelectorAll('.bp-claim-btn[data-tier]:not([disabled])').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tierNum = parseInt(btn.dataset.tier, 10);
+      claimBPRewardV2(tierNum, track, btn.dataset.custom);
+    });
+  });
+}
+
+/* ═══ استلام مكافأة ═══ */
+function claimBPRewardV2(tier, track, customItemId){
+  const tierProgress = getBPTier();
+  if(tier > tierProgress){
+    Sfx.play(220, 0.15, 'sine', 0.05, 180);
+    haptic(20);
+    return;
+  }
+
+  if(track === 'premium' && !Save.data.battlePass.premiumOwned){
+    Sfx.play(220, 0.15, 'sine', 0.05, 180);
+    haptic(20);
+    return;
+  }
+
+  const arr = track === 'free' ? 'claimedFree' : 'claimedPremium';
+  if(!Save.data.battlePass[arr]) Save.data.battlePass[arr] = [];
+  if(Save.data.battlePass[arr].includes(tier)) return;
+
+  /* إذا كان عنصراً مخصصاً */
+  if(customItemId){
+    const allCats = [
+      'spark','eyes','companion','footstep','trail','jump','death',
+      'aura','crown','cape','headItem','backItem','heldItem','groundMark',
+      'nameTag','badge','avatarFrame','banner',
+      'spawnEffect','reviveEffect','hitEffect'
+    ];
+    let found = false;
+    for(const cat of allCats){
+      const all = getAllCosmetics(cat);
+      const item = all.find(x => x.id === customItemId);
+      if(item){
+        if(Save.grantCosmetic(cat, customItemId)){
+          addFloat(P.x, P.y - 40, '🎁 ' + item.name, '#FFD060', 16);
+        }
+        found = true;
+        break;
+      }
+    }
+    if(!found){
+      const allSkins = getAllSkins();
+      const skin = allSkins.find(x => x.id === customItemId);
+      if(skin && !Save.data.ownedSkins.includes(customItemId)){
+        Save.data.ownedSkins.push(customItemId);
+        addFloat(P.x, P.y - 40, '🎨 ' + skin.ar, '#FFD060', 16);
+      }
+    }
+  } else {
+    const coinReward = track === 'free' ? (5 + tier * 2) : ((5 + tier * 2) * 3);
+    Save.data.coins += coinReward;
+    Save.data.stats.totalCoins += coinReward;
+  }
+
+  Save.data.battlePass[arr].push(tier);
+  Save.save();
+
+  Sfx.reward(); haptic(20);
+  updateCoinsUI();
+  buildBattlePassV2();
+}
+
+/* ============================================================
+   ═══════════════ SEASON RANKS v2 ═══════════════════════════
+   ============================================================ */
+
+function buildSeasonV2Page(){
+  const pts = Save.data.season.points || 0;
+  const rankIdx = getSeasonRankIdx();
+  const rank = SEASON_RANKS[rankIdx];
+  const nextRank = SEASON_RANKS[rankIdx + 1];
+
+  /* ═══ Hero ═══ */
+  const hero = document.getElementById('rank-hero-v2');
+  if(hero){
+    const progressToNext = nextRank
+      ? clamp((pts - rank.points) / (nextRank.points - rank.points), 0, 1)
+      : 1;
+    const remainingPts = nextRank ? nextRank.points - pts : 0;
+
+    hero.innerHTML = `
+      <div class="rhv2-current">
+        <div class="rhv2-icon">${rank.icon}</div>
+        <div class="rhv2-info">
+          <div class="rhv2-rank-name">${rank.name}</div>
+          <div class="rhv2-rank-points">
+            ${pts.toLocaleString()} نقطة موسم
+          </div>
+        </div>
+      </div>
+
+      ${nextRank ? `
+        <div class="rhv2-next">
+          <div class="rhv2-next-labels">
+            <span>${rank.name}</span>
+            <span>${nextRank.name} · ${remainingPts.toLocaleString()} نقطة متبقية</span>
+          </div>
+          <div class="rhv2-bar">
+            <div class="rhv2-bar-fill" style="width:${progressToNext * 100}%"></div>
+          </div>
+        </div>
+      ` : `
+        <div class="rhv2-maxed">
+          🌟 وصلت لأعلى رتبة!
+        </div>
+      `}
+
+      <div class="rhv2-stats">
+        <div class="rhv2-stat">
+          <div class="k">الرتبة</div>
+          <div class="v">${rankIdx + 1}/${SEASON_RANKS.length}</div>
+        </div>
+        <div class="rhv2-stat">
+          <div class="k">النقاط</div>
+          <div class="v">${pts.toLocaleString()}</div>
+        </div>
+        <div class="rhv2-stat">
+          <div class="k">المستوى القادم</div>
+          <div class="v">${nextRank ? nextRank.icon : '—'}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  /* ═══ قائمة الرتب ═══ */
+  const list = document.getElementById('rank-list-v2');
+  if(list){
+    list.innerHTML = '';
+
+    SEASON_RANKS.forEach((r, i) => {
+      const isCurrent = i === rankIdx;
+      const isUnlocked = i <= rankIdx;
+      const isNext = i === rankIdx + 1;
+
+      const el = document.createElement('div');
+      el.className = 'rank-item-v3' +
+        (isCurrent ? ' current' : '') +
+        (isUnlocked ? ' unlocked' : '') +
+        (isNext ? ' next' : '');
+
+      el.innerHTML = `
+        <div class="riv3-icon">${r.icon}</div>
+        <div class="riv3-info">
+          <div class="riv3-name">${r.name}</div>
+          <div class="riv3-req">${r.points.toLocaleString()} نقطة</div>
+        </div>
+        <div class="riv3-status">
+          ${isCurrent
+            ? '<span class="riv3-badge current">أنت هنا</span>'
+            : isUnlocked
+              ? '<span class="riv3-badge done">✓</span>'
+              : `<span class="riv3-badge locked">${(r.points - pts).toLocaleString()} 🔒</span>`
+          }
+        </div>
+      `;
+
+      list.appendChild(el);
+    });
+  }
+}
+
+/* ============================================================
+   ═══════════════ EVENTS v2 ═════════════════════════════════
+   ============================================================ */
+
+function buildEventsV2(){
+  const list = document.getElementById('events-v2-list');
+  if(!list) return;
+
+  const events = typeof getActiveEvents === 'function' ? getActiveEvents() : [];
+
+  if(events.length === 0){
+    list.innerHTML = `
+      <div style="text-align:center;padding:60px 20px;color:var(--ink-mute);">
+        <div style="font-size:60px;opacity:.3;margin-bottom:12px;">🎪</div>
+        <div style="font-size:14px;font-weight:700;">لا توجد أحداث نشطة</div>
+        <div style="font-size:11px;margin-top:6px;">تحقق لاحقاً للأحداث الأسبوعية</div>
+      </div>
+    `;
+    return;
+  }
+
+  list.innerHTML = '';
+  events.forEach(ev => {
+    const el = document.createElement('div');
+    el.className = 'event-card';
+    el.style.setProperty('--ec', ev.color);
+
+    el.innerHTML = `
+      <div class="ev-head">
+        <div class="ev-icon">${ev.icon}</div>
+        <div class="ev-info">
+          <div class="ev-name">${ev.name}</div>
+          <div class="ev-sub">${ev.en}</div>
+        </div>
+      </div>
+      <div class="ev-missions">
+        ${(ev.missions || []).map(m => {
+          const prog = Save.data.missions.progressDaily?.[m.key] || 0;
+          const pct = Math.min(100, (prog / m.target) * 100);
+          return `<div class="ev-mission">
+            <span class="evm-ic">${m.icon}</span>
+            <div class="evm-body">
+              <div class="evm-name">${m.title}</div>
+              <div class="evm-prog"><div style="width:${pct}%"></div></div>
+            </div>
+            <div class="evm-reward">◆${m.reward}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    `;
+
+    list.appendChild(el);
+  });
+}
+
+/* ============================================================
+   ═══════════════ SHOP v2 (MERGED) ══════════════════════════
+   ============================================================ */
+
+function buildShopV2(){
+  const grid = document.getElementById('shop-v2-grid');
+  if(!grid) return;
+
+  /* Coins */
+  const coinsEl = document.getElementById('shop-v2-coins');
+  if(coinsEl){
+    const unlimited = hasAdminAccess() && Save.data.admin.unlimitedCoins;
+    coinsEl.textContent = unlimited ? '∞' : Save.data.coins.toLocaleString();
+  }
+
+  /* Tabs */
+  document.querySelectorAll('#shop-v2-tabs .tab-chip').forEach(tab => {
+    if(tab._bound) return;
+    tab._bound = true;
+    tab.addEventListener('click', () => {
+      currentShopTab = tab.dataset.shopcat;
+      document.querySelectorAll('#shop-v2-tabs .tab-chip').forEach(t =>
+        t.classList.toggle('active', t === tab));
+      buildShopV2();
+      Sfx.tap();
+    });
+  });
+  document.querySelectorAll('#shop-v2-tabs .tab-chip').forEach(t =>
+    t.classList.toggle('active', t.dataset.shopcat === currentShopTab));
+
+  grid.innerHTML = '';
+
+  /* الأزياء */
+  if(currentShopTab === 'skins'){
+    const allSkins = getAllSkins();
+    allSkins.forEach(skin => {
+      const card = buildShopCard(skin, 'skin');
+      grid.appendChild(card);
+    });
+    return;
+  }
+
+  /* التأثيرات */
+  const items = getAllCosmetics(currentShopTab) || [];
+  items.forEach(item => {
+    const card = buildShopCard(item, currentShopTab);
+    grid.appendChild(card);
+  });
+
+  if(grid.children.length === 0){
+    grid.innerHTML = '<div style="grid-column:span 2;text-align:center;padding:40px;color:var(--ink-mute);">لا توجد عناصر</div>';
+  }
+}
+
+function buildShopCard(item, cat){
+  const isSkin = cat === 'skin';
+  const ownedList = isSkin ? (Save.data.ownedSkins || []) : (Save.data.cosmetics.owned[cat] || []);
+  const currentId = isSkin ? Save.data.currentSkin : Save.data.cosmetics.current[cat];
+
+  const isOwned = ownedList.includes(item.id);
+  const isEquipped = currentId === item.id;
+
+  const shopPlacement = (item.placements || []).find(p => p.type === 'shop') ||
+    (item.price !== undefined ? { price: item.price } : null);
+  const price = shopPlacement ? shopPlacement.price : 0;
+  const canBuy = shopPlacement && price > 0;
+
+  const unlimited = hasAdminAccess() && Save.data.admin.unlimitedUnlock;
+  const canAfford = unlimited || Save.data.coins >= price;
+
+  const el = document.createElement('button');
+  el.className = 'skin-card rar-' + (item.rarity || 'common') +
+                 (isEquipped ? ' equipped' : '') +
+                 (!isOwned ? ' locked' : '');
+  el.style.background = '#fff';
+
+  /* Preview */
+  const preview = document.createElement('div');
+  preview.style.cssText = 'width:100%;height:80px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:var(--paper-2);margin-bottom:8px;overflow:hidden;';
+
+  if(typeof hasItemImage === 'function' && hasItemImage(item)){
+    const img = document.createElement('img');
+    img.src = ASSET.resolve(item);
+    img.style.cssText = 'max-width:90%;max-height:90%;object-fit:contain;';
+    preview.appendChild(img);
+  } else if(isSkin){
+    const c = document.createElement('canvas');
+    const ps = 66, dpr = Math.min(window.devicePixelRatio || 1, 2);
+    c.width = ps * dpr; c.height = ps * dpr;
+    c.style.width = ps + 'px'; c.style.height = ps + 'px';
+    const pc = c.getContext('2d');
+    pc.setTransform(dpr, 0, 0, dpr, 0, 0);
+    pc.save();
+    pc.translate(ps/2, ps/2);
+    try { renderCharacter(pc, ps * 0.28, item, { mode: 'FLIP', skipExtras: true }); } catch(e){}
+    pc.restore();
+    preview.appendChild(c);
+  } else {
+    const c = document.createElement('canvas');
+    const pw = 140, ph = 60, dpr = Math.min(window.devicePixelRatio || 1, 2);
+    c.width = pw * dpr; c.height = ph * dpr;
+    c.style.width = pw + 'px'; c.style.height = ph + 'px';
+    const pc = c.getContext('2d');
+    pc.setTransform(dpr, 0, 0, dpr, 0, 0);
+    try { renderCosPreview(pc, pw, ph, cat, item); } catch(e){}
+    preview.appendChild(c);
+  }
+  el.appendChild(preview);
+
+  /* Name */
+  const nameEl = document.createElement('div');
+  nameEl.className = 'skin-name';
+  nameEl.textContent = isSkin ? (item.ar || item.name) : item.name;
+  el.appendChild(nameEl);
+
+  const enEl = document.createElement('div');
+  enEl.className = 'skin-name-ar';
+  enEl.textContent = (item.en || item.desc || '').toUpperCase();
+  el.appendChild(enEl);
+
+  /* Rarity */
+  const rarEl = document.createElement('div');
+  rarEl.className = 'skin-rarity';
+  rarEl.textContent = RARITY_LABELS[item.rarity || 'common'];
+  el.appendChild(rarEl);
+
+  /* Tag */
+  const tag = document.createElement('div');
+  tag.className = 'skin-tag';
+  if(isEquipped){
+    tag.classList.add('equipped');
+    tag.textContent = '✓ مُجهّز';
+  } else if(isOwned){
+    tag.classList.add('owned');
+    tag.textContent = 'مملوك';
+  } else if(canBuy){
+    tag.classList.add('buy');
+    tag.textContent = '◆ ' + price;
+    if(!canAfford) tag.style.opacity = '0.5';
+  } else {
+    tag.style.color = 'var(--ink-mute)';
+    tag.textContent = 'من مصدر آخر';
+  }
+  el.appendChild(tag);
+
+  /* Click */
+  el.addEventListener('click', () => {
+    if(isEquipped) return;
+
+    if(isOwned){
+      if(isSkin) Save.data.currentSkin = item.id;
+      else Save.data.cosmetics.current[cat] = item.id;
+      Save.save();
+      Sfx.tap(); haptic(8);
+      buildShopV2();
+      return;
+    }
+
+    if(canBuy && (unlimited || Save.data.coins >= price)){
+      if(!unlimited) Save.data.coins -= price;
+      if(!ownedList.includes(item.id)) ownedList.push(item.id);
+      if(isSkin) Save.data.currentSkin = item.id;
+      else Save.data.cosmetics.current[cat] = item.id;
+      Save.save();
+      Sfx.reward(); haptic(15);
+      updateCoinsUI();
+      buildShopV2();
+    } else {
+      Sfx.play(220, 0.15, 'sine', 0.05, 180);
+      haptic(20);
+    }
+  });
+
+  return el;
+}
+
+/* ============================================================
+   ═══════════════ MISSIONS v2 ═══════════════════════════════
+   ============================================================ */
+
+function buildMissionsV2Page(){
+  document.querySelectorAll('#missions-v2-tabs .tab-chip').forEach(tab => {
+    if(tab._bound) return;
+    tab._bound = true;
+    tab.addEventListener('click', () => {
+      currentMissionTab = tab.dataset.missionstab;
+      document.querySelectorAll('#missions-v2-tabs .tab-chip').forEach(t =>
+        t.classList.toggle('active', t === tab));
+      renderMissionsV2Content();
+      Sfx.tap();
+    });
+  });
+  renderMissionsV2Content();
+}
+
+function renderMissionsV2Content(){
+  const container = document.getElementById('missions-v2-content');
+  if(!container) return;
+  container.innerHTML = '';
+
+  if(currentMissionTab === 'login'){
+    renderDailyLoginV2(container);
+    return;
+  }
+
+  const active = Save.data.missions[currentMissionTab] || [];
+  if(active.length === 0){
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-mute);">لا توجد مهام</div>';
+    return;
+  }
+
+  active.forEach(id => {
+    const data = getMissionData(currentMissionTab, id);
+    if(!data) return;
+    const { tmpl, prog, done } = data;
+    const claimKey = `claimed_${currentMissionTab}_${id}`;
+    const isClaimed = Save.data.missions[claimKey] === true;
+    const pct = Math.min(100, (prog / tmpl.target) * 100);
+
+    const el = document.createElement('div');
+    el.className = 'mission-v2-card' + (done ? ' done' : '') + (isClaimed ? ' claimed' : '');
+
+    el.innerHTML = `
+      <div class="mv2-icon">${tmpl.icon}</div>
+      <div class="mv2-body">
+        <div class="mv2-title">${tmpl.title}</div>
+        <div class="mv2-desc">${isClaimed ? 'تم الاستلام' : (done ? 'جاهزة للاستلام!' : 'قيد التقدم')}</div>
+        <div class="mv2-progress">
+          <div class="mv2-progress-fill" style="width:${pct}%"></div>
+        </div>
+      </div>
+      <div class="mv2-side">
+        <div class="mv2-reward">◆ ${tmpl.reward}</div>
+        ${isClaimed
+          ? '<span class="mv2-claim claimed">✓ مُستلمة</span>'
+          : done
+            ? '<button class="mv2-claim">استلام</button>'
+            : `<span class="mv2-count">${Math.min(prog, tmpl.target)}/${tmpl.target}</span>`
+        }
+      </div>
+    `;
+
+    const btn = el.querySelector('.mv2-claim:not(.claimed)');
+    if(btn && done && !isClaimed){
+      btn.addEventListener('click', () => {
+        if(Save.data.missions[claimKey]) return;
+        Save.data.missions[claimKey] = true;
+        Save.data.coins += tmpl.reward;
+        Save.data.stats.totalCoins += tmpl.reward;
+        Save.save();
+        updateCoinsUI();
+        Sfx.reward(); haptic(20);
+        renderMissionsV2Content();
+        updateHomeBadges();
+      });
+    }
+
+    container.appendChild(el);
+  });
+}
+
+/* ═══ الدخول اليومي (نسخة مُصلحة) ═══ */
+function renderDailyLoginV2(container){
+  if(typeof checkDailyReset === 'function') checkDailyReset();
+
+  const dl = Save.data.dailyLogin;
+  const curDay = dl.streak % 7;
+  const canClaim = typeof canClaimDaily === 'function' ? canClaimDaily() : false;
+
+  /* Hero */
+  const hero = document.createElement('div');
+  hero.className = 'season-card';
+  hero.style.background = 'linear-gradient(135deg,#3A2010 0%,#6A3820 100%)';
+  hero.innerHTML = `
+    <div class="sc-eyebrow">CURRENT STREAK</div>
+    <div class="sc-title">🔥 ${dl.streak} يوم متتالي</div>
+    <div class="sc-sub">سجّل يومياً للحصول على مكافآت أكبر</div>
+  `;
+  container.appendChild(hero);
+
+  /* Grid */
+  const head = document.createElement('div');
+  head.className = 'admin-section-head';
+  head.innerHTML = `
+    <div class="admin-section-title">مكافآت 7 أيام</div>
+    <div class="admin-section-sub">REWARDS</div>
+  `;
+  container.appendChild(head);
+
+  const grid = document.createElement('div');
+  grid.className = 'daily-grid-v2';
+
+  for(let i = 0; i < 7; i++){
+    const rw = LOGIN_REWARDS[i];
+    const claimed = i < curDay || (i === curDay && !canClaim);
+    const isToday = i === curDay && canClaim;
+
+    const el = document.createElement('div');
+    el.className = 'daily-day-v2' + (claimed ? ' claimed' : '') + (isToday ? ' today' : '');
+    el.innerHTML = `
+      <span class="dd-num">${i + 1}</span>
+      <span class="dd-ic">${claimed ? '✓' : rw.icon}</span>
+      <span class="dd-val">${rw.label}</span>
+    `;
+    grid.appendChild(el);
+  }
+  container.appendChild(grid);
+
+  /* Button */
+  const btn = document.createElement('button');
+  btn.className = 'action-btn gold';
+  btn.style.width = '100%';
+  btn.style.maxWidth = '100%';
+
+  if(!canClaim){
+    btn.textContent = '✓ تم الاستلام اليوم';
+    btn.disabled = true;
+    btn.style.opacity = '0.55';
+  } else {
+    btn.textContent = '🎁 استلام مكافأة اليوم';
+    btn.addEventListener('click', () => {
+      const dayIdx = dl.streak % 7;
+      const rw = LOGIN_REWARDS[dayIdx];
+      Save.data.coins += rw.value;
+      Save.data.stats.totalCoins += rw.value;
+      dl.streak += 1;
+      dl.lastClaim = today();
+      Save.save();
+      updateCoinsUI();
+      Sfx.reward(); haptic(20);
+      renderMissionsV2Content();
+      updateHomeBadges();
+      if(typeof showRewardModal === 'function'){
+        showRewardModal('🎁', 'DAILY LOGIN · DAY ' + (dayIdx + 1),
+          '◆ ' + rw.value, 'سلسلة ' + dl.streak + ' أيام', null);
+      }
+    });
+  }
+  container.appendChild(btn);
+}
+
+/* ============================================================
+   ═══════════════ CHESTS ════════════════════════════════════
+   ============================================================ */
+
+const CHEST_DEFS = {
+  bronze: { name: 'برونزي', icon: '📦', price: 100, color: '#A07048',
+    rewards: { coins: [50, 200], cosmetics: 0.1, powerup: 0.05 } },
+  silver: { name: 'فضي', icon: '🎁', price: 500, color: '#B0B8C0',
+    rewards: { coins: [300, 800], cosmetics: 0.25, powerup: 0.15 } },
+  gold:   { name: 'ذهبي', icon: '💎', price: 2000, color: '#E8B34E',
+    rewards: { coins: [1000, 4000], cosmetics: 0.55, powerup: 0.35 } }
+};
+
+function buildChestPage(){
+  const cards = document.querySelectorAll('.chest-card');
+  cards.forEach(card => {
+    if(card._bound) return;
+    card._bound = true;
+    card.addEventListener('click', () => {
+      openChest(card.dataset.chest);
+    });
+  });
+}
+
+function openChest(type){
+  const def = CHEST_DEFS[type];
+  if(!def) return;
+
+  const unlimited = hasAdminAccess() && Save.data.admin.unlimitedCoins;
+  if(!unlimited && Save.data.coins < def.price){
+    Sfx.play(220, 0.15, 'sine', 0.05, 180);
+    haptic(20);
+    alert('رصيدك غير كافٍ');
+    return;
+  }
+
+  if(!unlimited) Save.data.coins -= def.price;
+
+  /* حساب المكافآت */
+  const rewards = [];
+  const coinRange = def.rewards.coins;
+  const coinsWon = Math.floor(rand(coinRange[0], coinRange[1]));
+  Save.data.coins += coinsWon;
+  rewards.push({ icon: '◆', name: 'عملات', value: '+' + coinsWon });
+
+  /* عنصر عرضي */
+  if(Math.random() < def.rewards.cosmetics){
+    const cats = ['spark','trail','jump','death','aura','crown','cape'];
+    const cat = cats[Math.floor(Math.random() * cats.length)];
+    const items = getAllCosmetics(cat).filter(i => i.id !== 'none');
+    if(items.length){
+      const item = items[Math.floor(Math.random() * items.length)];
+      if(Save.grantCosmetic(cat, item.id)){
+        rewards.push({ icon: '✨', name: item.name, value: 'جديد!' });
+      }
+    }
+  }
+
+  /* تعزيز */
+  if(Math.random() < def.rewards.powerup){
+    rewards.push({ icon: '⚡', name: 'تعزيز نادر', value: '× 1' });
+  }
+
+  Save.save();
+  updateCoinsUI();
+  Sfx.reward(); haptic(25);
+  showChestOpenModal(def, rewards);
+}
+
+function showChestOpenModal(def, rewards){
+  let modal = document.getElementById('chest-open-modal');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'chest-open-modal';
+    modal.className = 'chest-open-modal';
+    document.body.appendChild(modal);
+  }
+
+  modal.innerHTML = `
+    <div class="com-box">
+      <div class="com-icon" style="color:${def.color};">${def.icon}</div>
+      <div class="com-title">فتحت صندوق ${def.name}!</div>
+      <div class="com-rewards">
+        ${rewards.map(r => `
+          <div class="com-reward">
+            <span class="ic">${r.icon}</span>
+            <span class="nm">${r.name}</span>
+            <span class="vl">${r.value}</span>
+          </div>
+        `).join('')}
+      </div>
+      <button class="action-btn gold" style="width:100%;" id="com-close">استلام</button>
+    </div>
+  `;
+
+  modal.classList.add('active');
+
+  const close = modal.querySelector('#com-close');
+  if(close){
+    close.addEventListener('click', () => {
+      modal.classList.remove('active');
+      Sfx.tap();
+    });
+  }
+}
+
+/* ============================================================
+   ═══════════════ LUCKY WHEEL ═══════════════════════════════
+   ============================================================ */
+
+const WHEEL_SEGMENTS = [
+  { icon: '◆', value: 50, color: '#E8B34E' },
+  { icon: '◆', value: 100, color: '#E07A3F' },
+  { icon: '✨', value: 0, color: '#9A6AC8', type: 'cosmetic' },
+  { icon: '◆', value: 200, color: '#C98A2E' },
+  { icon: '⚡', value: 0, color: '#4A88C8', type: 'powerup' },
+  { icon: '◆', value: 75, color: '#E8B34E' },
+  { icon: '🎁', value: 500, color: '#E85838' },
+  { icon: '◆', value: 150, color: '#6B9B6B' }
+];
+
+let _wheelRotation = 0;
+let _wheelSpinning = false;
+
+function initWheel(){
+  drawWheel();
+  const balanceEl = document.getElementById('wheel-balance');
+  if(balanceEl) balanceEl.textContent = Save.data.coins.toLocaleString();
+
+  const spinBtn = document.getElementById('wheel-spin-btn');
+  if(spinBtn && !spinBtn._bound){
+    spinBtn._bound = true;
+    spinBtn.addEventListener('click', spinWheel);
+  }
+}
+
+function drawWheel(){
+  const canvas = document.getElementById('wheel-canvas');
+  if(!canvas) return;
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const size = 320;
+  canvas.width = size * dpr;
+  canvas.height = size * dpr;
+
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = size / 2 - 4;
+
+  ctx.clearRect(0, 0, size, size);
+
+  const segCount = WHEEL_SEGMENTS.length;
+  const segAngle = (Math.PI * 2) / segCount;
+
+  WHEEL_SEGMENTS.forEach((seg, i) => {
+    const startAngle = i * segAngle + _wheelRotation;
+    const endAngle = startAngle + segAngle;
+
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, startAngle, endAngle);
+    ctx.closePath();
+
+    ctx.fillStyle = seg.color;
+    ctx.fill();
+
+    /* حدود */
+    ctx.strokeStyle = 'rgba(255,255,255,.6)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    /* الأيقونة */
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(startAngle + segAngle / 2);
+    ctx.translate(r * 0.65, 0);
+    ctx.rotate(Math.PI / 2);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 28px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,.3)';
+    ctx.shadowBlur = 4;
+    ctx.fillText(seg.icon, 0, 0);
+    ctx.restore();
+  });
+}
+
+function spinWheel(){
+  if(_wheelSpinning) return;
+
+  const cost = 50;
+  const unlimited = hasAdminAccess() && Save.data.admin.unlimitedCoins;
+
+  if(!unlimited && Save.data.coins < cost){
+    Sfx.play(220, 0.15, 'sine', 0.05, 180);
+    haptic(20);
+    alert('رصيدك غير كافٍ');
+    return;
+  }
+
+  if(!unlimited) Save.data.coins -= cost;
+  updateCoinsUI();
+
+  const balanceEl = document.getElementById('wheel-balance');
+  if(balanceEl) balanceEl.textContent = Save.data.coins.toLocaleString();
+
+  _wheelSpinning = true;
+  Sfx.play(440, 0.3, 'sine', 0.06, 880);
+
+  const targetRotation = _wheelRotation + Math.PI * 2 * (5 + Math.random() * 3) +
+    Math.random() * Math.PI * 2;
+  const duration = 3500;
+  const startTime = performance.now();
+  const startRotation = _wheelRotation;
+
+  const animate = (now) => {
+    const t = Math.min(1, (now - startTime) / duration);
+    const easeOut = 1 - Math.pow(1 - t, 4);
+    _wheelRotation = startRotation + (targetRotation - startRotation) * easeOut;
+    drawWheel();
+
+    if(t < 1){
+      requestAnimationFrame(animate);
+    } else {
+      _wheelSpinning = false;
+      onWheelStop();
+    }
+  };
+  requestAnimationFrame(animate);
+}
+
+function onWheelStop(){
+  /* تحديد القطاع */
+  const segCount = WHEEL_SEGMENTS.length;
+  const segAngle = (Math.PI * 2) / segCount;
+
+  /* المؤشر في الأعلى (-PI/2) */
+  const normalized = ((-Math.PI / 2 - _wheelRotation) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+  const segIdx = Math.floor(normalized / segAngle) % segCount;
+  const seg = WHEEL_SEGMENTS[segIdx];
+
+  /* منح المكافأة */
+  const rewards = [];
+
+  if(seg.value > 0){
+    Save.data.coins += seg.value;
+    Save.data.stats.totalCoins += seg.value;
+    rewards.push({ icon: '◆', name: 'عملات', value: '+' + seg.value });
+  } else if(seg.type === 'cosmetic'){
+    const cats = ['spark', 'trail', 'jump', 'aura', 'crown', 'cape'];
+    const cat = cats[Math.floor(Math.random() * cats.length)];
+    const items = getAllCosmetics(cat).filter(i => i.id !== 'none');
+    if(items.length){
+      const item = items[Math.floor(Math.random() * items.length)];
+      if(Save.grantCosmetic(cat, item.id)){
+        rewards.push({ icon: '✨', name: item.name, value: 'جديد!' });
+      }
+    }
+  } else if(seg.type === 'powerup'){
+    rewards.push({ icon: '⚡', name: 'تعزيز عشوائي', value: '× 1' });
+  }
+
+  Save.save();
+  updateCoinsUI();
+  const balanceEl = document.getElementById('wheel-balance');
+  if(balanceEl) balanceEl.textContent = Save.data.coins.toLocaleString();
+
+  Sfx.reward(); haptic(30);
+  showChestOpenModal({ icon: '🎡', name: 'عجلة الحظ', color: '#FF00D8' }, rewards);
+}
+
+/* ============================================================
+   ═══════════════ FRIENDS ═══════════════════════════════════
+   ============================================================ */
+
+function buildFriendsPage(){
+  /* كود اللاعب */
+  const codeEl = document.getElementById('friend-my-code');
+  if(codeEl){
+    const uid = (Cloud.user && Cloud.user.uid) || 'LOCAL';
+    const short = uid.slice(0, 6).toUpperCase();
+    codeEl.textContent = short;
+  }
+
+  const copyBtn = document.getElementById('friend-copy-code');
+  if(copyBtn && !copyBtn._bound){
+    copyBtn._bound = true;
+    copyBtn.addEventListener('click', () => {
+      const code = codeEl.textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        copyBtn.textContent = '✓';
+        setTimeout(() => copyBtn.textContent = '📋', 1500);
+        Sfx.tap();
+      });
+    });
+  }
+
+  /* قائمة الأصدقاء (placeholder) */
+  const list = document.getElementById('friends-list');
+  if(!list) return;
+
+  list.innerHTML = `
+    <div style="text-align:center;padding:60px 20px;color:var(--ink-mute);">
+      <div style="font-size:60px;opacity:.3;margin-bottom:12px;">👥</div>
+      <div style="font-size:14px;font-weight:700;">لا يوجد أصدقاء بعد</div>
+      <div style="font-size:11px;margin-top:6px;">شارك كودك لدعوة أصدقائك</div>
+    </div>
+  `;
+}
+
+/* ============================================================
+   ═══════════════ LEADERBOARD ═══════════════════════════════
+   ============================================================ */
+
+function buildLeaderboardPage(){
+  document.querySelectorAll('#lb-tabs .tab-chip').forEach(tab => {
+    if(tab._bound) return;
+    tab._bound = true;
+    tab.addEventListener('click', () => {
+      currentLbTab = tab.dataset.lbtab;
+      document.querySelectorAll('#lb-tabs .tab-chip').forEach(t =>
+        t.classList.toggle('active', t === tab));
+      renderLeaderboard();
+      Sfx.tap();
+    });
+  });
+  renderLeaderboard();
+}
+
+async function renderLeaderboard(){
+  const list = document.getElementById('lb-list');
+  if(!list) return;
+
+  list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--ink-mute);">⏳ جارٍ التحميل...</div>';
+
+  let players = [];
+
+  if(typeof Cloud !== 'undefined' && Cloud.db){
+    try {
+      const snap = await Cloud.db.collection('players').limit(50).get();
+      snap.forEach(doc => {
+        const data = doc.data();
+        data.uid = doc.id;
+        players.push(data);
+      });
+    } catch(e){
+      console.warn('[Leaderboard] Fetch failed:', e);
+    }
+  }
+
+  /* إضافة اللاعب الحالي */
+  const me = {
+    uid: (Cloud.user && Cloud.user.uid) || 'me',
+    username: (Cloud.profile && Cloud.profile.username) || 'أنت',
+    saveData: Save.data,
+    isMe: true
+  };
+
+  /* ترتيب حسب التبويب */
+  const getValue = (p) => {
+    const sd = p.saveData || {};
+    switch(currentLbTab){
+      case 'coins': return sd.coins || 0;
+      case 'distance':
+        const bm = sd.bestMeters || {};
+        return (bm.FLIP||0) + (bm.FLAP||0) + (bm.DRIFT||0) + (bm.WALK||0);
+      case 'level':
+        return getLevelIdxFromMeters(sd.stats?.totalMeters || 0);
+      case 'season':
+        return (sd.season && sd.season.points) || 0;
+      default: return 0;
+    }
+  };
+
+  players = players.filter(p => p.uid !== me.uid);
+  players.push(me);
+  players.sort((a, b) => getValue(b) - getValue(a));
+  players = players.slice(0, 50);
+
+  if(players.length === 0){
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-mute);">لا يوجد لاعبون</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  players.forEach((p, idx) => {
+    const el = document.createElement('div');
+    el.className = 'lb-row' + (p.isMe ? ' me' : '');
+
+    const name = p.username || p.displayName || 'لاعب';
+    const val = getValue(p);
+    const formatted = currentLbTab === 'distance' || currentLbTab === 'level'
+      ? val.toLocaleString()
+      : '◆ ' + val.toLocaleString();
+
+    el.innerHTML = `
+      <div class="lb-rank">${idx + 1}</div>
+      <div class="lb-avatar">${name.charAt(0).toUpperCase()}</div>
+      <div class="lb-info">
+        <div class="lb-name">${name}${p.isMe ? ' (أنت)' : ''}</div>
+        <div class="lb-sub">${p.isMe ? 'لاعب محلي' : ''}</div>
+      </div>
+      <div class="lb-value">${formatted}</div>
+    `;
+    list.appendChild(el);
+  });
+}
+
+function getLevelIdxFromMeters(meters){
+  let idx = 0;
+  for(let i = 0; i < GLOBAL_LEVEL_THRESHOLDS.length; i++){
+    if(meters >= GLOBAL_LEVEL_THRESHOLDS[i]) idx = i;
+  }
+  return idx + 1;
+}
+
+/* ============================================================
+   ═══════════════ ACHIEVEMENTS v2 ═══════════════════════════
+   ============================================================ */
+
+function buildAchievementsV2Page(){
+  const unlocked = ACHIEVEMENTS.filter(a => Save.data.achievements[a.id]).length;
+  const total = ACHIEVEMENTS.length;
+
+  const unlockedEl = document.getElementById('ach-v2-unlocked');
+  const totalEl = document.getElementById('ach-v2-total');
+  if(unlockedEl) unlockedEl.textContent = unlocked;
+  if(totalEl) totalEl.textContent = total;
+
+  document.querySelectorAll('#ach-v2-tabs .tab-chip').forEach(tab => {
+    if(tab._bound) return;
+    tab._bound = true;
+    tab.addEventListener('click', () => {
+      currentAchCat = tab.dataset.achcat;
+      document.querySelectorAll('#ach-v2-tabs .tab-chip').forEach(t =>
+        t.classList.toggle('active', t === tab));
+      renderAchievementsV2();
+      Sfx.tap();
+    });
+  });
+  renderAchievementsV2();
+}
+
+function renderAchievementsV2(){
+  const grid = document.getElementById('ach-v2-grid');
+  if(!grid) return;
+  grid.innerHTML = '';
+
+  const cats = {
+    progression: '📈',
+    skill: '🎯',
+    mode: '🎮',
+    shift: '◆',
+    collection: '💎',
+    secret: '❓'
+  };
+
+  let filtered = ACHIEVEMENTS;
+  if(currentAchCat !== 'all'){
+    filtered = ACHIEVEMENTS.filter(a => a.cat === currentAchCat);
+  }
+
+  /* إضافة فئة للعناصر التي ليس لها cat */
+  filtered = filtered.map(a => ({ ...a, cat: a.cat || 'progression' }));
+
+  if(filtered.length === 0){
+    grid.innerHTML = '<div style="grid-column:span 2;text-align:center;padding:40px;color:var(--ink-mute);">لا إنجازات في هذه الفئة</div>';
+    return;
+  }
+
+  filtered.forEach(a => {
+    const isUnlocked = !!Save.data.achievements[a.id];
+    let val = 0;
+    try { val = Math.min(a.value(Save.data), a.target); } catch(e){}
+    const pct = a.target > 0 ? (val / a.target) * 100 : 0;
+
+    const el = document.createElement('div');
+    el.className = 'ach-v2-card' + (isUnlocked ? ' unlocked' : '');
+
+    el.innerHTML = `
+      <div class="ach-v2-icon">${isUnlocked ? a.icon : '❔'}</div>
+      <div class="ach-v2-name">${isUnlocked ? a.name : '???'}</div>
+      <div class="ach-v2-desc">${a.desc}</div>
+      ${!isUnlocked ? `
+        <div class="ach-v2-progress">
+          <div class="ach-v2-progress-fill" style="width:${pct}%"></div>
+        </div>
+      ` : ''}
+    `;
+
+    grid.appendChild(el);
+  });
+}
+
+/* ============================================================
+   ═══════════════ PROFILE v2 ════════════════════════════════
+   ============================================================ */
+
+function buildProfileV2(){
+  const hero = document.getElementById('profile-hero-v2');
+  if(!hero) return;
+
+  const user = Cloud.user;
+  const profile = Cloud.profile;
+  const name = (profile && profile.username) || (user && user.displayName) || 'لاعب';
+  const photo = (user && user.photoURL) || null;
+  const uid = (user && user.uid) || 'LOCAL';
+
+  const title = getPlayerTitle(Save.data);
+
+  hero.innerHTML = `
+    <div class="phv2-avatar-wrap">
+      <div class="phv2-avatar">
+        ${photo
+          ? `<img src="${photo}" alt="">`
+          : `<span>${name.charAt(0).toUpperCase()}</span>`
+        }
+      </div>
+    </div>
+    <div class="phv2-name">${name}</div>
+    <div class="phv2-title" style="color:${title.color};">${title.icon} ${title.name}</div>
+    <div class="phv2-uid">#${uid.slice(0, 12).toUpperCase()}</div>
+  `;
+
+  document.querySelectorAll('#profile-tabs .tab-chip').forEach(tab => {
+    if(tab._bound) return;
+    tab._bound = true;
+    tab.addEventListener('click', () => {
+      currentProfileTab = tab.dataset.proftab;
+      document.querySelectorAll('#profile-tabs .tab-chip').forEach(t =>
+        t.classList.toggle('active', t === tab));
+      renderProfileContent();
+      Sfx.tap();
+    });
+  });
+  renderProfileContent();
+}
+
+function renderProfileContent(){
+  const container = document.getElementById('profile-content');
+  if(!container) return;
+  container.innerHTML = '';
+
+  const s = Save.data.stats;
+
+  if(currentProfileTab === 'info'){
+    container.innerHTML = `
+      <div class="lvl-reward-card">
+        <div class="lrc-lvl">🎯</div>
+        <div class="lrc-info">
+          <div class="lrc-title">المستوى العام</div>
+        </div>
+        <div class="lrc-reward">${getGlobalLevel() + 1}</div>
+      </div>
+      <div class="lvl-reward-card">
+        <div class="lrc-lvl">📏</div>
+        <div class="lrc-info">
+          <div class="lrc-title">مجموع الأمتار</div>
+        </div>
+        <div class="lrc-reward">${Math.floor(getGlobalMeters()).toLocaleString()}</div>
+      </div>
+      <div class="lvl-reward-card">
+        <div class="lrc-lvl">◆</div>
+        <div class="lrc-info">
+          <div class="lrc-title">العملات الحالية</div>
+        </div>
+        <div class="lrc-reward">${Save.data.coins.toLocaleString()}</div>
+      </div>
+      <div class="lvl-reward-card">
+        <div class="lrc-lvl">🏅</div>
+        <div class="lrc-info">
+          <div class="lrc-title">نقاط الموسم</div>
+        </div>
+        <div class="lrc-reward">${(Save.data.season.points || 0).toLocaleString()}</div>
+      </div>
+    `;
+  } else if(currentProfileTab === 'stats'){
+    container.innerHTML = `
+      <div class="stats-grid">
+        <div class="stat-box"><div class="sb-icon">🎮</div><div class="sb-val">${s.totalPlays || 0}</div><div class="sb-label">جولات</div></div>
+        <div class="stat-box"><div class="sb-icon">📏</div><div class="sb-val">${Math.floor(getGlobalMeters())}</div><div class="sb-label">أمتار</div></div>
+        <div class="stat-box"><div class="sb-icon">🔥</div><div class="sb-val">x${s.bestCombo || 0}</div><div class="sb-label">سلسلة</div></div>
+        <div class="stat-box"><div class="sb-icon">◆</div><div class="sb-val">${s.shiftRuns || 0}</div><div class="sb-label">SHIFT</div></div>
+      </div>
+    `;
+  } else if(currentProfileTab === 'badges'){
+    const unlocked = BADGES.filter(b => Save.data.achievements[b.id]);
+    if(unlocked.length === 0){
+      container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-mute);">لا شارات بعد</div>';
+    } else {
+      container.innerHTML = '<div class="badges-grid">' + unlocked.map(b => `
+        <div class="badge-chip" style="--bc:#E8B34E;">
+          <span class="bc-ic">${b.icon}</span>
+          <span class="bc-nm">${b.name}</span>
+        </div>
+      `).join('') + '</div>';
+    }
+  } else if(currentProfileTab === 'history'){
+    container.innerHTML = `
+      <div style="text-align:center;padding:40px;color:var(--ink-mute);">
+        <div style="font-size:40px;opacity:.3;margin-bottom:10px;">📜</div>
+        <div style="font-size:12px;">سجل الجولات قريباً</div>
+      </div>
+    `;
+  }
+}
+
+/* ============================================================
+   ═══════════════ WIRE NEW SCREEN BUTTONS ═══════════════════
+   ============================================================ */
+
+function wireV2Buttons(){
+  /* ═══ أزرار hscroll-actions ═══ */
+  document.querySelectorAll('.hs-action[data-page]').forEach(btn => {
+    if(btn._bound) return;
+    btn._bound = true;
+    btn.addEventListener('click', () => {
+      const page = btn.dataset.page;
+      Sfx.tap(); haptic(6);
+
+      switch(page){
+        case 'shop':
+          buildShopV2();
+          showScreen('s-shop-v2');
+          break;
+        case 'season':
+          buildSeasonV2Page();
+          showScreen('s-season-v2');
+          break;
+        case 'battlepass':
+          buildBattlePassV2();
+          showScreen('s-battlepass-v2');
+          break;
+        case 'powerups':
+          buildPowerups();
+          showScreen('s-powerups');
+          break;
+        case 'missions':
+          buildMissionsV2Page();
+          showScreen('s-missions-v2');
+          break;
+        case 'friends':
+          buildFriendsPage();
+          showScreen('s-friends');
+          break;
+        case 'clan':
+          showScreen('s-clan');
+          break;
+        case 'referral':
+          showScreen('s-referral');
+          break;
+        case 'leaderboard':
+          buildLeaderboardPage();
+          showScreen('s-leaderboard');
+          break;
+        case 'chest':
+          buildChestPage();
+          showScreen('s-chest');
+          break;
+        case 'wheel':
+          initWheel();
+          showScreen('s-wheel');
+          break;
+        case 'events':
+          buildEventsV2();
+          showScreen('s-events-v2');
+          break;
+      }
+    });
+  });
+
+  /* ═══ زر الدعوة ═══ */
+  const inviteBtn = document.getElementById('invite-btn');
+  if(inviteBtn && !inviteBtn._bound){
+    inviteBtn._bound = true;
+    inviteBtn.addEventListener('click', () => {
+      Sfx.tap(); haptic(6);
+      const code = ((Cloud.user && Cloud.user.uid) || 'LOCAL').slice(0, 6).toUpperCase();
+      if(navigator.share){
+        navigator.share({
+          title: 'العب SHIFT معي!',
+          text: 'كود غرفتي: ' + code,
+          url: location.href
+        }).catch(()=>{});
+      } else {
+        navigator.clipboard.writeText('كود SHIFT: ' + code).then(() => {
+          alert('✓ تم نسخ كود الدعوة: ' + code);
+        });
+      }
+    });
+  }
+
+  /* ═══ القائمة المنسدلة (Home Menu) ═══ */
+  document.querySelectorAll('#home-menu .hm-item[data-menu]').forEach(item => {
+    if(item._bound) return;
+    item._bound = true;
+    item.addEventListener('click', () => {
+      const action = item.dataset.menu;
+      document.getElementById('home-menu').classList.remove('open');
+      Sfx.tap(); haptic(6);
+
+      switch(action){
+        case 'profile':
+          buildProfileV2();
+          showScreen('s-profile-v2');
+          break;
+        case 'level':
+          buildLevelPage();
+          showScreen('s-level');
+          break;
+        case 'stats':
+          buildStatsV2();
+          showScreen('s-stats-v2');
+          break;
+        case 'achievements':
+          buildAchievementsV2Page();
+          showScreen('s-achieve-v2');
+          break;
+        case 'daily':
+          currentMissionTab = 'login';
+          buildMissionsV2Page();
+          showScreen('s-missions-v2');
+          break;
+        case 'settings':
+          buildSettingsV2();
+          showScreen('s-settings-v2');
+          break;
+        case 'admin':
+          showScreen('s-admin');
+          if(typeof buildAdminPanel === 'function') buildAdminPanel();
+          if(typeof Admin !== 'undefined' && Admin){
+            if(!Admin.initialized) Admin.init();
+            Admin.refreshAll();
+          }
+          break;
+      }
+    });
+  });
+}
+
+/* ============================================================
+   ═══════════════ PATCH: boot & buildHome ═══════════════════
+   ============================================================ */
+
+(function patchBootV2(){
+  /* ═══ Patch buildHome ═══ */
+  const origBuildHome = window.buildHome;
+  window.buildHome = function(){
+    try {
+      if(typeof origBuildHome === 'function') origBuildHome.apply(this, arguments);
+    } catch(e){ console.warn('[buildHome] original failed:', e); }
+
+    try {
+      buildHomeV2();
+      wireV2Buttons();
+    } catch(e){ console.warn('[buildHomeV2] failed:', e); }
+  };
+
+  /* ═══ Patch boot — نداء wireV2Buttons بعد wireGameButtons ═══ */
+  const origBoot = window.boot;
+  if(typeof origBoot === 'function'){
+    window.boot = function(){
+      origBoot.apply(this, arguments);
+      try {
+        wireV2Buttons();
+        updateHomeBadges();
+      } catch(e){ console.warn('[wireV2Buttons] failed:', e); }
+    };
+  }
+})();
+
+/* ═══ تصدير للاستخدام الخارجي ═══ */
+window.buildHomeV2 = buildHomeV2;
+window.updatePlayerCard = updatePlayerCard;
+window.drawPlayerPreview = drawPlayerPreview;
+window.buildLevelPage = buildLevelPage;
+window.buildStatsV2 = buildStatsV2;
+window.buildSettingsV2 = buildSettingsV2;
+window.buildBattlePassV2 = buildBattlePassV2;
+window.buildSeasonV2Page = buildSeasonV2Page;
+window.buildEventsV2 = buildEventsV2;
+window.buildShopV2 = buildShopV2;
+window.buildMissionsV2Page = buildMissionsV2Page;
+window.buildChestPage = buildChestPage;
+window.initWheel = initWheel;
+window.buildFriendsPage = buildFriendsPage;
+window.buildLeaderboardPage = buildLeaderboardPage;
+window.buildAchievementsV2Page = buildAchievementsV2Page;
+window.buildProfileV2 = buildProfileV2;
+
+console.log('[SHIFT v2] ✅ Home & Pages engine loaded');
+
+/* ============================================================
+   ═══════════════════════════════════════════════════════════
+   ═══════════ SHIFT v2.5 — FRIENDS · LEADERBOARD · TOASTS ══
+   ═══════════════════════════════════════════════════════════
+   يضيف:
+   - نظام Toast موحّد
+   - نظام الأصدقاء الكامل (Firebase)
+   - لوحة الصدارة الحقيقية
+   - شراء Premium Battle Pass
+   - التحديات اليومية والأسبوعية
+   - انتقالات ناعمة
+   ============================================================ */
+
+/* ============================================================
+   ═══════════════ TOAST NOTIFICATION SYSTEM ═════════════════
+   ============================================================ */
+
+const Toast = {
+  _container: null,
+  _queue: [],
+  _active: new Set(),
+
+  init(){
+    if(this._container) return;
+    this._container = document.createElement('div');
+    this._container.id = 'toast-container';
+    document.body.appendChild(this._container);
+  },
+
+  show(opts){
+    if(!opts) return;
+    this.init();
+
+    const {
+      icon = 'ℹ️',
+      title = '',
+      desc = '',
+      type = 'info',      /* success | error | warning | info | reward */
+      action = null,      /* { label, callback } */
+      duration = 3200,
+      position = 'top'    /* top | bottom */
+    } = opts;
+
+    /* حد أقصى 3 toasts في نفس الوقت */
+    if(this._active.size >= 3){
+      const first = this._active.values().next().value;
+      if(first) this.remove(first);
+    }
+
+    const el = document.createElement('div');
+    el.className = 'shift-toast ' + type + (position === 'bottom' ? ' bottom' : '');
+
+    const colorMap = {
+      success: '#6B9B6B',
+      error:   '#C14A4A',
+      warning: '#E8B34E',
+      info:    '#4A88C8',
+      reward:  '#E8B34E'
+    };
+    el.style.setProperty('--tc', colorMap[type] || colorMap.info);
+
+    el.innerHTML = `
+      <div class="st-icon">${icon}</div>
+      <div class="st-body">
+        ${title ? `<div class="st-title">${this._escape(title)}</div>` : ''}
+        ${desc ? `<div class="st-desc">${this._escape(desc)}</div>` : ''}
+      </div>
+      ${action ? `<button class="st-action">${this._escape(action.label)}</button>` : ''}
+    `;
+
+    /* زر الإجراء */
+    if(action){
+      const btn = el.querySelector('.st-action');
+      if(btn){
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          try { action.callback && action.callback(); } catch(err){}
+          this.remove(el);
+        });
+      }
+    }
+
+    /* إضافة */
+    this._container.appendChild(el);
+    this._active.add(el);
+
+    /* إزالة تلقائية */
+    if(duration > 0){
+      setTimeout(() => this.remove(el), duration);
+    }
+
+    return el;
+  },
+
+  remove(el){
+    if(!el || !this._active.has(el)) return;
+    this._active.delete(el);
+    el.classList.add('out');
+    setTimeout(() => {
+      if(el.parentNode) el.parentNode.removeChild(el);
+    }, 300);
+  },
+
+  /* ═══ اختصارات ═══ */
+  success(title, desc, opts = {}){
+    return this.show({ icon: '✓', title, desc, type: 'success', ...opts });
+  },
+  error(title, desc, opts = {}){
+    return this.show({ icon: '✕', title, desc, type: 'error', ...opts });
+  },
+  warning(title, desc, opts = {}){
+    return this.show({ icon: '⚠️', title, desc, type: 'warning', ...opts });
+  },
+  info(title, desc, opts = {}){
+    return this.show({ icon: 'ℹ️', title, desc, type: 'info', ...opts });
+  },
+  reward(icon, title, desc, opts = {}){
+    return this.show({ icon: icon || '🎁', title, desc, type: 'reward', duration: 4000, ...opts });
+  },
+
+  _escape(s){
+    return String(s || '').replace(/[&<>"']/g, c => ({
+      '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+    }[c]));
+  }
+};
+
+/* ═══ استبدال showToast القديم ═══ */
+window.showToast = function(msg, duration){
+  Toast.info('', msg, { duration: duration || 2200 });
+};
+
+/* ============================================================
+   ═══════════════ SCREEN TRANSITIONS ════════════════════════
+   ============================================================ */
+
+(function patchShowScreen(){
+  const origShowScreen = window.showScreen;
+  if(typeof origShowScreen !== 'function') return;
+
+  let _currentScreenId = null;
+
+  window.showScreen = function(id){
+    const screen = document.getElementById(id);
+    if(!screen) return;
+
+    /* إزالة slide من الشاشات السابقة */
+    document.querySelectorAll('.screen').forEach(s => {
+      s.classList.remove('slide-in');
+    });
+
+    /* إضافة slide للشاشة الجديدة */
+    if(id !== _currentScreenId){
+      screen.classList.add('slide-in');
+      setTimeout(() => screen.classList.remove('slide-in'), 400);
+    }
+
+    _currentScreenId = id;
+    return origShowScreen.apply(this, arguments);
+  };
+})();
+
+/* ============================================================
+   ═══════════════ FRIENDS v2 — FULL SYSTEM ══════════════════
+   ============================================================ */
+
+let _friendsTab = 'list';
+let _friendRequests = [];
+let _friends = [];
+let _recentPlayers = [];
+let _friendsUnsub = null;
+
+function buildFriendsV2(){
+  /* بنية الصفحة */
+  const container = document.querySelector('#s-friends .sub');
+  if(!container) return;
+
+  /* حقن التبويبات */
+  let tabs = document.getElementById('friends-v2-tabs');
+  if(!tabs){
+    tabs = document.createElement('div');
+    tabs.id = 'friends-v2-tabs';
+    tabs.className = 'friends-tabs';
+    tabs.innerHTML = `
+      <button class="ft-btn active" data-ftab="list">
+        👥 الأصدقاء
+        <span class="ft-badge" id="ft-badge-friends" style="display:none;">0</span>
+      </button>
+      <button class="ft-btn" data-ftab="requests">
+        📨 الطلبات
+        <span class="ft-badge" id="ft-badge-req" style="display:none;">0</span>
+      </button>
+      <button class="ft-btn" data-ftab="recent">
+        🕐 الأخيرون
+      </button>
+    `;
+    const toolbar = container.querySelector('.friends-toolbar');
+    if(toolbar) toolbar.insertAdjacentElement('afterend', tabs);
+    else container.insertBefore(tabs, container.firstChild);
+  }
+
+  /* ربط التبويبات */
+  tabs.querySelectorAll('.ft-btn').forEach(btn => {
+    if(btn._bound) return;
+    btn._bound = true;
+    btn.addEventListener('click', () => {
+      _friendsTab = btn.dataset.ftab;
+      tabs.querySelectorAll('.ft-btn').forEach(b =>
+        b.classList.toggle('active', b === btn));
+      renderFriendsContent();
+      Sfx.tap();
+    });
+  });
+
+  /* كود اللاعب */
+  updateMyFriendCode();
+
+  /* زر النسخ */
+  const copyBtn = document.getElementById('friend-copy-code');
+  if(copyBtn && !copyBtn._bound){
+    copyBtn._bound = true;
+    copyBtn.addEventListener('click', copyMyFriendCode);
+  }
+
+  /* البحث والإضافة */
+  const searchInput = document.getElementById('friend-search');
+  const addBtn = document.getElementById('friend-add-btn');
+
+  if(addBtn && !addBtn._bound){
+    addBtn._bound = true;
+    addBtn.addEventListener('click', () => {
+      const q = (searchInput && searchInput.value || '').trim();
+      if(!q){
+        Toast.warning('اكتب اسماً أو كوداً', '');
+        return;
+      }
+      searchAndAddFriend(q);
+    });
+  }
+
+  if(searchInput && !searchInput._bound){
+    searchInput._bound = true;
+    searchInput.addEventListener('keydown', e => {
+      if(e.code === 'Enter') addBtn && addBtn.click();
+    });
+  }
+
+  /* تحميل البيانات */
+  loadFriendsData();
+  renderFriendsContent();
+}
+
+function updateMyFriendCode(){
+  const codeEl = document.getElementById('friend-my-code');
+  if(!codeEl) return;
+
+  const uid = (Cloud.user && Cloud.user.uid) || 'LOCAL0000';
+  const code = uid.slice(0, 6).toUpperCase() + '-' + uid.slice(-4).toUpperCase();
+  codeEl.textContent = code;
+}
+
+function copyMyFriendCode(){
+  const codeEl = document.getElementById('friend-my-code');
+  if(!codeEl) return;
+  const code = codeEl.textContent;
+
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(code).then(() => {
+      Toast.success('تم نسخ الكود!', 'شاركه مع أصدقائك');
+      const copyBtn = document.getElementById('friend-copy-code');
+      if(copyBtn){
+        copyBtn.textContent = '✓';
+        setTimeout(() => copyBtn.textContent = '📋', 1500);
+      }
+    }).catch(() => {
+      Toast.error('فشل النسخ', code);
+    });
+  } else {
+    Toast.info('الكود', code);
+  }
+}
+
+async function loadFriendsData(){
+  if(!Cloud.user || !Cloud.db){
+    _friends = [];
+    _friendRequests = [];
+    _recentPlayers = [];
+    return;
+  }
+
+  const uid = Cloud.user.uid;
+
+  try {
+    /* جلب طلبات الصداقة */
+    const reqSnap = await Cloud.db.collection('friend_requests')
+      .where('toUid', '==', uid)
+      .where('status', '==', 'pending')
+      .limit(20)
+      .get()
+      .catch(() => null);
+
+    if(reqSnap){
+      _friendRequests = [];
+      reqSnap.forEach(doc => {
+        _friendRequests.push({ id: doc.id, ...doc.data() });
+      });
+    }
+
+    /* جلب قائمة الأصدقاء */
+    const friendSnap = await Cloud.db.collection('players').doc(uid)
+      .collection('friends')
+      .limit(50)
+      .get()
+      .catch(() => null);
+
+    if(friendSnap){
+      _friends = [];
+      friendSnap.forEach(doc => {
+        _friends.push({ uid: doc.id, ...doc.data() });
+      });
+
+      /* جلب بياناتهم الكاملة */
+      const friendUids = _friends.map(f => f.uid);
+      if(friendUids.length > 0){
+        const playersSnap = await Cloud.db.collection('players')
+          .where('__name__', 'in', friendUids.slice(0, 10))
+          .get()
+          .catch(() => null);
+
+        if(playersSnap){
+          const playerMap = {};
+          playersSnap.forEach(doc => {
+            playerMap[doc.id] = doc.data();
+          });
+
+          _friends = _friends.map(f => ({
+            ...f,
+            profile: playerMap[f.uid] || null
+          }));
+        }
+      }
+    }
+
+    /* جلب اللاعبين الأخيرين (بديل: الجدد) */
+    const recentSnap = await Cloud.db.collection('players')
+      .orderBy('updatedAt', 'desc')
+      .limit(10)
+      .get()
+      .catch(() => null);
+
+    if(recentSnap){
+      _recentPlayers = [];
+      recentSnap.forEach(doc => {
+        if(doc.id === uid) return;
+        _recentPlayers.push({ uid: doc.id, ...doc.data() });
+      });
+    }
+
+  } catch(e){
+    console.warn('[Friends] Load failed:', e);
+  }
+
+  updateFriendsBadges();
+}
+
+function updateFriendsBadges(){
+  const friendsBadge = document.getElementById('ft-badge-friends');
+  const reqBadge = document.getElementById('ft-badge-req');
+
+  if(friendsBadge){
+    friendsBadge.textContent = _friends.length;
+    friendsBadge.style.display = _friends.length > 0 ? 'flex' : 'none';
+  }
+  if(reqBadge){
+    reqBadge.textContent = _friendRequests.length;
+    reqBadge.style.display = _friendRequests.length > 0 ? 'flex' : 'none';
+  }
+}
+
+function renderFriendsContent(){
+  const container = document.getElementById('friends-list');
+  if(!container) return;
+  container.innerHTML = '';
+
+  if(_friendsTab === 'list'){
+    renderFriendsList(container);
+  } else if(_friendsTab === 'requests'){
+    renderFriendRequests(container);
+  } else if(_friendsTab === 'recent'){
+    renderRecentPlayers(container);
+  }
+}
+
+function renderFriendsList(container){
+  if(_friends.length === 0){
+    container.innerHTML = `
+      <div class="friends-empty">
+        <div class="fe-icon">👥</div>
+        <div class="fe-title">لا يوجد أصدقاء بعد</div>
+        <div class="fe-desc">شارك كودك الخاص أو ابحث عن أصدقائك بالاسم</div>
+      </div>
+    `;
+    return;
+  }
+
+  _friends.forEach(friend => {
+    const card = buildFriendCard(friend, 'friend');
+    container.appendChild(card);
+  });
+}
+
+function renderFriendRequests(container){
+  if(_friendRequests.length === 0){
+    container.innerHTML = `
+      <div class="friends-empty">
+        <div class="fe-icon">📨</div>
+        <div class="fe-title">لا توجد طلبات</div>
+        <div class="fe-desc">ستظهر هنا طلبات الصداقة الجديدة</div>
+      </div>
+    `;
+    return;
+  }
+
+  _friendRequests.forEach(req => {
+    const card = buildFriendCard(req, 'request');
+    container.appendChild(card);
+  });
+}
+
+function renderRecentPlayers(container){
+  if(_recentPlayers.length === 0){
+    container.innerHTML = `
+      <div class="friends-empty">
+        <div class="fe-icon">🕐</div>
+        <div class="fe-title">لا لاعبون أخيرون</div>
+        <div class="fe-desc">العب أونلاين لتلتقي بلاعبين جدد</div>
+      </div>
+    `;
+    return;
+  }
+
+  _recentPlayers.forEach(p => {
+    const card = buildFriendCard(p, 'recent');
+    container.appendChild(card);
+  });
+}
+
+function buildFriendCard(data, type){
+  const card = document.createElement('div');
+  card.className = 'friend-card-v2';
+
+  /* بيانات اللاعب */
+  let name, photo, level, status;
+  if(type === 'friend'){
+    const profile = data.profile || {};
+    name = profile.username || 'صديق';
+    photo = null;
+    level = Math.floor((profile.saveData?.stats?.totalMeters || 0) / 300) + 1;
+    status = 'offline';
+  } else if(type === 'request'){
+    name = data.fromName || 'لاعب';
+    photo = data.fromPhoto || null;
+    level = 1;
+    status = 'offline';
+  } else {
+    name = data.username || 'لاعب';
+    photo = null;
+    level = Math.floor((data.saveData?.stats?.totalMeters || 0) / 300) + 1;
+    status = 'offline';
+  }
+
+  /* فحص حالة آخر ظهور */
+  const lastSeen = data.lastSeen && data.lastSeen.toMillis ? data.lastSeen.toMillis() : 0;
+  if(lastSeen > Date.now() - 5 * 60 * 1000){
+    status = 'online';
+  }
+
+  const statusLabel = {
+    online: 'متصل الآن',
+    playing: 'قيد اللعب',
+    away: 'غير نشط',
+    offline: 'غير متصل'
+  }[status];
+
+  const avatarContent = photo
+    ? `<img src="${photo}" alt="">`
+    : `<span>${name.charAt(0).toUpperCase()}</span>`;
+
+  card.innerHTML = `
+    <div class="fc2-avatar">
+      ${avatarContent}
+      <span class="fc2-status ${status}"></span>
+    </div>
+    <div class="fc2-info">
+      <div class="fc2-name">${escapeHtml(name)}</div>
+      <div class="fc2-meta">
+        <span class="fc2-level">LVL ${level}</span>
+        <span class="dot"></span>
+        <span>${statusLabel}</span>
+      </div>
+    </div>
+    <div class="fc2-actions">
+      ${type === 'request' ? `
+        <button class="fc2-btn success" data-action="accept" title="قبول">✓</button>
+        <button class="fc2-btn danger" data-action="reject" title="رفض">✕</button>
+      ` : type === 'friend' ? `
+        <button class="fc2-btn primary" data-action="invite" title="دعوة">🎮</button>
+        <button class="fc2-btn ghost" data-action="more" title="المزيد">⋯</button>
+      ` : `
+        <button class="fc2-btn primary" data-action="add" title="إضافة">＋</button>
+      `}
+    </div>
+  `;
+
+  /* ربط الأزرار */
+  card.querySelectorAll('.fc2-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      handleFriendAction(btn.dataset.action, data, type);
+    });
+  });
+
+  return card;
+}
+
+async function handleFriendAction(action, data, type){
+  if(!Cloud.user || !Cloud.db) return;
+
+  const uid = Cloud.user.uid;
+
+  if(action === 'accept'){
+    try {
+      /* إضافة اللاعب للقائمة */
+      await Cloud.db.collection('players').doc(uid)
+        .collection('friends').doc(data.fromUid).set({
+          uid: data.fromUid,
+          since: Date.now()
+        });
+
+      /* إضافة العكس */
+      await Cloud.db.collection('players').doc(data.fromUid)
+        .collection('friends').doc(uid).set({
+          uid,
+          since: Date.now()
+        });
+
+      /* تحديث الطلب */
+      await Cloud.db.collection('friend_requests').doc(data.id).update({
+        status: 'accepted'
+      });
+
+      Toast.success('تم قبول الصداقة!', 'يمكنك الآن اللعب معه');
+      await loadFriendsData();
+      renderFriendsContent();
+    } catch(e){
+      console.warn('[Friends] Accept failed:', e);
+      Toast.error('فشل القبول', e.message);
+    }
+  }
+  else if(action === 'reject'){
+    try {
+      await Cloud.db.collection('friend_requests').doc(data.id).update({
+        status: 'rejected'
+      });
+      Toast.info('تم رفض الطلب');
+      await loadFriendsData();
+      renderFriendsContent();
+    } catch(e){
+      Toast.error('فشل', e.message);
+    }
+  }
+  else if(action === 'add'){
+    await sendFriendRequest(data.uid);
+  }
+  else if(action === 'invite'){
+    /* دعوة للعب */
+    if(typeof mpCreateRoom === 'function'){
+      try {
+        await mpCreateRoom(Save.data.mode);
+        Toast.success('تم إنشاء غرفة!', 'شارك الكود مع صديقك');
+      } catch(e){
+        Toast.error('فشل', e.message);
+      }
+    }
+  }
+  else if(action === 'more'){
+    showFriendActions(data);
+  }
+}
+
+async function searchAndAddFriend(query){
+  if(!Cloud.user || !Cloud.db) return;
+
+  const uid = Cloud.user.uid;
+  const cleanQuery = query.trim();
+  if(!cleanQuery) return;
+
+  try {
+    /* البحث بالـ username */
+    let targetUid = null;
+
+    /* محاولة البحث بالكود أولاً */
+    const codeSnap = await Cloud.db.collection('players')
+      .where('friendCode', '==', cleanQuery.toUpperCase())
+      .limit(1)
+      .get()
+      .catch(() => null);
+
+    if(codeSnap && !codeSnap.empty){
+      targetUid = codeSnap.docs[0].id;
+    } else {
+      /* البحث بالاسم */
+      const nameSnap = await Cloud.db.collection('players')
+        .where('username', '==', cleanQuery)
+        .limit(1)
+        .get()
+        .catch(() => null);
+
+      if(nameSnap && !nameSnap.empty){
+        targetUid = nameSnap.docs[0].id;
+      }
+    }
+
+    if(!targetUid){
+      Toast.warning('لا يوجد لاعب بهذا الاسم/الكود', '');
+      return;
+    }
+
+    if(targetUid === uid){
+      Toast.warning('لا يمكن إضافة نفسك', '');
+      return;
+    }
+
+    await sendFriendRequest(targetUid);
+
+  } catch(e){
+    console.warn('[Friends] Search failed:', e);
+    Toast.error('فشل البحث', e.message);
+  }
+}
+
+async function sendFriendRequest(targetUid){
+  if(!Cloud.user || !Cloud.db) return;
+
+  const uid = Cloud.user.uid;
+  const name = (Cloud.profile && Cloud.profile.username) || 'لاعب';
+  const photo = Cloud.user.photoURL || null;
+
+  try {
+    /* تحقق من عدم وجود طلب سابق */
+    const existing = await Cloud.db.collection('friend_requests')
+      .where('fromUid', '==', uid)
+      .where('toUid', '==', targetUid)
+      .where('status', '==', 'pending')
+      .limit(1)
+      .get()
+      .catch(() => null);
+
+    if(existing && !existing.empty){
+      Toast.info('الطلب مرسل مسبقاً');
+      return;
+    }
+
+    /* إنشاء الطلب */
+    await Cloud.db.collection('friend_requests').add({
+      fromUid: uid,
+      fromName: name,
+      fromPhoto: photo,
+      toUid: targetUid,
+      status: 'pending',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    Toast.success('تم إرسال الطلب!', 'بانتظار قبول الصديق');
+
+  } catch(e){
+    console.warn('[Friends] Send failed:', e);
+    Toast.error('فشل الإرسال', e.message);
+  }
+}
+
+function showFriendActions(friend){
+  const name = (friend.profile && friend.profile.username) || friend.username || 'صديق';
+  const action = prompt(
+    `الصديق: ${name}\n\n` +
+    `1 — دعوة للمبارزة\n` +
+    `2 — عرض الملف\n` +
+    `3 — إزالة صديق`
+  );
+
+  if(action === '1'){
+    handleFriendAction('invite', friend, 'friend');
+  } else if(action === '2'){
+    Toast.info('عرض الملف', 'قيد التطوير');
+  } else if(action === '3'){
+    removeFriend(friend);
+  }
+}
+
+async function removeFriend(friend){
+  if(!Cloud.user || !Cloud.db) return;
+  if(!confirm('إزالة هذا الصديق؟')) return;
+
+  const uid = Cloud.user.uid;
+
+  try {
+    await Cloud.db.collection('players').doc(uid)
+      .collection('friends').doc(friend.uid).delete();
+
+    await Cloud.db.collection('players').doc(friend.uid)
+      .collection('friends').doc(uid).delete();
+
+    Toast.success('تمت الإزالة');
+    await loadFriendsData();
+    renderFriendsContent();
+  } catch(e){
+    Toast.error('فشل', e.message);
+  }
+}
+
+function escapeHtml(s){
+  return String(s || '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  }[c]));
+}
+
+/* ============================================================
+   ═══════════════ LEADERBOARD v2 ════════════════════════════
+   ============================================================ */
+
+let _lbFilter = 'global'; /* global | friends | local */
+
+function buildLeaderboardV2(){
+  /* بناء فلاتر */
+  const container = document.querySelector('#s-leaderboard .sub');
+  if(!container) return;
+
+  let filters = document.getElementById('lb-filters');
+  if(!filters){
+    filters = document.createElement('div');
+    filters.id = 'lb-filters';
+    filters.className = 'lb-filters';
+    filters.innerHTML = `
+      <button class="lbf-chip active" data-lb="global">🌍 عالمي</button>
+      <button class="lbf-chip" data-lb="friends">👥 الأصدقاء</button>
+      <button class="lbf-chip" data-lb="local">📱 محلي</button>
+    `;
+    const tabs = container.querySelector('#lb-tabs');
+    if(tabs) tabs.insertAdjacentElement('beforebegin', filters);
+    else container.appendChild(filters);
+  }
+
+  /* ربط الفلاتر */
+  filters.querySelectorAll('.lbf-chip').forEach(btn => {
+    if(btn._bound) return;
+    btn._bound = true;
+    btn.addEventListener('click', () => {
+      _lbFilter = btn.dataset.lb;
+      filters.querySelectorAll('.lbf-chip').forEach(b =>
+        b.classList.toggle('active', b === btn));
+      renderLeaderboardV2();
+      Sfx.tap();
+    });
+  });
+
+  /* ربط التبويبات الرئيسية */
+  document.querySelectorAll('#lb-tabs .tab-chip').forEach(tab => {
+    if(tab._bound) return;
+    tab._bound = true;
+    tab.addEventListener('click', () => {
+      currentLbTab = tab.dataset.lbtab;
+      document.querySelectorAll('#lb-tabs .tab-chip').forEach(t =>
+        t.classList.toggle('active', t === tab));
+      renderLeaderboardV2();
+      Sfx.tap();
+    });
+  });
+
+  renderLeaderboardV2();
+}
+
+async function renderLeaderboardV2(){
+  const list = document.getElementById('lb-list');
+  if(!list) return;
+
+  list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-mute);font-size:12px;">⏳ جارٍ التحميل...</div>';
+
+  let players = [];
+
+  /* ═══ جلب البيانات ═══ */
+  if(_lbFilter === 'local'){
+    /* عرض البيانات المحلية فقط */
+    players = [{
+      uid: 'local',
+      username: (Cloud.profile && Cloud.profile.username) || 'أنت',
+      saveData: Save.data,
+      isMe: true
+    }];
+  } else if(_lbFilter === 'friends'){
+    /* عرض الأصدقاء + اللاعب الحالي */
+    players = [{
+      uid: (Cloud.user && Cloud.user.uid) || 'me',
+      username: (Cloud.profile && Cloud.profile.username) || 'أنت',
+      saveData: Save.data,
+      isMe: true
+    }];
+
+    _friends.forEach(f => {
+      if(f.profile){
+        players.push({
+          uid: f.uid,
+          username: f.profile.username || 'صديق',
+          saveData: f.profile.saveData || {}
+        });
+      }
+    });
+  } else {
+    /* عالمي */
+    if(Cloud.db){
+      try {
+        const snap = await Cloud.db.collection('players').limit(50).get();
+        snap.forEach(doc => {
+          players.push({
+            uid: doc.id,
+            username: doc.data().username || 'لاعب',
+            saveData: doc.data().saveData || {}
+          });
+        });
+      } catch(e){
+        console.warn('[LB] Fetch failed:', e);
+      }
+    }
+
+    /* أضف نفسك */
+    const myUid = (Cloud.user && Cloud.user.uid) || 'me';
+    if(!players.find(p => p.uid === myUid)){
+      players.push({
+        uid: myUid,
+        username: (Cloud.profile && Cloud.profile.username) || 'أنت',
+        saveData: Save.data,
+        isMe: true
+      });
+    } else {
+      players.forEach(p => { if(p.uid === myUid) p.isMe = true; });
+    }
+  }
+
+  /* الترتيب */
+  const getValue = (p) => {
+    const sd = p.saveData || {};
+    switch(currentLbTab){
+      case 'coins': return sd.coins || 0;
+      case 'distance': {
+        const bm = sd.bestMeters || {};
+        return (bm.FLIP||0) + (bm.FLAP||0) + (bm.DRIFT||0) + (bm.WALK||0);
+      }
+      case 'level': {
+        const meters = (sd.stats && sd.stats.totalMeters) || 0;
+        return getLevelIdxFromMeters(meters);
+      }
+      case 'season': return (sd.season && sd.season.points) || 0;
+      default: return 0;
+    }
+  };
+
+  players.sort((a, b) => getValue(b) - getValue(a));
+  players = players.slice(0, 50);
+
+  if(players.length === 0){
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-mute);">لا يوجد لاعبون</div>';
+    return;
+  }
+
+  /* ═══ Top 3 Podium ═══ */
+  const top3 = players.slice(0, 3);
+  const rest = players.slice(3);
+
+  if(top3.length > 0 && _lbFilter !== 'local'){
+    const podium = document.createElement('div');
+    podium.className = 'lb-podium';
+
+    const order = top3.length >= 3 ? [top3[1], top3[0], top3[2]] : top3;
+    const positions = top3.length >= 3 ? ['second', 'first', 'third'] : ['first', 'second', 'third'];
+
+    order.forEach((p, i) => {
+      if(!p) return;
+      const pos = positions[i];
+      const rankNum = pos === 'first' ? 1 : pos === 'second' ? 2 : 3;
+      const name = (p.username || 'لاعب').slice(0, 10);
+      const val = getValue(p);
+
+      const el = document.createElement('div');
+      el.className = `lbp-item ${pos}`;
+
+      el.innerHTML = `
+        ${pos === 'first' ? '<div class="lbp-crown">👑</div>' : ''}
+        <div class="lbp-avatar">${name.charAt(0).toUpperCase()}</div>
+        <div class="lbp-name">${escapeHtml(name)}${p.isMe ? ' (أنت)' : ''}</div>
+        <div class="lbp-value">${formatLbValue(val)}</div>
+        <div class="lbp-podium-bar">${rankNum}</div>
+      `;
+
+      podium.appendChild(el);
+    });
+
+    list.appendChild(podium);
+  }
+
+  /* ═══ باقي القائمة ═══ */
+  const startRank = top3.length >= 3 ? 4 : 1;
+  const displayRest = _lbFilter === 'local' ? players : rest;
+
+  displayRest.forEach((p, idx) => {
+    const rank = startRank + idx;
+    const name = p.username || 'لاعب';
+    const val = getValue(p);
+
+    const el = document.createElement('div');
+    el.className = 'lb-row' + (p.isMe ? ' me' : '');
+
+    el.innerHTML = `
+      <div class="lb-rank">${rank}</div>
+      <div class="lb-avatar">${name.charAt(0).toUpperCase()}</div>
+      <div class="lb-info">
+        <div class="lb-name">${escapeHtml(name)}${p.isMe ? ' (أنت)' : ''}</div>
+        <div class="lb-sub">${currentLbTab === 'distance' ? 'المسافة الكلية' : currentLbTab === 'coins' ? 'العملات' : currentLbTab === 'level' ? 'المستوى' : 'نقاط الموسم'}</div>
+      </div>
+      <div class="lb-value">${formatLbValue(val)}</div>
+    `;
+
+    list.appendChild(el);
+  });
+}
+
+function formatLbValue(val){
+  const tab = currentLbTab;
+  if(tab === 'coins') return '◆ ' + Number(val).toLocaleString();
+  if(tab === 'distance') return Number(val).toLocaleString() + 'م';
+  if(tab === 'level') return 'LVL ' + val;
+  if(tab === 'season') return val.toLocaleString();
+  return val;
+}
+
+/* ============================================================
+   ═══════════════ PREMIUM BATTLE PASS ═══════════════════════
+   ============================================================ */
+
+const PREMIUM_BP_PRICE = 1500;
+
+function buildPremiumBPCard(){
+  const container = document.getElementById('bp-v2-tiers');
+  if(!container) return;
+
+  const parent = container.parentNode;
+  if(!parent) return;
+
+  /* إزالة البطاقة القديمة إن وُجدت */
+  const existing = document.getElementById('bp-premium-card');
+  if(existing) existing.remove();
+
+  const card = document.createElement('div');
+  const isOwned = !!Save.data.battlePass.premiumOwned;
+
+  card.id = 'bp-premium-card';
+  card.className = 'bp-premium-card' + (isOwned ? ' owned' : '');
+
+  card.innerHTML = `
+    <div class="bppc-head">
+      <div class="bppc-icon">${isOwned ? '👑' : '✨'}</div>
+      <div class="bppc-info">
+        <div class="bppc-title">${isOwned ? 'Premium مفعّل!' : 'Premium Battle Pass'}</div>
+        <div class="bppc-sub">${isOwned ? 'استمتع بمكافآت مضاعفة' : 'افتح مكافآت 3 أضعاف'}</div>
+      </div>
+    </div>
+
+    <div class="bppc-features">
+      <div class="bppc-feat"><span class="ic">💎</span> <span>عملات مضاعفة 3x</span></div>
+      <div class="bppc-feat"><span class="ic">🎁</span> <span>عناصر حصرية Premium</span></div>
+      <div class="bppc-feat"><span class="ic">👑</span> <span>شارة Premium على اسمك</span></div>
+      <div class="bppc-feat"><span class="ic">⚡</span> <span>تعزيز إضافي أسبوعياً</span></div>
+    </div>
+
+    <div class="bppc-price-row">
+      ${isOwned
+        ? `<div class="bppc-price"><span class="c">✓</span> مُفعّل</div>
+           <button class="bppc-buy owned" disabled>مملوك</button>`
+        : `<div class="bppc-price">
+             <span class="old">◆ 2500</span>
+             <span class="c">◆</span>
+             <span>${PREMIUM_BP_PRICE}</span>
+           </div>
+           <button class="bppc-buy" id="bp-premium-buy">شراء الآن</button>`
+      }
+    </div>
+  `;
+
+  /* إدراج قبل القائمة */
+  parent.insertBefore(card, container);
+
+  /* ربط الزر */
+  const buyBtn = card.querySelector('#bp-premium-buy');
+  if(buyBtn){
+    buyBtn.addEventListener('click', purchasePremiumBP);
+  }
+}
+
+async function purchasePremiumBP(){
+  const unlimited = hasAdminAccess() && Save.data.admin.unlimitedCoins;
+  const canAfford = Save.data.coins >= PREMIUM_BP_PRICE;
+
+  if(!unlimited && !canAfford){
+    Toast.error('رصيد غير كافٍ', `تحتاج ◆ ${PREMIUM_BP_PRICE - Save.data.coins}`);
+    Sfx.play(220, 0.15, 'sine', 0.05, 180);
+    haptic(20);
+    return;
+  }
+
+  if(!confirm(`شراء Premium Battle Pass بـ ◆ ${PREMIUM_BP_PRICE}؟`)) return;
+
+  if(!unlimited) Save.data.coins -= PREMIUM_BP_PRICE;
+  Save.data.battlePass.premiumOwned = true;
+  Save.save();
+
+  updateCoinsUI();
+  Sfx.reward(); haptic(40);
+
+  /* تأثيرات */
+  Toast.reward('👑', 'تم تفعيل Premium!', 'استمتع بالمكافآت المضاعفة', { duration: 5000 });
+
+  /* احتفال بصري */
+  for(let i = 0; i < 40; i++){
+    const a = (i / 40) * Math.PI * 2;
+    particles.push({
+      x: P.x, y: P.y,
+      vx: Math.cos(a) * rand(4, 10),
+      vy: Math.sin(a) * rand(4, 10),
+      life: 1.5, decay: 0.018,
+      color: i % 2 ? '#E8B34E' : '#FFF4C0',
+      size: rand(3, 6)
+    });
+  }
+
+  /* إعادة بناء القائمة */
+  if(typeof buildBattlePassV2Page === 'function'){
+    buildBattlePassV2Page();
+  }
+}
+
+/* ============================================================
+   ═══════════════ DAILY CHALLENGES ══════════════════════════
+   ============================================================ */
+
+const CHALLENGE_TEMPLATES = [
+  {
+    id: 'speedRun',
+    icon: '⚡',
+    title: 'سباق السرعة',
+    desc: 'اعبر 500 متر خلال 30 ثانية',
+    target: 500,
+    unit: 'م',
+    reward: 150,
+    difficulty: 'medium',
+    check: (stats) => stats.maxMetersIn30s || 0
+  },
+  {
+    id: 'comboMaster',
+    icon: '🔥',
+    title: 'سيّد السلاسل',
+    desc: 'حقق سلسلة x25',
+    target: 25,
+    unit: 'x',
+    reward: 200,
+    difficulty: 'hard',
+    check: (stats) => stats.bestCombo || 0
+  },
+  {
+    id: 'perfectRun',
+    icon: '💎',
+    title: 'الجولة المثالية',
+    desc: 'اعبر 1000 متر دون إصابة',
+    target: 1000,
+    unit: 'م',
+    reward: 300,
+    difficulty: 'hard',
+    check: (stats) => stats.perfectRunMeters || 0
+  },
+  {
+    id: 'noPowerups',
+    icon: '🎯',
+    title: 'بلا تعزيزات',
+    desc: 'اعبر 400 متر بدون تعزيزات',
+    target: 400,
+    unit: 'م',
+    reward: 180,
+    difficulty: 'medium',
+    check: (stats) => stats.noPowerupMeters || 0
+  },
+  {
+    id: 'collector',
+    icon: '🔮',
+    title: 'جامع الطاقة',
+    desc: 'اجمع 20 كرة طاقة',
+    target: 20,
+    unit: 'كرة',
+    reward: 150,
+    difficulty: 'easy',
+    check: (stats) => stats.orbsCollected || 0
+  }
+];
+
+function getDailyChallenge(){
+  /* اختيار تحدٍ حسب التاريخ (يعطيك نفس التحدي لليوم) */
+  const dayIndex = Math.floor(Date.now() / (24 * 60 * 60 * 1000));
+  const idx = dayIndex % CHALLENGE_TEMPLATES.length;
+  const template = CHALLENGE_TEMPLATES[idx];
+
+  /* ✅ استخدم دالة محلية بدلاً من today() لتجنّب TDZ */
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  const state = Save.data.dailyChallenge || {};
+  const completed = state.date === todayStr && state.completed;
+  const progress = state.date === todayStr ? (state.progress || 0) : 0;
+
+  return { ...template, completed, progress, date: todayStr };
+}
+
+function buildDailyChallengeCard(){
+  const challenge = getDailyChallenge();
+  const container = document.getElementById('missions-v2-content') ||
+                    document.querySelector('#s-missions-v2 .sub');
+  if(!container) return;
+
+  /* إزالة البطاقة السابقة */
+  const existing = document.getElementById('daily-challenge-card');
+  if(existing) existing.remove();
+
+  const card = document.createElement('div');
+  card.id = 'daily-challenge-card';
+  card.className = 'challenge-card' + (challenge.completed ? ' completed' : '');
+
+  const progressPct = Math.min(100, (challenge.progress / challenge.target) * 100);
+
+  card.innerHTML = `
+    <div class="ch-head">
+      <div class="ch-icon">${challenge.icon}</div>
+      <div class="ch-info">
+        <div class="ch-title">${challenge.title}</div>
+        <div class="ch-desc">${challenge.desc}</div>
+      </div>
+    </div>
+    <div class="ch-meta">
+      <div class="ch-progress">
+        <div class="ch-prog-bar">
+          <div class="ch-prog-fill" style="width:${progressPct}%"></div>
+        </div>
+        <div class="ch-prog-label">${challenge.progress} / ${challenge.target} ${challenge.unit}</div>
+      </div>
+      <div class="ch-reward">
+        <span class="c">◆</span>
+        <span>${challenge.reward}</span>
+      </div>
+    </div>
+  `;
+
+  card.addEventListener('click', () => {
+    if(challenge.completed){
+      Toast.success('تحدي اليوم مكتمل!', 'عد غداً لتحدٍ جديد');
+      return;
+    }
+    showChallengeModal(challenge);
+  });
+
+  /* الإدراج في أعلى المحتوى */
+  container.insertBefore(card, container.firstChild);
+}
+
+function showChallengeModal(challenge){
+  let modal = document.getElementById('challenge-modal');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'challenge-modal';
+    modal.className = 'challenge-modal';
+    document.body.appendChild(modal);
+  }
+
+  modal.innerHTML = `
+    <div class="cm-box">
+      <div class="cm-icon">${challenge.icon}</div>
+      <div class="cm-title">${challenge.title}</div>
+      <div class="cm-desc">${challenge.desc}</div>
+
+      <div class="cm-rules">
+        <div class="cm-rule">
+          <span class="ic">◆</span>
+          <span>الهدف: ${challenge.target} ${challenge.unit}</span>
+        </div>
+        <div class="cm-rule">
+          <span class="ic">◆</span>
+          <span>المكافأة: ◆ ${challenge.reward}</span>
+        </div>
+        <div class="cm-rule">
+          <span class="ic">◆</span>
+          <span>الصعوبة: ${challenge.difficulty === 'easy' ? 'سهل' : challenge.difficulty === 'medium' ? 'متوسط' : 'صعب'}</span>
+        </div>
+      </div>
+
+      <div class="cm-reward-box">
+        <span class="ic">🎁</span>
+        <span class="val">◆ ${challenge.reward}</span>
+      </div>
+
+      <div class="cm-actions">
+        <button class="action-btn soft" id="cm-cancel">لاحقاً</button>
+        <button class="action-btn gold" id="cm-start">ابدأ الآن</button>
+      </div>
+    </div>
+  `;
+
+  modal.classList.add('active');
+
+  const cancelBtn = modal.querySelector('#cm-cancel');
+  const startBtn = modal.querySelector('#cm-start');
+
+  if(cancelBtn){
+    cancelBtn.addEventListener('click', () => {
+      modal.classList.remove('active');
+      Sfx.tap();
+    });
+  }
+
+  if(startBtn){
+    startBtn.addEventListener('click', () => {
+      modal.classList.remove('active');
+      Sfx.reward(); haptic(20);
+
+      /* ابدأ اللعب مع تتبع التحدي */
+      Save.data._activeChallenge = challenge.id;
+      Save.save();
+
+      Toast.info('بدأ التحدي!', challenge.desc, { duration: 3000 });
+
+      if(typeof startGame === 'function'){
+        startGame();
+      }
+    });
+  }
+}
+
+/* ═══ تحديث التقدم عند نهاية الجولة ═══ */
+function updateChallengeProgress(runStats){
+  const challenge = getDailyChallenge();
+  if(challenge.completed) return;
+
+  const today = challenge.date;
+  const state = Save.data.dailyChallenge || {};
+
+  /* فحص شرط التحدي */
+  let newProgress = 0;
+  if(challenge.id === 'comboMaster'){
+    newProgress = runStats.bestCombo || 0;
+  } else if(challenge.id === 'collector'){
+    newProgress = runStats.orbsCollected || 0;
+  } else if(challenge.id === 'speedRun'){
+    newProgress = runStats.maxMetersIn30s || 0;
+  } else if(challenge.id === 'perfectRun'){
+    newProgress = runStats.perfectRunMeters || 0;
+  } else if(challenge.id === 'noPowerups'){
+    newProgress = runStats.noPowerupMeters || 0;
+  }
+
+  /* تحديث */
+  if(state.date !== today){
+    state.date = today;
+    state.progress = 0;
+    state.completed = false;
+  }
+
+  if(newProgress > (state.progress || 0)){
+    state.progress = newProgress;
+  }
+
+  /* اكتمل؟ */
+  const wasCompleted = state.completed;
+  const isNowCompleted = state.progress >= challenge.target;
+
+  if(isNowCompleted && !wasCompleted){
+    state.completed = true;
+    Save.data.coins += challenge.reward;
+    Save.data.stats.totalCoins += challenge.reward;
+    Save.save();
+    updateCoinsUI();
+
+    Sfx.reward(); haptic(30);
+    Toast.reward(challenge.icon, 'تحدي اليوم مكتمل!', '◆ +' + challenge.reward, { duration: 5000 });
+  } else {
+    Save.save();
+  }
+}
+
+/* ============================================================
+   ═══════════════ INTEGRATION HOOKS ═════════════════════════
+   ============================================================ */
+
+/* ═══ hook: عند فتح شاشة الأصدقاء ═══ */
+(function hookFriendsScreen(){
+  const origShowScreen = window.showScreen;
+  if(typeof origShowScreen !== 'function') return;
+
+  window.showScreen = function(id){
+    const result = origShowScreen.apply(this, arguments);
+
+    if(id === 's-friends'){
+      setTimeout(() => {
+        try { buildFriendsV2(); } catch(e){ console.warn('[Friends]', e); }
+      }, 80);
+    }
+
+    if(id === 's-leaderboard'){
+      setTimeout(() => {
+        try { buildLeaderboardV2(); } catch(e){ console.warn('[Leaderboard]', e); }
+      }, 80);
+    }
+
+    if(id === 's-battlepass-v2'){
+      setTimeout(() => {
+        try { buildPremiumBPCard(); } catch(e){ console.warn('[PremiumBP]', e); }
+      }, 80);
+    }
+
+    if(id === 's-missions-v2'){
+      setTimeout(() => {
+        try { buildDailyChallengeCard(); } catch(e){ console.warn('[Challenge]', e); }
+      }, 80);
+    }
+
+    return result;
+  };
+})();
+
+/* ═══ hook: عند انتهاء الجولة ═══ */
+(function hookGameOver(){
+  const origGameOver = window.gameOver;
+  if(typeof origGameOver !== 'function') return;
+
+  window.gameOver = function(){
+    /* جمع إحصائيات الجولة */
+    const runStats = {
+      meters: getMeters(),
+      bestCombo: G.comboMax || 0,
+      orbsCollected: G.orbCount || 0,
+      maxMetersIn30s: Math.max(Save.data.stats.maxMetersIn30s || 0, getMeters()),
+      perfectRunMeters: G.invulnUsed === 0 ? getMeters() : (Save.data.stats.perfectRunMeters || 0),
+      noPowerupMeters: Object.keys(G.activePowerups).length === 0 ? getMeters() : (Save.data.stats.noPowerupMeters || 0)
+    };
+
+    /* تحديث الحفظ */
+    if(!Save.data.stats) Save.data.stats = {};
+    Save.data.stats.maxMetersIn30s = runStats.maxMetersIn30s;
+    if(runStats.perfectRunMeters > (Save.data.stats.perfectRunMeters || 0)){
+      Save.data.stats.perfectRunMeters = runStats.perfectRunMeters;
+    }
+    if(runStats.noPowerupMeters > (Save.data.stats.noPowerupMeters || 0)){
+      Save.data.stats.noPowerupMeters = runStats.noPowerupMeters;
+    }
+
+    /* تحديث التحدي اليومي */
+    try { updateChallengeProgress(runStats); } catch(e){ console.warn('[Challenge]', e); }
+
+    /* استدعاء الأصلي */
+    return origGameOver.apply(this, arguments);
+  };
+})();
+
+/* ═══ hook: عند فتح الرئيسية — تحديث الشارات ═══ */
+(function hookHome(){
+  const origBuildHome = window.buildHome;
+  if(typeof origBuildHome !== 'function') return;
+
+  window.buildHome = function(){
+    const result = origBuildHome.apply(this, arguments);
+    try {
+      updateHomeBadges();
+      if(typeof updatePlayerCard === 'function') updatePlayerCard();
+    } catch(e){}
+    return result;
+  };
+})();
+
+/* ============================================================
+   ═══════════════ INIT ═══════════════
+   ============================================================ */
+
+(function initV25(){
+  /* تهيئة Toast */
+  Toast.init();
+
+  /* فحص التحدي اليومي عند البدء */
+  setTimeout(() => {
+    const challenge = getDailyChallenge();
+    if(!challenge.completed){
+      setTimeout(() => {
+        Toast.reward(challenge.icon, 'تحدي اليوم!', challenge.title, {
+          duration: 4500,
+          action: {
+            label: 'اعرض',
+            callback: () => {
+              currentMissionTab = 'daily';
+              buildMissionsV2Page();
+              showScreen('s-missions-v2');
+            }
+          }
+        });
+      }, 2000);
+    }
+  }, 1500);
+
+  /* فحص طلبات الصداقة */
+  setInterval(async () => {
+    if(!Cloud.user || !Cloud.db) return;
+    if(!document.getElementById('s-home').classList.contains('active')) return;
+
+    try {
+      const uid = Cloud.user.uid;
+      const snap = await Cloud.db.collection('friend_requests')
+        .where('toUid', '==', uid)
+        .where('status', '==', 'pending')
+        .limit(1)
+        .get();
+
+      if(!snap.empty){
+        const hasShownBadge = document.getElementById('ft-badge-req');
+        if(!hasShownBadge || hasShownBadge.style.display === 'none'){
+          Toast.info('📨', 'لديك طلب صداقة جديد', '', {
+            duration: 5000,
+            action: {
+              label: 'اعرض',
+              callback: () => {
+                _friendsTab = 'requests';
+                buildFriendsV2();
+                showScreen('s-friends');
+              }
+            }
+          });
+        }
+      }
+    } catch(e){}
+  }, 60000); /* كل دقيقة */
+
+  console.log('[SHIFT v2.5] ✅ Friends · Leaderboard · Toasts · Challenges loaded');
+})();
+
+/* ═══ تصدير ═══ */
+window.Toast = Toast;
+window.buildFriendsV2 = buildFriendsV2;
+window.buildLeaderboardV2 = buildLeaderboardV2;
+window.buildPremiumBPCard = buildPremiumBPCard;
+window.buildDailyChallengeCard = buildDailyChallengeCard;
+window.getDailyChallenge = getDailyChallenge;
+
+/* ============================================================
+   ═══════════════════════════════════════════════════════════
+   ═══════════ SHIFT v2.6 — CHAT · REFERRAL · CLANS ═════════
+   ═══════════════════════════════════════════════════════════
+   يضيف:
+   - دردشة فورية مع الأصدقاء
+   - تحديات مباشرة (بدون كود)
+   - نظام إحالة مع مكافآت
+   - نظام فرق/Clans كامل
+   ============================================================ */
+
+/* ═══════════════ المتغيرات ═══════════════ */
+let _chatFriend = null;
+let _chatUnsub = null;
+let _chatMessages = [];
+let _directChallengeFriend = null;
+let _directChallengeRounds = 1;
+
+let _referralUnsub = null;
+let _referrals = [];
+let _referralMilestones = [];
+
+let _clanTab = 'my';
+let _myClan = null;
+let _clanUnsub = null;
+let _clanList = [];
+let _pendingClanEmblem = '🛡️';
+let _pendingClanColor = '#4A88C8';
+let _pendingClanPrivacy = 'open';
+
+const CLAN_COST = 500;
+const CLAN_MAX_MEMBERS = 20;
+
+const CLAN_EMBLEMS = ['🛡️','⚔️','🔥','💎','👑','🐺','🦁','🦅','🐉','⚡','🌟','🌀','🌊','🏆','🎯','⚓','🍀','🎪'];
+
+const CLAN_COLORS = [
+  '#4A88C8','#8E6AA8','#E8B34E','#E85838','#6B9B6B',
+  '#C98A2E','#A06AD8','#FF00D8','#5A8FD8','#3A8040',
+  '#C06030','#6A48A8','#FF8040','#E87080','#4090B0','#8040A0'
+];
+
+const REFERRAL_MILESTONES = [
+  { count: 1, reward: 200,  icon: '🌱', title: 'أول صديق',      desc: 'انضم صديق واحد' },
+  { count: 3, reward: 800,  icon: '🌿', title: 'ثلاثة أصدقاء',   desc: 'انضم 3 أصدقاء' },
+  { count: 5, reward: 1500, icon: '🌳', title: 'مجموعة قوية',    desc: 'انضم 5 أصدقاء' },
+  { count: 10, reward: 4000, icon: '👑', title: 'زعيم الدعوات',   desc: 'انضم 10 أصدقاء' },
+  { count: 25, reward: 12000, icon: '🏆', title: 'أسطورة الدعوة',  desc: 'انضم 25 صديقاً' }
+];
+
+const EMOJI_LIST = [
+  '😀','😂','🤣','😊','😍','😘','🥰','😎','🤩','😇',
+  '🙂','😉','😌','😜','🤪','🤔','🤨','😐','😑','😴',
+  '😢','😭','😤','😠','😡','🤯','😱','😨','🥺','😳',
+  '👍','👎','👏','🙌','🤝','💪','✌️','🤞','👋','🙏',
+  '❤️','🧡','💛','💚','💙','💜','🖤','💔','💯','✨',
+  '🔥','⭐','🌟','💫','⚡','💥','🎉','🎊','🎁','🎯',
+  '🏆','👑','💎','🚀','⚔️','🛡️','🎮','🎲','🎪','🎨'
+];
+
+/* ============================================================
+   ═══════════════ CHAT SYSTEM ═══════════════════════════════
+   ============================================================ */
+
+async function openChatWithFriend(friend){
+  if(!Cloud.user || !Cloud.db){
+    Toast.error('يجب تسجيل الدخول');
+    return;
+  }
+
+  _chatFriend = friend;
+
+  /* رأس المحادثة */
+  const headerName = document.getElementById('chat-header-name');
+  const headerStatus = document.getElementById('chat-header-status');
+  const headerAvatar = document.getElementById('chat-header-avatar');
+
+  const name = friend.username || (friend.profile && friend.profile.username) || 'صديق';
+  if(headerName) headerName.textContent = name;
+  if(headerStatus){
+    headerStatus.textContent = 'غير متصل';
+    headerStatus.className = 'chat-header-status';
+  }
+  if(headerAvatar){
+    headerAvatar.textContent = name.charAt(0).toUpperCase();
+  }
+
+  /* عرض الشاشة */
+  showScreen('s-chat');
+
+  /* تحميل الرسائل */
+  loadChatMessages();
+
+  /* ربط زر الدعوة */
+  const inviteBtn = document.getElementById('chat-invite-btn');
+  if(inviteBtn && !inviteBtn._bound){
+    inviteBtn._bound = true;
+    inviteBtn.addEventListener('click', () => {
+      openDirectChallenge(friend);
+    });
+  }
+
+  /* ربط الإدخال */
+  wireChatInput();
+
+  /* تحميل الإيموجي */
+  buildEmojiPanel();
+}
+
+function wireChatInput(){
+  const input = document.getElementById('chat-input');
+  const sendBtn = document.getElementById('chat-send-btn');
+  const emojiBtn = document.getElementById('chat-emoji-btn');
+  const emojiPanel = document.getElementById('chat-emoji-panel');
+
+  if(input && !input._bound){
+    input._bound = true;
+    input.addEventListener('input', () => {
+      if(sendBtn) sendBtn.disabled = !input.value.trim();
+    });
+    input.addEventListener('keydown', e => {
+      if(e.code === 'Enter' && !e.shiftKey){
+        e.preventDefault();
+        if(input.value.trim()) sendChatMessage();
+      }
+    });
+  }
+
+  if(sendBtn && !sendBtn._bound){
+    sendBtn._bound = true;
+    sendBtn.addEventListener('click', sendChatMessage);
+  }
+
+  if(emojiBtn && !emojiBtn._bound){
+    emojiBtn._bound = true;
+    emojiBtn.addEventListener('click', () => {
+      if(emojiPanel){
+        emojiPanel.style.display = emojiPanel.style.display === 'none' ? 'block' : 'none';
+        Sfx.tap();
+      }
+    });
+  }
+}
+
+function buildEmojiPanel(){
+  const grid = document.getElementById('cep-grid');
+  if(!grid || grid._built) return;
+  grid._built = true;
+
+  grid.innerHTML = EMOJI_LIST.map(e =>
+    `<button class="cep-emoji" data-emoji="${e}">${e}</button>`
+  ).join('');
+
+  grid.querySelectorAll('.cep-emoji').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const input = document.getElementById('chat-input');
+      if(input){
+        input.value += btn.dataset.emoji;
+        input.dispatchEvent(new Event('input'));
+      }
+    });
+  });
+}
+
+async function loadChatMessages(){
+  if(!Cloud.user || !Cloud.db || !_chatFriend) return;
+
+  /* إلغاء المستمع السابق */
+  if(_chatUnsub){ try { _chatUnsub(); } catch(e){} _chatUnsub = null; }
+
+  const myUid = Cloud.user.uid;
+  const friendUid = _chatFriend.uid || _chatFriend.fromUid;
+
+  /* معرّف محادثة موحد (ترتيب أبجدي لضمان عدم التكرار) */
+  const chatId = [myUid, friendUid].sort().join('_');
+
+  const messagesEl = document.getElementById('chat-messages');
+  if(messagesEl){
+    messagesEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-mute);font-size:12px;">⏳ جارٍ التحميل...</div>';
+  }
+
+  try {
+    _chatUnsub = Cloud.db.collection('chats').doc(chatId)
+      .collection('messages')
+      .orderBy('ts', 'desc')
+      .limit(50)
+      .onSnapshot(snap => {
+        _chatMessages = [];
+        snap.forEach(doc => {
+          _chatMessages.push({ id: doc.id, ...doc.data() });
+        });
+        _chatMessages.reverse();
+        renderChatMessages();
+      }, err => {
+        console.warn('[Chat] Listener error:', err);
+        renderChatMessages();
+      });
+
+  } catch(e){
+    console.warn('[Chat] Load failed:', e);
+  }
+}
+
+function renderChatMessages(){
+  const container = document.getElementById('chat-messages');
+  if(!container) return;
+
+  if(_chatMessages.length === 0){
+    container.innerHTML = `
+      <div class="chat-empty">
+        <div class="ce-icon">💬</div>
+        <div class="ce-title">لا توجد رسائل</div>
+        <div class="ce-desc">ابدأ المحادثة بإرسال تحية!</div>
+      </div>
+    `;
+    return;
+  }
+
+  const myUid = Cloud.user ? Cloud.user.uid : null;
+
+  container.innerHTML = '';
+
+  _chatMessages.forEach(msg => {
+    const isMe = msg.from === myUid;
+    const el = document.createElement('div');
+    el.className = 'chat-message ' + (isMe ? 'me' : 'them');
+
+    const time = msg.ts && msg.ts.toMillis
+      ? new Date(msg.ts.toMillis())
+      : new Date(msg.ts || Date.now());
+
+    const timeStr = time.toLocaleTimeString('ar-EG', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    el.innerHTML = `
+      <div class="cm-bubble">
+        <div>${escapeHtmlChat(msg.text || '')}</div>
+        <div class="cm-time">${timeStr}</div>
+      </div>
+    `;
+
+    container.appendChild(el);
+  });
+
+  /* تمرير لآخر رسالة */
+  setTimeout(() => {
+    container.scrollTop = container.scrollHeight;
+  }, 50);
+}
+
+async function sendChatMessage(){
+  if(!Cloud.user || !Cloud.db || !_chatFriend) return;
+
+  const input = document.getElementById('chat-input');
+  const text = input ? input.value.trim() : '';
+  if(!text) return;
+
+  const myUid = Cloud.user.uid;
+  const friendUid = _chatFriend.uid || _chatFriend.fromUid;
+  const chatId = [myUid, friendUid].sort().join('_');
+
+  /* مسح فوري */
+  if(input){
+    input.value = '';
+    input.dispatchEvent(new Event('input'));
+  }
+
+  try {
+    await Cloud.db.collection('chats').doc(chatId)
+      .collection('messages').add({
+        from: myUid,
+        to: friendUid,
+        text: text.slice(0, 200),
+        ts: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+    Sfx.play(880, 0.08, 'sine', 0.03, 1320);
+    haptic(6);
+  } catch(e){
+    console.warn('[Chat] Send failed:', e);
+    Toast.error('فشل الإرسال', e.message);
+  }
+}
+
+function escapeHtmlChat(s){
+  return String(s || '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  }[c]));
+}
+
+/* ============================================================
+   ═══════════════ DIRECT CHALLENGE ══════════════════════════
+   ============================================================ */
+
+function openDirectChallenge(friend){
+  _directChallengeFriend = friend;
+
+  /* معاينة الصديق */
+  const preview = document.getElementById('dch-friend-preview');
+  if(preview){
+    const name = friend.username || (friend.profile && friend.profile.username) || 'صديق';
+    preview.innerHTML = `
+      <div class="fpa">${name.charAt(0).toUpperCase()}</div>
+      <div class="fpi">
+        <div class="fpn">${escapeHtmlChat(name)}</div>
+        <div class="fps">جاهز للمبارزة</div>
+      </div>
+    `;
+  }
+
+  /* ربط الجولات */
+  document.querySelectorAll('.dch-round').forEach(btn => {
+    if(btn._bound) return;
+    btn._bound = true;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.dch-round').forEach(b =>
+        b.classList.toggle('active', b === btn));
+      _directChallengeRounds = parseInt(btn.dataset.rounds, 10);
+      Sfx.tap();
+    });
+  });
+
+  /* إرسال */
+  const sendBtn = document.getElementById('dch-send');
+  if(sendBtn && !sendBtn._bound){
+    sendBtn._bound = true;
+    sendBtn.addEventListener('click', sendDirectChallenge);
+  }
+
+  /* إلغاء */
+  const cancelBtn = document.getElementById('dch-cancel');
+  if(cancelBtn && !cancelBtn._bound){
+    cancelBtn._bound = true;
+    cancelBtn.addEventListener('click', () => showScreen('s-chat'));
+  }
+
+  showScreen('s-direct-challenge');
+}
+
+async function sendDirectChallenge(){
+  if(!Cloud.user || !Cloud.db || !_directChallengeFriend) return;
+
+  const uid = Cloud.user.uid;
+  const targetUid = _directChallengeFriend.uid || _directChallengeFriend.fromUid;
+
+  try {
+    /* إرسال الدعوة */
+    const code = generateChallengeCode();
+
+    await Cloud.db.collection('challenges').add({
+      fromUid: uid,
+      fromName: (Cloud.profile && Cloud.profile.username) || 'لاعب',
+      toUid: targetUid,
+      rounds: _directChallengeRounds,
+      code,
+      status: 'pending',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    Toast.success('تم إرسال التحدي!', 'بانتظار قبول الصديق');
+
+    /* رسالة في الدردشة */
+    const chatId = [uid, targetUid].sort().join('_');
+    await Cloud.db.collection('chats').doc(chatId)
+      .collection('messages').add({
+        from: uid,
+        to: targetUid,
+        text: `⚔️ أرسل لك تحدياً (${_directChallengeRounds} جولات)`,
+        ts: firebase.firestore.FieldValue.serverTimestamp(),
+        system: true
+      }).catch(() => {});
+
+    Sfx.reward(); haptic(20);
+    showScreen('s-chat');
+
+  } catch(e){
+    console.warn('[DirectChallenge] Failed:', e);
+    Toast.error('فشل الإرسال', e.message);
+  }
+}
+
+function generateChallengeCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for(let i = 0; i < 6; i++){
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+/* ============================================================
+   ═══════════════ REFERRAL SYSTEM ═══════════════════════════
+   ============================================================ */
+
+function buildReferralPage(){
+  const uid = (Cloud.user && Cloud.user.uid) || 'LOCAL000';
+
+  /* كود الإحالة */
+  const codeEl = document.getElementById('ref-code');
+  if(codeEl){
+    const code = 'SHIFT-' + uid.slice(0, 6).toUpperCase();
+    codeEl.textContent = code;
+  }
+
+  /* زر النسخ */
+  const copyBtn = document.getElementById('ref-copy');
+  if(copyBtn && !copyBtn._bound){
+    copyBtn._bound = true;
+    copyBtn.addEventListener('click', () => {
+      const code = codeEl ? codeEl.textContent : '';
+      if(navigator.clipboard){
+        navigator.clipboard.writeText(code).then(() => {
+          Toast.success('تم نسخ الكود!', code);
+        }).catch(() => {
+          Toast.info('الكود', code);
+        });
+      }
+    });
+  }
+
+  /* زر المشاركة */
+  const shareBtn = document.getElementById('ref-share');
+  if(shareBtn && !shareBtn._bound){
+    shareBtn._bound = true;
+    shareBtn.addEventListener('click', () => {
+      const code = codeEl ? codeEl.textContent : '';
+      const text = `العب SHIFT معي! استخدم كودي: ${code}\n${location.href}`;
+      if(navigator.share){
+        navigator.share({
+          title: 'العب SHIFT',
+          text: 'استخدم كود الإحالة: ' + code,
+          url: location.href
+        }).catch(() => {});
+      } else {
+        navigator.clipboard.writeText(text).then(() => {
+          Toast.success('تم النسخ!', 'شاركه مع أصدقائك');
+        });
+      }
+    });
+  }
+
+  /* قائمة المكافآت */
+  renderReferralMilestones();
+  loadReferrals();
+}
+
+function renderReferralMilestones(){
+  const container = document.getElementById('ref-milestones');
+  if(!container) return;
+
+  const referralCount = Save.data.referralCount || 0;
+  const claimed = Save.data.claimedReferrals || [];
+
+  container.innerHTML = '';
+
+  REFERRAL_MILESTONES.forEach((ms, idx) => {
+    const isUnlocked = referralCount >= ms.count;
+    const isClaimed = claimed.includes(idx);
+
+    const el = document.createElement('div');
+    el.className = 'ref-ms-card' +
+      (isUnlocked ? ' unlocked' : '') +
+      (isClaimed ? ' claimed' : '');
+
+    el.innerHTML = `
+      <div class="rms-icon">${ms.icon}</div>
+      <div class="rms-info">
+        <div class="rms-title">${ms.title}</div>
+        <div class="rms-sub">${ms.desc} · ${referralCount}/${ms.count}</div>
+      </div>
+      <div class="rms-reward">◆ ${ms.reward}</div>
+      ${isUnlocked && !isClaimed
+        ? `<button class="rms-claim" data-ms="${idx}">استلام</button>`
+        : isClaimed
+          ? `<span style="color:var(--sage);font-size:14px;font-weight:700;">✓</span>`
+          : `<span style="color:var(--ink-mute);font-size:11px;">🔒</span>`
+      }
+    `;
+
+    const btn = el.querySelector('[data-ms]');
+    if(btn){
+      btn.addEventListener('click', () => {
+        const idxNum = parseInt(btn.dataset.ms, 10);
+        if((Save.data.claimedReferrals || []).includes(idxNum)) return;
+
+        Save.data.coins += ms.reward;
+        Save.data.stats.totalCoins += ms.reward;
+        if(!Save.data.claimedReferrals) Save.data.claimedReferrals = [];
+        Save.data.claimedReferrals.push(idxNum);
+        Save.save();
+
+        updateCoinsUI();
+        Sfx.reward(); haptic(25);
+        Toast.reward('🎁', 'مكافأة إحالة!', '◆ +' + ms.reward);
+        renderReferralMilestones();
+      });
+    }
+
+    container.appendChild(el);
+  });
+}
+
+async function loadReferrals(){
+  const container = document.getElementById('ref-list');
+  if(!container) return;
+
+  if(!Cloud.user || !Cloud.db){
+    container.innerHTML = `
+      <div class="ref-empty">
+        <div class="re-icon">👥</div>
+        <div class="re-title">يجب تسجيل الدخول</div>
+      </div>
+    `;
+    return;
+  }
+
+  const uid = Cloud.user.uid;
+
+  try {
+    const snap = await Cloud.db.collection('players')
+      .where('referredBy', '==', uid)
+      .limit(50)
+      .get()
+      .catch(() => null);
+
+    if(!snap || snap.empty){
+      container.innerHTML = `
+        <div class="ref-empty">
+          <div class="re-icon">👥</div>
+          <div class="re-title">لا أحد بعد</div>
+          <div class="re-desc">شارك كودك لتبدأ الكسب</div>
+        </div>
+      `;
+
+      /* تحديث العدّاد */
+      Save.data.referralCount = 0;
+      Save.save();
+      return;
+    }
+
+    const count = snap.size;
+    Save.data.referralCount = count;
+    Save.save();
+
+    container.innerHTML = '';
+    snap.forEach(doc => {
+      const data = doc.data();
+      const name = data.username || 'لاعب';
+
+      const el = document.createElement('div');
+      el.className = 'ref-list-item';
+      el.innerHTML = `
+        <div class="rli-avatar">${name.charAt(0).toUpperCase()}</div>
+        <div class="rli-info">
+          <div class="rli-name">${escapeHtmlChat(name)}</div>
+          <div class="rli-date">انضم حديثاً</div>
+        </div>
+        <span style="color:var(--sage);font-size:16px;">✓</span>
+      `;
+      container.appendChild(el);
+    });
+
+    renderReferralMilestones();
+
+  } catch(e){
+    console.warn('[Referral] Load failed:', e);
+  }
+}
+
+/* ═══ حفظ كود الإحالة عند التسجيل ═══ */
+async function applyReferralCode(code){
+  if(!Cloud.user || !Cloud.db) return false;
+  if(!code) return false;
+
+  const uid = Cloud.user.uid;
+
+  try {
+    /* منع التطبيق أكثر من مرة */
+    const meRef = Cloud.db.collection('players').doc(uid);
+    const meSnap = await meRef.get();
+    if(meSnap.exists && meSnap.data().referredBy){
+      return false;
+    }
+
+    /* استخراج UID من الكود */
+    const targetUidShort = code.replace('SHIFT-', '').toLowerCase();
+
+    /* البحث عن اللاعب صاحب الكود */
+    const snap = await Cloud.db.collection('players').limit(100).get();
+    let referrerUid = null;
+    snap.forEach(doc => {
+      if(doc.id.toLowerCase().startsWith(targetUidShort)){
+        referrerUid = doc.id;
+      }
+    });
+
+    if(!referrerUid || referrerUid === uid) return false;
+
+    /* حفظ الإحالة */
+    await meRef.update({
+      referredBy: referrerUid,
+      referredAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    /* مكافأة الإحالة (للطرفين) */
+    Save.data.coins += 100;
+    Save.save();
+
+    Toast.success('تم تطبيق كود الإحالة!', '◆ +100');
+    return true;
+
+  } catch(e){
+    console.warn('[Referral] Apply failed:', e);
+    return false;
+  }
+}
+
+/* ============================================================
+   ═══════════════ CLANS SYSTEM ══════════════════════════════
+   ============================================================ */
+
+function buildClanPage(){
+  const tabs = document.querySelectorAll('.clan-tab');
+  tabs.forEach(tab => {
+    if(tab._bound) return;
+    tab._bound = true;
+    tab.addEventListener('click', () => {
+      _clanTab = tab.dataset.clantab;
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      renderClanContent();
+      Sfx.tap();
+    });
+  });
+
+  loadMyClan();
+  renderClanContent();
+}
+
+async function loadMyClan(){
+  if(!Cloud.user || !Cloud.db) return;
+
+  const uid = Cloud.user.uid;
+
+  try {
+    const meSnap = await Cloud.db.collection('players').doc(uid).get();
+    if(!meSnap.exists) return;
+
+    const clanId = meSnap.data().clanId;
+    if(!clanId){
+      _myClan = null;
+      return;
+    }
+
+    /* جلب الفريق */
+    const clanSnap = await Cloud.db.collection('clans').doc(clanId).get();
+    if(!clanSnap.exists){
+      _myClan = null;
+      return;
+    }
+
+    _myClan = { id: clanId, ...clanSnap.data() };
+
+    /* جلب الأعضاء */
+    const membersSnap = await Cloud.db.collection('clans').doc(clanId)
+      .collection('members').limit(30).get().catch(() => null);
+
+    if(membersSnap){
+      _myClan.members = [];
+      membersSnap.forEach(doc => {
+        _myClan.members.push({ uid: doc.id, ...doc.data() });
+      });
+    }
+
+  } catch(e){
+    console.warn('[Clan] Load failed:', e);
+  }
+}
+
+function renderClanContent(){
+  const container = document.getElementById('clan-content');
+  if(!container) return;
+  container.innerHTML = '';
+
+  if(_clanTab === 'my'){
+    renderMyClan(container);
+  } else if(_clanTab === 'browse'){
+    renderBrowseClans(container);
+  } else if(_clanTab === 'top'){
+    renderTopClans(container);
+  }
+}
+
+function renderMyClan(container){
+  if(!_myClan){
+    container.innerHTML = `
+      <div class="clan-no-clan">
+        <div class="cnc-icon">🛡️</div>
+        <div class="cnc-title">لا فريق لك بعد</div>
+        <div class="cnc-desc">انشئ فريقك أو انضم لفريق موجود للتنافس مع اللاعبين</div>
+        <div class="cnc-actions">
+          <button class="action-btn gold" id="clan-create-btn" style="max-width:180px;">
+            🛡️ &nbsp; إنشاء فريق
+          </button>
+          <button class="action-btn soft" id="clan-browse-btn" style="max-width:180px;">
+            🔍 &nbsp; تصفح الفرق
+          </button>
+        </div>
+      </div>
+    `;
+
+    const createBtn = container.querySelector('#clan-create-btn');
+    if(createBtn) createBtn.addEventListener('click', () => {
+      buildCreateClanPage();
+      showScreen('s-create-clan');
+    });
+
+    const browseBtn = container.querySelector('#clan-browse-btn');
+    if(browseBtn) browseBtn.addEventListener('click', () => {
+      _clanTab = 'browse';
+      document.querySelectorAll('.clan-tab').forEach(t =>
+        t.classList.toggle('active', t.dataset.clantab === 'browse'));
+      renderClanContent();
+    });
+
+    return;
+  }
+
+  /* بطاقة الفريق */
+  const totalScore = (_myClan.members || []).reduce((sum, m) => sum + (m.score || 0), 0);
+
+  const card = document.createElement('div');
+  card.className = 'clan-card-hero';
+  card.style.background = `linear-gradient(135deg, ${_myClan.color} 0%, ${_myClan.color}DD 100%)`;
+
+  card.innerHTML = `
+    <div class="cch-header">
+      <div class="cch-emblem">${_myClan.emblem}</div>
+      <div class="cch-info">
+        <div class="cch-name">${escapeHtmlChat(_myClan.name)}</div>
+        <div class="cch-tag">CLAN</div>
+      </div>
+    </div>
+    ${_myClan.desc ? `<div class="cch-desc">${escapeHtmlChat(_myClan.desc)}</div>` : ''}
+    <div class="cch-stats">
+      <div class="cch-stat">
+        <div class="k">أعضاء</div>
+        <div class="v">${(_myClan.members || []).length}/${CLAN_MAX_MEMBERS}</div>
+      </div>
+      <div class="cch-stat">
+        <div class="k">النقاط</div>
+        <div class="v">${totalScore.toLocaleString()}</div>
+      </div>
+      <div class="cch-stat">
+        <div class="k">المستوى</div>
+        <div class="v">${Math.floor(totalScore / 5000) + 1}</div>
+      </div>
+    </div>
+  `;
+
+  container.appendChild(card);
+
+  /* قائمة الأعضاء */
+  const head = document.createElement('div');
+  head.className = 'admin-section-head';
+  head.innerHTML = `
+    <div class="admin-section-title">الأعضاء</div>
+    <div class="admin-section-sub">MEMBERS</div>
+  `;
+  container.appendChild(head);
+
+  const list = document.createElement('div');
+  list.className = 'clan-members-list';
+
+  (_myClan.members || []).forEach(member => {
+    const memberName = member.name || 'عضو';
+    const isLeader = member.uid === _myClan.ownerUid;
+    const role = isLeader ? 'زعيم' : (member.role === 'officer' ? 'ضابط' : 'عضو');
+    const roleClass = isLeader ? 'leader' : (member.role === 'officer' ? 'officer' : '');
+
+    const el = document.createElement('div');
+    el.className = 'clan-member' + (isLeader ? ' leader' : '');
+
+    el.innerHTML = `
+      <div class="cm-avatar">${memberName.charAt(0).toUpperCase()}</div>
+      <div class="cm-info">
+        <div class="cm-name">${escapeHtmlChat(memberName)}${member.uid === Cloud.user.uid ? ' (أنت)' : ''}</div>
+        <div class="cm-role ${roleClass}">${isLeader ? '👑 ' : ''}${role}</div>
+      </div>
+      <div class="cm-score">◆ ${(member.score || 0).toLocaleString()}</div>
+    `;
+
+    list.appendChild(el);
+  });
+
+  container.appendChild(list);
+
+  /* زر الخروج */
+  const actions = document.createElement('div');
+  actions.style.cssText = 'margin-top:20px;display:flex;flex-direction:column;gap:8px;';
+
+  const leaveBtn = document.createElement('button');
+  leaveBtn.className = 'action-btn soft';
+  leaveBtn.style.color = '#C14A4A';
+  leaveBtn.textContent = '🚪 مغادرة الفريق';
+  leaveBtn.addEventListener('click', leaveClan);
+
+  actions.appendChild(leaveBtn);
+  container.appendChild(actions);
+}
+
+async function renderBrowseClans(container){
+  container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-mute);">⏳ جارٍ التحميل...</div>';
+
+  if(!Cloud.db){
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:#C14A4A;">غير متصل</div>';
+    return;
+  }
+
+  try {
+    const snap = await Cloud.db.collection('clans')
+      .where('privacy', '==', 'open')
+      .limit(30)
+      .get()
+      .catch(() => null);
+
+    if(!snap || snap.empty){
+      container.innerHTML = `
+        <div class="clan-no-clan">
+          <div class="cnc-icon">🔍</div>
+          <div class="cnc-title">لا توجد فرق مفتوحة</div>
+          <div class="cnc-desc">كن أول من ينشئ فريقاً!</div>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = '';
+
+    snap.forEach(doc => {
+      const clan = { id: doc.id, ...doc.data() };
+      const el = buildClanListItem(clan);
+      container.appendChild(el);
+    });
+
+  } catch(e){
+    container.innerHTML = `<div style="text-align:center;padding:40px;color:#C14A4A;">فشل: ${e.message}</div>`;
+  }
+}
+
+async function renderTopClans(container){
+  container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-mute);">⏳ جارٍ التحميل...</div>';
+
+  if(!Cloud.db){
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:#C14A4A;">غير متصل</div>';
+    return;
+  }
+
+  try {
+    const snap = await Cloud.db.collection('clans')
+      .orderBy('totalScore', 'desc')
+      .limit(20)
+      .get()
+      .catch(() => null);
+
+    if(!snap || snap.empty){
+      container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-mute);">لا توجد فرق</div>';
+      return;
+    }
+
+    container.innerHTML = '';
+
+    let rank = 1;
+    snap.forEach(doc => {
+      const clan = { id: doc.id, ...doc.data() };
+      const el = buildClanListItem(clan, rank);
+      container.appendChild(el);
+      rank++;
+    });
+
+  } catch(e){
+    container.innerHTML = `<div style="text-align:center;padding:40px;color:#C14A4A;">فشل: ${e.message}</div>`;
+  }
+}
+
+function buildClanListItem(clan, rank){
+  const el = document.createElement('div');
+  el.className = 'clan-list-item';
+
+  const privacyBadge = clan.privacy === 'open'
+    ? '<span class="cli-badge open">مفتوح</span>'
+    : '<span class="cli-badge invite">بالدعوة</span>';
+
+  el.innerHTML = `
+    <div class="cli-emblem" style="background:${clan.color || '#4A88C8'};color:#fff;">
+      ${clan.emblem || '🛡️'}
+    </div>
+    <div class="cli-info">
+      <div class="cli-name">${escapeHtmlChat(clan.name)}</div>
+      <div class="cli-meta">
+        ${privacyBadge}
+        <span>👥 ${clan.memberCount || 0}/${CLAN_MAX_MEMBERS}</span>
+      </div>
+    </div>
+    ${rank ? `<div style="font-family:'Space Grotesk';font-size:14px;font-weight:700;color:var(--ink-mute);margin-left:4px;">#${rank}</div>` : ''}
+    <div class="cli-score">${(clan.totalScore || 0).toLocaleString()}</div>
+  `;
+
+  el.addEventListener('click', () => openClanDetails(clan));
+  return el;
+}
+
+async function openClanDetails(clan){
+  /* نسخة مبسطة — عرض معلومات + خيار الانضمام */
+  const preview = confirm(
+    `🛡️ ${clan.name}\n` +
+    (clan.desc ? `\n${clan.desc}\n` : '') +
+    `\n👥 الأعضاء: ${clan.memberCount || 0}/${CLAN_MAX_MEMBERS}` +
+    `\n💰 النقاط: ${(clan.totalScore || 0).toLocaleString()}` +
+    `\n\nهل تريد الانضمام؟`
+  );
+
+  if(preview) joinClan(clan);
+}
+
+async function joinClan(clan){
+  if(!Cloud.user || !Cloud.db) return;
+
+  if(_myClan){
+    Toast.warning('أنت في فريق بالفعل', '');
+    return;
+  }
+
+  if(clan.privacy !== 'open'){
+    Toast.warning('هذا الفريق بالدعوة فقط');
+    return;
+  }
+
+  if((clan.memberCount || 0) >= CLAN_MAX_MEMBERS){
+    Toast.error('الفريق ممتلئ');
+    return;
+  }
+
+  try {
+    const uid = Cloud.user.uid;
+    const name = (Cloud.profile && Cloud.profile.username) || 'لاعب';
+
+    /* إضافة العضو */
+    await Cloud.db.collection('clans').doc(clan.id)
+      .collection('members').doc(uid).set({
+        uid,
+        name,
+        role: 'member',
+        score: 0,
+        joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+    /* تحديث العدّاد */
+    await Cloud.db.collection('clans').doc(clan.id).update({
+      memberCount: firebase.firestore.FieldValue.increment(1)
+    });
+
+    /* تحديث اللاعب */
+    await Cloud.db.collection('players').doc(uid).update({
+      clanId: clan.id
+    });
+
+    Toast.success('انضممت للفريق!', clan.name);
+    Sfx.reward(); haptic(30);
+
+    await loadMyClan();
+    _clanTab = 'my';
+    document.querySelectorAll('.clan-tab').forEach(t =>
+      t.classList.toggle('active', t.dataset.clantab === 'my'));
+    renderClanContent();
+
+  } catch(e){
+    console.warn('[Clan] Join failed:', e);
+    Toast.error('فشل الانضمام', e.message);
+  }
+}
+
+async function leaveClan(){
+  if(!_myClan) return;
+  if(_myClan.ownerUid === Cloud.user.uid){
+    Toast.warning('لا يمكن للزعيم المغادرة', 'انقل الزعامة أولاً');
+    return;
+  }
+  if(!confirm('مغادرة الفريق؟')) return;
+
+  try {
+    const uid = Cloud.user.uid;
+
+    await Cloud.db.collection('clans').doc(_myClan.id)
+      .collection('members').doc(uid).delete();
+
+    await Cloud.db.collection('clans').doc(_myClan.id).update({
+      memberCount: firebase.firestore.FieldValue.increment(-1)
+    });
+
+    await Cloud.db.collection('players').doc(uid).update({
+      clanId: firebase.firestore.FieldValue.delete()
+    });
+
+    Toast.success('غادرت الفريق');
+    _myClan = null;
+    renderClanContent();
+
+  } catch(e){
+    Toast.error('فشل', e.message);
+  }
+}
+
+/* ============================================================
+   ═══════════════ CREATE CLAN ═══════════════════════════════
+   ============================================================ */
+
+function buildCreateClanPage(){
+  /* إيموجي */
+  const emblemGrid = document.getElementById('clan-emblem-grid');
+  if(emblemGrid && !emblemGrid._built){
+    emblemGrid._built = true;
+    emblemGrid.innerHTML = CLAN_EMBLEMS.map((e, i) =>
+      `<button class="clan-emblem-btn ${i === 0 ? 'active' : ''}" data-emblem="${e}">${e}</button>`
+    ).join('');
+
+    emblemGrid.querySelectorAll('.clan-emblem-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        emblemGrid.querySelectorAll('.clan-emblem-btn').forEach(b =>
+          b.classList.toggle('active', b === btn));
+        _pendingClanEmblem = btn.dataset.emblem;
+      });
+    });
+  }
+
+  /* ألوان */
+  const colorGrid = document.getElementById('clan-color-grid');
+  if(colorGrid && !colorGrid._built){
+    colorGrid._built = true;
+    colorGrid.innerHTML = CLAN_COLORS.map((c, i) =>
+      `<button class="clan-color-btn ${i === 0 ? 'active' : ''}" data-color="${c}" style="background:${c};"></button>`
+    ).join('');
+
+    colorGrid.querySelectorAll('.clan-color-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        colorGrid.querySelectorAll('.clan-color-btn').forEach(b =>
+          b.classList.toggle('active', b === btn));
+        _pendingClanColor = btn.dataset.color;
+      });
+    });
+  }
+
+  /* الخصوصية */
+  document.querySelectorAll('.clan-privacy-btn').forEach(btn => {
+    if(btn._bound) return;
+    btn._bound = true;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.clan-privacy-btn').forEach(b =>
+        b.classList.toggle('active', b === btn));
+      _pendingClanPrivacy = btn.dataset.privacy;
+    });
+  });
+
+  /* التحقق من الاسم */
+  const nameInput = document.getElementById('clan-name');
+  const submitBtn = document.getElementById('clan-create-submit');
+  const statusEl = document.getElementById('clan-create-status');
+
+  if(nameInput && !nameInput._bound){
+    nameInput._bound = true;
+    nameInput.addEventListener('input', () => {
+      const v = nameInput.value.trim();
+      if(v.length < 3){
+        if(statusEl){
+          statusEl.textContent = v.length === 0 ? '' : 'الاسم قصير جداً';
+          statusEl.className = 'af-status err';
+        }
+        submitBtn.disabled = true;
+        return;
+      }
+      if(statusEl){
+        statusEl.textContent = '✓ الاسم صالح';
+        statusEl.className = 'af-status ok';
+      }
+      submitBtn.disabled = false;
+    });
+  }
+
+  if(submitBtn && !submitBtn._bound){
+    submitBtn._bound = true;
+    submitBtn.addEventListener('click', createClan);
+  }
+}
+
+async function createClan(){
+  if(!Cloud.user || !Cloud.db){
+    Toast.error('يجب تسجيل الدخول');
+    return;
+  }
+
+  if(_myClan){
+    Toast.warning('أنت في فريق بالفعل');
+    return;
+  }
+
+  const nameInput = document.getElementById('clan-name');
+  const descInput = document.getElementById('clan-desc');
+  const name = nameInput ? nameInput.value.trim() : '';
+
+  if(name.length < 3){
+    Toast.warning('الاسم قصير جداً');
+    return;
+  }
+
+  /* فحص الرصيد */
+  const unlimited = hasAdminAccess() && Save.data.admin.unlimitedCoins;
+  if(!unlimited && Save.data.coins < CLAN_COST){
+    Toast.error('رصيد غير كافٍ', `تحتاج ◆ ${CLAN_COST - Save.data.coins}`);
+    return;
+  }
+
+  if(!confirm(`إنشاء الفريق "${name}" بـ ◆ ${CLAN_COST}؟`)) return;
+
+  try {
+    const uid = Cloud.user.uid;
+    const myName = (Cloud.profile && Cloud.profile.username) || 'لاعب';
+
+    /* خصم التكلفة */
+    if(!unlimited) Save.data.coins -= CLAN_COST;
+    Save.save();
+    updateCoinsUI();
+
+    /* إنشاء الفريق */
+    const clanRef = await Cloud.db.collection('clans').add({
+      name,
+      desc: descInput ? descInput.value.trim().slice(0, 60) : '',
+      emblem: _pendingClanEmblem,
+      color: _pendingClanColor,
+      privacy: _pendingClanPrivacy,
+      ownerUid: uid,
+      memberCount: 1,
+      totalScore: 0,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    /* إضافة الزعيم كعضو */
+    await clanRef.collection('members').doc(uid).set({
+      uid,
+      name: myName,
+      role: 'leader',
+      score: 0,
+      joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    /* ربط اللاعب */
+    await Cloud.db.collection('players').doc(uid).update({
+      clanId: clanRef.id
+    });
+
+    Toast.reward('🛡️', 'تم إنشاء الفريق!', name, { duration: 5000 });
+    Sfx.reward(); haptic(40);
+
+    /* احتفال */
+    for(let i = 0; i < 30; i++){
+      const a = (i / 30) * Math.PI * 2;
+      particles.push({
+        x: P.x, y: P.y,
+        vx: Math.cos(a) * rand(4, 9),
+        vy: Math.sin(a) * rand(4, 9),
+        life: 1.4, decay: 0.018,
+        color: _pendingClanColor,
+        size: rand(3, 6)
+      });
+    }
+
+    await loadMyClan();
+    _clanTab = 'my';
+    showScreen('s-clan');
+    document.querySelectorAll('.clan-tab').forEach(t =>
+      t.classList.toggle('active', t.dataset.clantab === 'my'));
+    renderClanContent();
+
+  } catch(e){
+    console.warn('[Clan] Create failed:', e);
+    Toast.error('فشل الإنشاء', e.message);
+  }
+}
+
+/* ============================================================
+   ═══════════════ INTEGRATION HOOKS ═════════════════════════
+   ============================================================ */
+
+/* ═══ Hook على showScreen ═══ */
+(function hookScreensV26(){
+  const origShowScreen = window.showScreen;
+  if(typeof origShowScreen !== 'function') return;
+
+  window.showScreen = function(id){
+    const result = origShowScreen.apply(this, arguments);
+
+    if(id === 's-referral'){
+      setTimeout(() => {
+        try { buildReferralPage(); } catch(e){ console.warn('[Referral]', e); }
+      }, 80);
+    }
+
+    if(id === 's-clan'){
+      setTimeout(() => {
+        try { buildClanPage(); } catch(e){ console.warn('[Clan]', e); }
+      }, 80);
+    }
+
+    if(id === 's-create-clan'){
+      setTimeout(() => {
+        try { buildCreateClanPage(); } catch(e){ console.warn('[CreateClan]', e); }
+      }, 80);
+    }
+
+    return result;
+  };
+})();
+
+/* ═══ Hook على buildFriendsV2 — إضافة أزرار المحادثة ═══ */
+(function hookFriendCardActions(){
+  /* interceptor للحدث على friend cards */
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.fc2-btn');
+    if(!btn) return;
+    const action = btn.dataset.action;
+    if(action !== 'chat' && action !== 'challenge') return;
+
+    e.stopPropagation();
+
+    const card = btn.closest('.friend-card-v2');
+    if(!card) return;
+
+    /* استخراج بيانات الصديق */
+    const friendUid = card.dataset.friendUid;
+    if(!friendUid) return;
+
+    const friend = _friends.find(f => f.uid === friendUid) ||
+                   _recentPlayers.find(f => f.uid === friendUid);
+    if(!friend) return;
+
+    if(action === 'chat'){
+      openChatWithFriend(friend);
+    } else if(action === 'challenge'){
+      openDirectChallenge(friend);
+    }
+  });
+})();
+
+/* ═══ إضافة زرين للـ friend card ═══ */
+(function patchBuildFriendCard(){
+  const origBuildFriendCard = window.buildFriendCard;
+  if(typeof origBuildFriendCard !== 'function') return;
+  /* سنترك البناء الأصلي ونضيف البيانات عبر CSS selector */
+})();
+
+/* ═══ حقن أزرار المحادثة في بطاقات الأصدقاء ═══ */
+(function enhanceFriendCards(){
+  const observer = new MutationObserver(mutations => {
+    mutations.forEach(m => {
+      m.addedNodes.forEach(node => {
+        if(node.nodeType !== 1) return;
+        if(node.classList && node.classList.contains('friend-card-v2')){
+          enhanceSingleFriendCard(node);
+        }
+        /* بحث في الأبناء */
+        if(node.querySelectorAll){
+          node.querySelectorAll('.friend-card-v2').forEach(enhanceSingleFriendCard);
+        }
+      });
+    });
+  });
+
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  function enhanceSingleFriendCard(card){
+    if(card._enhanced) return;
+    card._enhanced = true;
+
+    const actions = card.querySelector('.fc2-actions');
+    if(!actions) return;
+
+    /* لا نضيف إن كان الطلب */
+    if(card.querySelector('[data-action="accept"]')) return;
+
+    /* إضافة أزرار الدردشة والتحدي قبل زر "المزيد" */
+    const moreBtn = actions.querySelector('[data-action="more"]');
+    if(moreBtn){
+      const chatBtn = document.createElement('button');
+      chatBtn.className = 'fc2-btn ghost';
+      chatBtn.dataset.action = 'chat';
+      chatBtn.title = 'محادثة';
+      chatBtn.textContent = '💬';
+
+      const challengeBtn = document.createElement('button');
+      challengeBtn.className = 'fc2-btn success';
+      challengeBtn.dataset.action = 'challenge';
+      challengeBtn.title = 'تحدي';
+      challengeBtn.textContent = '⚔️';
+
+      actions.insertBefore(challengeBtn, moreBtn);
+      actions.insertBefore(chatBtn, moreBtn);
+    }
+  }
+})();
+
+/* ═══ إضافة زرّي الإحالة والفرق إلى hscroll-actions ═══ */
+(function patchHomeActions(){
+  const origBuildHomeV2 = window.buildHomeV2;
+  if(typeof origBuildHomeV2 !== 'function') return;
+
+  window.buildHomeV2 = function(){
+    const result = origBuildHomeV2.apply(this, arguments);
+
+    /* ربط أزرار الإحالة والفرق */
+    setTimeout(() => {
+      document.querySelectorAll('.hs-action[data-page="referral"], .hs-action[data-page="clan"]').forEach(btn => {
+        if(btn._bound) return;
+        btn._bound = true;
+        btn.addEventListener('click', () => {
+          const page = btn.dataset.page;
+          Sfx.tap(); haptic(6);
+          if(page === 'referral') showScreen('s-referral');
+          else if(page === 'clan') showScreen('s-clan');
+        });
+      });
+    }, 100);
+
+    return result;
+  };
+})();
+
+/* ═══ دعم كود الإحالة من URL ═══ */
+(function checkReferralFromURL(){
+  try {
+    const params = new URLSearchParams(location.search);
+    const refCode = params.get('ref');
+    if(!refCode) return;
+
+    /* نحفظه لاستخدامه بعد تسجيل الدخول */
+    sessionStorage.setItem('pending_ref_code', refCode);
+
+    /* نحاول تطبيقه إذا كنا مسجلين */
+    if(Cloud.user){
+      applyReferralCode(refCode).then(applied => {
+        if(applied){
+          sessionStorage.removeItem('pending_ref_code');
+        }
+      });
+    }
+  } catch(e){}
+})();
+
+/* ═══ Hook على mergeAndGoHome — تطبيق كود الإحالة ═══ */
+(function hookMergeAndGoHome(){
+  const origMergeAndGoHome = window.mergeAndGoHome;
+  if(typeof origMergeAndGoHome !== 'function') return;
+
+  window.mergeAndGoHome = async function(){
+    const result = await origMergeAndGoHome.apply(this, arguments);
+
+    /* تطبيق كود الإحالة المعلّق */
+    setTimeout(async () => {
+      const refCode = sessionStorage.getItem('pending_ref_code');
+      if(refCode){
+        const applied = await applyReferralCode(refCode);
+        if(applied){
+          sessionStorage.removeItem('pending_ref_code');
+        }
+      }
+    }, 500);
+
+    return result;
+  };
+})();
+
+/* ============================================================
+   ═══════════════ INIT ══════════════════════════════════════
+   ============================================================ */
+
+(function initV26(){
+  console.log('[SHIFT v2.6] ✅ Chat · Referral · Clans · DirectChallenge loaded');
+})();
+
+/* ═══ تصدير ═══ */
+window.openChatWithFriend = openChatWithFriend;
+window.openDirectChallenge = openDirectChallenge;
+window.buildReferralPage = buildReferralPage;
+window.buildClanPage = buildClanPage;
+window.buildCreateClanPage = buildCreateClanPage;
+window.applyReferralCode = applyReferralCode;
+
+/* ============================================================
    ==================== BOOT =================================
    ============================================================ */
 function boot() {
@@ -23724,8 +29804,8 @@ if(gg) gg.classList.remove('show');
 
 initSkyDecor();
 
-/* ✅ بناء مناطق مؤشر الارتفاع */
-buildGaugeZones();
+/* ✅ بناء بركة مناطق المؤشر */
+ensureGaugeZonePool();
 
 /* تهيئة نظام المصادر */
 PLACEMENT_TYPES = buildPlacementTypes();

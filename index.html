@@ -62,7 +62,7 @@
   <!-- مقياس الارتفاع العمودي -->
 <div id="altitude-gauge">
   <div class="gauge-track" id="gauge-track">
-    <!-- ✅ المناطق تُبنى ديناميكياً بواسطة JS -->
+    <!-- ✅ المناطق تُبنى تلقائياً من JS -->
     <div class="gauge-marker" id="gauge-marker"></div>
   </div>
   <div class="gauge-readout" id="gauge-readout">
@@ -672,195 +672,901 @@
   </div>
 </div>
 
-    <!-- ============================================================
-         HOME
-         ============================================================ -->
-    <div class="screen" id="s-home">
-      <div class="home">
-        <div class="home-top">
-          <div class="brand">
-            <div class="brand-name">SH<span class="accent">I</span>FT</div>
-            <div class="brand-sub">CALM ARCADE</div>
-          </div>
-          <div class="top-pills">
-            <button class="global-level" id="global-lvl-btn" style="--p:0">
-              <div class="lvl-ring"><span class="n" id="global-lvl-num">1</span></div>
-              <div class="lvl-text">
-                <span class="l">GLOBAL</span>
-                <span class="v" id="global-lvl-meters">0م</span>
-              </div>
-            </button>
-            <div class="coin-pill">
-              <span class="c">◆</span>
-              <span id="home-coins">0</span>
-            </div>
-            <button class="menu-btn" id="menu-btn" title="القائمة">☰</button>
-          </div>
+<!-- ============================================================
+     HOME — النسخة الجديدة (بطاقة لاعب + شخصية + أزرار)
+     ============================================================ -->
+<div class="screen" id="s-home">
+  <div class="home">
+
+    <!-- ═══ Top Bar ═══ -->
+    <div class="home-top">
+      <div class="brand">
+        <div class="brand-name">SH<span class="accent">I</span>FT</div>
+        <div class="brand-sub">CALM ARCADE</div>
+      </div>
+      <div class="top-pills">
+        <div class="coin-pill">
+          <span class="c">◆</span>
+          <span id="home-coins">0</span>
         </div>
+        <button class="menu-btn" id="menu-btn" title="القائمة">☰</button>
+      </div>
+    </div>
 
-        <div class="hero">
-          <div class="hero-avatar" id="hero-avatar"></div>
-          <div class="hero-info">
-            <div class="hero-eyebrow">أفضل مسافة</div>
-            <div class="hero-score">
-              <span id="hero-score">0</span>
-              <span class="unit">م</span>
-            </div>
-            <div class="hero-mode">
-              <span id="hero-mode-name">قلب الجاذبية</span>
-              <span class="dot"></span>
-              <span class="hero-lvl" id="hero-mode-lvl">LVL 1</span>
-            </div>
-          </div>
+<!-- ═══ Merged Player Hero: Avatar + Name + Character ═══ -->
+<div class="player-hero-merged" id="player-hero-merged">
+  <div class="phm-bg"></div>
+
+  <!-- ───────── RIGHT: Avatar + Level ───────── -->
+  <div class="phm-avatar-col">
+    <div class="phm-avatar-wrap">
+      <div class="phm-frame" id="pch-frame"></div>
+      <div class="phm-avatar" id="pch-avatar">
+        <span id="pch-emoji">👤</span>
+        <img id="pch-img" style="display:none;" alt="">
+      </div>
+      <div class="phm-badge" id="pch-badge"></div>
+    </div>
+
+    <div class="phm-level" id="pch-level-btn">
+      <div class="phm-lvl-ring" style="--p:0">
+        <span id="pch-lvl-num">1</span>
+      </div>
+      <div class="phm-lvl-meters" id="pch-lvl-meters">0م</div>
+    </div>
+  </div>
+
+  <!-- ───────── CENTER: Name + Title ───────── -->
+  <div class="phm-info-col">
+    <div class="phm-name" id="pch-name">لاعب</div>
+    <div class="phm-title" id="pch-title">🌱 مبتدئ</div>
+    <div class="phm-progress">
+      <div class="phm-progress-fill" id="pch-progress-fill" style="width:0%"></div>
+    </div>
+    <button class="phm-edit-btn" id="pps-edit-btn">
+      <span>✎</span> تعديل
+    </button>
+  </div>
+
+  <!-- ───────── LEFT: Player Character ───────── -->
+  <div class="phm-character-col">
+    <canvas id="player-preview-canvas" width="140" height="170"></canvas>
+    <div class="phm-char-glow"></div>
+  </div>
+</div>
+
+    <!-- ═══ Mode Selector Button ═══ -->
+    <button class="mode-selector-btn" id="mode-selector-btn">
+      <div class="msb-left">
+        <div class="msb-icon" id="msb-icon">⇅</div>
+        <div class="msb-info">
+          <div class="msb-label">النمط الحالي</div>
+          <div class="msb-name" id="msb-name">قلب الجاذبية</div>
         </div>
-
-        <div class="section">
-          <div class="section-head">
-            <div class="section-title">الأنماط الأساسية</div>
-            <div class="section-sub">MODES</div>
-          </div>
-          <div class="mode-grid" id="mode-grid"></div>
+      </div>
+      <div class="msb-right">
+        <div class="msb-best">
+          <span class="k">BEST</span>
+          <span class="v" id="msb-best">0م</span>
         </div>
+        <div class="msb-arrow">‹</div>
+      </div>
+    </button>
 
-        <div class="section">
-          <div class="section-head">
-            <div class="section-title">نمط الجولة</div>
-            <div class="section-sub">RUN TYPE</div>
-          </div>
-          <div id="run-type-grid" class="run-type-grid"></div>
+    <!-- ═══ Play + Invite ═══ -->
+    <div class="play-row">
+      <button class="play-btn" id="play-btn">
+        <span>ابدأ اللعب</span>
+        <span class="arrow">▶</span>
+      </button>
+      <button class="invite-btn" id="invite-btn" title="دعوة لاعب">
+        <span class="invite-ic">👥</span>
+      </button>
+    </div>
+
+    <!-- ═══ Horizontal Scroll Actions ═══ -->
+    <div class="section-head" style="margin-top:6px;">
+      <div class="section-title">الأقسام</div>
+      <div class="section-sub">EXPLORE</div>
+    </div>
+
+<!-- ═══ Wrapper لعناصر التمرير ═══ -->
+<div class="hscroll-wrapper">
+  <!-- زر تمرير يسار -->
+  <button class="hscroll-nav right" id="hscroll-nav-right" aria-label="تمرير">‹</button>
+  <!-- زر تمرير يمين -->
+  <button class="hscroll-nav left" id="hscroll-nav-left" aria-label="تمرير">›</button>
+
+  <!-- الأزرار -->
+  <div class="hscroll-actions" id="hscroll-actions">
+    <button class="hs-action" data-page="shop" style="--hs:#E8B34E;">
+      <div class="hs-ic">🛒</div>
+      <div class="hs-lbl">المتجر</div>
+    </button>
+    <button class="hs-action" data-page="season" style="--hs:#E8B34E;">
+      <div class="hs-ic">🏅</div>
+      <div class="hs-lbl">الرتب</div>
+    </button>
+    <button class="hs-action" data-page="battlepass" style="--hs:#8E6AA8;">
+      <div class="hs-ic">🎫</div>
+      <div class="hs-lbl">باتل باس</div>
+    </button>
+    <button class="hs-action" data-page="powerups" style="--hs:#4A88C8;">
+      <div class="hs-ic">⚡</div>
+      <div class="hs-lbl">التعزيزات</div>
+    </button>
+    <button class="hs-action" data-page="missions" style="--hs:#6B9B6B;">
+      <div class="hs-ic">📋</div>
+      <div class="hs-lbl">المهام</div>
+      <div class="hs-badge" id="missions-badge" style="display:none;">!</div>
+    </button>
+    <button class="hs-action" data-page="friends" style="--hs:#4A88C8;">
+      <div class="hs-ic">👥</div>
+      <div class="hs-lbl">الأصدقاء</div>
+    </button>
+    <button class="hs-action" data-page="clan" style="--hs:#8E6AA8;">
+      <div class="hs-ic">🛡️</div>
+      <div class="hs-lbl">الفرق</div>
+    </button>
+    <button class="hs-action" data-page="leaderboard" style="--hs:#C98A2E;">
+      <div class="hs-ic">🏆</div>
+      <div class="hs-lbl">لوحة الصدارة</div>
+    </button>
+    <button class="hs-action" data-page="chest" style="--hs:#E85838;">
+      <div class="hs-ic">📦</div>
+      <div class="hs-lbl">الصناديق</div>
+    </button>
+    <button class="hs-action" data-page="wheel" style="--hs:#FF00D8;">
+      <div class="hs-ic">🎡</div>
+      <div class="hs-lbl">عجلة الحظ</div>
+    </button>
+    <button class="hs-action" data-page="referral" style="--hs:#E8B34E;">
+      <div class="hs-ic">🎁</div>
+      <div class="hs-lbl">الإحالة</div>
+    </button>
+    <button class="hs-action" data-page="events" style="--hs:#A06AD8;">
+      <div class="hs-ic">🎪</div>
+      <div class="hs-lbl">الأحداث</div>
+    </button>
+  </div>
+
+  <!-- مؤشرات النقاط -->
+  <div class="hscroll-indicator" id="hscroll-indicator"></div>
+</div>
+
+  </div>
+
+  <!-- ═══ HOME MENU (المحدّث) ═══ -->
+  <div id="home-menu" class="home-menu">
+    <div class="home-menu-backdrop"></div>
+    <div class="home-menu-panel">
+
+      <div class="hm-header">
+        <div class="hm-avatar" id="hm-avatar">
+          <span id="hm-avatar-emoji">👤</span>
+          <img id="hm-avatar-img" style="display:none;" alt="">
         </div>
-
-        <button class="play-btn" id="play-btn">
-          <span>ابدأ اللعب</span>
-          <span class="arrow">▶</span>
-        </button>
-
-        <div class="section">
-          <div class="section-head">
-            <div class="section-title">يومي وأسبوعي</div>
-            <div class="section-sub">DAILY</div>
-          </div>
-          <div class="quick-actions">
-            <button class="qa-btn highlight" data-page="daily">
-              <div class="ic">🎁</div>
-              <div class="lbl">يومي</div>
-              <div class="badge" id="daily-badge" style="display:none;">!</div>
-            </button>
-            <button class="qa-btn" data-page="quests">
-              <div class="ic">📋</div>
-              <div class="lbl">المهام</div>
-              <div class="badge" id="quest-badge" style="display:none;">!</div>
-            </button>
-            <button class="qa-btn" data-page="season">
-              <div class="ic">🏅</div>
-              <div class="lbl">الموسم</div>
-            </button>
-            <button class="qa-btn highlight" data-page="battlepass">
-              <div class="ic">🎫</div>
-              <div class="lbl">باتل باس</div>
-            </button>
-          </div>
-        </div>
-
-        <!-- ✅ جديد: زر اللعب الجماعي -->
-        <div class="section">
-          <div class="section-head">
-            <div class="section-title">اللعب الجماعي</div>
-            <div class="section-sub">MULTIPLAYER</div>
-          </div>
-          <button class="mp-open-card" id="mp-open-btn">
-            <div class="mp-open-ic">👥</div>
-            <div class="mp-open-body">
-              <div class="mp-open-title">العب مع صديق</div>
-              <div class="mp-open-sub">أنشئ غرفة وشارك الكود، أو انضم بغرفة موجودة</div>
-            </div>
-            <div class="mp-open-arrow">‹</div>
-          </button>
-        </div>
-
-        <div class="section">
-          <div class="section-head">
-            <div class="section-title">التخصيص والمقتنيات</div>
-            <div class="section-sub">CUSTOMIZE</div>
-          </div>
-          <div class="quick-actions">
-            <button class="qa-btn" data-page="shop">
-              <div class="ic">🎨</div>
-              <div class="lbl">الأزياء</div>
-            </button>
-            <button class="qa-btn" data-page="cosmetics">
-              <div class="ic">✨</div>
-              <div class="lbl">التأثيرات</div>
-            </button>
-            <button class="qa-btn highlight" data-page="powerups">
-              <div class="ic">⚡</div>
-              <div class="lbl">التعزيزات</div>
-            </button>
-            <button class="qa-btn" data-page="achieve">
-              <div class="ic">🏆</div>
-              <div class="lbl">الإنجازات</div>
-              <div class="badge" id="ach-badge" style="display:none;">0</div>
-            </button>
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="section-head">
-            <div class="section-title">الأحداث والفعاليات</div>
-            <div class="section-sub">EVENTS</div>
-          </div>
-          <div class="quick-actions">
-            <button class="qa-btn highlight" data-page="events" style="grid-column: span 4;">
-              <div class="ic">🎪</div>
-              <div class="lbl">الأحداث الأسبوعية</div>
-            </button>
-          </div>
+        <div class="hm-user">
+          <div class="hm-username" id="hm-username">ضيف</div>
+          <div class="hm-user-sub" id="hm-user-sub">لاعب محلي</div>
         </div>
       </div>
 
-      <!-- HOME MENU -->
-      <div id="home-menu" class="home-menu">
-        <div class="home-menu-backdrop"></div>
-        <div class="home-menu-panel">
+      <div class="hm-divider"></div>
 
-          <div class="hm-header">
-            <div class="hm-avatar" id="hm-avatar">
-              <span id="hm-avatar-emoji">👤</span>
-              <img id="hm-avatar-img" style="display:none;" alt="">
-            </div>
-            <div class="hm-user">
-              <div class="hm-username" id="hm-username">ضيف</div>
-              <div class="hm-user-sub" id="hm-user-sub">لاعب محلي</div>
-            </div>
-          </div>
+      <button class="hm-item" data-menu="profile">
+        <span class="hm-ic">🎖️</span>
+        <span class="hm-lbl">الملف الشخصي</span>
+        <span class="hm-arrow">‹</span>
+      </button>
+      <button class="hm-item" data-menu="level">
+        <span class="hm-ic">⬆️</span>
+        <span class="hm-lbl">المستوى</span>
+        <span class="hm-arrow">‹</span>
+      </button>
+      <button class="hm-item" data-menu="stats">
+        <span class="hm-ic">📊</span>
+        <span class="hm-lbl">الإحصاءات</span>
+        <span class="hm-arrow">‹</span>
+      </button>
+      <button class="hm-item" data-menu="achievements">
+        <span class="hm-ic">🏆</span>
+        <span class="hm-lbl">الإنجازات</span>
+        <span class="hm-badge" id="hm-ach-badge" style="display:none;">0</span>
+        <span class="hm-arrow">‹</span>
+      </button>
+      <button class="hm-item" data-menu="daily">
+        <span class="hm-ic">🎁</span>
+        <span class="hm-lbl">الجوائز اليومية</span>
+        <span class="hm-badge" id="hm-daily-badge" style="display:none;">!</span>
+        <span class="hm-arrow">‹</span>
+      </button>
+      <button class="hm-item" data-menu="settings">
+        <span class="hm-ic">⚙️</span>
+        <span class="hm-lbl">الإعدادات</span>
+        <span class="hm-arrow">‹</span>
+      </button>
 
-          <div class="hm-divider"></div>
+      <div class="hm-divider"></div>
 
-          <button class="hm-item" data-menu="player-card">
-            <span class="hm-ic">🎖️</span>
-            <span class="hm-lbl">بطاقة اللاعب</span>
-            <span class="hm-arrow">‹</span>
-          </button>
-          <button class="hm-item" data-menu="stats">
-            <span class="hm-ic">📊</span>
-            <span class="hm-lbl">الإحصاءات</span>
-            <span class="hm-arrow">‹</span>
-          </button>
-          <button class="hm-item" data-menu="settings">
-            <span class="hm-ic">⚙️</span>
-            <span class="hm-lbl">الإعدادات</span>
-            <span class="hm-arrow">‹</span>
-          </button>
+      <button class="hm-item hm-admin" data-menu="admin" id="menu-admin-btn" style="display:none;">
+        <span class="hm-ic">👑</span>
+        <span class="hm-lbl">لوحة المشرف</span>
+        <span class="hm-arrow">‹</span>
+      </button>
 
-          <button class="hm-item hm-admin" data-menu="admin" id="menu-admin-btn" style="display:none;">
-            <span class="hm-ic">👑</span>
-            <span class="hm-lbl">لوحة المشرف</span>
-            <span class="hm-arrow">‹</span>
-          </button>
+    </div>
+  </div>
+</div>
 
+<!-- ============ MODE SELECTOR ============ -->
+<div class="screen" id="s-mode-select">
+  <div class="sub">
+    <div class="sub-top">
+      <button class="back-btn" data-back>←</button>
+      <div>
+        <div class="sub-title">اختر النمط</div>
+        <div class="sub-eyebrow">SELECT MODE</div>
+      </div>
+      <div class="sub-spacer"></div>
+    </div>
+    <div class="mode-grid-v2" id="mode-grid-v2"></div>
+  </div>
+</div>
+
+<!-- ============ LEVEL PAGE ============ -->
+<div class="screen" id="s-level">
+  <div class="sub">
+    <div class="sub-top">
+      <button class="back-btn" data-back>←</button>
+      <div>
+        <div class="sub-title">المستوى العام</div>
+        <div class="sub-eyebrow">GLOBAL LEVEL</div>
+      </div>
+      <div class="sub-spacer"></div>
+    </div>
+
+    <div class="level-hero-v2">
+      <div class="lhv-ring">
+        <svg viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="8"/>
+          <circle cx="60" cy="60" r="52" fill="none" stroke="url(#lvlGrad)" stroke-width="8"
+                  stroke-dasharray="327" stroke-dashoffset="327" id="level-ring-progress"
+                  stroke-linecap="round" transform="rotate(-90 60 60)"/>
+          <defs>
+            <linearGradient id="lvlGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#E07A3F"/>
+              <stop offset="100%" stop-color="#E8B34E"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <div class="lhv-ring-inner">
+          <div class="lhv-num" id="level-page-num">1</div>
+          <div class="lhv-label">LEVEL</div>
+        </div>
+      </div>
+
+      <div class="lhv-stats">
+        <div class="lhv-stat">
+          <div class="k">المسافة الحالية</div>
+          <div class="v"><span id="level-current-m">0</span>م</div>
+        </div>
+        <div class="lhv-stat">
+          <div class="k">المسافة للمستوى القادم</div>
+          <div class="v"><span id="level-next-m">0</span>م</div>
         </div>
       </div>
     </div>
+
+    <div class="section-head">
+      <div class="section-title">المكافآت</div>
+      <div class="section-sub">REWARDS</div>
+    </div>
+    <div class="level-rewards-list" id="level-rewards-list"></div>
+
+    <div class="section-head" style="margin-top:18px;">
+      <div class="section-title">جميع المستويات</div>
+      <div class="section-sub">ALL LEVELS</div>
+    </div>
+    <div class="level-all-list" id="level-all-list"></div>
+  </div>
+</div>
+
+<!-- ============ ADVANCED STATS ============ -->
+<div class="screen" id="s-stats-v2">
+  <div class="sub">
+    <div class="sub-top">
+      <button class="back-btn" data-back>←</button>
+      <div>
+        <div class="sub-title">الإحصاءات</div>
+        <div class="sub-eyebrow">DEEP STATS</div>
+      </div>
+      <div class="sub-spacer"></div>
+    </div>
+
+    <div class="stats-hero-v2">
+      <div class="shv2-title">TOTAL DISTANCE</div>
+      <div class="shv2-big">
+        <span id="stats-total-m">0</span><span class="unit">م</span>
+      </div>
+      <div class="shv2-sub">عبر <span id="stats-total-plays">0</span> جولة</div>
+      <canvas id="stats-chart" width="320" height="100"></canvas>
+    </div>
+
+    <div class="tab-row" id="stats-tabs">
+      <button class="tab-chip active" data-statstab="overview">نظرة عامة</button>
+      <button class="tab-chip" data-statstab="modes">الأنماط</button>
+      <button class="tab-chip" data-statstab="records">الأرقام</button>
+      <button class="tab-chip" data-statstab="progress">التقدم</button>
+    </div>
+
+    <div id="stats-content"></div>
+  </div>
+</div>
+
+<!-- ============ ADVANCED SETTINGS ============ -->
+<div class="screen" id="s-settings-v2">
+  <div class="sub">
+    <div class="sub-top">
+      <button class="back-btn" data-back>←</button>
+      <div>
+        <div class="sub-title">الإعدادات</div>
+        <div class="sub-eyebrow">SETTINGS</div>
+      </div>
+      <div class="sub-spacer"></div>
+    </div>
+    <div id="settings-content"></div>
+  </div>
+</div>
+
+<!-- ============ BATTLE PASS v2 ============ -->
+<div class="screen" id="s-battlepass-v2">
+  <div class="sub">
+    <div class="sub-top">
+      <button class="back-btn" data-back>←</button>
+      <div>
+        <div class="sub-title">باتل باس</div>
+        <div class="sub-eyebrow">BATTLE PASS · SEASON 1</div>
+      </div>
+      <div class="sub-spacer"></div>
+    </div>
+
+    <div class="bp-hero-v2">
+      <div class="bph-top">
+        <div>
+          <div class="bph-season">SEASON 1 · ORIGINS</div>
+          <div class="bph-title">موسم البداية</div>
+        </div>
+        <div class="bph-tier">
+          <span class="k">TIER</span>
+          <span class="v" id="bp-v2-tier">0</span>
+          <span class="m">/30</span>
+        </div>
+      </div>
+      <div class="bph-progress">
+        <div class="bph-bar">
+          <div class="bph-fill" id="bp-v2-fill" style="width:0%"></div>
+        </div>
+        <div class="bph-points" id="bp-v2-points">0 / 300</div>
+      </div>
+    </div>
+
+    <div class="bp-track-toggle">
+      <button class="bpt-btn active" data-track="free">🎁 مجاني</button>
+      <button class="bpt-btn premium" data-track="premium">👑 مميز</button>
+    </div>
+
+    <div id="bp-v2-tiers"></div>
+  </div>
+</div>
+
+<!-- ============ SEASON RANKS v2 ============ -->
+<div class="screen" id="s-season-v2">
+  <div class="sub">
+    <div class="sub-top">
+      <button class="back-btn" data-back>←</button>
+      <div>
+        <div class="sub-title">الرتب</div>
+        <div class="sub-eyebrow">SEASON RANKS</div>
+      </div>
+      <div class="sub-spacer"></div>
+    </div>
+
+    <div class="rank-hero-v2" id="rank-hero-v2"></div>
+
+    <div class="section-head">
+      <div class="section-title">جميع الرتب</div>
+      <div class="section-sub">ALL RANKS</div>
+    </div>
+    <div id="rank-list-v2"></div>
+  </div>
+</div>
+
+<!-- ============ EVENTS v2 ============ -->
+<div class="screen" id="s-events-v2">
+  <div class="sub">
+    <div class="sub-top">
+      <button class="back-btn" data-back>←</button>
+      <div>
+        <div class="sub-title">الأحداث</div>
+        <div class="sub-eyebrow">WEEKLY EVENTS</div>
+      </div>
+      <div class="sub-spacer"></div>
+    </div>
+    <div id="events-v2-list"></div>
+  </div>
+</div>
+
+<!-- ============ SHOP (MERGED) ============ -->
+<div class="screen" id="s-shop-v2">
+  <div class="sub">
+    <div class="sub-top">
+      <button class="back-btn" data-back>←</button>
+      <div>
+        <div class="sub-title">المتجر</div>
+        <div class="sub-eyebrow">SHOP · SKINS & EFFECTS</div>
+      </div>
+      <div class="sub-spacer"></div>
+    </div>
+
+    <div class="shop-coins-hero">
+      <span class="c">◆</span>
+      <span id="shop-v2-coins">0</span>
+    </div>
+
+    <div class="tab-row" id="shop-v2-tabs">
+      <button class="tab-chip active" data-shopcat="skins">🎨 الأزياء</button>
+      <button class="tab-chip" data-shopcat="aura">🌟 الهالات</button>
+      <button class="tab-chip" data-shopcat="crown">👑 الرأسيات</button>
+      <button class="tab-chip" data-shopcat="cape">🦸 العباءات</button>
+      <button class="tab-chip" data-shopcat="trail">➰ خط السير</button>
+      <button class="tab-chip" data-shopcat="spark">✨ الشرار</button>
+      <button class="tab-chip" data-shopcat="eyes">👁️ العيون</button>
+      <button class="tab-chip" data-shopcat="companion">🐾 الرفاق</button>
+      <button class="tab-chip" data-shopcat="footstep">👣 الآثار</button>
+      <button class="tab-chip" data-shopcat="jump">⬆️ القفز</button>
+      <button class="tab-chip" data-shopcat="death">💀 النهاية</button>
+      <button class="tab-chip" data-shopcat="headItem">🎩 الرأس</button>
+      <button class="tab-chip" data-shopcat="backItem">🦋 الظهر</button>
+      <button class="tab-chip" data-shopcat="heldItem">⚔️ المحمول</button>
+    </div>
+
+    <div class="shop-grid-v2" id="shop-v2-grid"></div>
+  </div>
+</div>
+
+<!-- ============ MISSIONS v2 ============ -->
+<div class="screen" id="s-missions-v2">
+  <div class="sub">
+    <div class="sub-top">
+      <button class="back-btn" data-back>←</button>
+      <div>
+        <div class="sub-title">المهام والجوائز</div>
+        <div class="sub-eyebrow">MISSIONS & DAILY</div>
+      </div>
+      <div class="sub-spacer"></div>
+    </div>
+
+    <div class="tab-row" id="missions-v2-tabs">
+      <button class="tab-chip active" data-missionstab="daily">📋 يومي</button>
+      <button class="tab-chip" data-missionstab="weekly">📆 أسبوعي</button>
+      <button class="tab-chip" data-missionstab="monthly">📅 شهري</button>
+      <button class="tab-chip" data-missionstab="login">🎁 الدخول</button>
+    </div>
+
+    <div id="missions-v2-content"></div>
+  </div>
+</div>
+
+<!-- ============ CHESTS ============ -->
+<div class="screen" id="s-chest">
+  <div class="sub">
+    <div class="sub-top">
+      <button class="back-btn" data-back>←</button>
+      <div>
+        <div class="sub-title">الصناديق</div>
+        <div class="sub-eyebrow">CHESTS</div>
+      </div>
+      <div class="sub-spacer"></div>
+    </div>
+
+    <div class="chest-grid" id="chest-grid">
+      <div class="chest-card" data-chest="bronze" style="--ch:#A07048;">
+        <div class="cc-icon">📦</div>
+        <div class="cc-name">صندوق برونزي</div>
+        <div class="cc-desc">مكافآت أساسية</div>
+        <div class="cc-price">◆ 100</div>
+      </div>
+      <div class="chest-card" data-chest="silver" style="--ch:#B0B8C0;">
+        <div class="cc-icon">🎁</div>
+        <div class="cc-name">صندوق فضي</div>
+        <div class="cc-desc">مكافآت نادرة</div>
+        <div class="cc-price">◆ 500</div>
+      </div>
+      <div class="chest-card" data-chest="gold" style="--ch:#E8B34E;">
+        <div class="cc-icon">💎</div>
+        <div class="cc-name">صندوق ذهبي</div>
+        <div class="cc-desc">مكافآت ملحمية</div>
+        <div class="cc-price">◆ 2000</div>
+      </div>
+    </div>
+
+    <div class="chest-info">
+      <div class="ci-title">📖 كيف تعمل الصناديق؟</div>
+      <div class="ci-text">افتح الصناديق للحصول على عملات، تعزيزات، أو عناصر مخصصة نادرة!</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ LUCKY WHEEL ============ -->
+<div class="screen" id="s-wheel">
+  <div class="sub">
+    <div class="sub-top">
+      <button class="back-btn" data-back>←</button>
+      <div>
+        <div class="sub-title">عجلة الحظ</div>
+        <div class="sub-eyebrow">LUCKY WHEEL</div>
+      </div>
+      <div class="sub-spacer"></div>
+    </div>
+
+    <div class="wheel-stage">
+      <div class="wheel-wrapper">
+        <canvas id="wheel-canvas" width="320" height="320"></canvas>
+        <div class="wheel-pointer">▼</div>
+        <div class="wheel-center">🎡</div>
+      </div>
+    </div>
+
+    <div class="wheel-info">
+      <div class="wi-cost">◆ <span id="wheel-cost">50</span> / دورة</div>
+      <div class="wi-balance">رصيدك: ◆ <span id="wheel-balance">0</span></div>
+    </div>
+
+    <button class="action-btn gold" id="wheel-spin-btn" style="margin-top:14px;">
+      🎡 &nbsp; أدر العجلة
+    </button>
+  </div>
+</div>
+
+<!-- ============ FRIENDS ============ -->
+<div class="screen" id="s-friends">
+  <div class="sub">
+    <div class="sub-top">
+      <button class="back-btn" data-back>←</button>
+      <div>
+        <div class="sub-title">الأصدقاء</div>
+        <div class="sub-eyebrow">FRIENDS</div>
+      </div>
+      <div class="sub-spacer"></div>
+    </div>
+
+    <div class="friends-toolbar">
+      <input type="text" class="af-input" id="friend-search"
+             placeholder="🔍 ابحث عن صديق بالاسم أو UID...">
+      <button class="admin-mini-btn" id="friend-add-btn" style="width:44px;height:44px;">➕</button>
+    </div>
+
+    <div class="friends-invite-box">
+      <div class="fib-title">🎮 العب مع صديق</div>
+      <div class="fib-code">
+        <span class="fib-code-label">كودك:</span>
+        <span class="fib-code-val" id="friend-my-code">—</span>
+        <button class="fib-copy" id="friend-copy-code">📋</button>
+      </div>
+    </div>
+
+    <div id="friends-list" class="friends-list"></div>
+  </div>
+</div>
+
+<!-- ============ LEADERBOARD ============ -->
+<div class="screen" id="s-leaderboard">
+  <div class="sub">
+    <div class="sub-top">
+      <button class="back-btn" data-back>←</button>
+      <div>
+        <div class="sub-title">لوحة الصدارة</div>
+        <div class="sub-eyebrow">LEADERBOARD</div>
+      </div>
+      <div class="sub-spacer"></div>
+    </div>
+
+    <div class="tab-row" id="lb-tabs">
+      <button class="tab-chip active" data-lbtab="coins">💰 العملات</button>
+      <button class="tab-chip" data-lbtab="distance">📏 المسافة</button>
+      <button class="tab-chip" data-lbtab="level">⬆️ المستوى</button>
+      <button class="tab-chip" data-lbtab="season">🏅 الموسم</button>
+    </div>
+
+    <div id="lb-list" class="lb-list"></div>
+  </div>
+</div>
+
+<!-- ============ ACHIEVEMENTS v2 ============ -->
+<div class="screen" id="s-achieve-v2">
+  <div class="sub">
+    <div class="sub-top">
+      <button class="back-btn" data-back>←</button>
+      <div>
+        <div class="sub-title">الإنجازات</div>
+        <div class="sub-eyebrow">ACHIEVEMENTS</div>
+      </div>
+      <div class="sub-spacer"></div>
+    </div>
+
+    <div class="ach-hero-v2">
+      <div class="ah2-icon">🏆</div>
+      <div class="ah2-info">
+        <div class="ah2-label">مفتوحة</div>
+        <div class="ah2-val">
+          <span id="ach-v2-unlocked">0</span>
+          <span class="of">/ <span id="ach-v2-total">0</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-row" id="ach-v2-tabs">
+      <button class="tab-chip active" data-achcat="all">الكل</button>
+      <button class="tab-chip" data-achcat="progression">📈 التقدم</button>
+      <button class="tab-chip" data-achcat="skill">🎯 المهارة</button>
+      <button class="tab-chip" data-achcat="mode">🎮 الأنماط</button>
+      <button class="tab-chip" data-achcat="shift">◆ التحولات</button>
+      <button class="tab-chip" data-achcat="collection">💎 المجموعة</button>
+      <button class="tab-chip" data-achcat="secret">❓ سرية</button>
+    </div>
+
+    <div class="ach-v2-grid" id="ach-v2-grid"></div>
+  </div>
+</div>
+
+<!-- ============ PLAYER PROFILE (Advanced) ============ -->
+<div class="screen" id="s-profile-v2">
+  <div class="sub">
+    <div class="sub-top">
+      <button class="back-btn" data-back>←</button>
+      <div>
+        <div class="sub-title">الملف الشخصي</div>
+        <div class="sub-eyebrow">PLAYER PROFILE</div>
+      </div>
+      <div class="sub-spacer"></div>
+    </div>
+
+    <div class="profile-hero-v2" id="profile-hero-v2"></div>
+
+    <div class="tab-row" id="profile-tabs">
+      <button class="tab-chip active" data-proftab="info">المعلومات</button>
+      <button class="tab-chip" data-proftab="stats">الإحصاءات</button>
+      <button class="tab-chip" data-proftab="badges">الشارات</button>
+      <button class="tab-chip" data-proftab="history">السجل</button>
+    </div>
+
+    <div id="profile-content"></div>
+  </div>
+</div>
+
+<!-- ============ FRIEND CHAT ============ -->
+<div class="screen" id="s-chat">
+  <div class="sub chat-screen">
+    <div class="sub-top">
+      <button class="back-btn" data-back>←</button>
+      <div class="chat-header" id="chat-header">
+        <div class="chat-header-avatar" id="chat-header-avatar">👤</div>
+        <div class="chat-header-info">
+          <div class="chat-header-name" id="chat-header-name">صديق</div>
+          <div class="chat-header-status" id="chat-header-status">غير متصل</div>
+        </div>
+      </div>
+      <button class="admin-mini-btn" id="chat-invite-btn" title="دعوة للمبارزة">🎮</button>
+    </div>
+
+    <div class="chat-messages" id="chat-messages">
+      <div class="chat-empty" id="chat-empty">
+        <div class="ce-icon">💬</div>
+        <div class="ce-title">لا توجد رسائل</div>
+        <div class="ce-desc">ابدأ المحادثة بإرسال تحية!</div>
+      </div>
+    </div>
+
+    <div class="chat-input-bar">
+      <button class="chat-emoji-btn" id="chat-emoji-btn">😊</button>
+      <input type="text" class="chat-input" id="chat-input"
+             placeholder="اكتب رسالة..." maxlength="200"
+             autocomplete="off" spellcheck="false">
+      <button class="chat-send-btn" id="chat-send-btn" disabled>
+        <span>➤</span>
+      </button>
+    </div>
+
+    <div class="chat-emoji-panel" id="chat-emoji-panel" style="display:none;">
+      <div class="cep-grid" id="cep-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ DIRECT CHALLENGE ============ -->
+<div class="screen" id="s-direct-challenge">
+  <div class="center-screen">
+    <div class="dch-hero">
+      <div class="dch-icon">⚔️</div>
+      <div class="dch-title">تحدي مباشر</div>
+      <div class="dch-sub">اختر صديقاً وابدأ مبارزة فورية</div>
+    </div>
+
+    <div class="dch-friend-preview" id="dch-friend-preview">
+      <!-- ديناميكي -->
+    </div>
+
+    <div class="dch-options">
+      <div class="section-head">
+        <div class="section-title">عدد الجولات</div>
+        <div class="section-sub">ROUNDS</div>
+      </div>
+      <div class="dch-rounds" id="dch-rounds">
+        <button class="dch-round active" data-rounds="1">جولة واحدة</button>
+        <button class="dch-round" data-rounds="3">أفضل من 3</button>
+        <button class="dch-round" data-rounds="5">أفضل من 5</button>
+      </div>
+    </div>
+
+    <div class="dch-actions">
+      <button class="action-btn soft" id="dch-cancel">إلغاء</button>
+      <button class="action-btn gold" id="dch-send">⚔️ &nbsp; أرسل التحدي</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ REFERRAL ============ -->
+<div class="screen" id="s-referral">
+  <div class="sub">
+    <div class="sub-top">
+      <button class="back-btn" data-back>←</button>
+      <div>
+        <div class="sub-title">دعوة الأصدقاء</div>
+        <div class="sub-eyebrow">REFERRAL PROGRAM</div>
+      </div>
+      <div class="sub-spacer"></div>
+    </div>
+
+    <div class="ref-hero">
+      <div class="ref-hero-icon">🎁</div>
+      <div class="ref-hero-title">ادعُ أصدقاءك واكسب ◆</div>
+      <div class="ref-hero-sub">احصل على مكافآت متدرّجة عند انضمام أصدقائك</div>
+    </div>
+
+    <div class="ref-code-card">
+      <div class="rcc-label">كود الدعوة الخاص بك</div>
+      <div class="rcc-code" id="ref-code" dir="ltr">—</div>
+      <div class="rcc-actions">
+        <button class="rcc-btn" id="ref-copy">
+          <span class="ic">📋</span>
+          <span>نسخ</span>
+        </button>
+        <button class="rcc-btn" id="ref-share">
+          <span class="ic">📤</span>
+          <span>مشاركة</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="section-head">
+      <div class="section-title">مكافآتك</div>
+      <div class="section-sub">MILESTONES</div>
+    </div>
+    <div class="ref-milestones" id="ref-milestones"></div>
+
+    <div class="section-head" style="margin-top:18px;">
+      <div class="section-title">من انضم عبرك</div>
+      <div class="section-sub">REFERRED</div>
+    </div>
+    <div class="ref-list" id="ref-list">
+      <div class="ref-empty">
+        <div class="re-icon">👥</div>
+        <div class="re-title">لا أحد بعد</div>
+        <div class="re-desc">شارك كودك لتبدأ الكسب</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CLANS / TEAMS ============ -->
+<div class="screen" id="s-clan">
+  <div class="sub">
+    <div class="sub-top">
+      <button class="back-btn" data-back>←</button>
+      <div>
+        <div class="sub-title">الفرق</div>
+        <div class="sub-eyebrow">CLANS</div>
+      </div>
+      <div class="sub-spacer"></div>
+    </div>
+
+    <div class="clan-tabs" id="clan-tabs">
+      <button class="clan-tab active" data-clantab="my">فريقي</button>
+      <button class="clan-tab" data-clantab="browse">الفرق</button>
+      <button class="clan-tab" data-clantab="top">الأفضل</button>
+    </div>
+
+    <div id="clan-content"></div>
+  </div>
+</div>
+
+<!-- ============ CREATE CLAN ============ -->
+<div class="screen" id="s-create-clan">
+  <div class="sub">
+    <div class="sub-top">
+      <button class="back-btn" data-back>←</button>
+      <div>
+        <div class="sub-title">إنشاء فريق</div>
+        <div class="sub-eyebrow">CREATE CLAN</div>
+      </div>
+      <div class="sub-spacer"></div>
+    </div>
+
+    <div class="clan-create-form">
+      <div class="af-group">
+        <label class="af-label">اسم الفريق *</label>
+        <input class="af-input" id="clan-name" type="text"
+               maxlength="20" placeholder="مثال: أسود الصحراء">
+      </div>
+
+      <div class="af-group">
+        <label class="af-label">الوصف (اختياري)</label>
+        <input class="af-input" id="clan-desc" type="text"
+               maxlength="60" placeholder="فريق محترف...">
+      </div>
+
+      <div class="af-group">
+        <label class="af-label">شعار الفريق</label>
+        <div class="clan-emblem-grid" id="clan-emblem-grid">
+          <!-- يبنى من JS -->
+        </div>
+      </div>
+
+      <div class="af-group">
+        <label class="af-label">لون الفريق</label>
+        <div class="clan-color-grid" id="clan-color-grid">
+          <!-- يبنى من JS -->
+        </div>
+      </div>
+
+      <div class="af-group">
+        <label class="af-label">الانضمام</label>
+        <div class="clan-privacy">
+          <button class="clan-privacy-btn active" data-privacy="open">🌍 مفتوح</button>
+          <button class="clan-privacy-btn" data-privacy="invite">🔒 بالدعوة</button>
+        </div>
+      </div>
+
+      <div class="clan-create-cost">
+        <span class="cc-label">تكلفة الإنشاء:</span>
+        <span class="cc-value">◆ <span id="clan-cost">500</span></span>
+      </div>
+
+      <div class="af-status" id="clan-create-status"></div>
+
+      <button class="action-btn gold" id="clan-create-submit" disabled style="margin-top:10px;">
+        🛡️ &nbsp; إنشاء الفريق
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CLAN DETAILS ============ -->
+<div class="screen" id="s-clan-details">
+  <div class="sub">
+    <div class="sub-top">
+      <button class="back-btn" data-back>←</button>
+      <div>
+        <div class="sub-title">تفاصيل الفريق</div>
+        <div class="sub-eyebrow">CLAN DETAILS</div>
+      </div>
+      <div class="sub-spacer"></div>
+    </div>
+
+    <div id="clan-details-content"></div>
+  </div>
+</div>
 
     <!-- ============================================================
          MULTIPLAYER — LOBBY
