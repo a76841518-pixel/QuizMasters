@@ -91,29 +91,29 @@ const TITLES_V2 = [
 /* ============================================================
    ============ نظام المخزون (INVENTORY) ====================
    ============================================================ */
+/* ============================================================
+   ═══════════ INVENTORY v3 — IMAGE-BASED ════════════════════
+   ============================================================ */
 function buildInventory(){
   const grid = document.getElementById('inv-grid');
   const header = document.getElementById('inv-header');
   if(!grid) return;
 
-  /* ✅ كل الفئات */
-  const cats = [
-    'spark','eyes','companion','footstep','trail','jump','death','aura','crown','cape',
-    /* ✨ جديدة */
-    'headItem','backItem','heldItem','groundMark',
-    'nameTag','badge','avatarFrame','banner',
-    'spawnEffect','reviveEffect','hitEffect'
-  ];
+  /* ✅ تصنيفات v3 فقط */
+  const cats = COSMETIC_CATEGORY_ORDER;
 
   const totalSkins = getAllSkins().length;
-  const ownedSkins = Save.data.ownedSkins.length;
+  const ownedSkins = (Save.data.ownedSkins || []).length;
+
   let totalCos = 0, ownedCos = 0;
   for(const cat of cats){
     totalCos += getAllCosmetics(cat).length;
     ownedCos += ((Save.data.cosmetics.owned[cat] || []).length);
   }
 
+  /* ═══ Header ═══ */
   if(header){
+    const unlimited = hasAdminAccess() && Save.data.admin.unlimitedCoins;
     header.innerHTML = `
       <div class="inv-stat">
         <div class="k">SKINS</div>
@@ -125,23 +125,23 @@ function buildInventory(){
       </div>
       <div class="inv-stat">
         <div class="k">COINS</div>
-        <div class="v">${Save.data.coins}</div>
+        <div class="v">${unlimited ? '∞' : Save.data.coins}</div>
       </div>
     `;
   }
 
   grid.innerHTML = '';
 
-  /* عرض الأزياء المملوكة */
+  /* ═══ عرض الأزياء المملوكة ═══ */
   const allSkins = getAllSkins();
   allSkins.filter(s => Save.data.ownedSkins.includes(s.id)).forEach(skin => {
     const el = document.createElement('div');
     el.className = 'inv-item';
     el.style.setProperty('--rar', `var(--r-${skin.rarity || 'common'})`);
 
-    const img = resolveImageSrc(skin);
+    const img = ASSET.resolve(skin);
     const thumb = img
-      ? `<img src="${img}" alt="">`
+      ? `<img src="${img}" alt="" onerror="this.style.display='none';this.parentElement.innerHTML='⚠'">`
       : `<div style="width:100%;height:100%;background:${skin.body || '#E07A3F'};display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:800;">${(skin.ar||'?').charAt(0)}</div>`;
 
     el.innerHTML = `
@@ -152,24 +152,28 @@ function buildInventory(){
     grid.appendChild(el);
   });
 
-  /* ✅ عرض كل التأثيرات المملوكة */
+  /* ═══ عرض التأثيرات المملوكة ═══ */
   for(const cat of cats){
     const owned = Save.data.cosmetics.owned[cat] || [];
     const all = getAllCosmetics(cat);
+    const catInfo = getCategoryConfig(cat);
+
     for(const item of all){
       if(!owned.includes(item.id)) continue;
+      if(item.id === 'none') continue;
+
       const el = document.createElement('div');
       el.className = 'inv-item';
 
-      const img = resolveImageSrc(item);
+      const img = ASSET.resolve(item);
       const thumb = img
-        ? `<img src="${img}" alt="">`
-        : `<span style="font-size:24px;">✨</span>`;
+        ? `<img src="${img}" alt="" onerror="this.style.display='none';this.parentElement.innerHTML='⚠'">`
+        : `<span style="font-size:24px;">${catInfo.icon}</span>`;
 
       el.innerHTML = `
         <div class="inv-thumb">${thumb}</div>
         <div class="inv-name">${item.name}</div>
-        <div class="inv-cat">${(CATEGORY_LABELS && CATEGORY_LABELS[cat]) || cat}</div>
+        <div class="inv-cat">${catInfo.label}</div>
       `;
       grid.appendChild(el);
     }
@@ -1131,67 +1135,52 @@ COSMETICS.hitEffect = [
 ];
 
 /* ============================================================
-   ==================== Skins ================================
+   ═══════════ DEFAULT SKIN IMAGE (SVG inline) ══════════════
+   ═══════════════════════════════════════════════════════════
+   صورة افتراضية لكل لاعب — SVG data URL مدمج
+   لا يمكن حذفها (تُستخدم كـ fallback)
    ============================================================ */
-const SKINS = [
-  /* ═══ الأساسيات ═══ */
-  { id:'cream', ar:'كريمي', en:'CREAM', body:'#F5EFE6', bodyDark:'#D9CBBA', detail:'#1A1512', accent:'#FFB060', accessory:'none', pattern:'none', price:0, rarity:'common' },
+const DEFAULT_SKIN_IMAGE = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="body" cx="35%" cy="30%" r="75%">
+      <stop offset="0%"   stop-color="#FFF9F0"/>
+      <stop offset="50%"  stop-color="#F5EFE6"/>
+      <stop offset="100%" stop-color="#D9CBBA"/>
+    </radialGradient>
+    <radialGradient id="shine" cx="30%" cy="25%" r="40%">
+      <stop offset="0%"   stop-color="#FFFFFF" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="100" cy="100" r="92" fill="url(#body)" stroke="#C8B8A8" stroke-width="3"/>
+  <ellipse cx="70" cy="62" rx="34" ry="20" fill="url(#shine)" transform="rotate(-30 70 62)"/>
+  <circle cx="72"  cy="88" r="9" fill="#1A1512"/>
+  <circle cx="128" cy="88" r="9" fill="#1A1512"/>
+  <circle cx="69"  cy="85" r="3" fill="#FFFFFF"/>
+  <circle cx="125" cy="85" r="3" fill="#FFFFFF"/>
+  <ellipse cx="60"  cy="115" rx="12" ry="7" fill="#E07A3F" opacity="0.35"/>
+  <ellipse cx="140" cy="115" rx="12" ry="7" fill="#E07A3F" opacity="0.35"/>
+  <path d="M 78 128 Q 100 145 122 128" stroke="#1A1512" stroke-width="4" fill="none" stroke-linecap="round"/>
+</svg>
+`);
 
-  /* ═══ COLOR SERIES ═══ */
-  { id:'amber', ar:'عنبري', en:'AMBER', body:'#E0A44C', bodyDark:'#B07628', detail:'#1A1512', accent:'#FFD080', accessory:'horns', pattern:'none', price:150, rarity:'common' },
-  { id:'crimson', ar:'قرمزي', en:'CRIMSON', body:'#D83838', bodyDark:'#901818', detail:'#1A1512', accent:'#FF8888', accessory:'none', pattern:'none', price:200, rarity:'common' },
-  { id:'emerald', ar:'زمردي', en:'EMERALD', body:'#2FA850', bodyDark:'#186828', detail:'#0A2810', accent:'#7FFFA0', accessory:'none', pattern:'none', price:250, rarity:'common' },
-  { id:'sapphire', ar:'ياقوتي', en:'SAPPHIRE', body:'#2848D8', bodyDark:'#102878', detail:'#F0F8FF', accent:'#88A8FF', accessory:'none', pattern:'none', price:250, rarity:'common' },
-  { id:'amethyst', ar:'أرجواني', en:'AMETHYST', body:'#8858C8', bodyDark:'#503898', detail:'#F0E0FF', accent:'#D8B0FF', accessory:'none', pattern:'none', price:300, rarity:'common' },
-  { id:'copper', ar:'نحاسي', en:'COPPER', body:'#C87848', bodyDark:'#8A4828', detail:'#1A1512', accent:'#FFB888', accessory:'none', pattern:'none', price:300, rarity:'common' },
-  { id:'pearl', ar:'لؤلؤي', en:'PEARL', body:'#F8F0E8', bodyDark:'#C8B8A8', detail:'#3A2828', accent:'#FFD0E0', accessory:'none', pattern:'none', price:350, rarity:'common' },
-  { id:'slate', ar:'حجري', en:'SLATE', body:'#5A6270', bodyDark:'#3A4048', detail:'#F5EFE6', accent:'#9AACBC', accessory:'none', pattern:'spots', price:300, rarity:'common' },
+/* ═══ الأزياء ═══ */
+const DEFAULT_SKIN = {
+  id: 'default',
+  ar: 'افتراضي',
+  en: 'DEFAULT',
+  imageData: DEFAULT_SKIN_IMAGE,
+  body: '#F5EFE6',
+  bodyDark: '#D9CBBA',
+  detail: '#1A1512',
+  accent: '#FFB060',
+  price: 0,
+  rarity: 'common',
+  isDefault: true
+};
 
-  /* ═══ RARE — PATTERNS ═══ */
-  { id:'rose', ar:'وردي', en:'ROSE', body:'#E89BA8', bodyDark:'#C06878', detail:'#1A1512', accent:'#FFDCE4', accessory:'wings', pattern:'none', price:500, rarity:'rare' },
-  { id:'sage', ar:'زيتوني', en:'SAGE', body:'#7BA47B', bodyDark:'#4E7A4E', detail:'#1A1512', accent:'#D8F0A8', accessory:'leaf', pattern:'none', price:750, rarity:'rare' },
-  { id:'sky', ar:'سماوي', en:'SKY', body:'#88C8E8', bodyDark:'#4E90B8', detail:'#1A1512', accent:'#FFFFFF', accessory:'cloud', pattern:'none', price:1000, rarity:'rare' },
-  { id:'camo', ar:'تمويه', en:'CAMO', body:'#7A8A5A', bodyDark:'#4A5A38', detail:'#1A1512', accent:'#A8B888', accessory:'none', pattern:'camo', price:850, rarity:'rare' },
-  { id:'zebra', ar:'حمار وحشي', en:'ZEBRA', body:'#F5EFE6', bodyDark:'#C8C0B0', detail:'#1A1512', accent:'#1A1512', accessory:'none', pattern:'stripes', price:900, rarity:'rare' },
-  { id:'tiger', ar:'نمر', en:'TIGER', body:'#F0A830', bodyDark:'#A87828', detail:'#1A1512', accent:'#FFD080', accessory:'none', pattern:'tiger', price:1100, rarity:'rare' },
-  { id:'checker', ar:'مربعات', en:'CHECKER', body:'#F5EFE6', bodyDark:'#C8C0B0', detail:'#1A1512', accent:'#1A1512', accessory:'none', pattern:'checker', price:1000, rarity:'rare' },
-  { id:'honeycomb', ar:'عسل النحل', en:'HONEYCOMB', body:'#E8B34E', bodyDark:'#A87828', detail:'#3A2010', accent:'#FFE090', accessory:'none', pattern:'hex', price:1200, rarity:'rare' },
-  { id:'circuit', ar:'إلكتروني', en:'CIRCUIT', body:'#1A2828', bodyDark:'#0A1010', detail:'#00FF80', accent:'#00FF80', accessory:'antenna', pattern:'circuit', glow:true, glowColor:'#00FF80', price:1300, rarity:'rare' },
-  { id:'pastel', ar:'باستيل', en:'PASTEL', body:'#FFD8E8', bodyDark:'#E8B8C8', detail:'#5A3040', accent:'#FFC0A0', accessory:'flowerCrown', pattern:'gradient', price:1400, rarity:'rare' },
-
-  /* ═══ EPIC ═══ */
-  { id:'ink', ar:'حِبري', en:'INK', body:'#2A2622', bodyDark:'#100E0C', detail:'#E8D0FF', accent:'#A080FF', accessory:'spikes', pattern:'none', glow:true, glowColor:'#6A50B0', price:1500, rarity:'epic' },
-  { id:'gold', ar:'ذهبي', en:'GOLD', body:'#E8B34E', bodyDark:'#B08028', detail:'#1A1512', accent:'#FFF4C0', accessory:'halo', pattern:'none', sparkle:true, price:2000, rarity:'epic' },
-  { id:'lava', ar:'بركاني', en:'LAVA', body:'#E85838', bodyDark:'#A03018', detail:'#1A1512', accent:'#FFD060', accessory:'horns', pattern:'lavaCracks', glow:true, glowColor:'#FF5020', price:3000, rarity:'epic' },
-  { id:'ice', ar:'جليدي', en:'ICE', body:'#A8E0F0', bodyDark:'#5898C8', detail:'#1A2838', accent:'#FFFFFF', accessory:'crystalShards', pattern:'crystalPattern', glow:true, glowColor:'#80D8FF', price:2200, rarity:'epic' },
-  { id:'dragon', ar:'التنين', en:'DRAGON', body:'#3A8040', bodyDark:'#1A4820', detail:'#F0E0A0', accent:'#E85020', accessory:'dragonHorns', pattern:'scales', price:2800, rarity:'epic' },
-  { id:'demon', ar:'الشيطان', en:'DEMON', body:'#8A2020', bodyDark:'#4A0808', detail:'#FFE0A0', accent:'#FF8020', accessory:'demonHorns', pattern:'none', glow:true, glowColor:'#FF3030', price:3200, rarity:'epic' },
-  { id:'angel', ar:'الملاك', en:'ANGEL', body:'#FFF8E8', bodyDark:'#E8D8B8', detail:'#C88040', accent:'#FFE890', accessory:'angelWings', pattern:'none', glow:true, glowColor:'#FFF8C0', sparkle:true, price:3500, rarity:'epic' },
-  { id:'ninja', ar:'النينجا', en:'NINJA', body:'#1A1A28', bodyDark:'#0A0A18', detail:'#E83040', accent:'#FF5060', accessory:'ninjaMask', pattern:'none', price:2400, rarity:'epic' },
-  { id:'astronaut', ar:'رائد الفضاء', en:'ASTRONAUT', body:'#F0F0F8', bodyDark:'#C0C0D0', detail:'#4080C0', accent:'#FFC040', accessory:'helmet', pattern:'none', price:2600, rarity:'epic' },
-  { id:'cyber', ar:'سايبر', en:'CYBER', body:'#0A0A28', bodyDark:'#050515', detail:'#00FFFF', accent:'#FF00D8', accessory:'visor', pattern:'circuit', glow:true, glowColor:'#00FFFF', price:3400, rarity:'epic' },
-  { id:'cactus', ar:'الصبار', en:'CACTUS', body:'#4A8040', bodyDark:'#2A4820', detail:'#F0E0A0', accent:'#E8A0C0', accessory:'flowerCrown', pattern:'none', price:2000, rarity:'epic' },
-  { id:'mushroom', ar:'الفطر', en:'MUSHROOM', body:'#E85040', bodyDark:'#A02820', detail:'#FFF8E0', accent:'#FFFFFF', accessory:'mushroomCap', pattern:'spots', price:2200, rarity:'epic' },
-  { id:'pumpkin', ar:'اليقطين', en:'PUMPKIN', body:'#E88820', bodyDark:'#A05010', detail:'#3A1808', accent:'#FFD060', accessory:'pumpkinStem', pattern:'none', price:2400, rarity:'epic' },
-
-  /* ═══ LEGEND ═══ */
-  { id:'neon', ar:'نيون', en:'NEON', body:'#00E8D8', bodyDark:'#007870', detail:'#0A2828', accent:'#FF00A8', accessory:'star', pattern:'none', glow:true, glowColor:'#00E8D8', price:4000, rarity:'legend' },
-  { id:'rainbow', ar:'قوس قزح', en:'RAINBOW', body:'#FF6088', bodyDark:'#A03060', detail:'#1A1512', accent:'#FFE060', accessory:'rainbow', pattern:'rainbow', rainbow:true, price:6000, rarity:'legend' },
-  { id:'ghost', ar:'شبح', en:'GHOST', body:'#F0F0FF', bodyDark:'#B8B8D8', detail:'#4A4060', accent:'#FFFFFF', accessory:'none', pattern:'none', transparent:true, ghostly:true, price:8000, rarity:'legend' },
-  { id:'galaxy', ar:'المجرة', en:'GALAXY', body:'#3A1878', bodyDark:'#180438', detail:'#FFC0FF', accent:'#C080FF', accessory:'star', pattern:'galaxyPattern', glow:true, glowColor:'#8040D0', sparkle:true, price:7500, rarity:'legend' },
-  { id:'holographic', ar:'هولوجرافي', en:'HOLO', body:'#C0E8FF', bodyDark:'#80A8D8', detail:'#FFFFFF', accent:'#FFC0E8', accessory:'none', pattern:'holo', rainbow:true, glow:true, glowColor:'#A0E8FF', sparkle:true, price:9000, rarity:'legend' },
-  { id:'phoenix', ar:'العنقاء', en:'PHOENIX', body:'#E85020', bodyDark:'#A01808', detail:'#FFE090', accent:'#FFD060', accessory:'phoenixWings', pattern:'firePattern', glow:true, glowColor:'#FF8040', sparkle:true, price:10000, rarity:'legend' },
-  { id:'storm', ar:'العاصفة', en:'STORM', body:'#5A6878', bodyDark:'#2A3038', detail:'#A0E0FF', accent:'#FFE060', accessory:'lightningBolts', pattern:'clouds', glow:true, glowColor:'#80D0FF', price:8500, rarity:'legend' },
-  { id:'shadow', ar:'الظل', en:'SHADOW', body:'#1A0A20', bodyDark:'#08020A', detail:'#A060A0', accent:'#8040A0', accessory:'shadowWisps', pattern:'voidPattern', transparent:true, glow:true, glowColor:'#6020A0', price:11000, rarity:'legend' },
-
-  /* ═══ MYTHIC ═══ */
-  { id:'void', ar:'الفراغ', en:'VOID', body:'#1A0A2A', bodyDark:'#0A0414', detail:'#FF80FF', accent:'#C080FF', accessory:'star', pattern:'voidPattern', glow:true, glowColor:'#A040FF', price:12000, rarity:'mythic' },
-  { id:'sun', ar:'الشمس', en:'SUN', body:'#FFE060', bodyDark:'#E8A020', detail:'#5A2010', accent:'#FFFFFF', accessory:'halo', pattern:'none', glow:true, glowColor:'#FFD040', sparkle:true, price:15000, rarity:'mythic' },
-  { id:'moon', ar:'القمر', en:'MOON', body:'#E8E8F0', bodyDark:'#A8A8B8', detail:'#3A3A50', accent:'#FFF8D0', accessory:'moonCrown', pattern:'craters', glow:true, glowColor:'#F0F0FF', sparkle:true, price:14000, rarity:'mythic' },
-  { id:'cosmic', ar:'الكوني', en:'COSMIC', body:'#0A0420', bodyDark:'#050010', detail:'#FFFFFF', accent:'#FFD060', accessory:'star', pattern:'starfield', glow:true, glowColor:'#A060FF', sparkle:true, price:18000, rarity:'mythic' },
-  { id:'god', ar:'الإلهي', en:'DIVINE', body:'#FFF8E0', bodyDark:'#FFD060', detail:'#A06020', accent:'#FFFFFF', accessory:'divineCrown', pattern:'holyPattern', glow:true, glowColor:'#FFF8C0', sparkle:true, price:25000, rarity:'mythic' },
-  { id:'prismatic', ar:'المنشوري', en:'PRISMATIC', body:'#FF80C0', bodyDark:'#A04080', detail:'#FFFFFF', accent:'#80FFFF', accessory:'crystalCrown', pattern:'prismatic', rainbow:true, glow:true, glowColor:'#FF80FF', sparkle:true, price:30000, rarity:'mythic' }
-];
+const SKINS = [DEFAULT_SKIN];
 
 const RARITY_LABELS = {
   common:  'عادي',
@@ -1205,17 +1194,6 @@ function currentSkin(){
   const all = getAllSkins();
   return all.find(s=>s.id===Save.data.currentSkin) || all[0];
 }
-
-function currentSpark(){ return getAllCosmetics('spark').find(c=>c.id===Save.data.cosmetics.current.spark) || COSMETICS.spark[0]; }
-function currentTrail(){ return getAllCosmetics('trail').find(c=>c.id===Save.data.cosmetics.current.trail) || COSMETICS.trail[0]; }
-function currentJump(){ return getAllCosmetics('jump').find(c=>c.id===Save.data.cosmetics.current.jump) || COSMETICS.jump[0]; }
-function currentDeath(){ return getAllCosmetics('death').find(c=>c.id===Save.data.cosmetics.current.death) || COSMETICS.death[0]; }
-function currentAura(){ return getAllCosmetics('aura').find(c=>c.id===Save.data.cosmetics.current.aura) || COSMETICS.aura[0]; }
-function currentCrown(){ return getAllCosmetics('crown').find(c=>c.id===Save.data.cosmetics.current.crown) || COSMETICS.crown[0]; }
-function currentCape(){ return getAllCosmetics('cape').find(c=>c.id===Save.data.cosmetics.current.cape) || COSMETICS.cape[0]; }
-function currentEyes(){ return getAllCosmetics('eyes').find(c=>c.id===Save.data.cosmetics.current.eyes) || {id:'default'}; }
-function currentCompanion(){ return getAllCosmetics('companion').find(c=>c.id===Save.data.cosmetics.current.companion) || {id:'none'}; }
-function currentFootstep(){ return getAllCosmetics('footstep').find(c=>c.id===Save.data.cosmetics.current.footstep) || {id:'none'}; }
 
 /* ============================================================
    ==================== POWER-UPS SYSTEM v2.0 ================
@@ -1791,50 +1769,51 @@ function spawnPowerup(cx, cy){
   if(p) powerups.push(p);
 }
 
-function currentHeadItem(){
-  return getAllCosmetics('headItem').find(c => c.id === Save.data.cosmetics.current.headItem)
-      || COSMETICS.headItem[0];
+/* ============================================================
+   ═══════════ COSMETIC GETTERS v3 ═══════════════════════════
+   ═══════════════════════════════════════════════════════════
+   جميع الدوال تُعيد عنصراً آمناً (id:'none') إذا لم يوجد
+   ============================================================ */
+
+function _getCurrentCosmetic(category){
+  const id = Save.data.cosmetics?.current?.[category] || 'none';
+  if(id === 'none') return { id:'none' };
+  return getAllCosmetics(category).find(c => c.id === id) || { id:'none' };
 }
-function currentBackItem(){
-  return getAllCosmetics('backItem').find(c => c.id === Save.data.cosmetics.current.backItem)
-      || COSMETICS.backItem[0];
-}
-function currentHeldItem(){
-  return getAllCosmetics('heldItem').find(c => c.id === Save.data.cosmetics.current.heldItem)
-      || COSMETICS.heldItem[0];
-}
-function currentNameTag(){
-  return getAllCosmetics('nameTag').find(c => c.id === Save.data.cosmetics.current.nameTag)
-      || COSMETICS.nameTag[0];
-}
-function currentBadge(){
-  return getAllCosmetics('badge').find(c => c.id === Save.data.cosmetics.current.badge)
-      || COSMETICS.badge[0];
-}
-function currentAvatarFrame(){
-  return getAllCosmetics('avatarFrame').find(c => c.id === Save.data.cosmetics.current.avatarFrame)
-      || COSMETICS.avatarFrame[0];
-}
-function currentBanner(){
-  return getAllCosmetics('banner').find(c => c.id === Save.data.cosmetics.current.banner)
-      || COSMETICS.banner[0];
-}
-function currentGroundMark(){
-  return getAllCosmetics('groundMark').find(c => c.id === Save.data.cosmetics.current.groundMark)
-      || COSMETICS.groundMark[0];
-}
-function currentSpawnEffect(){
-  return getAllCosmetics('spawnEffect').find(c => c.id === Save.data.cosmetics.current.spawnEffect)
-      || COSMETICS.spawnEffect[0];
-}
-function currentReviveEffect(){
-  return getAllCosmetics('reviveEffect').find(c => c.id === Save.data.cosmetics.current.reviveEffect)
-      || COSMETICS.reviveEffect[0];
-}
-function currentHitEffect(){
-  return getAllCosmetics('hitEffect').find(c => c.id === Save.data.cosmetics.current.hitEffect)
-      || COSMETICS.hitEffect[0];
-}
+
+/* ═══ التأثيرات (9) ═══ */
+const currentHead   = () => _getCurrentCosmetic('head');
+const currentBack   = () => _getCurrentCosmetic('back');
+const currentEyes   = () => _getCurrentCosmetic('eyes');
+const currentTrail  = () => _getCurrentCosmetic('trail');
+const currentSpark  = () => _getCurrentCosmetic('spark');
+const currentJump   = () => _getCurrentCosmetic('jump');
+const currentSpawn  = () => _getCurrentCosmetic('spawn');
+const currentRevive = () => _getCurrentCosmetic('revive');
+const currentDeath  = () => _getCurrentCosmetic('death');
+
+/* ═══ الجماليات (5) ═══ */
+const currentAvatar      = () => _getCurrentCosmetic('avatar');
+const currentAvatarFrame = () => _getCurrentCosmetic('avatarFrame');
+const currentBanner      = () => _getCurrentCosmetic('banner');
+const currentNameTag     = () => _getCurrentCosmetic('nameTag');
+const currentBadge       = () => _getCurrentCosmetic('badge');
+
+/* ═══ توافق خلفي — للكود القديم الذي قد يستدعيها ═══ */
+const currentCrown     = currentHead;      /* crown → head */
+const currentCape      = currentBack;      /* cape → back */
+const currentHeadItem  = currentHead;      /* headItem → head */
+const currentBackItem  = currentBack;      /* backItem → back */
+const currentSpawnEffect  = currentSpawn;
+const currentReviveEffect = currentRevive;
+const currentHitEffect    = currentDeath;  /* hitEffect مدموج مع death */
+
+/* ═══ دوال قديمة معطّلة (تُعيد 'none' دائماً) ═══ */
+const currentAura       = () => ({ id:'none' });
+const currentCompanion  = () => ({ id:'none' });
+const currentFootstep   = () => ({ id:'none' });
+const currentHeldItem   = () => ({ id:'none' });
+const currentGroundMark = () => ({ id:'none' });
 
 /* ============================================================
    ==================== DEFAULT SAVE DATA ====================
@@ -1842,29 +1821,45 @@ function currentHitEffect(){
 const DEFAULT_SAVE_DATA = {
   coins: 0,
   bestMeters: { FLIP:0, FLAP:0, DRIFT:0, WALK:0, FLIP_WALK:0, SKY_JUMP:0, MIXED:0 },
-  ownedSkins: ['cream'],
-  currentSkin: 'cream',
+ownedSkins: ['default'],
+currentSkin: 'default',
 /* استبدل cosmetics في DEFAULT_SAVE_DATA بـ: */
 cosmetics: {
   owned: {
-    spark:['none'], trail:['default'], jump:['default'], death:['default'],
-    aura:['none'], crown:['none'], cape:['none'],
-    eyes:['default'], companion:['none'], footstep:['none'],
-    /* جديدة */
-    headItem:['none'], backItem:['none'], heldItem:['none'],
-    nameTag:['default'], badge:['none'], avatarFrame:['default'],
-    banner:['default'], groundMark:['none'],
-    spawnEffect:['default'], reviveEffect:['default'], hitEffect:['default']
+    /* ═══ التأثيرات (9) ═══ */
+    head:   ['none'],
+    back:   ['none'],
+    eyes:   ['none'],
+    trail:  ['none'],
+    spark:  ['none'],
+    jump:   ['none'],
+    spawn:  ['none'],
+    revive: ['none'],
+    death:  ['none'],
+    /* ═══ الجماليات (5) ═══ */
+    avatar:      ['none'],
+    avatarFrame: ['none'],
+    banner:      ['none'],
+    nameTag:     ['none'],
+    badge:       ['none']
   },
   current: {
-    spark:'none', trail:'default', jump:'default', death:'default',
-    aura:'none', crown:'none', cape:'none',
-    eyes:'default', companion:'none', footstep:'none',
-    /* جديدة */
-    headItem:'none', backItem:'none', heldItem:'none',
-    nameTag:'default', badge:'none', avatarFrame:'default',
-    banner:'default', groundMark:'none',
-    spawnEffect:'default', reviveEffect:'default', hitEffect:'default'
+    /* ═══ التأثيرات (9) ═══ */
+    head:   'none',
+    back:   'none',
+    eyes:   'none',
+    trail:  'none',
+    spark:  'none',
+    jump:   'none',
+    spawn:  'none',
+    revive: 'none',
+    death:  'none',
+    /* ═══ الجماليات (5) ═══ */
+    avatar:      'none',
+    avatarFrame: 'none',
+    banner:      'none',
+    nameTag:     'none',
+    badge:       'none'
   }
 },
   achievements: {},
@@ -1951,39 +1946,59 @@ const Save = {
 
   /* ═══════════════ ترحيلات وإصلاحات ═══════════════ */
   runMigrations(){
-    /* ═══ ضمان وجود بنية cosmetics ═══ */
-    if(!this.data.cosmetics) this.data.cosmetics = { owned: {}, current: {} };
-    if(!this.data.cosmetics.owned)   this.data.cosmetics.owned = {};
-    if(!this.data.cosmetics.current) this.data.cosmetics.current = {};
+/* ═══ cosmetics — ترحيل كامل للنظام v3 ═══ */
+if(!this.data.cosmetics) this.data.cosmetics = { owned: {}, current: {} };
+if(!this.data.cosmetics.owned)   this.data.cosmetics.owned = {};
+if(!this.data.cosmetics.current) this.data.cosmetics.current = {};
 
-    /* ═══ قيم افتراضية لكل فئة (قديمة + جديدة) ═══ */
-    const catDefaults = {
-      /* قديمة */
-      spark: 'none', trail: 'default', jump: 'default', death: 'default',
-      aura: 'none', crown: 'none', cape: 'none',
-      eyes: 'default', companion: 'none', footstep: 'none',
-      /* ✨ جديدة */
-      headItem: 'none', backItem: 'none', heldItem: 'none',
-      nameTag: 'default', badge: 'none', avatarFrame: 'default',
-      banner: 'default', groundMark: 'none',
-      spawnEffect: 'default', reviveEffect: 'default', hitEffect: 'default'
-    };
+/* ═══ قائمة ثابتة محلية — لا تعتمد على ترتيب التعريف ═══ */
+const V3_CATEGORIES_LOCAL = [
+  /* التأثيرات (9) */
+  'head','back','eyes','trail','spark','jump','spawn','revive','death',
+  /* الجماليات (5) */
+  'avatar','avatarFrame','banner','nameTag','badge'
+];
 
-    for(const cat in catDefaults){
-      const defValue = catDefaults[cat];
+/* ═══ حذف كل التصنيفات القديمة (غير الموجودة في v3) ═══ */
+const v3Set = new Set(V3_CATEGORIES_LOCAL);
+const oldOwned = this.data.cosmetics.owned;
+const oldCurrent = this.data.cosmetics.current;
 
-      /* ═══ owned ═══ */
-      if(!Array.isArray(this.data.cosmetics.owned[cat])){
-        this.data.cosmetics.owned[cat] = [defValue];
-      } else if(!this.data.cosmetics.owned[cat].includes(defValue)){
-        this.data.cosmetics.owned[cat].push(defValue);
-      }
+for(const oldCat of Object.keys(oldOwned)){
+  if(!v3Set.has(oldCat)){
+    delete oldOwned[oldCat];
+  }
+}
+for(const oldCat of Object.keys(oldCurrent)){
+  if(!v3Set.has(oldCat)){
+    delete oldCurrent[oldCat];
+  }
+}
 
-      /* ═══ current ═══ */
-      if(!this.data.cosmetics.current[cat]){
-        this.data.cosmetics.current[cat] = defValue;
-      }
+/* ═══ ضمان وجود كل تصنيفات v3 ═══ */
+for(const cat of V3_CATEGORIES_LOCAL){
+  /* ─── owned ─── */
+  if(!Array.isArray(this.data.cosmetics.owned[cat])){
+    this.data.cosmetics.owned[cat] = ['none'];
+  } else {
+    /* أضف 'none' إن لم يكن موجوداً */
+    if(!this.data.cosmetics.owned[cat].includes('none')){
+      this.data.cosmetics.owned[cat].unshift('none');
     }
+    /* نظّف أي قيم غير نصية أو فارغة */
+    this.data.cosmetics.owned[cat] = this.data.cosmetics.owned[cat]
+      .filter(id => typeof id === 'string' && id.length > 0);
+  }
+
+  /* ─── current ─── */
+  if(!this.data.cosmetics.current[cat]){
+    this.data.cosmetics.current[cat] = 'none';
+  }
+  /* تحقق من أن current موجود ضمن owned */
+  if(!this.data.cosmetics.owned[cat].includes(this.data.cosmetics.current[cat])){
+    this.data.cosmetics.current[cat] = 'none';
+  }
+}
 
     /* ═══ bestMeters — ضمان كل الأنماط ═══ */
     if(!this.data.bestMeters || typeof this.data.bestMeters !== 'object'){
@@ -2075,15 +2090,15 @@ const Save = {
       this.data.dailyLogin = { streak: 0, lastClaim: null, claimedToday: false };
     }
 
-    /* ═══ ownedSkins ═══ */
-    if(!Array.isArray(this.data.ownedSkins) || this.data.ownedSkins.length === 0){
-      this.data.ownedSkins = ['cream'];
-    }
+/* ═══ ownedSkins ═══ */
+if(!Array.isArray(this.data.ownedSkins) || this.data.ownedSkins.length === 0){
+  this.data.ownedSkins = ['default'];
+}
 
-    /* ═══ currentSkin ═══ */
-    if(!this.data.currentSkin){
-      this.data.currentSkin = 'cream';
-    }
+/* ═══ currentSkin ═══ */
+if(!this.data.currentSkin || this.data.currentSkin === 'default'){
+  this.data.currentSkin = 'default';
+}
 
     /* ═══ settings ═══ */
     if(!this.data.settings || typeof this.data.settings !== 'object'){
@@ -2204,38 +2219,178 @@ Save.load();
 Save.runMigrations();
 
 /* ============================================================
-   CATEGORIES v2 — موسّعة
+   ═══════════ COSMETIC CATEGORIES v3 — IMAGE-BASED ══════════
+   ============================================================
+   - كل العناصر تعتمد على صور خارجية
+   - 9 تأثيرات جوهرية + 5 جماليات شخصية
+   - لا رسم برمجي — فقط صور
    ============================================================ */
-const CATEGORY_LABELS = {
-  // موجودة سابقاً
-  skin: 'زي', eyes: 'عيون', companion: 'رفيق', footstep: 'أثر',
-  spark: 'شرار', trail: 'خط سير', jump: 'قفزة', death: 'نهاية',
-  aura: 'هالة', crown: 'رأسية', cape: 'عباءة',
 
-  // ✨ جديدة
-  headItem: 'غطاء رأس',       // قبعات/خوذ — طبقة منفصلة
-  backItem: 'ظهر',             // أجنحة / حقائب / عباءات كصور
-  heldItem: 'محمول',           // سيف، مطرقة، مصباح، لافتة
-  nameTag: 'بطاقة الاسم',      // إطار الاسم في القوائم
-  badge: 'شارة ملف',          // شعار صغير بجانب الاسم
-  avatarFrame: 'إطار الصورة',  // إطار دائري في الملف الشخصي
-  banner: 'خلفية ملف',        // خلفية البطاقة
-  groundMark: 'علامة أرضية',  // حلقة/شعار تحت اللاعب
-  spawnEffect: 'تأثير البداية',// وميض عند بدء الجولة
-  reviveEffect: 'تأثير الإحياء',// عند العودة للحياة
-  hitEffect: 'تأثير الارتطام'   // عند الاصطدام بالدرع/العدو
+const COSMETIC_CATEGORIES = {
+  /* ═══════ التأثيرات الجوهرية (9) ═══════ */
+  head: {
+    label:'الرأس', en:'HEAD', icon:'👑', folder:'head',
+    color:'#E8B34E', order:1, group:'effect',
+    desc:'تاج، قبعة، خوذة — فوق الرأس',
+    render: {
+      anchor:{ x:0.5, y:1.0 },   /* مرتكز على أسفل الصورة */
+      sizeMul: 2.4,               /* مضاعف نصف قطر اللاعب */
+      offsetY:-1.15,              /* إزاحة رأسية بالنسبة لنصف القطر */
+      rotationAmp: 0.02,          /* اهتزاز طفيف */
+      rotationSpeed: 0.04
+    }
+  },
+  back: {
+    label:'الظهر', en:'BACK', icon:'🦋', folder:'back',
+    color:'#9A6AC8', order:2, group:'effect',
+    desc:'أجنحة، عباءة، حقيبة — خلف اللاعب',
+    render: {
+      anchor:{ x:0.5, y:0.5 },
+      sizeMul: 4.5,
+      offsetY:0,
+      rotationAmp: 0.03,
+      rotationSpeed: 0.05,
+      behind: true                 /* يُرسم قبل الجسم */
+    }
+  },
+  eyes: {
+    label:'العيون', en:'EYES', icon:'👁️', folder:'eyes',
+    color:'#4A88C8', order:3, group:'effect',
+    desc:'شكل العيون — تُرسم على الوجه',
+    render: {
+      anchor:{ x:0.5, y:0.5 },
+      sizeMul: 1.6,
+      offsetY:-0.15,
+      onFace: true                 /* يُرسم فوق الوجه (فقط إن لم يكن الجسم صورة) */
+    }
+  },
+  trail: {
+    label:'خط السير', en:'TRAIL', icon:'➰', folder:'trail',
+    color:'#6B9B6B', order:4, group:'effect',
+    desc:'أثر يتبع اللاعب',
+    render: {
+      type:'particle',
+      spawnRate: 2,
+      sizeMul: 1.4,
+      life: 1.0,
+      fade: 0.03
+    }
+  },
+  spark: {
+    label:'الشرار', en:'SPARK', icon:'✨', folder:'spark',
+    color:'#FFD060', order:5, group:'effect',
+    desc:'جسيمات تنبعث من اللاعب',
+    render: {
+      type:'particle',
+      spawnRate: 3,
+      sizeMul: 1.2,
+      life: 1.0,
+      fade: 0.028
+    }
+  },
+  jump: {
+    label:'القفز', en:'JUMP', icon:'⬆️', folder:'jump',
+    color:'#5A8FD8', order:6, group:'effect',
+    desc:'تأثير لحظي عند القفز',
+    render: {
+      type:'burst',
+      sizeMul: 5.0,
+      life: 0.9,
+      fade: 0.035
+    }
+  },
+  spawn: {
+    label:'البداية', en:'SPAWN', icon:'🚀', folder:'spawn',
+    color:'#4A88C8', order:7, group:'effect',
+    desc:'تأثير عند بدء الجولة',
+    render: {
+      type:'burst',
+      sizeMul: 8.0,
+      life: 1.4,
+      fade: 0.018,
+      scaleOverLife: 2.5
+    }
+  },
+  revive: {
+    label:'الإحياء', en:'REVIVE', icon:'💫', folder:'revive',
+    color:'#C080FF', order:8, group:'effect',
+    desc:'تأثير عند العودة للحياة',
+    render: {
+      type:'burst',
+      sizeMul: 8.0,
+      life: 1.6,
+      fade: 0.014,
+      scaleOverLife: 3.0
+    }
+  },
+  death: {
+    label:'الموت', en:'DEATH', icon:'💀', folder:'death',
+    color:'#E85838', order:9, group:'effect',
+    desc:'تأثير الارتطام + النهاية',
+    render: {
+      type:'burst',
+      sizeMul: 6.0,
+      life: 1.4,
+      fade: 0.018,
+      count: 18
+    }
+  },
+
+  /* ═══════ الجماليات الشخصية (5) ═══════ */
+  avatar: {
+    label:'الصورة الشخصية', en:'AVATAR', icon:'👤', folder:'avatar',
+    color:'#E8B34E', order:10, group:'aesthetic',
+    desc:'صورة رمزية في القوائم والملف'
+  },
+  avatarFrame: {
+    label:'إطار الصورة', en:'FRAME', icon:'🖼️', folder:'frames',
+    color:'#FFD060', order:11, group:'aesthetic',
+    desc:'إطار دائري حول الصورة الشخصية',
+    render: { sizeMul: 2.4, anchor:{ x:0.5, y:0.5 } }
+  },
+  banner: {
+    label:'خلفية البطاقة', en:'BANNER', icon:'🎨', folder:'banners',
+    color:'#E85838', order:12, group:'aesthetic',
+    desc:'خلفية بطاقة اللاعب'
+  },
+  nameTag: {
+    label:'بطاقة الاسم', en:'NAMETAG', icon:'🏷️', folder:'tags',
+    color:'#A06AD8', order:13, group:'aesthetic',
+    desc:'شكل لوحة الاسم فوق اللاعب',
+    render: { sizeMul: 6.0, anchor:{ x:0.5, y:0.5 } }
+  },
+  badge: {
+    label:'الشارة', en:'BADGE', icon:'⭐', folder:'badges',
+    color:'#E8B34E', order:14, group:'aesthetic',
+    desc:'أيقونة صغيرة بجانب الاسم',
+    render: { sizeMul: 1.2, anchor:{ x:0.5, y:0.5 } }
+  }
 };
 
-const CATEGORY_FOLDERS = {
-  skin: 'skins', eyes: 'eyes', companion: 'companion', footstep: 'footstep',
-  spark: 'spark', trail: 'trail', jump: 'jump', death: 'death',
-  aura: 'aura', crown: 'crown', cape: 'cape',
-  // جديدة
-  headItem: 'head', backItem: 'back', heldItem: 'held',
-  nameTag: 'tags', badge: 'badges', avatarFrame: 'frames',
-  banner: 'banners', groundMark: 'marks',
-  spawnEffect: 'spawn', reviveEffect: 'revive', hitEffect: 'hit'
-};
+/* ═══ قوائم مُشتقّة ═══ */
+const COSMETIC_CATEGORY_ORDER = Object.entries(COSMETIC_CATEGORIES)
+  .sort((a, b) => a[1].order - b[1].order)
+  .map(([k]) => k);
+
+const EFFECT_CATEGORIES    = COSMETIC_CATEGORY_ORDER.filter(k => COSMETIC_CATEGORIES[k].group === 'effect');
+const AESTHETIC_CATEGORIES = COSMETIC_CATEGORY_ORDER.filter(k => COSMETIC_CATEGORIES[k].group === 'aesthetic');
+
+/* ═══ متوافق مع الكود القديم (يُستخدم في مشغل الأدمن) ═══ */
+const CATEGORY_LABELS = Object.fromEntries(
+  Object.entries(COSMETIC_CATEGORIES).map(([k, v]) => [k, v.label])
+);
+const CATEGORY_FOLDERS = Object.fromEntries(
+  Object.entries(COSMETIC_CATEGORIES).map(([k, v]) => [k, v.folder])
+);
+
+/* ═══ مساعد: جلب إعدادات تصنيف ═══ */
+function getCategoryConfig(cat){
+  return COSMETIC_CATEGORIES[cat] || {
+    label: cat, en: String(cat).toUpperCase(), icon:'✨',
+    folder: cat, color:'#8B8278', desc:'', group:'effect',
+    render: { sizeMul: 2.0, anchor:{ x:0.5, y:0.5 }, offsetY: 0 }
+  };
+}
 
 /* ═══ دالة بناء أنواع الأماكن (نسخة آمنة) ═══ */
 function buildPlacementTypes(){
@@ -2439,15 +2594,8 @@ function collectPlacements(){
 /* ═══ جلب كل العناصر المخصصة ═══ */
 function getAllCustomItems(){
   const items = [];
-  /* ✅ كل الفئات — قديمة + جديدة */
-  const cats = [
-    'skins','eyes','companion','footstep',
-    'spark','trail','jump','death','aura','crown','cape',
-    /* ✨ جديدة */
-    'headItem','backItem','heldItem','groundMark',
-    'nameTag','badge','avatarFrame','banner',
-    'spawnEffect','reviveEffect','hitEffect'
-  ];
+  /* ✅ التصنيفات v3 فقط */
+  const cats = ['skins', ...COSMETIC_CATEGORY_ORDER];
 
   for(const cat of cats){
     const key = 'custom' + cat.charAt(0).toUpperCase() + cat.slice(1);
@@ -3788,261 +3936,50 @@ function dust(x,y,color,count=6,dir=-1){
   }
 }
 function spawnJumpEffect(x, y, color){
-  const cos = currentJump();
+  const item = currentJump();
+  if(!item || item.id === 'none' || !hasItemImage(item)) return;
 
-  /* ✅ قفزة مخصصة بصورة */
-// ✅ جديد
-if(hasItemImage(cos)){
-  const img = getItemImgOrNull(cos) || getItemImageEl(cos);
-    /* نضيف 3 جسيمات صور صغيرة متناثرة */
-    for(let i = 0; i < 5; i++){
-      const a = (i/5) * Math.PI * 2;
-      particles.push({
-        x, y,
-        vx: Math.cos(a) * rand(2, 4),
-        vy: Math.sin(a) * rand(2, 4),
-        life: 0.9, decay: 0.03,
-        item: cos,
-        size: 18,
-        color: '#FFFFFF'
-      });
-    }
-    Sfx.bounce();
-    return;
-  }
-  const id = cos.id;
+  const cfg = getCategoryConfig('jump').render;
+  particles.push({
+    x, y,
+    vx: 0, vy: 0,
+    life: cfg.life || 0.9,
+    decay: cfg.fade || 0.035,
+    item,
+    size: P.r * (cfg.sizeMul || 5.0),
+    scaleOverLife: 1.6,
+    color: '#FFFFFF'
+  });
 
-  if(id==='ring'){
-    for(let i=0;i<8;i++){
-      const a=(i/8)*Math.PI*2;
-      particles.push({x,y,vx:Math.cos(a)*4,vy:Math.sin(a)*4,life:1,decay:0.035,color,size:3});
-    }
-  } else if(id==='burst' || id==='shadowBurst'){
-    const col = id==='shadowBurst' ? '#2A1A30' : color;
-    for(let i=0;i<12;i++){
-      const a=Math.random()*Math.PI*2;
-      const s=rand(2,5);
-      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,decay:0.025,color:col,size:rand(2.5,4)});
-    }
-  } else if(id==='star' || id==='starBurst'){
-    for(let i=0;i<10;i++){
-      const a=(i/10)*Math.PI*2;
-      particles.push({x,y,vx:Math.cos(a)*rand(3,6),vy:Math.sin(a)*rand(3,6),life:1,decay:0.03,color,size:rand(3,5)});
-    }
-    if(id==='starBurst'){
-      for(let i=0;i<16;i++){
-        const a=Math.random()*Math.PI*2;
-        const s=rand(4,8);
-        particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.2,decay:0.022,color:'#FFF8C0',size:rand(2,4)});
-      }
-    }
-  } else if(id==='shockwave' || id==='fireRing' || id==='holyRing'){
-    const col = id==='fireRing' ? '#FF6020' : id==='holyRing' ? '#FFF8C0' : '#FFFFFF';
-    for(let i=0;i<16;i++){
-      const a=(i/16)*Math.PI*2;
-      particles.push({x,y,vx:Math.cos(a)*5,vy:Math.sin(a)*5,life:1.2,decay:0.02,color:col,size:4});
-    }
-  } else if(id==='spiral' || id==='vortex'){
-    for(let i=0;i<20;i++){
-      const a=(i/20)*Math.PI*4;
-      const s=1 + i*0.25;
-      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.4,decay:0.018,color,size:rand(2,4)});
-    }
-  } else if(id==='smokeBomb' || id==='smoke'){
-    for(let i=0;i<14;i++){
-      const a=Math.random()*Math.PI*2;
-      const s=rand(1,3);
-      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.6,decay:0.014,color:'#9098A0',size:rand(4,7)});
-    }
-  } else if(id==='iceBurst'){
-    for(let i=0;i<14;i++){
-      const a=Math.random()*Math.PI*2;
-      const s=rand(2,5);
-      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.1,decay:0.025,color:'#A0E0FF',size:rand(3,5)});
-    }
-  } else if(id==='holyBurst'){
-    for(let i=0;i<18;i++){
-      const a=Math.random()*Math.PI*2;
-      const s=rand(1,4);
-      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s - 1,life:1.4,decay:0.02,color:'#FFF8C0',size:rand(2.5,4.5)});
-    }
-  } else if(id==='voidBurst' || id==='abyssBurst' || id==='cosmicBurst'){
-    const col = id==='abyssBurst' ? '#2A0848' : id==='cosmicBurst' ? '#C080FF' : '#6020A0';
-    for(let i=0;i<20;i++){
-      const a=Math.random()*Math.PI*2;
-      const s=rand(3,7);
-      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.4,decay:0.018,color:col,size:rand(3,5)});
-    }
-  } else if(id==='lightningSmash'){
-    for(let i=0;i<12;i++){
-      const a=(i/12)*Math.PI*2;
-      particles.push({x,y,vx:Math.cos(a)*6,vy:Math.sin(a)*6,life:1,decay:0.028,color:'#A0E0FF',size:rand(3,5)});
-    }
-  } else if(id==='waterSplash'){
-    for(let i=0;i<15;i++){
-      const a=-Math.PI + Math.random()*Math.PI;
-      const s=rand(3,6);
-      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s - 2,life:1,decay:0.03,color:'#88D8FF',size:rand(2.5,4.5)});
-    }
-  } else if(id==='flowerBurst'){
-    for(let i=0;i<15;i++){
-      const a=Math.random()*Math.PI*2;
-      const s=rand(2,5);
-      const cols = ['#FF80A0','#FFE060','#FFA0C0','#FFFFFF'];
-      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.2,decay:0.024,color:cols[i%4],size:rand(3,5)});
-    }
-  } else if(id==='leafBurst'){
-    for(let i=0;i<14;i++){
-      const a=Math.random()*Math.PI*2;
-      const s=rand(2,5);
-      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.2,decay:0.024,color:'#7BC44C',size:rand(2.5,4.5)});
-    }
-  } else if(id==='bubbleBurst'){
-    for(let i=0;i<15;i++){
-      const a=Math.random()*Math.PI*2;
-      const s=rand(1,4);
-      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.3,decay:0.02,color:'#A8D8E8',size:rand(3,5)});
-    }
-  } else if(id==='heartBurst'){
-    for(let i=0;i<12;i++){
-      const a=Math.random()*Math.PI*2;
-      const s=rand(2,5);
-      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.3,decay:0.022,color:'#FF6080',size:rand(3,5)});
-    }
-  } else if(id==='gearBurst'){
-    for(let i=0;i<10;i++){
-      const a=Math.random()*Math.PI*2;
-      const s=rand(2,5);
-      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.2,decay:0.024,color:'#C0C8D8',size:rand(3,5)});
-    }
-  } else {
-    dust(x,y,color,6);
-  }
+  Sfx.bounce();
+  haptic(4);
 }
 function spawnDeathEffect(x, y, color){
-  const cos = currentDeath();
-
-  /* ✅ نهاية مخصصة بصورة */
-  if(hasItemImage(cos)){
-    for(let i = 0; i < 18; i++){
-      const a = (i/18) * Math.PI * 2;
-      const s = rand(3, 8);
-      particles.push({
-        x, y,
-        vx: Math.cos(a) * s, vy: Math.sin(a) * s,
-        life: 1.4, decay: 0.018,
-        item: cos,
-        size: rand(14, 22),
-        color: '#FFFFFF'
-      });
-    }
+  const item = currentDeath();
+  if(!item || item.id === 'none' || !hasItemImage(item)){
+    /* fallback: انفجار بسيط */
+    burst(x, y, color || '#FFFFFF', 30, 7);
     return;
   }
-  const id = cos.id;
 
-  if(id==='explode'){
-    burst(x,y,color,40,10);
-    burst(x,y,'#FF8860',20,12);
-  } else if(id==='dissolve'){
-    for(let i=0;i<40;i++){
-      const a=Math.random()*Math.PI*2;
-      const s=Math.random()*3;
-      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-0.5,life:1,decay:0.012,color,size:rand(2,4)});
-    }
-  } else if(id==='pixel'){
-    for(let i=0;i<50;i++){
-      particles.push({x:x+rand(-15,15), y:y+rand(-15,15),vx:rand(-2,2), vy:rand(-3,-0.5),life:1, decay:0.018, color, size:4});
-    }
-  } else if(id==='shatter' || id==='shatterIce'){
-    const col = id==='shatterIce' ? '#A0E0FF' : mixColor(color,'#FFFFFF',0.4);
-    for(let i=0;i<45;i++){
-      const a = Math.random()*Math.PI*2;
-      const s = rand(4,9);
-      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.3, decay:0.018, color: col, size: rand(3,6)});
-    }
-  } else if(id==='nova'){
-    for(let i=0;i<60;i++){
-      const a=Math.random()*Math.PI*2;
-      const s=rand(3,11);
-      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.5,decay:0.014,
-        color: i%3===0?'#FFF8C0': (i%3===1?'#FFB060':color), size:rand(3,6)});
-    }
-  } else if(id==='implode'){
-    for(let i=0;i<50;i++){
-      const a=Math.random()*Math.PI*2;
-      const d=rand(40,120);
-      particles.push({x:x+Math.cos(a)*d, y:y+Math.sin(a)*d,
-        vx:-Math.cos(a)*6, vy:-Math.sin(a)*6, life:1, decay:0.02, color, size:rand(2,4)});
-    }
-  } else if(id==='flash'){
-    for(let i=0;i<30;i++){
-      const a=Math.random()*Math.PI*2;
-      const s=rand(6,12);
-      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:0.6,decay:0.04,color:'#FFFFFF',size:rand(3,6)});
-    }
-    G.flash = 0.8;
-  } else if(id==='vortexDeath'){
-    for(let i=0;i<50;i++){
-      const a=(i/50)*Math.PI*8;
-      const s=1 + i*0.2;
-      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.6,decay:0.014,color,size:rand(2,5)});
-    }
-  } else if(id==='holyAscend'){
-    for(let i=0;i<50;i++){
-      const a=Math.random()*Math.PI*2;
-      const s=rand(1,3);
-      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s - 3,life:1.8,decay:0.012,color:'#FFF8C0',size:rand(3,6)});
-    }
-  } else if(id==='blackHole'){
-    for(let i=0;i<80;i++){
-      const a=Math.random()*Math.PI*2;
-      const d=rand(60,160);
-      particles.push({x:x+Math.cos(a)*d, y:y+Math.sin(a)*d,
-        vx:-Math.cos(a)*9, vy:-Math.sin(a)*9, life:1.4, decay:0.016, color:'#1A0A2A', size:rand(3,7)});
-    }
-  } else if(id==='fireworks'){
-    const cols = ['#FF4040','#FFD040','#40FF60','#4080FF','#FF40C0'];
-    for(let c=0;c<5;c++){
-      const baseA = (c/5)*Math.PI*2;
-      for(let i=0;i<15;i++){
-        const a = baseA + (i/15)*Math.PI*2;
-        const s=rand(5,10);
-        particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.4,decay:0.016,color:cols[c],size:rand(2,4)});
-      }
-    }
-  } else if(id==='soulRise'){
-    for(let i=0;i<40;i++){
-      const a=Math.random()*Math.PI*2;
-      const s=rand(0.5,2);
-      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s - 2.5,life:2,decay:0.01,color:'#C0D0FF',size:rand(2,5)});
-    }
-  } else if(id==='neonBurst'){
-    for(let i=0;i<40;i++){
-      const a=Math.random()*Math.PI*2;
-      const s=rand(4,10);
-      const cols = ['#00FFD8','#FF00A8','#FFD000'];
-      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.2,decay:0.018,color:cols[i%3],size:rand(3,6)});
-    }
-  } else if(id==='cosmicVoid'){
-    for(let i=0;i<70;i++){
-      const a=Math.random()*Math.PI*2;
-      const s=rand(3,14);
-      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.8,decay:0.012,color: i%3===0?'#C080FF':(i%3===1?'#6020A0':'#FFFFFF'), size:rand(3,6)});
-    }
-  } else if(id==='starScatter'){
-    for(let i=0;i<55;i++){
-      const a=Math.random()*Math.PI*2;
-      const s=rand(3,11);
-      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1.5,decay:0.014,color:'#FFF4C0',size:rand(3,6)});
-    }
-  } else if(id==='petalFall'){
-    for(let i=0;i<45;i++){
-      const a=Math.random()*Math.PI*2;
-      const s=rand(1,4);
-      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s + 1.5,life:2,decay:0.012,color:'#FFC0D8',size:rand(3,5)});
-    }
-  } else {
-    burst(x,y,color,30,7);
+  const cfg = getCategoryConfig('death').render;
+  const count = cfg.count || 18;
+
+  for(let i = 0; i < count; i++){
+    const a = (i / count) * Math.PI * 2;
+    const s = rand(3, 8);
+    particles.push({
+      x, y,
+      vx: Math.cos(a) * s,
+      vy: Math.sin(a) * s,
+      life: cfg.life || 1.4,
+      decay: cfg.fade || 0.018,
+      item,
+      size: rand(P.r * 1.0, P.r * 1.8),
+      rotation: rand(0, Math.PI * 2),
+      rotationSpeed: rand(-0.05, 0.05),
+      color: '#FFFFFF'
+    });
   }
 }
 function addFloat(x,y,text,color,size=14){ floats.push({x,y,text,color,size,life:1,vy:-1.1}); }
@@ -4050,397 +3987,90 @@ function showBanner(text,sub=''){ G.banner.text=text; G.banner.sub=sub; G.banner
 function shake(v){ G.shake = Math.max(G.shake, v); }
 
 function spawnFootstep(){
-  const fs = currentFootstep();
-  if(fs.id === 'none') return;
-
-  const x = P.x - 6;
-  const y = P.y + P.r - 2;
-
-  if(hasItemImage(fs)){
-    /* ✅ يظهر كصورة كاملة بحجم معقول */
-    particles.push({
-      x, y,
-      vx: -1.2, vy: -0.3,
-      life: 1.0, decay: 0.02,
-      item: fs,
-      size: 22,
-      rotation: rand(-0.2, 0.2),
-      color: '#FFFFFF'
-    });
-    return;
-  }
-
-  const id = fs.id;
-
-  if(id === 'dust' || id === 'smoke'){
-    const col = id === 'smoke' ? 'rgba(120,120,130,0.6)' : G.currentScene.groundDark;
-    for(let i=0;i<3;i++){
-      particles.push({
-        x: x + rand(-3,3), y: y,
-        vx: rand(-0.6,0.2), vy: rand(-1.2,-0.3),
-        life: 0.9, decay: 0.028,
-        color: col, size: rand(2.5,4.5)
-      });
-    }
-  }
-  else if(id === 'spark'){
-    for(let i=0;i<3;i++){
-      particles.push({
-        x, y,
-        vx: rand(-2,2), vy: rand(-2,0),
-        life: 0.7, decay: 0.04,
-        color: '#FFB060', size: rand(2,3.5)
-      });
-    }
-  }
-  else if(id === 'snow'){
-    for(let i=0;i<3;i++){
-      particles.push({
-        x: x + rand(-3,3), y,
-        vx: rand(-0.8,0.3), vy: rand(-1,-0.2),
-        life: 0.9, decay: 0.03,
-        color: '#FFFFFF', size: rand(1.8,3)
-      });
-    }
-  }
-  else if(id === 'water'){
-    for(let i=0;i<4;i++){
-      const a = -Math.PI/2 + rand(-0.5,0.5);
-      particles.push({
-        x, y,
-        vx: Math.cos(a)*rand(1,3), vy: Math.sin(a)*rand(1,3),
-        life: 0.8, decay: 0.035,
-        color: '#80D0F0', size: rand(2,4)
-      });
-    }
-  }
-  else if(id === 'magic'){
-    for(let i=0;i<4;i++){
-      const a = (i/4)*Math.PI*2;
-      particles.push({
-        x, y,
-        vx: Math.cos(a)*2, vy: Math.sin(a)*2 - 0.5,
-        life: 1, decay: 0.03,
-        color: '#C080FF', size: rand(2.5,4)
-      });
-    }
-    const hue = (G.t*5) % 360;
-    addFloat(x, y - 10, '✦', `hsl(${hue}, 80%, 65%)`, 12);
-  }
-  else if(id === 'fire'){
-    for(let i=0;i<3;i++){
-      particles.push({
-        x: x + rand(-3,3), y,
-        vx: rand(-0.8,0.8), vy: rand(-2,-0.5),
-        life: 0.7, decay: 0.04,
-        color: ['#FFB060','#FF6020','#FFE090'][i%3], size: rand(2.5,4.5)
-      });
-    }
-  }
-  else if(id === 'shadow'){
-    for(let i=0;i<3;i++){
-      particles.push({
-        x: x + rand(-4,4), y,
-        vx: rand(-0.8,0.3), vy: rand(-0.6,0),
-        life: 1.1, decay: 0.02,
-        color: '#3A1A50', size: rand(3,5)
-      });
-    }
-  }
-  else if(id === 'rainbow'){
-    const hue = (G.t*6) % 360;
-    for(let i=0;i<3;i++){
-      particles.push({
-        x: x + rand(-3,3), y,
-        vx: rand(-0.8,0.3), vy: rand(-1.5,-0.3),
-        life: 0.9, decay: 0.03,
-        color: `hsl(${(hue + i*40)%360}, 85%, 65%)`, size: rand(2.5,4)
-      });
-    }
-  }
-  else if(id === 'void'){
-    for(let i=0;i<3;i++){
-      particles.push({
-        x: x + rand(-3,3), y,
-        vx: rand(-0.5,0.5), vy: rand(-1.5,-0.3),
-        life: 1.1, decay: 0.022,
-        color: i%2===0 ? '#8040FF' : '#200840', size: rand(3,5)
-      });
-    }
-  }
-  else if(id === 'divine'){
-    for(let i=0;i<4;i++){
-      particles.push({
-        x: x + rand(-4,4), y,
-        vx: rand(-0.6,0.6), vy: rand(-2,-0.5),
-        life: 1.2, decay: 0.02,
-        color: '#FFF8C0', size: rand(2.5,4.5)
-      });
-    }
-    const glow = particles[particles.length - 1];
-    glow.shadowColor = '#FFE060';
-  }
+  /* ❌ نظام الآثار محذوف في v3 */
 }
 
-/* ============================================================
-   ==================== SPARKS ===============================
-   ============================================================ */
-const SPARK_PALETTES = {
-  sparks:    { colors:['#FFB060','#FF6020','#FFE090','#FF8850'], size:[1.5,3.2] },
-  bubbles:   { colors:['#C8E8F0','#A8D8E8','#FFFFFF','#E0F0F8'], size:[2,4.5] },
-  stars:     { colors:['#FFE060','#FFF0A0','#FFD040','#FFFFFF'], size:[2,4] },
-  hearts:    { colors:['#FF80A0','#FF4060','#FFB0C0','#FF6080'], size:[2.5,4.5] },
-  notes:     { colors:['#A080FF','#8060E0','#C0A0FF','#FFA0E0'], size:[3,5] },
-  leaves:    { colors:['#E87030','#C86030','#A8602A','#F0A050'], size:[2.5,4.5] },
-  petals:    { colors:['#FFC8D8','#F0A8C0','#FFE0E8','#F088A8'], size:[2.5,4.5] },
-  snow:      { colors:['#FFFFFF','#E8F0F8','#D0E0F0','#F0F8FF'], size:[1.8,3.5] },
-  digital:   { colors:['#00FFA0','#00E880','#60FFC0','#008840'], size:[2,4] },
-  lightning: { colors:['#A0E0FF','#60C0FF','#FFFFFF','#C0F0FF'], size:[2,5] },
-  firefly:   { colors:['#F5D77E','#FFE090','#E8B34E','#FFF0B0'], size:[1.5,3] },
-  rainbow:   { colors:['#FF6088','#FFA84C','#FFE24C','#4CE0A8','#4CA8FF','#A86AFF'], size:[2,4] },
-  cosmic:    { colors:['#A080FF','#8060D0','#D0B0FF','#FFC0FF','#60A0FF'], size:[2,4.5] },
-  gold:      { colors:['#E8B34E','#FFF4C0','#FFD060','#FFE8A0'], size:[2,4.5] },
-  /* ═══ جديد ═══ */
-  runes:      { colors:['#8060E0','#6040C0','#A080FF','#E0D0FF'], size:[2.5,4] },
-  gears:      { colors:['#C8C8D8','#9098A8','#E8E8F0','#5A6270'], size:[2.5,4] },
-  plus:       { colors:['#40E860','#20C040','#80FFA0','#008020'], size:[3,5] },
-  cross:      { colors:['#E8E8E8','#C0C0C0','#FFFFFF','#A0A0A0'], size:[2.5,4] },
-  triangles:  { colors:['#FF8040','#FFC060','#FFA020','#FFD080'], size:[2.5,4.5] },
-  diamonds:   { colors:['#80E8FF','#40A8D0','#C0F0FF','#2090B8'], size:[2.5,4.5] },
-  moonPhases: { colors:['#FFF4D0','#F0E0A0','#FFFFFF','#E0D080'], size:[2.5,4] },
-  arrows:     { colors:['#FF4040','#FF8080','#FF2020','#FFB0B0'], size:[2.5,4] },
-  shuriken:   { colors:['#808898','#C0C8D8','#E8E8F0','#5A6270'], size:[2.5,4.5] },
-  smoke:      { colors:['#808088','#606068','#A0A0A8','#404048'], size:[3,5.5] },
-  voidOrbs:   { colors:['#6020A0','#A040FF','#4020A0','#C080FF'], size:[2.5,4.5] },
-  candy:      { colors:['#FF60A0','#FFB040','#60E0FF','#A0FF60'], size:[2.5,4.5] },
-  donuts:     { colors:['#FFB0C0','#FFD0A0','#A08060','#FFE0E0'], size:[2.5,4.5] },
-  cherries:   { colors:['#E82040','#C01030','#FF4060','#A00820'], size:[2.5,4] },
-  soccerBalls:{ colors:['#FFFFFF','#E8E8E8','#D0D0D0','#F8F8F8'], size:[2.5,4] },
-  pixels:     { colors:['#FF00FF','#00FFFF','#FFFF00','#FF0000'], size:[3,5] },
-  mushrooms:  { colors:['#E85040','#C03020','#FF7060','#A02020'], size:[2.5,4] },
-  feathers:   { colors:['#FFFFFF','#E8E8F0','#D0D0E0','#F0F0FF'], size:[2.5,4.5] },
-  skulls:     { colors:['#F0E8E0','#D0C8C0','#FFFFFF','#B0A8A0'], size:[2.5,4] },
-  coffee:     { colors:['#6A4830','#8A6848','#4A2818','#A08868'], size:[2.5,4] },
-  books:      { colors:['#C04040','#4060C0','#40C060','#C0A040'], size:[2.5,4.5] },
-  wrenches:   { colors:['#C0C8D8','#9098A8','#E8E8F0','#5A6270'], size:[2.5,4] },
-  aurora:     { colors:['#40FFB0','#4080FF','#C080FF','#40E0FF'], size:[3,5] },
-  supernova:  { colors:['#FFFFFF','#FFE060','#FF8040','#FF4040'], size:[3,6] }
-};
-
 function spawnSpark(){
-  const spark = currentSpark();
-  if(!spark || spark.id === 'none') return;
+  const item = currentSpark();
+  if(!item || item.id === 'none' || !hasItemImage(item)) return;
+  if(sparkParticles.length > 40) return;
 
-  /* ✅ شرار مخصص بصورة */
-  if(hasItemImage(spark)){
-    if(sparkParticles.length > 55) return;
-    sparkParticles.push({
-      x: P.x - 10 - rand(0,6),
-      y: P.y + rand(-6,6),
-      vx: rand(-2.2,-0.6), vy: rand(-0.6,0.6),
-      size: rand(12, 18),
-      life: 1, decay: rand(0.014,0.028),
-      item: spark,
-      type: 'customItem',
-      rot: rand(0,Math.PI*2), rotSpd: rand(-0.04,0.04)
-    });
-    return;
-  }
-
-  if(spark.imageData){
-    if(sparkParticles.length > 55) return;
-    sparkParticles.push({
-      x: P.x - 10 - rand(0,6), y: P.y + rand(-6,6),
-      vx: rand(-2.2,-0.6), vy: rand(-0.6,0.6),
-      size: rand(10, 16), life: 1, decay: rand(0.014,0.028),
-      imageData: spark.imageData,
-      type: 'customImage', rot: rand(0,Math.PI*2), rotSpd: rand(-0.04,0.04)
-    });
-    return;
-  }
-  const palette = SPARK_PALETTES[spark.id];
-  if(!palette) return;
-  if(sparkParticles.length > 55) return;
-
-  const px = P.x - 10 - rand(0,6);
-  const py = P.y + rand(-6,6);
-
-  const col = palette.colors[Math.floor(Math.random()*palette.colors.length)];
-  const sz = rand(palette.size[0], palette.size[1]);
-
+  const cfg = getCategoryConfig('spark').render;
   sparkParticles.push({
-    x: px, y: py,
+    x: P.x - 10 - rand(0, 6),
+    y: P.y + rand(-6, 6),
     vx: rand(-2.2, -0.6),
     vy: rand(-0.6, 0.6),
-    size: sz, color: col,
-    life: 1, decay: rand(0.014, 0.028),
-    rot: rand(0, Math.PI*2), rotSpd: rand(-0.06, 0.06),
-    type: spark.id,
-    phase: rand(0, Math.PI*2),
-    wobble: rand(0.2, 0.7),
-    grow: spark.id==='bubbles' ? 0.06 : 0,
-    sparkHue: spark.id==='rainbow' ? Math.floor(Math.random()*360) : 0
+    size: P.r * (cfg.sizeMul || 1.2) * rand(0.8, 1.3),
+    life: cfg.life || 1.0,
+    decay: cfg.fade || 0.028,
+    item,
+    rot: rand(0, Math.PI * 2),
+    rotSpd: rand(-0.04, 0.04)
   });
 }
 
+/* يُستدعى من updateGameplay كل إطار */
+function updateTrailEffect(){
+  if(G.state !== 'PLAYING') return;
+  const item = currentTrail();
+  if(!item || item.id === 'none' || !hasItemImage(item)) return;
+
+  const cfg = getCategoryConfig('trail').render;
+  const rate = cfg.spawnRate || 2;
+
+  if(G.t % rate === 0){
+    particles.push({
+      x: P.x + rand(-6, 6),
+      y: P.y + rand(-6, 6),
+      vx: rand(-0.8, 0.2),
+      vy: rand(-0.3, 0.3),
+      life: cfg.life || 1.0,
+      decay: cfg.fade || 0.03,
+      item,
+      size: P.r * (cfg.sizeMul || 1.4),
+      rotation: rand(0, Math.PI * 2),
+      rotationSpeed: rand(-0.03, 0.03),
+      color: '#FFFFFF'
+    });
+  }
+}
+
 function updateSparks(){
-  const spark = currentSpark();
-  if(spark.id !== 'none' && G.state === 'PLAYING'){
-    const rate = spark.id === 'digital' || spark.id === 'snow' ? 3
-              : spark.id === 'bubbles' ? 4
-              : spark.id === 'firefly' ? 8
-              : spark.id === 'cosmic' || spark.id === 'gold' ? 3
-              : 2;
-    if(G.t % rate === 0) spawnSpark();
-    if(G.t % rate === Math.floor(rate/2)) spawnSpark();
+  const item = currentSpark();
+  if(item && item.id !== 'none' && G.state === 'PLAYING'){
+    if(G.t % 3 === 0) spawnSpark();
   }
 
-  for(let i=sparkParticles.length-1;i>=0;i--){
+  for(let i = sparkParticles.length - 1; i >= 0; i--){
     const p = sparkParticles[i];
-    if(p.type === 'customImage'){ p.rot += p.rotSpd; }
-    else if(p.type === 'sparks' || p.type === 'lightning'){ p.vy += 0.06; p.vx *= 0.97; }
-    else if(p.type === 'bubbles'){ p.vy = -0.5 - Math.sin(G.t*0.05 + p.phase)*0.2; p.vx *= 0.99; p.size += p.grow; }
-    else if(p.type === 'firefly' || p.type === 'cosmic' || p.type === 'gold'){
-      p.vy += Math.sin(G.t*0.08 + p.phase)*0.04;
-      p.vx += Math.cos(G.t*0.06 + p.phase)*0.02;
-      p.vx *= 0.97;
-    }
-    else if(p.type === 'hearts'){ p.vy = -0.7 + Math.sin(G.t*0.1 + p.phase)*0.3; p.vx *= 0.97; }
-    else if(p.type === 'notes'){ p.vy = -0.5 + Math.sin(G.t*0.12 + p.phase)*0.4; p.vx += Math.sin(G.t*0.08+p.phase)*0.06; p.vx *= 0.97; }
-    else if(p.type === 'leaves' || p.type === 'petals'){ p.vy += 0.02; p.vx += Math.sin(G.t*0.1 + p.phase)*0.06; p.vx *= 0.98; }
-    else if(p.type === 'snow'){ p.vy += 0.015; p.vx += Math.sin(G.t*0.08 + p.phase)*0.04; p.vx *= 0.98; }
-    else if(p.type === 'stars'){ p.vy -= 0.02; p.vx *= 0.97; }
-    else if(p.type === 'digital'){ p.vx *= 0.92; p.vy = Math.sin(G.t*0.2 + p.phase)*0.6; }
-    else if(p.type === 'rainbow'){ p.vy += 0.04; p.vx *= 0.98; }
-
-    p.x += p.vx; p.y += p.vy;
+    p.x += p.vx;
+    p.y += p.vy;
     p.rot += p.rotSpd;
+    p.vx *= 0.98;
     p.life -= p.decay;
-    if(p.life <= 0 || p.x < -50 || p.y < -50 || p.y > H + 50){ sparkParticles.splice(i,1); }
+
+    if(p.life <= 0 || p.x < -50 || p.y < -50 || p.y > H + 50){
+      sparkParticles.splice(i, 1);
+    }
   }
 }
 
 function drawSparks(){
   for(const p of sparkParticles){
+    /* ✅ صورة فقط */
+    if(!p.item) continue;
 
-    /* ✅ صورة مخصصة (imageData أو imagePath) */
-    if(p.type === 'customImage' || p.type === 'customItem'){
-      const img = p.item
-        ? getItemImageEl(p.item)
-        : getImageEl(p.imageData);
+    const img = getItemImageEl(p.item);
+    if(!img || !img.complete || img.naturalWidth <= 0) continue;
 
-      if(img && img.complete && img.naturalWidth > 0){
-        ctx.save();
-        ctx.globalAlpha = Math.max(0, Math.min(1, p.life*1.2));
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.rot);
-        const sz = p.size * Math.max(0.5, p.life);
-        ctx.drawImage(img, -sz/2, -sz/2, sz, sz);
-        ctx.restore();
-      }
-      continue;
-    }
-    if(p.type === 'customImage'){
-      const img = getImageEl(p.imageData);
-      if(img.complete && img.naturalWidth > 0){
-        ctx.save();
-        ctx.globalAlpha = Math.max(0, Math.min(1, p.life*1.2));
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.rot);
-        const sz = p.size * Math.max(0.5, p.life);
-        ctx.drawImage(img, -sz/2, -sz/2, sz, sz);
-        ctx.restore();
-      }
-      continue;
-    }
-    const alpha = Math.max(0, Math.min(1, p.life*1.2));
+    const alpha = Math.max(0, Math.min(1, p.life * 1.2));
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.translate(p.x, p.y);
     ctx.rotate(p.rot);
-    const col = p.type === 'rainbow' ? `hsl(${p.sparkHue}, 85%, 65%)` : p.color;
-
-    if(p.type === 'sparks' || p.type === 'lightning'){
-      ctx.shadowColor = col; ctx.shadowBlur = 8;
-      ctx.fillStyle = col;
-      ctx.beginPath(); ctx.arc(0, 0, p.size, 0, Math.PI*2); ctx.fill();
-      ctx.globalAlpha = alpha*0.5;
-      ctx.strokeStyle = col; ctx.lineWidth = p.size*0.7;
-      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-p.size*1.8, -p.vy*0.5); ctx.stroke();
-      ctx.shadowBlur = 0;
-    } else if(p.type === 'bubbles'){
-      ctx.strokeStyle = col; ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1.2;
-      ctx.beginPath(); ctx.arc(0, 0, p.size, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = 'rgba(255,255,255,0.9)';
-      ctx.beginPath(); ctx.arc(-p.size*0.35, -p.size*0.35, p.size*0.28, 0, Math.PI*2); ctx.fill();
-    } else if(p.type === 'stars'){
-      ctx.fillStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 6;
-      ctx.beginPath();
-      for(let i=0;i<8;i++){
-        const a = (i/8)*Math.PI*2;
-        const rr = i%2===0 ? p.size : p.size*0.4;
-        const px = Math.cos(a)*rr, py = Math.sin(a)*rr;
-        i===0 ? ctx.moveTo(px,py) : ctx.lineTo(px,py);
-      }
-      ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0;
-    } else if(p.type === 'hearts'){
-      ctx.fillStyle = col;
-      ctx.beginPath();
-      ctx.moveTo(0, p.size*0.4);
-      ctx.bezierCurveTo(p.size*1.1, -p.size*0.5, p.size*0.6, -p.size*1.3, 0, -p.size*0.5);
-      ctx.bezierCurveTo(-p.size*0.6, -p.size*1.3, -p.size*1.1, -p.size*0.5, 0, p.size*0.4);
-      ctx.closePath(); ctx.fill();
-    } else if(p.type === 'notes'){
-      ctx.fillStyle = col;
-      ctx.font = `bold ${p.size*3}px "Space Grotesk", sans-serif`;
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(Math.random() > 0.5 ? '♪' : '♫', 0, 0);
-    } else if(p.type === 'leaves'){
-      ctx.fillStyle = col;
-      ctx.beginPath(); ctx.ellipse(0, 0, p.size*1.4, p.size*0.65, 0, 0, Math.PI*2); ctx.fill();
-      ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 0.6;
-      ctx.beginPath(); ctx.moveTo(-p.size*1.3, 0); ctx.lineTo(p.size*1.3, 0); ctx.stroke();
-    } else if(p.type === 'petals'){
-      ctx.fillStyle = col;
-      ctx.beginPath(); ctx.ellipse(0, 0, p.size*1.5, p.size*0.75, 0, 0, Math.PI*2); ctx.fill();
-    } else if(p.type === 'snow'){
-      ctx.strokeStyle = col; ctx.lineWidth = 1.3;
-      for(let i=0;i<6;i++){
-        const a = (i/6)*Math.PI*2;
-        ctx.beginPath(); ctx.moveTo(0, 0);
-        ctx.lineTo(Math.cos(a)*p.size, Math.sin(a)*p.size); ctx.stroke();
-      }
-      ctx.fillStyle = col;
-      ctx.beginPath(); ctx.arc(0, 0, p.size*0.4, 0, Math.PI*2); ctx.fill();
-    } else if(p.type === 'digital'){
-      ctx.fillStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 5;
-      ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
-      ctx.shadowBlur = 0;
-    } else if(p.type === 'firefly'){
-      const glow = ctx.createRadialGradient(0,0,0, 0,0,p.size*2.5);
-      glow.addColorStop(0, col); glow.addColorStop(1, 'rgba(255,255,255,0)');
-      ctx.fillStyle = glow;
-      ctx.beginPath(); ctx.arc(0, 0, p.size*2.5, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#FFFFFF';
-      ctx.beginPath(); ctx.arc(0, 0, p.size*0.5, 0, Math.PI*2); ctx.fill();
-    } else if(p.type === 'rainbow'){
-      ctx.fillStyle = col;
-      ctx.beginPath(); ctx.ellipse(0, 0, p.size*0.55, p.size*1.4, 0, 0, Math.PI*2); ctx.fill();
-    } else if(p.type === 'cosmic'){
-      ctx.fillStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 8;
-      ctx.beginPath(); ctx.arc(0, 0, p.size*0.7, 0, Math.PI*2); ctx.fill();
-      ctx.strokeStyle = col; ctx.lineWidth = 0.9;
-      for(let i=0;i<4;i++){
-        const a = (i/4)*Math.PI*2 + G.t*0.02;
-        ctx.beginPath(); ctx.moveTo(0,0);
-        ctx.lineTo(Math.cos(a)*p.size*1.6, Math.sin(a)*p.size*1.6); ctx.stroke();
-      }
-      ctx.shadowBlur = 0;
-    } else if(p.type === 'gold'){
-      ctx.fillStyle = col; ctx.shadowColor = '#FFF4C0'; ctx.shadowBlur = 10;
-      ctx.beginPath(); ctx.arc(0, 0, p.size*0.8, 0, Math.PI*2); ctx.fill();
-      ctx.shadowBlur = 0;
-    }
+    const sz = p.size * Math.max(0.5, p.life);
+    ctx.drawImage(img, -sz/2, -sz/2, sz, sz);
     ctx.restore();
   }
 }
@@ -8246,6 +7876,7 @@ if(G.mode === 'ASCEND'){
   updateSynergies();
   drawSynergiesUI();
   updateSparks();
+    updateTrailEffect();   /* ✅ أثر خط السير */
 
   updateSceneTransition();
   updateWeather();
@@ -8284,8 +7915,6 @@ else if(G.mode !== 'ASCEND' && G.camY > 0.5){   // ✅ استثناء ASCEND
 
   P.enginePhase += 0.15;
   P.bouncePhase += 0.2;
-  updateCapePhysics();
-  updateCompanion();
 
   /* ═══════════════════════════════════════════════════════
      ═══════════════ فيزياء اللاعب حسب النمط ═══════════════
@@ -9409,2955 +9038,156 @@ function collectOrb(ob){
    ==================== CAPE (وشاح متحرك) ====================
    ============================================================ */
 function initCape(){
-  P.cape = [];
-  const segCount = 10;
-  for(let i=0;i<segCount;i++){
-    P.cape.push({ x: P.x - i*4, y: P.y + i*1.5 });
-  }
+  /* ❌ نظام العباءات البرمجي محذوف — العباءة الآن في backItem */
 }
 
 function updateCapePhysics(){
-  if(!P.cape) { initCape(); return; }
-  const cape = Save.data.cosmetics.current.cape;
-  if(cape === 'none') return;
-
-  const isScarf = cape.startsWith('scarf');
-  const segCount = isScarf ? 7 : 10;
-  if(P.cape.length !== segCount){
-    P.cape = [];
-    for(let i=0;i<segCount;i++) P.cape.push({ x: P.x, y: P.y });
-  }
-
-  const segLen = P.r * (isScarf ? 0.45 : 0.62);
-  const anchorX = P.x - P.r * 0.75;
-  const anchorY = P.y - P.r * 0.1;
-
-  P.cape[0].x = anchorX;
-  P.cape[0].y = anchorY;
-
-  const windX = -0.4 - G.speed * 0.15;
-  const windY = 0.15 + G.speed * 0.03;
-  const wobble = Math.sin(G.t * 0.15) * 0.35;
-
-  for(let i=1;i<P.cape.length;i++){
-    const seg = P.cape[i];
-    const prev = P.cape[i-1];
-
-    seg.x += windX;
-    seg.y += windY + wobble * (i / P.cape.length);
-
-    const dx = seg.x - prev.x;
-    const dy = seg.y - prev.y;
-    const d = Math.hypot(dx, dy) || 1;
-    const ratio = segLen / d;
-    seg.x = prev.x + dx * ratio;
-    seg.y = prev.y + dy * ratio;
-  }
-}
-
-function drawCape(c, r, cape, t, ox, oy){
-  if(!cape || typeof cape !== 'object') return;
-  if(!cape.id || cape.id === 'none') return;
-  if(!P.cape || !Array.isArray(P.cape)) return;
-  if(typeof c !== 'object' || !c) return;
-  if(typeof r !== 'number' || r <= 0) return;
-
-  ox = ox || 0; oy = oy || 0;
-
-  /* ✅ عباءة مخصصة بصورة */
-  if(hasItemImage(cape)){
-    const img = getItemImageEl(cape);
-    if(img && img.complete && img.naturalWidth > 0){
-      const size = r * 3.5;
-      const segs = P.cape;
-      const tail = segs[segs.length - 1] || { x: P.x, y: P.y };
-      c.save();
-      const bob = Math.sin(t * 0.1) * 2;
-      c.drawImage(img,
-        tail.x - ox - size/2,
-        tail.y - oy - size/2 + bob,
-        size, size);
-      c.restore();
-      return;
-    }
-  }
-  const kind = cape.id;
-  const segs = P.cape;
-
-  const isScarf = kind.startsWith('scarf');
-  const isWing = kind.startsWith('cape_') && ['cape_butterfly','cape_dragon','cape_angel','cape_demon'].includes(kind);
-  const baseW = isScarf ? r * 0.5 : isWing ? r * 1.4 : r * 0.95;
-
-  let col1 = '#E04040', col2 = '#A02030';
-  if(kind === 'scarf_red'){ col1='#E84848'; col2='#A02030'; }
-  else if(kind === 'scarf_blue'){ col1='#5090E8'; col2='#2040A0'; }
-  else if(kind === 'scarf_gold'){ col1='#E8B34E'; col2='#A07028'; }
-  else if(kind === 'cape_hero'){ col1='#C03030'; col2='#801818'; }
-  else if(kind === 'cape_dark'){ col1='#2A1A30'; col2='#100810'; }
-  else if(kind === 'cape_royal'){ col1='#5A30A0'; col2='#301860'; }
-  else if(kind === 'cape_fire'){ col1='#FF8040'; col2='#8A2008'; }
-  else if(kind === 'cape_ice'){ col1='#A0E0FF'; col2='#4080C0'; }
-  else if(kind === 'cape_wind'){ col1='#E8F4FF'; col2='#88B0D0'; }
-  else if(kind === 'cape_water'){ col1='#40A8E0'; col2='#104060'; }
-  else if(kind === 'cape_leaf'){ col1='#7BC44C'; col2='#2A5020'; }
-  else if(kind === 'cape_neon'){ col1='#00FFD8'; col2='#006090'; }
-  else if(kind === 'cape_toxic'){ col1='#80FF40'; col2='#206020'; }
-  else if(kind === 'cape_blood'){ col1='#C03030'; col2='#5A0808'; }
-  else if(kind === 'cape_holy'){ col1='#FFF8C0'; col2='#E8B34E'; }
-  else if(kind === 'cape_void'){ col1='#301050'; col2='#08000A'; }
-  else if(kind === 'cape_crystal'){ col1='#A0D8FF'; col2='#4060A0'; }
-
-  c.save();
-
-  if(isWing){
-    /* ═══ أجنحة ═══ */
-    const flap = Math.sin(t*0.12) * 0.15;
-    const wingType = kind.replace('cape_','');
-
-    for(const side of [-1, 1]){
-      c.save();
-      c.translate(side * r * 0.7, 0);
-      c.rotate(side * (0.3 + flap));
-      const wc = wingType === 'angel' ? '#FFF8E0' :
-                 wingType === 'dragon' ? '#3A8040' :
-                 wingType === 'demon' ? '#3A0820' :
-                 /* butterfly */ '#FF80C0';
-      c.fillStyle = wc;
-      c.shadowColor = wc; c.shadowBlur = 6;
-      for(let i=0;i<4;i++){
-        const sz = r * (1.1 - i*0.15);
-        c.beginPath();
-        c.ellipse(side * i * r * 0.2, i*r*0.1, sz, r*0.28, side*0.2, 0, Math.PI*2);
-        c.fill();
-      }
-      c.shadowBlur = 0;
-      if(wingType === 'butterfly'){
-        c.fillStyle = 'rgba(255,255,255,0.6)';
-        for(let i=0;i<3;i++){
-          c.beginPath();
-          c.arc(side * (i*r*0.3), i*r*0.1, r*0.13, 0, Math.PI*2);
-          c.fill();
-        }
-      }
-      c.restore();
-    }
-  }
-  else if(kind === 'cape_rainbow'){
-    for(let i=0;i<segs.length;i++){
-      const p = i/segs.length;
-      const hue = (t*4 + i*28) % 360;
-      const sz = baseW * (1 - p * 0.55);
-      c.fillStyle = `hsl(${hue}, 80%, 58%)`;
-      c.shadowColor = c.fillStyle; c.shadowBlur = 8;
-      c.beginPath();
-      c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.5, 0, Math.PI*2);
-      c.fill();
-    }
-    c.shadowBlur = 0;
-  }
-  else if(kind === 'cape_shadow'){
-    for(let i=segs.length - 1; i >= 0; i--){
-      const p = i/segs.length;
-      const alpha = 0.85 * (1 - p * 0.85);
-      const sz = baseW * (1 - p * 0.5);
-      c.fillStyle = `rgba(20,10,35,${alpha})`;
-      c.beginPath();
-      c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.5, 0, Math.PI*2);
-      c.fill();
-    }
-  }
-  else if(kind === 'cape_galaxy'){
-    for(let i=segs.length - 1; i >= 0; i--){
-      const p = i/segs.length;
-      const sz = baseW * (1 - p * 0.5);
-      const col = i < 3 ? '#4A2880' : mixColor('#4A2880', '#100820', p);
-      c.fillStyle = col;
-      c.beginPath();
-      c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.5, 0, Math.PI*2);
-      c.fill();
-    }
-    for(let i=0;i<segs.length;i+=2){
-      const twinkle = 0.5 + Math.sin(t * 0.12 + i) * 0.5;
-      c.fillStyle = '#FFFFFF';
-      c.globalAlpha = twinkle * 0.85;
-      c.beginPath();
-      c.arc(segs[i].x - ox + Math.sin(t*0.1 + i*2)*3, segs[i].y - oy + Math.cos(t*0.1 + i*2)*3, 1.3, 0, Math.PI*2);
-      c.fill();
-    }
-    c.globalAlpha = 1;
-  }
-  else if(kind === 'cape_cosmic'){
-    for(let i=segs.length - 1; i >= 0; i--){
-      const p = i/segs.length;
-      const hue = (t*2 + p*120) % 360;
-      c.fillStyle = `hsla(${hue}, 70%, ${30 - p*15}%, ${0.9 - p*0.4})`;
-      c.beginPath();
-      const sz = baseW * (1 - p * 0.6);
-      c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.55, 0, Math.PI*2);
-      c.fill();
-    }
-    for(let i=0;i<segs.length;i++){
-      if(i%2===0){
-        const col = `hsl(${(t*4 + i*40)%360}, 80%, 65%)`;
-        c.fillStyle = col;
-        c.shadowColor = col; c.shadowBlur = 10;
-        c.beginPath();
-        c.arc(segs[i].x - ox, segs[i].y - oy, r*0.13, 0, Math.PI*2);
-        c.fill();
-      }
-    }
-    c.shadowBlur = 0;
-  }
-  else if(kind === 'cape_prismatic'){
-    for(let i=segs.length - 1; i >= 0; i--){
-      const p = i/segs.length;
-      const hue = (t*8 + i*40) % 360;
-      c.fillStyle = `hsl(${hue}, 85%, 60%)`;
-      c.shadowColor = c.fillStyle; c.shadowBlur = 8;
-      const sz = baseW * (1 - p * 0.55);
-      c.beginPath();
-      c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.5, 0, Math.PI*2);
-      c.fill();
-    }
-    c.shadowBlur = 0;
-  }
-  else if(kind === 'cape_god'){
-    for(let i=segs.length - 1; i >= 0; i--){
-      const p = i/segs.length;
-      const pl = 0.7 + Math.sin(t*0.12 + i*0.3)*0.3;
-      c.fillStyle = `rgba(255,248,192,${(0.9 - p*0.6) * pl})`;
-      c.shadowColor = '#FFE060'; c.shadowBlur = 12*pl;
-      const sz = baseW * (1 - p * 0.55);
-      c.beginPath();
-      c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.55, 0, Math.PI*2);
-      c.fill();
-    }
-    c.shadowBlur = 0;
-  }
-  else if(kind === 'cape_fire'){
-    for(let i=segs.length - 1; i >= 0; i--){
-      const p = i/segs.length;
-      const hue = 40 - p*30;
-      const sz = baseW * (1 - p * 0.55);
-      const grad = c.createRadialGradient(segs[i].x - ox, segs[i].y - oy, 0, segs[i].x - ox, segs[i].y - oy, sz*0.7);
-      grad.addColorStop(0, `hsl(${hue}, 100%, 75%)`);
-      grad.addColorStop(0.6, `hsl(${hue-15}, 100%, 55%)`);
-      grad.addColorStop(1, 'rgba(200,60,10,0)');
-      c.fillStyle = grad;
-      c.beginPath();
-      c.arc(segs[i].x - ox, segs[i].y - oy, sz*0.7, 0, Math.PI*2);
-      c.fill();
-    }
-  }
-  else if(kind === 'cape_ice' || kind === 'cape_crystal'){
-    for(let i=segs.length - 1; i >= 0; i--){
-      const p = i/segs.length;
-      const sz = baseW * (1 - p * 0.55);
-      c.fillStyle = i < 3 ? '#E0F4FF' : mixColor('#A0D8FF', '#4060A0', p);
-      c.shadowColor = '#80D8FF'; c.shadowBlur = 6;
-      c.beginPath();
-      c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.5, 0, Math.PI*2);
-      c.fill();
-    }
-    c.shadowBlur = 0;
-    for(let i=0;i<segs.length;i+=3){
-      c.strokeStyle = 'rgba(255,255,255,0.6)'; c.lineWidth = 1;
-      c.beginPath();
-      c.arc(segs[i].x - ox, segs[i].y - oy, r*0.2, 0, Math.PI*2);
-      c.stroke();
-    }
-  }
-  else if(kind === 'cape_wind'){
-    for(let i=segs.length - 1; i >= 0; i--){
-      const p = i/segs.length;
-      const sz = baseW * (1 - p * 0.5);
-      c.strokeStyle = `rgba(220,240,255,${0.7 - p*0.5})`;
-      c.lineWidth = 2;
-      c.beginPath();
-      c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.5, 0, Math.PI*2);
-      c.stroke();
-    }
-  }
-  else if(kind === 'cape_water'){
-    for(let i=segs.length - 1; i >= 0; i--){
-      const p = i/segs.length;
-      const sz = baseW * (1 - p * 0.5);
-      const grad = c.createRadialGradient(segs[i].x - ox, segs[i].y - oy, 0, segs[i].x - ox, segs[i].y - oy, sz*0.7);
-      grad.addColorStop(0, '#80E0FF');
-      grad.addColorStop(0.7, '#2080C0');
-      grad.addColorStop(1, 'rgba(20,60,90,0)');
-      c.fillStyle = grad;
-      c.beginPath(); c.arc(segs[i].x - ox, segs[i].y - oy, sz*0.7, 0, Math.PI*2); c.fill();
-    }
-  }
-  else if(kind === 'cape_neon'){
-    for(let i=segs.length - 1; i >= 0; i--){
-      const p = i/segs.length;
-      const sz = baseW * (1 - p * 0.5);
-      c.fillStyle = '#0A2828';
-      c.beginPath();
-      c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.5, 0, Math.PI*2);
-      c.fill();
-      const col = `hsl(${(t*6 + i*50)%360}, 100%, 60%)`;
-      c.strokeStyle = col; c.lineWidth = 2;
-      c.shadowColor = col; c.shadowBlur = 8;
-      c.beginPath();
-      c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.5, 0, Math.PI*2);
-      c.stroke();
-    }
-    c.shadowBlur = 0;
-  }
-  else if(kind === 'cape_leaf'){
-    for(let i=segs.length - 1; i >= 0; i--){
-      const p = i/segs.length;
-      const sz = baseW * (1 - p * 0.5);
-      c.fillStyle = ['#7BC44C','#5EA041','#A8E84C'][i%3];
-      c.beginPath();
-      c.ellipse(segs[i].x - ox, segs[i].y - oy, sz*0.7, sz*0.4, i*0.3, 0, Math.PI*2);
-      c.fill();
-    }
-  }
-  else if(kind === 'cape_toxic' || kind === 'cape_blood'){
-    const core = kind === 'cape_blood' ? '#C03030' : '#80FF40';
-    for(let i=segs.length - 1; i >= 0; i--){
-      const p = i/segs.length;
-      const sz = baseW * (1 - p * 0.5);
-      c.fillStyle = i < 3 ? core : mixColor(core, '#200808', p);
-      c.beginPath();
-      c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.5, 0, Math.PI*2);
-      c.fill();
-    }
-    for(let i=2;i<segs.length;i+=3){
-      c.fillStyle = core;
-      c.globalAlpha = 0.6;
-      c.beginPath();
-      c.arc(segs[i].x - ox, segs[i].y - oy + r*0.2 + Math.sin(t*0.15+i)*2, r*0.08, 0, Math.PI*2);
-      c.fill();
-    }
-    c.globalAlpha = 1;
-  }
-  else if(kind === 'cape_holy'){
-    for(let i=segs.length - 1; i >= 0; i--){
-      const p = i/segs.length;
-      const pl = 0.7 + Math.sin(t*0.1 + i*0.3)*0.3;
-      c.fillStyle = `rgba(255,248,192,${(0.9 - p*0.7)*pl})`;
-      c.shadowColor = '#FFE060'; c.shadowBlur = 8;
-      const sz = baseW * (1 - p * 0.55);
-      c.beginPath(); c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.55, 0, Math.PI*2); c.fill();
-    }
-    c.shadowBlur = 0;
-  }
-  else if(kind === 'cape_void'){
-    for(let i=segs.length - 1; i >= 0; i--){
-      const p = i/segs.length;
-      const sz = baseW * (1 - p * 0.55);
-      c.fillStyle = `rgba(10,0,20,${0.95 - p*0.5})`;
-      c.beginPath(); c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.55, 0, Math.PI*2); c.fill();
-    }
-    /* حافة بنفسجية متوهجة */
-    c.strokeStyle = 'rgba(160,64,255,0.7)'; c.lineWidth = 2;
-    c.shadowColor = '#A040FF'; c.shadowBlur = 12;
-    c.beginPath();
-    c.moveTo(segs[0].x - ox, segs[0].y - oy);
-    for(let i=1;i<segs.length;i++) c.lineTo(segs[i].x - ox, segs[i].y - oy);
-    c.stroke();
-    c.shadowBlur = 0;
-  }
-  else {
-    /* افتراضي: عباءة/وشاح عادية */
-    for(let i=segs.length - 1; i >= 0; i--){
-      const p = i/segs.length;
-      const sz = baseW * (1 - p * 0.55);
-      const col = i < 2 ? col1 : mixColor(col1, col2, p);
-      c.fillStyle = col;
-      c.beginPath();
-      c.arc(segs[i].x - ox, segs[i].y - oy, sz * 0.5, 0, Math.PI*2);
-      c.fill();
-    }
-    if(!isScarf && segs.length > 2){
-      c.fillStyle = 'rgba(255,255,255,0.18)';
-      for(let i=1;i<segs.length-1;i+=2){
-        const sz = baseW * (1 - i/segs.length * 0.5) * 0.3;
-        c.beginPath();
-        c.arc(segs[i].x - ox, segs[i].y - oy - 2, sz, 0, Math.PI*2);
-        c.fill();
-      }
-    }
-  }
-
-  c.restore();
+  /* ❌ نظام العباءات البرمجي محذوف */
 }
 
 /* ============================================================
-   ==================== AURA (هالة دائمة) ====================
-   ============================================================ */
-function drawAura(c, r, aura, t){
-  /* ═══ حماية شاملة ═══ */
-  if(!aura || typeof aura !== 'object') return;
-  if(!aura.id || aura.id === 'none') return;
-  if(typeof c !== 'object' || !c) return;
-  if(typeof r !== 'number' || r <= 0 || !isFinite(r)) return;
-  if(typeof t !== 'number' || !isFinite(t)) return;
-
-  /* ✅ هالة مخصصة بصورة */
-  if(hasItemImage(aura)){
-    const img = getItemImageEl(aura);
-    if(img && img.complete && img.naturalWidth > 0){
-      const size = r * 4.5;
-      c.save();
-      c.globalAlpha = 0.85;
-      const pulse = 1 + Math.sin(t * 0.08) * 0.08;
-      c.drawImage(img, -size/2, -size/2, size * pulse, size * pulse);
-      c.restore();
-      return;
-    }
-  }
-
-  /* ═══════════════════════════════════════════════════
-     ✅ الإصلاح: تعريف kind قبل أي استخدام
-     ═══════════════════════════════════════════════════ */
-  const kind = aura.id;
-  if(kind === 'none') return;
-
-  const pulse = 1 + Math.sin(t * 0.08) * 0.1;
-  const aur = r * 2.3 * pulse;
-
-  const basic = {
-    amber: { c1:'#FFB060', c2:'#FF8020', c3:'#FFE090' },
-    cyan:  { c1:'#80E8F0', c2:'#40A0C0', c3:'#E0FFFF' },
-    holy:  { c1:'#FFF8D0', c2:'#FFD060', c3:'#FFFFFF' },
-    void:  { c1:'#C080FF', c2:'#6020A0', c3:'#FFC0FF' },
-    toxic: { c1:'#80FF40', c2:'#20A020', c3:'#C0FF80' },
-    blood: { c1:'#FF4040', c2:'#8A0808', c3:'#FFB0B0' },
-    electricBlue: { c1:'#60C0FF', c2:'#2060C0', c3:'#C0E8FF' },
-    divine: { c1:'#FFF8C0', c2:'#FFD040', c3:'#FFFFFF' }
-  };
-
-  if(basic[kind]){
-    const p = basic[kind];
-    const grad = c.createRadialGradient(0,0,r*0.7, 0,0,aur);
-    grad.addColorStop(0, 'rgba(0,0,0,0)');
-    grad.addColorStop(0.45, p.c1);
-    grad.addColorStop(0.75, p.c2);
-    grad.addColorStop(1, 'rgba(0,0,0,0)');
-    c.globalAlpha = 0.45;
-    c.fillStyle = grad;
-    c.beginPath(); c.arc(0,0,aur,0,Math.PI*2); c.fill();
-    c.globalAlpha = 1;
-
-    c.strokeStyle = p.c3; c.lineWidth = 2.2; c.globalAlpha = 0.7;
-    c.beginPath();
-    c.arc(0, 0, aur*0.85, t*0.025, t*0.025 + Math.PI*1.55);
-    c.stroke();
-    c.globalAlpha = 0.4;
-    c.beginPath();
-    c.arc(0, 0, aur*0.85, t*0.025 + Math.PI, t*0.025 + Math.PI*2);
-    c.stroke();
-    c.globalAlpha = 1;
-
-    for(let i=0;i<4;i++){
-      const a = t*0.03 + (i/4)*Math.PI*2;
-      const dist = aur * 0.9;
-      c.fillStyle = p.c3; c.globalAlpha = 0.7;
-      c.beginPath();
-      c.arc(Math.cos(a)*dist, Math.sin(a)*dist, 2.2, 0, Math.PI*2);
-      c.fill();
-    }
-    c.globalAlpha = 1;
-  }
-  else if(kind === 'fire'){
-    for(let i=0;i<10;i++){
-      const a = t*0.05 + (i/10)*Math.PI*2;
-      const dist = r * 1.85 + Math.sin(t*0.12 + i) * 3;
-      const px = Math.cos(a) * dist, py = Math.sin(a) * dist;
-      const sz = 4.5 + Math.sin(t*0.15 + i) * 1.6;
-      const grad = c.createRadialGradient(px, py, 0, px, py, sz*2.2);
-      grad.addColorStop(0, '#FFF8C0'); grad.addColorStop(0.4, '#FFB060'); grad.addColorStop(1, 'rgba(232,88,56,0)');
-      c.fillStyle = grad;
-      c.beginPath(); c.arc(px, py, sz*2.2, 0, Math.PI*2); c.fill();
-    }
-  }
-  else if(kind === 'ice'){
-    for(let i=0;i<8;i++){
-      const a = t*0.035 + (i/8)*Math.PI*2;
-      const dist = r * 1.95;
-      const px = Math.cos(a) * dist, py = Math.sin(a) * dist;
-      c.save(); c.translate(px, py); c.rotate(a + t*0.04);
-      c.fillStyle = 'rgba(160,224,248,0.9)';
-      c.shadowColor = '#A0E0F8'; c.shadowBlur = 6;
-      for(let k=0;k<3;k++){
-        const ak = (k/3)*Math.PI*2;
-        c.beginPath(); c.ellipse(0, 0, r*0.16, r*0.035, ak, 0, Math.PI*2); c.fill();
-      }
-      c.restore();
-    }
-    c.shadowBlur = 0;
-  }
-  else if(kind === 'lightning'){
-    for(let i=0;i<7;i++){
-      const a = t*0.08 + (i/7)*Math.PI*2;
-      const dist = r * 2.05;
-      const px = Math.cos(a) * dist, py = Math.sin(a) * dist;
-      c.strokeStyle = '#A0E0FF'; c.lineWidth = 1.6;
-      c.shadowColor = '#80D0FF'; c.shadowBlur = 10;
-      c.beginPath();
-      c.moveTo(px * 0.55, py * 0.55);
-      c.lineTo(px*0.55 + (Math.random()-0.5)*10, py*0.55 + (Math.random()-0.5)*10);
-      c.lineTo(px, py);
-      c.stroke();
-    }
-    c.shadowBlur = 0;
-  }
-  else if(kind === 'shadow' || kind === 'phantom'){
-    const grad = c.createRadialGradient(0,0,r*0.5, 0,0,aur);
-    grad.addColorStop(0, 'rgba(80,40,90,0.42)');
-    grad.addColorStop(0.55, 'rgba(40,20,60,0.3)');
-    grad.addColorStop(1, 'rgba(0,0,0,0)');
-    c.fillStyle = grad;
-    c.beginPath(); c.arc(0,0,aur,0,Math.PI*2); c.fill();
-    for(let i=0;i<4;i++){
-      const a = t*0.04 + (i/4)*Math.PI*2;
-      const dist = r*1.6 + Math.sin(t*0.1 + i)*4;
-      c.fillStyle = 'rgba(20,8,30,0.75)';
-      c.beginPath();
-      c.ellipse(Math.cos(a)*dist, Math.sin(a)*dist, r*0.45, r*0.16, a, 0, Math.PI*2);
-      c.fill();
-    }
-  }
-  else if(kind === 'rainbow' || kind === 'prisma'){
-    const hue = (t*3) % 360;
-    const grad = c.createRadialGradient(0,0,r*0.7, 0,0,aur);
-    grad.addColorStop(0, 'rgba(0,0,0,0)');
-    grad.addColorStop(0.5, `hsla(${hue}, 85%, 65%, 0.6)`);
-    grad.addColorStop(1, 'rgba(0,0,0,0)');
-    c.fillStyle = grad;
-    c.beginPath(); c.arc(0,0,aur,0,Math.PI*2); c.fill();
-    for(let i=0;i<8;i++){
-      const a = t*0.06 + (i/8)*Math.PI*2;
-      const dist = r * 1.85;
-      const col = `hsl(${(hue + i*45) % 360}, 85%, 65%)`;
-      c.fillStyle = col;
-      c.shadowColor = col; c.shadowBlur = 12;
-      c.beginPath();
-      c.arc(Math.cos(a)*dist, Math.sin(a)*dist, 3.5, 0, Math.PI*2);
-      c.fill();
-    }
-    c.shadowBlur = 0;
-  }
-  else if(kind === 'galaxy' || kind === 'cosmicAura'){
-    const grad = c.createRadialGradient(0,0,r*0.5, 0,0,aur*1.15);
-    grad.addColorStop(0, 'rgba(80,40,160,0.38)');
-    grad.addColorStop(0.6, 'rgba(40,20,80,0.22)');
-    grad.addColorStop(1, 'rgba(0,0,0,0)');
-    c.fillStyle = grad;
-    c.beginPath(); c.arc(0,0,aur*1.15,0,Math.PI*2); c.fill();
-    for(let i=0;i<18;i++){
-      const a = (i * 1.7 + t*0.012) % (Math.PI*2);
-      const dist = r * (1.4 + (i % 5) * 0.18);
-      const px = Math.cos(a) * dist, py = Math.sin(a) * dist;
-      const twinkle = 0.5 + Math.sin(t*0.18 + i) * 0.5;
-      c.fillStyle = i % 3 === 0 ? '#FFD0FF' : '#FFFFFF';
-      c.globalAlpha = twinkle * 0.85;
-      c.beginPath(); c.arc(px, py, 1.2 + twinkle*1.8, 0, Math.PI*2); c.fill();
-    }
-    c.globalAlpha = 1;
-  }
-  else if(kind === 'earth'){
-    for(let i=0;i<8;i++){
-      const a = (i/8)*Math.PI*2 + t*0.02;
-      const dist = r * 1.9;
-      c.fillStyle = ['#A07840','#7A5020','#604018','#8A6838'][i%4];
-      c.beginPath();
-      c.arc(Math.cos(a)*dist, Math.sin(a)*dist + Math.sin(t*0.1+i)*3, r*0.12, 0, Math.PI*2);
-      c.fill();
-    }
-  }
-  else if(kind === 'water'){
-    for(let i=0;i<6;i++){
-      const a = t*0.04 + (i/6)*Math.PI*2;
-      const dist = r*1.85;
-      c.fillStyle = 'rgba(120,200,255,0.75)';
-      c.beginPath();
-      c.ellipse(Math.cos(a)*dist, Math.sin(a)*dist, r*0.12, r*0.18, a, 0, Math.PI*2);
-      c.fill();
-    }
-  }
-  else if(kind === 'wind'){
-    for(let i=0;i<5;i++){
-      const a = t*0.08 + (i/5)*Math.PI*2;
-      const dist = r*1.9;
-      c.strokeStyle = 'rgba(200,230,255,0.7)'; c.lineWidth = 1.5;
-      c.beginPath();
-      c.arc(0, 0, dist, a, a + 0.5);
-      c.stroke();
-    }
-  }
-  else if(kind === 'nature'){
-    for(let i=0;i<7;i++){
-      const a = t*0.03 + (i/7)*Math.PI*2;
-      const dist = r*1.85;
-      c.fillStyle = ['#7BC44C','#5EA041','#FF80A0','#FFE060'][i%4];
-      c.beginPath();
-      c.ellipse(Math.cos(a)*dist, Math.sin(a)*dist, r*0.15, r*0.08, a, 0, Math.PI*2);
-      c.fill();
-    }
-  }
-  else if(kind === 'smokeAura'){
-    for(let i=0;i<5;i++){
-      const a = t*0.04 + (i/5)*Math.PI*2;
-      const dist = r*1.9;
-      c.fillStyle = `rgba(120,120,130,${0.4 + Math.sin(t*0.1+i)*0.2})`;
-      c.beginPath();
-      c.arc(Math.cos(a)*dist, Math.sin(a)*dist - Math.sin(t*0.1+i)*5, r*0.28, 0, Math.PI*2);
-      c.fill();
-    }
-  }
-  else if(kind === 'pixelAura'){
-    for(let i=0;i<10;i++){
-      const a = (i/10)*Math.PI*2 + t*0.02;
-      const dist = r*1.9;
-      c.fillStyle = ['#FF00FF','#00FFFF','#FFFF00','#FF0000'][i%4];
-      c.fillRect(Math.cos(a)*dist - r*0.1, Math.sin(a)*dist - r*0.1, r*0.2, r*0.2);
-    }
-  }
-  else if(kind === 'runes'){
-    const chars = ['ᚠ','ᚢ','ᚦ','ᚨ','ᚱ','ᚲ','ᚷ','ᚹ'];
-    c.font = `bold ${r*0.5}px sans-serif`;
-    c.textAlign = 'center'; c.textBaseline = 'middle';
-    for(let i=0;i<6;i++){
-      const a = t*0.04 + (i/6)*Math.PI*2;
-      const dist = r*1.9;
-      c.fillStyle = `hsl(${(t*3 + i*40)%360}, 80%, 65%)`;
-      c.shadowColor = c.fillStyle; c.shadowBlur = 8;
-      c.fillText(chars[i%chars.length], Math.cos(a)*dist, Math.sin(a)*dist);
-    }
-    c.shadowBlur = 0;
-  }
-  else if(kind === 'music'){
-    c.font = `bold ${r*0.5}px sans-serif`;
-    c.textAlign = 'center'; c.textBaseline = 'middle';
-    for(let i=0;i<5;i++){
-      const a = t*0.05 + (i/5)*Math.PI*2;
-      const dist = r*1.9;
-      c.fillStyle = ['#A080FF','#FF80A0','#80FFB0','#FFE060'][i%4];
-      c.fillText(i%2===0?'♪':'♫', Math.cos(a)*dist, Math.sin(a)*dist);
-    }
-  }
-  else if(kind === 'candyAura'){
-    for(let i=0;i<8;i++){
-      const a = t*0.05 + (i/8)*Math.PI*2;
-      const dist = r*1.9;
-      c.fillStyle = ['#FF60A0','#FFB040','#60E0FF','#A0FF60'][i%4];
-      c.beginPath();
-      c.ellipse(Math.cos(a)*dist, Math.sin(a)*dist, r*0.13, r*0.09, a, 0, Math.PI*2);
-      c.fill();
-    }
-  }
-}
-
-/* ============================================================
-   ==================== CROWN (تاج) ==========================
-   ============================================================ */
-function drawCrown(c, r, crown, t){
-  /* ═══ حماية شاملة ═══ */
-  if(!crown || typeof crown !== 'object') return;
-  if(!crown.id || crown.id === 'none') return;
-  if(typeof c !== 'object' || !c) return;
-  if(typeof r !== 'number' || r <= 0 || !isFinite(r)) return;
-  if(typeof t !== 'number' || !isFinite(t)) return;
-
-  const kind = crown.id;
-
-  /* ✅ تاج مخصص بصورة */
-  if(hasItemImage(crown)){
-    const img = getItemImageEl(crown);
-    if(img && img.complete && img.naturalWidth > 0){
-      const size = r * 1.8;
-      c.drawImage(img, -size/2, -r*1.9, size, size);
-      return;
-    }
-  }
-
-  const cy = -r * 1.08;
-
-  if(kind === 'bronze' || kind === 'silver' || kind === 'gold' || kind === 'diamond'){
-    const palettes = {
-      bronze:  { base:'#B8763E', light:'#E8A870', gem:'#FFD8A8' },
-      silver:  { base:'#A8B0C0', light:'#D8E0F0', gem:'#FFFFFF' },
-      gold:    { base:'#E8B34E', light:'#FFF4C0', gem:'#FF6088' },
-      diamond: { base:'#80D0E8', light:'#E0F8FF', gem:'#FFFFFF' }
-    };
-    const p = palettes[kind];
-
-    c.fillStyle = p.base;
-    c.beginPath();
-    c.moveTo(-r*0.7, cy + r*0.25);
-    c.lineTo(-r*0.7, cy - r*0.08);
-    c.lineTo(-r*0.42, cy - r*0.08);
-    c.lineTo(-r*0.30, cy - r*0.42);
-    c.lineTo(0, cy - r*0.15);
-    c.lineTo(r*0.30, cy - r*0.42);
-    c.lineTo(r*0.42, cy - r*0.08);
-    c.lineTo(r*0.7, cy - r*0.08);
-    c.lineTo(r*0.7, cy + r*0.25);
-    c.closePath();
-    c.fill();
-
-    c.fillStyle = p.light;
-    c.beginPath();
-    c.moveTo(-r*0.6, cy + r*0.18);
-    c.lineTo(-r*0.6, cy - r*0.02);
-    c.lineTo(r*0.6, cy - r*0.02);
-    c.lineTo(r*0.6, cy + r*0.18);
-    c.closePath();
-    c.fill();
-
-    c.fillStyle = p.gem;
-    c.beginPath();
-    c.arc(0, cy - r*0.13, r*0.11, 0, Math.PI*2);
-    c.fill();
-
-    if(kind === 'gold' || kind === 'diamond'){
-      c.beginPath();
-      c.arc(-r*0.42, cy + r*0.02, r*0.075, 0, Math.PI*2);
-      c.arc(r*0.42, cy + r*0.02, r*0.075, 0, Math.PI*2);
-      c.fill();
-      c.fillStyle = 'rgba(255,255,255,0.9)';
-      c.beginPath();
-      c.arc(-r*0.5, cy + r*0.1, r*0.06, 0, Math.PI*2);
-      c.fill();
-    }
-
-  } else if(kind === 'leaf'){
-    for(let i=0;i<5;i++){
-      const a = -1.0 + i*0.5;
-      c.save();
-      c.translate(0, cy + r*0.18);
-      c.rotate(a);
-      c.fillStyle = i % 2 === 0 ? '#5EA041' : '#7BC44C';
-      c.beginPath();
-      c.ellipse(0, -r*0.35, r*0.14, r*0.34, 0, 0, Math.PI*2);
-      c.fill();
-      c.restore();
-    }
-    c.strokeStyle = 'rgba(0,0,0,0.2)';
-    c.lineWidth = 0.8;
-    c.beginPath();
-    c.arc(0, cy + r*0.15, r*0.35, Math.PI, Math.PI*2);
-    c.stroke();
-
-  } else if(kind === 'flower'){
-    for(let i=0;i<6;i++){
-      const a = (i/6)*Math.PI*2;
-      c.fillStyle = i % 2 === 0 ? '#FF80A0' : '#FFB0C0';
-      c.beginPath();
-      c.ellipse(Math.cos(a)*r*0.26, cy + r*0.05 + Math.sin(a)*r*0.26, r*0.16, r*0.1, a, 0, Math.PI*2);
-      c.fill();
-    }
-    c.fillStyle = '#FFE060';
-    c.beginPath();
-    c.arc(0, cy + r*0.05, r*0.13, 0, Math.PI*2);
-    c.fill();
-    c.fillStyle = '#E8B34E';
-    c.beginPath();
-    c.arc(0, cy + r*0.05, r*0.06, 0, Math.PI*2);
-    c.fill();
-
-  } else if(kind === 'horns'){
-    c.fillStyle = '#2A1818';
-    c.beginPath();
-    c.moveTo(-r*0.5, cy + r*0.25);
-    c.quadraticCurveTo(-r*0.95, cy - r*0.5, -r*0.65, cy - r*0.95);
-    c.quadraticCurveTo(-r*0.55, cy - r*0.4, -r*0.25, cy + r*0.1);
-    c.closePath();
-    c.fill();
-    c.beginPath();
-    c.moveTo(r*0.5, cy + r*0.25);
-    c.quadraticCurveTo(r*0.95, cy - r*0.5, r*0.65, cy - r*0.95);
-    c.quadraticCurveTo(r*0.55, cy - r*0.4, r*0.25, cy + r*0.1);
-    c.closePath();
-    c.fill();
-    c.fillStyle = 'rgba(255,180,180,0.4)';
-    c.beginPath();
-    c.moveTo(-r*0.55, cy - r*0.15);
-    c.lineTo(-r*0.7, cy - r*0.55);
-    c.lineTo(-r*0.62, cy - r*0.7);
-    c.lineTo(-r*0.5, cy - r*0.3);
-    c.closePath();
-    c.fill();
-
-  } else if(kind === 'flame'){
-    c.fillStyle = '#E8B34E';
-    c.beginPath();
-    c.moveTo(-r*0.6, cy + r*0.28);
-    c.lineTo(-r*0.6, cy + r*0.05);
-    c.lineTo(r*0.6, cy + r*0.05);
-    c.lineTo(r*0.6, cy + r*0.28);
-    c.closePath();
-    c.fill();
-
-    for(let i=0;i<5;i++){
-      const x = -r*0.5 + i*r*0.25;
-      const h = r * (0.55 + Math.sin(t*0.18 + i)*0.15);
-      const grad = c.createLinearGradient(x, cy - h, x, cy + r*0.05);
-      grad.addColorStop(0, '#FFF8C0');
-      grad.addColorStop(0.5, '#FFB060');
-      grad.addColorStop(1, '#E85838');
-      c.fillStyle = grad;
-      c.beginPath();
-      c.moveTo(x - r*0.11, cy + r*0.05);
-      c.quadraticCurveTo(x - r*0.08, cy - h*0.5, x, cy - h);
-      c.quadraticCurveTo(x + r*0.08, cy - h*0.5, x + r*0.11, cy + r*0.05);
-      c.closePath();
-      c.fill();
-    }
-
-  } else if(kind === 'ice'){
-    c.fillStyle = '#5E90B0';
-    c.beginPath();
-    c.moveTo(-r*0.6, cy + r*0.28);
-    c.lineTo(-r*0.6, cy + r*0.1);
-    c.lineTo(r*0.6, cy + r*0.1);
-    c.lineTo(r*0.6, cy + r*0.28);
-    c.closePath();
-    c.fill();
-
-    for(let i=0;i<5;i++){
-      const x = -r*0.5 + i*r*0.25;
-      const h = r * (0.55 + (i%2 === 0 ? 0.18 : 0.02));
-      c.fillStyle = '#A0E0F8';
-      c.shadowColor = '#A0E0F8';
-      c.shadowBlur = 6;
-      c.beginPath();
-      c.moveTo(x - r*0.1, cy + r*0.1);
-      c.lineTo(x, cy - h);
-      c.lineTo(x + r*0.1, cy + r*0.1);
-      c.closePath();
-      c.fill();
-    }
-    c.shadowBlur = 0;
-    c.fillStyle = 'rgba(255,255,255,0.9)';
-    for(let i=0;i<3;i++){
-      c.beginPath();
-      c.arc(-r*0.4 + i*r*0.4, cy + r*0.2, r*0.055, 0, Math.PI*2);
-      c.fill();
-    }
-
-  } else if(kind === 'star'){
-    c.fillStyle = '#FFE060';
-    c.shadowColor = '#FFE060';
-    c.shadowBlur = 12;
-    c.beginPath();
-    for(let i=0;i<10;i++){
-      const a = (i/10)*Math.PI*2 - Math.PI/2;
-      const rr = i % 2 === 0 ? r*0.42 : r*0.18;
-      const px = Math.cos(a)*rr;
-      const py = cy + Math.sin(a)*rr;
-      i===0 ? c.moveTo(px, py) : c.lineTo(px, py);
-    }
-    c.closePath();
-    c.fill();
-    c.fillStyle = 'rgba(255,255,255,0.85)';
-    c.beginPath();
-    c.arc(0, cy, r*0.12, 0, Math.PI*2);
-    c.fill();
-    c.shadowBlur = 0;
-
-  } else if(kind === 'skull'){
-    c.fillStyle = '#F0E8E0';
-    c.beginPath();
-    c.arc(0, cy, r*0.34, 0, Math.PI*2);
-    c.fill();
-    roundRect(c, -r*0.2, cy + r*0.16, r*0.4, r*0.16, r*0.05);
-    c.fill();
-    c.fillStyle = '#1A0A0A';
-    c.beginPath();
-    c.arc(-r*0.14, cy - r*0.05, r*0.1, 0, Math.PI*2);
-    c.arc(r*0.14, cy - r*0.05, r*0.1, 0, Math.PI*2);
-    c.fill();
-    c.fillStyle = '#F0E8E0';
-    for(let i=0;i<4;i++){
-      c.fillRect(-r*0.15 + i*r*0.09, cy + r*0.2, r*0.05, r*0.11);
-    }
-    c.strokeStyle = 'rgba(0,0,0,0.25)';
-    c.lineWidth = 1;
-    c.beginPath();
-    c.moveTo(-r*0.15, cy - r*0.2);
-    c.lineTo(0, cy - r*0.1);
-    c.lineTo(-r*0.08, cy + r*0.02);
-    c.stroke();
-
-  } else if(kind === 'king'){
-    c.fillStyle = '#E8B34E';
-    c.shadowColor = '#FFD060';
-    c.shadowBlur = 14;
-    c.beginPath();
-    c.moveTo(-r*0.75, cy + r*0.3);
-    c.lineTo(-r*0.75, cy - r*0.12);
-    c.lineTo(-r*0.45, cy - r*0.08);
-    c.lineTo(-r*0.35, cy - r*0.58);
-    c.lineTo(-r*0.12, cy - r*0.18);
-    c.lineTo(0, cy - r*0.75);
-    c.lineTo(r*0.12, cy - r*0.18);
-    c.lineTo(r*0.35, cy - r*0.58);
-    c.lineTo(r*0.45, cy - r*0.08);
-    c.lineTo(r*0.75, cy - r*0.12);
-    c.lineTo(r*0.75, cy + r*0.3);
-    c.closePath();
-    c.fill();
-    c.shadowBlur = 0;
-
-    c.fillStyle = '#FFF4C0';
-    c.beginPath();
-    c.moveTo(-r*0.6, cy + r*0.22);
-    c.lineTo(-r*0.6, cy - r*0.02);
-    c.lineTo(r*0.6, cy - r*0.02);
-    c.lineTo(r*0.6, cy + r*0.22);
-    c.closePath();
-    c.fill();
-
-    c.fillStyle = '#FF4060';
-    c.beginPath();
-    c.arc(0, cy - r*0.32, r*0.1, 0, Math.PI*2);
-    c.fill();
-    c.fillStyle = '#4080FF';
-    c.beginPath();
-    c.arc(-r*0.38, cy - r*0.22, r*0.075, 0, Math.PI*2);
-    c.arc(r*0.38, cy - r*0.22, r*0.075, 0, Math.PI*2);
-    c.fill();
-    c.fillStyle = '#40FF80';
-    c.beginPath();
-    c.arc(-r*0.7, cy + r*0.1, r*0.065, 0, Math.PI*2);
-    c.arc(r*0.7, cy + r*0.1, r*0.065, 0, Math.PI*2);
-    c.fill();
-
-  } else if(kind === 'hat'){
-    c.fillStyle = '#8E4A30';
-    c.beginPath();
-    c.arc(0, cy + r*0.2, r*0.75, Math.PI, Math.PI*2);
-    c.fill();
-    c.fillStyle = '#A05838';
-    c.beginPath();
-    c.ellipse(0, cy + r*0.22, r*0.85, r*0.16, 0, 0, Math.PI*2);
-    c.fill();
-    c.fillStyle = 'rgba(0,0,0,0.15)';
-    c.beginPath();
-    c.ellipse(0, cy + r*0.2, r*0.72, r*0.1, 0, 0, Math.PI*2);
-    c.fill();
-    c.fillStyle = '#C14A4A';
-    c.fillRect(-r*0.72, cy + r*0.02, r*1.44, r*0.12);
-
-  } else if(kind === 'cap'){
-    c.fillStyle = '#2A5A90';
-    c.beginPath();
-    c.arc(0, cy + r*0.15, r*0.72, Math.PI, Math.PI*2);
-    c.fill();
-    c.beginPath();
-    c.moveTo(-r*0.75, cy + r*0.15);
-    c.lineTo(-r*0.9, cy + r*0.3);
-    c.lineTo(r*0.9, cy + r*0.3);
-    c.lineTo(r*0.75, cy + r*0.15);
-    c.closePath();
-    c.fill();
-    c.fillStyle = '#1A3A60';
-    c.beginPath();
-    c.arc(0, cy - r*0.5, r*0.09, 0, Math.PI*2);
-    c.fill();
-
-  } else if(kind === 'beanie'){
-    c.fillStyle = '#B03060';
-    c.beginPath();
-    c.arc(0, cy + r*0.1, r*0.78, Math.PI, Math.PI*2);
-    c.fill();
-    c.fillStyle = '#D04070';
-    roundRect(c, -r*0.85, cy + r*0.05, r*1.7, r*0.24, r*0.08);
-    c.fill();
-    c.fillStyle = '#E8D0D8';
-    c.beginPath();
-    c.arc(0, cy - r*0.75, r*0.2, 0, Math.PI*2);
-    c.fill();
-
-  } else if(kind === 'cowboy'){
-    c.fillStyle = '#8A5A30';
-    c.beginPath();
-    c.moveTo(-r*0.55, cy + r*0.15);
-    c.lineTo(-r*0.5, cy - r*0.4);
-    c.lineTo(0, cy - r*0.55);
-    c.lineTo(r*0.5, cy - r*0.4);
-    c.lineTo(r*0.55, cy + r*0.15);
-    c.closePath();
-    c.fill();
-    c.fillStyle = '#A06838';
-    c.beginPath();
-    c.ellipse(0, cy + r*0.15, r*1.05, r*0.18, 0, 0, Math.PI*2);
-    c.fill();
-    c.fillStyle = '#3A2010';
-    c.fillRect(-r*0.5, cy - r*0.05, r*1.0, r*0.12);
-
-  } else if(kind === 'santa'){
-    c.fillStyle = '#C03030';
-    c.beginPath();
-    c.moveTo(-r*0.7, cy + r*0.15);
-    c.quadraticCurveTo(0, cy - r*0.9, r*0.7, cy + r*0.15);
-    c.closePath();
-    c.fill();
-    c.fillStyle = '#FFFFFF';
-    roundRect(c, -r*0.78, cy + r*0.05, r*1.56, r*0.22, r*0.1);
-    c.fill();
-    c.beginPath();
-    c.arc(r*0.7, cy + r*0.15, r*0.18, 0, Math.PI*2);
-    c.fill();
-
-  } else if(kind === 'party'){
-    const colors = ['#FF6088','#FFB04C','#FFE24C','#4CE0A8','#4CA8FF','#A86AFF'];
-    c.save();
-    c.translate(0, cy + r*0.15);
-    c.rotate(-0.15);
-    c.beginPath();
-    c.moveTo(-r*0.45, 0);
-    c.lineTo(r*0.45, 0);
-    c.lineTo(0, -r*1.1);
-    c.closePath();
-    c.fillStyle = colors[0];
-    c.fill();
-    for(let i=1;i<colors.length;i++){
-      const y = -i*r*0.18;
-      c.fillStyle = colors[i];
-      c.fillRect(-r*0.4 + i*r*0.08, y, r*0.8 - i*r*0.16, r*0.05);
-    }
-    c.fillStyle = '#FFE060';
-    c.beginPath();
-    c.arc(0, -r*1.1, r*0.13, 0, Math.PI*2);
-    c.fill();
-    c.restore();
-
-  } else if(kind === 'wizard'){
-    c.save();
-    c.translate(0, cy + r*0.15);
-    c.fillStyle = '#3A2060';
-    c.beginPath();
-    c.moveTo(-r*0.75, 0);
-    c.quadraticCurveTo(-r*0.25, -r*0.9, r*0.2, -r*1.4);
-    c.quadraticCurveTo(r*0.3, -r*0.9, r*0.75, 0);
-    c.closePath();
-    c.fill();
-    c.fillStyle = '#4A2880';
-    c.beginPath();
-    c.ellipse(0, 0, r*0.85, r*0.18, 0, 0, Math.PI*2);
-    c.fill();
-    c.fillStyle = '#FFE060';
-    for(let i=0;i<4;i++){
-      const sx = -r*0.4 + i*r*0.25;
-      const sy = -r*0.25 - i*r*0.15;
-      c.beginPath();
-      c.arc(sx, sy, r*0.06, 0, Math.PI*2);
-      c.fill();
-    }
-    c.restore();
-
-  } else if(kind === 'viking'){
-    c.fillStyle = '#808898';
-    c.beginPath();
-    c.arc(0, cy + r*0.1, r*0.72, Math.PI, Math.PI*2);
-    c.fill();
-    c.fillStyle = '#A0A8B8';
-    roundRect(c, -r*0.82, cy + r*0.05, r*1.64, r*0.22, r*0.06);
-    c.fill();
-    c.fillStyle = '#F0E8D0';
-    c.beginPath();
-    c.moveTo(-r*0.6, cy + r*0.15);
-    c.quadraticCurveTo(-r*1.2, cy - r*0.2, -r*1.0, cy - r*0.75);
-    c.quadraticCurveTo(-r*1.05, cy - r*0.3, -r*0.7, cy + r*0.05);
-    c.closePath();
-    c.fill();
-    c.beginPath();
-    c.moveTo(r*0.6, cy + r*0.15);
-    c.quadraticCurveTo(r*1.2, cy - r*0.2, r*1.0, cy - r*0.75);
-    c.quadraticCurveTo(r*1.05, cy - r*0.3, r*0.7, cy + r*0.05);
-    c.closePath();
-    c.fill();
-    c.fillStyle = '#3A4050';
-    c.fillRect(-r*0.5, cy + r*0.0, r*1.0, r*0.06);
-
-  } else if(kind === 'deerHorns'){
-    c.strokeStyle = '#8A6030';
-    c.lineWidth = r*0.14;
-    c.lineCap = 'round';
-    c.lineJoin = 'round';
-    c.beginPath();
-    c.moveTo(-r*0.35, cy + r*0.3);
-    c.quadraticCurveTo(-r*0.7, cy - r*0.3, -r*0.55, cy - r*0.95);
-    c.stroke();
-    c.beginPath();
-    c.moveTo(-r*0.55, cy - r*0.4);
-    c.lineTo(-r*0.95, cy - r*0.5);
-    c.stroke();
-    c.beginPath();
-    c.moveTo(-r*0.5, cy - r*0.7);
-    c.lineTo(-r*0.85, cy - r*0.85);
-    c.stroke();
-    c.beginPath();
-    c.moveTo(r*0.35, cy + r*0.3);
-    c.quadraticCurveTo(r*0.7, cy - r*0.3, r*0.55, cy - r*0.95);
-    c.stroke();
-    c.beginPath();
-    c.moveTo(r*0.55, cy - r*0.4);
-    c.lineTo(r*0.95, cy - r*0.5);
-    c.stroke();
-    c.beginPath();
-    c.moveTo(r*0.5, cy - r*0.7);
-    c.lineTo(r*0.85, cy - r*0.85);
-    c.stroke();
-
-  } else if(kind === 'singleHorn'){
-    c.fillStyle = '#F0E0C0';
-    c.beginPath();
-    c.moveTo(-r*0.12, cy + r*0.2);
-    c.quadraticCurveTo(-r*0.15, cy - r*0.5, 0, cy - r*1.0);
-    c.quadraticCurveTo(r*0.15, cy - r*0.5, r*0.12, cy + r*0.2);
-    c.closePath();
-    c.fill();
-    c.strokeStyle = 'rgba(0,0,0,0.15)';
-    c.lineWidth = 1;
-    for(let i=0;i<4;i++){
-      const y = cy + r*0.05 - i*r*0.22;
-      c.beginPath();
-      c.moveTo(-r*0.1 + i*r*0.02, y);
-      c.lineTo(r*0.1 - i*r*0.02, y);
-      c.stroke();
-    }
-  }
-    else if(kind === 'pirate'){
-    c.fillStyle = '#1A1A28';
-    c.beginPath();
-    c.moveTo(-r*0.75, cy + r*0.2);
-    c.quadraticCurveTo(0, cy - r*0.7, r*0.75, cy + r*0.2);
-    c.lineTo(r*0.7, cy + r*0.35);
-    c.lineTo(-r*0.7, cy + r*0.35);
-    c.closePath(); c.fill();
-    c.fillStyle = '#FFFFFF';
-    c.beginPath(); c.arc(0, cy - r*0.15, r*0.15, 0, Math.PI*2); c.fill();
-    c.fillStyle = '#1A1A28';
-    c.beginPath();
-    c.arc(-r*0.06, cy - r*0.15, r*0.04, 0, Math.PI*2);
-    c.arc(r*0.06, cy - r*0.15, r*0.04, 0, Math.PI*2);
-    c.fill();
-    c.strokeStyle = '#1A1A28'; c.lineWidth = 1.5;
-    c.beginPath();
-    c.moveTo(-r*0.14, cy - r*0.08); c.lineTo(r*0.14, cy - r*0.22);
-    c.stroke();
-  }
-  else if(kind === 'wreath'){
-    c.strokeStyle = '#5EA041'; c.lineWidth = r*0.15;
-    c.beginPath();
-    c.arc(0, cy, r*0.7, Math.PI*1.1, Math.PI*1.9);
-    c.stroke();
-    const cols = ['#FF80A0','#FFB040','#FFE060','#C080FF'];
-    for(let i=0;i<5;i++){
-      const a = Math.PI*1.15 + (i/4)*Math.PI*0.7;
-      const px = Math.cos(a)*r*0.7, py = cy + Math.sin(a)*r*0.7;
-      c.fillStyle = cols[i%cols.length];
-      c.beginPath(); c.arc(px, py, r*0.11, 0, Math.PI*2); c.fill();
-      c.fillStyle = '#FFE060';
-      c.beginPath(); c.arc(px, py, r*0.04, 0, Math.PI*2); c.fill();
-    }
-  }
-  else if(kind === 'haloBroken'){
-    c.strokeStyle = '#FFE060'; c.lineWidth = r*0.1;
-    c.shadowColor = '#FFE060'; c.shadowBlur = 8;
-    c.beginPath();
-    c.arc(-r*0.15, cy - r*0.1, r*0.55, Math.PI*1.1, Math.PI*1.75);
-    c.stroke();
-    c.beginPath();
-    c.arc(r*0.15, cy - r*0.1, r*0.55, Math.PI*1.25, Math.PI*1.9);
-    c.stroke();
-    c.shadowBlur = 0;
-  }
-  else if(kind === 'spikeCrown'){
-    c.fillStyle = '#5A4030';
-    c.beginPath();
-    c.ellipse(0, cy + r*0.25, r*0.7, r*0.18, 0, 0, Math.PI*2);
-    c.fill();
-    c.fillStyle = '#4A3020';
-    for(let i=0;i<6;i++){
-      const a = (i/6)*Math.PI*2;
-      const px = Math.cos(a)*r*0.55;
-      c.beginPath();
-      c.moveTo(px - r*0.08, cy + r*0.15);
-      c.lineTo(px, cy + r*0.15 - r*0.5);
-      c.lineTo(px + r*0.08, cy + r*0.15);
-      c.closePath(); c.fill();
-    }
-  }
-  else if(kind === 'topHat'){
-    c.fillStyle = '#0A0A0A';
-    c.fillRect(-r*0.6, cy - r*0.5, r*1.2, r*0.8);
-    c.fillStyle = '#1A1A1A';
-    c.beginPath();
-    c.ellipse(0, cy + r*0.25, r*0.9, r*0.15, 0, 0, Math.PI*2);
-    c.fill();
-    c.fillStyle = '#C03030';
-    c.fillRect(-r*0.6, cy + r*0.05, r*1.2, r*0.1);
-  }
-  else if(kind === 'graduationCap'){
-    c.fillStyle = '#1A1A28';
-    c.beginPath();
-    c.moveTo(-r*0.75, cy + r*0.15);
-    c.lineTo(0, cy - r*0.15);
-    c.lineTo(r*0.75, cy + r*0.15);
-    c.lineTo(0, cy + r*0.45);
-    c.closePath(); c.fill();
-    c.fillStyle = '#FFD060';
-    c.fillRect(-r*0.15, cy + r*0.25, r*0.3, r*0.5);
-    c.beginPath(); c.arc(0, cy + r*0.75, r*0.1, 0, Math.PI*2); c.fill();
-  }
-  else if(kind === 'jesterHat'){
-    const cols = ['#FF6088','#FFB04C','#FFE24C','#4CE0A8','#4CA8FF'];
-    for(let i=0;i<3;i++){
-      const a = -0.5 + i*0.5;
-      c.fillStyle = cols[i];
-      c.beginPath();
-      c.moveTo(-r*0.5, cy + r*0.2);
-      c.quadraticCurveTo(Math.cos(a)*r*0.8 - r*0.3, cy - r*0.9, Math.cos(a)*r*0.5, cy - r*1.1);
-      c.quadraticCurveTo(Math.cos(a)*r*0.6, cy - r*0.5, r*0.5, cy + r*0.2);
-      c.closePath(); c.fill();
-      c.fillStyle = '#FFE060';
-      c.beginPath(); c.arc(Math.cos(a)*r*0.5, cy - r*1.1, r*0.1, 0, Math.PI*2); c.fill();
-    }
-  }
-  else if(kind === 'chefHat'){
-    c.fillStyle = '#FFFFFF';
-    c.beginPath();
-    c.arc(0, cy - r*0.3, r*0.6, Math.PI, Math.PI*2);
-    c.fill();
-    c.fillRect(-r*0.6, cy - r*0.3, r*1.2, r*0.6);
-    c.fillStyle = 'rgba(200,200,200,0.3)';
-    c.fillRect(-r*0.6, cy + r*0.15, r*1.2, r*0.1);
-  }
-  else if(kind === 'propeller'){
-    c.fillStyle = '#2A5A90';
-    c.beginPath();
-    c.arc(0, cy + r*0.15, r*0.75, Math.PI, Math.PI*2);
-    c.fill();
-    c.fillStyle = '#1A3A60';
-    c.fillRect(-r*0.75, cy + r*0.15, r*1.5, r*0.1);
-    c.strokeStyle = '#909090'; c.lineWidth = 2;
-    c.beginPath(); c.moveTo(0, cy - r*0.6); c.lineTo(0, cy - r*0.9); c.stroke();
-    const rot = t*0.15;
-    c.strokeStyle = '#E84040'; c.lineWidth = r*0.1;
-    c.beginPath();
-    c.moveTo(-Math.cos(rot)*r*0.5, cy - r*0.9 - Math.sin(rot)*r*0.15);
-    c.lineTo(Math.cos(rot)*r*0.5, cy - r*0.9 + Math.sin(rot)*r*0.15);
-    c.stroke();
-  }
-  else if(kind === 'bunnyEars'){
-    c.fillStyle = '#F0E0E8';
-    for(const side of [-1, 1]){
-      c.beginPath();
-      c.ellipse(side*r*0.35, cy - r*0.8, r*0.18, r*0.6, side*0.15, 0, Math.PI*2);
-      c.fill();
-      c.fillStyle = '#FFB0C0';
-      c.beginPath();
-      c.ellipse(side*r*0.35, cy - r*0.8, r*0.08, r*0.45, side*0.15, 0, Math.PI*2);
-      c.fill();
-      c.fillStyle = '#F0E0E8';
-    }
-  }
-  else if(kind === 'catEars'){
-    for(const side of [-1, 1]){
-      c.fillStyle = '#2A2020';
-      c.beginPath();
-      c.moveTo(side*r*0.2, cy + r*0.2);
-      c.lineTo(side*r*0.45, cy - r*0.8);
-      c.lineTo(side*r*0.75, cy + r*0.2);
-      c.closePath(); c.fill();
-      c.fillStyle = '#FF8080';
-      c.beginPath();
-      c.moveTo(side*r*0.35, cy + r*0.05);
-      c.lineTo(side*r*0.45, cy - r*0.55);
-      c.lineTo(side*r*0.6, cy + r*0.05);
-      c.closePath(); c.fill();
-    }
-  }
-  else if(kind === 'devilHorns'){
-    c.fillStyle = '#C02020';
-    c.shadowColor = '#FF4040'; c.shadowBlur = 6;
-    for(const side of [-1, 1]){
-      c.beginPath();
-      c.moveTo(side*r*0.4, cy + r*0.2);
-      c.quadraticCurveTo(side*r*0.9, cy - r*0.5, side*r*0.6, cy - r*1.1);
-      c.quadraticCurveTo(side*r*0.55, cy - r*0.4, side*r*0.2, cy + r*0.1);
-      c.closePath(); c.fill();
-    }
-    c.shadowBlur = 0;
-  }
-  else if(kind === 'pumpkinHead'){
-    c.fillStyle = '#E88820';
-    c.beginPath();
-    c.ellipse(0, cy - r*0.2, r*0.7, r*0.6, 0, 0, Math.PI*2);
-    c.fill();
-    c.strokeStyle = '#A05010'; c.lineWidth = 1.5;
-    for(let i=-2;i<=2;i++){
-      c.beginPath();
-      c.moveTo(i*r*0.2, cy - r*0.75);
-      c.quadraticCurveTo(i*r*0.25, cy - r*0.2, i*r*0.2, cy + r*0.35);
-      c.stroke();
-    }
-    c.fillStyle = '#1A0808';
-    c.beginPath();
-    c.moveTo(-r*0.3, cy - r*0.35); c.lineTo(-r*0.1, cy - r*0.1); c.lineTo(-r*0.35, cy - r*0.1); c.closePath(); c.fill();
-    c.beginPath();
-    c.moveTo(r*0.3, cy - r*0.35); c.lineTo(r*0.1, cy - r*0.1); c.lineTo(r*0.35, cy - r*0.1); c.closePath(); c.fill();
-    c.beginPath();
-    c.moveTo(-r*0.3, cy + r*0.05); c.lineTo(-r*0.15, cy + r*0.15); c.lineTo(0, cy + r*0.05);
-    c.lineTo(r*0.15, cy + r*0.15); c.lineTo(r*0.3, cy + r*0.05);
-    c.lineTo(r*0.2, cy + r*0.2); c.lineTo(-r*0.2, cy + r*0.2);
-    c.closePath(); c.fill();
-  }
-  else if(kind === 'crownSkull'){
-    c.fillStyle = '#1A0808';
-    for(const side of [-1, 1]){
-      c.beginPath();
-      c.moveTo(side*r*0.7, cy + r*0.3); c.lineTo(side*r*0.75, cy - r*0.4);
-      c.lineTo(side*r*0.5, cy + r*0.1); c.closePath(); c.fill();
-    }
-    c.fillStyle = '#F0E8E0';
-    for(let i=-1;i<=1;i++){
-      const px = i*r*0.35;
-      c.beginPath();
-      c.arc(px, cy - r*0.2, r*0.16, 0, Math.PI*2);
-      c.fill();
-      c.fillStyle = '#1A0A0A';
-      c.beginPath();
-      c.arc(px - r*0.05, cy - r*0.22, r*0.045, 0, Math.PI*2);
-      c.arc(px + r*0.05, cy - r*0.22, r*0.045, 0, Math.PI*2);
-      c.fill();
-      c.fillStyle = '#F0E8E0';
-    }
-  }
-  else if(kind === 'angelRing'){
-    const pl = 0.6 + Math.sin(t*0.1)*0.4;
-    c.strokeStyle = `rgba(255,248,192,${pl})`;
-    c.lineWidth = r*0.18;
-    c.shadowColor = '#FFF8C0'; c.shadowBlur = 15*pl;
-    c.beginPath();
-    c.ellipse(0, cy - r*0.1, r*0.65, r*0.22, 0, 0, Math.PI*2);
-    c.stroke();
-    c.shadowBlur = 0;
-    for(let i=0;i<3;i++){
-      const a = t*0.05 + (i/3)*Math.PI*2;
-      c.fillStyle = '#FFFFFF';
-      c.shadowColor = '#FFF8C0'; c.shadowBlur = 10;
-      c.beginPath();
-      c.arc(Math.cos(a)*r*0.65, cy - r*0.1 + Math.sin(a)*r*0.22, r*0.08, 0, Math.PI*2);
-      c.fill();
-    }
-    c.shadowBlur = 0;
-  }
-  else if(kind === 'cyberVisor'){
-    c.fillStyle = 'rgba(10,20,40,0.9)';
-    c.strokeStyle = '#00FFFF'; c.lineWidth = 2;
-    c.shadowColor = '#00FFFF'; c.shadowBlur = 10;
-    c.beginPath();
-    c.ellipse(0, cy + r*0.15, r*0.85, r*0.3, 0, 0, Math.PI*2);
-    c.fill(); c.stroke();
-    c.shadowBlur = 0;
-    const scan = ((t*4)%100)/100;
-    c.strokeStyle = `rgba(0,255,255,${0.7})`; c.lineWidth = 1;
-    c.beginPath();
-    c.moveTo(-r*0.7, cy + r*0.15 - r*0.15 + scan*r*0.3);
-    c.lineTo(r*0.7, cy + r*0.15 - r*0.15 + scan*r*0.3);
-    c.stroke();
-  }
-  else if(kind === 'gasMask'){
-    c.fillStyle = '#4A5A40';
-    c.beginPath();
-    c.ellipse(0, cy + r*0.1, r*0.7, r*0.55, 0, 0, Math.PI*2);
-    c.fill();
-    c.fillStyle = '#2A3020';
-    c.beginPath();
-    c.arc(-r*0.3, cy + r*0.05, r*0.18, 0, Math.PI*2);
-    c.arc(r*0.3, cy + r*0.05, r*0.18, 0, Math.PI*2);
-    c.fill();
-    c.fillStyle = '#FF6020';
-    c.beginPath();
-    c.arc(-r*0.3, cy + r*0.05, r*0.08, 0, Math.PI*2);
-    c.arc(r*0.3, cy + r*0.05, r*0.08, 0, Math.PI*2);
-    c.fill();
-    c.fillStyle = '#3A4030';
-    c.fillRect(-r*0.2, cy + r*0.4, r*0.4, r*0.25);
-  }
-  else if(kind === 'lightBulb'){
-    c.fillStyle = 'rgba(255,240,160,0.95)';
-    c.shadowColor = '#FFE060'; c.shadowBlur = 15 + Math.sin(t*0.15)*8;
-    c.beginPath();
-    c.arc(0, cy - r*0.4, r*0.4, 0, Math.PI*2);
-    c.fill();
-    c.shadowBlur = 0;
-    c.fillStyle = '#9098A0';
-    c.fillRect(-r*0.15, cy - r*0.05, r*0.3, r*0.2);
-    c.fillStyle = '#5A6270';
-    for(let i=0;i<3;i++){
-      c.fillRect(-r*0.15, cy + i*r*0.05, r*0.3, r*0.03);
-    }
-  }
-  else if(kind === 'mushroomCap'){
-    c.fillStyle = '#E85040';
-    c.beginPath();
-    c.arc(0, cy + r*0.1, r*0.75, Math.PI, Math.PI*2);
-    c.fill();
-    c.fillStyle = '#FFFFFF';
-    for(let i=0;i<5;i++){
-      const px = -r*0.5 + i*r*0.25;
-      const py = cy - r*0.1 + Math.sin(i*1.3)*r*0.1;
-      c.beginPath(); c.arc(px, py, r*0.07, 0, Math.PI*2); c.fill();
-    }
-    c.fillStyle = '#F0E8D0';
-    c.fillRect(-r*0.15, cy + r*0.1, r*0.3, r*0.6);
-  }
-  else if(kind === 'sunhat'){
-    c.fillStyle = '#FFE090';
-    c.beginPath();
-    c.ellipse(0, cy + r*0.15, r*1.0, r*0.18, 0, 0, Math.PI*2);
-    c.fill();
-    c.beginPath();
-    c.arc(0, cy + r*0.1, r*0.55, Math.PI, Math.PI*2);
-    c.fill();
-    c.fillStyle = '#FF4080';
-    c.fillRect(-r*0.55, cy + r*0.02, r*1.1, r*0.1);
-  }
-  else if(kind === 'sombrero'){
-    c.fillStyle = '#C8A040';
-    c.beginPath();
-    c.ellipse(0, cy + r*0.2, r*1.1, r*0.2, 0, 0, Math.PI*2);
-    c.fill();
-    c.beginPath();
-    c.moveTo(-r*0.6, cy + r*0.2);
-    c.quadraticCurveTo(0, cy - r*0.6, r*0.6, cy + r*0.2);
-    c.closePath(); c.fill();
-    c.fillStyle = '#8A3010';
-    c.fillRect(-r*0.6, cy + r*0.05, r*1.2, r*0.1);
-  }
-  else if(kind === 'crownFireworks'){
-    c.fillStyle = '#E8B34E';
-    c.beginPath();
-    c.moveTo(-r*0.7, cy + r*0.25); c.lineTo(-r*0.7, cy - r*0.1);
-    c.lineTo(-r*0.35, cy - r*0.6); c.lineTo(0, cy - r*0.15);
-    c.lineTo(r*0.35, cy - r*0.6); c.lineTo(r*0.7, cy - r*0.1);
-    c.lineTo(r*0.7, cy + r*0.25); c.closePath(); c.fill();
-    for(let i=0;i<5;i++){
-      const a = t*0.15 + (i/5)*Math.PI*2;
-      const px = Math.cos(a)*r*0.6;
-      const py = cy - r*0.4 + Math.sin(a)*r*0.3;
-      c.fillStyle = `hsl(${(t*8 + i*72)%360}, 90%, 65%)`;
-      c.shadowColor = c.fillStyle; c.shadowBlur = 8;
-      c.beginPath(); c.arc(px, py, r*0.1, 0, Math.PI*2); c.fill();
-    }
-    c.shadowBlur = 0;
-  }
-  else if(kind === 'crownDivine'){
-    const pl = 0.7 + Math.sin(t*0.1)*0.3;
-    c.fillStyle = '#FFF4C0';
-    c.shadowColor = '#FFE060'; c.shadowBlur = 15*pl;
-    c.beginPath();
-    c.moveTo(-r*0.75, cy + r*0.3); c.lineTo(-r*0.75, cy - r*0.15);
-    c.lineTo(-r*0.45, cy - r*0.05); c.lineTo(-r*0.3, cy - r*0.7);
-    c.lineTo(0, cy - r*0.85); c.lineTo(r*0.3, cy - r*0.7);
-    c.lineTo(r*0.45, cy - r*0.05); c.lineTo(r*0.75, cy - r*0.15);
-    c.lineTo(r*0.75, cy + r*0.3); c.closePath(); c.fill();
-    c.shadowBlur = 0;
-    for(let i=0;i<5;i++){
-      const px = -r*0.5 + i*r*0.25;
-      c.fillStyle = ['#FF4060','#4080FF','#40FF80','#FFD040','#FF80C0'][i];
-      c.beginPath(); c.arc(px, cy - r*0.05, r*0.06, 0, Math.PI*2); c.fill();
-    }
-  }
-  else if(kind === 'crownCosmic'){
-    for(let i=0;i<7;i++){
-      const a = -Math.PI*0.9 + (i/6)*Math.PI*0.8;
-      const px = Math.cos(a)*r*0.7;
-      const py = cy + Math.sin(a)*r*0.5;
-      c.fillStyle = `hsl(${(t*3 + i*50)%360}, 80%, 55%)`;
-      c.shadowColor = c.fillStyle; c.shadowBlur = 10;
-      c.beginPath();
-      c.moveTo(px - r*0.1, py);
-      c.lineTo(px, py - r*0.4);
-      c.lineTo(px + r*0.1, py);
-      c.closePath(); c.fill();
-    }
-    c.shadowBlur = 0;
-    c.strokeStyle = '#FFFFFF'; c.lineWidth = 1;
-    c.beginPath(); c.arc(0, cy, r*0.5, 0, Math.PI*2); c.stroke();
-  }
-  else if(kind === 'crownPrisma'){
-    c.save();
-    c.translate(0, cy);
-    for(let i=0;i<6;i++){
-      const a = (i/6)*Math.PI*2 + t*0.02;
-      const hue = (t*8 + i*60)%360;
-      c.fillStyle = `hsl(${hue},85%,65%)`;
-      c.shadowColor = c.fillStyle; c.shadowBlur = 12;
-      c.beginPath();
-      c.moveTo(Math.cos(a - 0.3)*r*0.8, Math.sin(a - 0.3)*r*0.6);
-      c.lineTo(Math.cos(a)*r*0.55, Math.sin(a)*r*0.9 - r*0.3);
-      c.lineTo(Math.cos(a + 0.3)*r*0.8, Math.sin(a + 0.3)*r*0.6);
-      c.closePath(); c.fill();
-    }
-    c.shadowBlur = 0;
-    c.restore();
-  }
-}
-
-/* ============================================================
-   ==================== Character drawing ====================
-   ============================================================ */
-   function drawSkinPattern(c, r, pattern){
-  if(!pattern || pattern === 'none') return;
-  c.save();
-  c.beginPath(); c.arc(0, 0, r-1, 0, Math.PI*2); c.clip();
-
-  if(pattern === 'spots'){
-    c.fillStyle = 'rgba(0,0,0,0.14)';
-    const spots = [[-r*0.5,-r*0.3,r*0.18],[r*0.55,-r*0.5,r*0.14],[-r*0.25,r*0.55,r*0.16],[r*0.35,r*0.35,r*0.12],[r*0.05,-r*0.75,r*0.11]];
-    for(const [sx,sy,sr] of spots){ c.beginPath(); c.arc(sx,sy,sr,0,Math.PI*2); c.fill(); }
-  }
-  else if(pattern === 'stripes'){
-    c.strokeStyle = 'rgba(0,0,0,0.5)'; c.lineWidth = r*0.18;
-    for(let i=-2;i<=2;i++){
-      c.beginPath(); c.moveTo(-r*1.3, i*r*0.4 + r*0.2); c.lineTo(r*1.3, i*r*0.4 - r*0.2); c.stroke();
-    }
-  }
-  else if(pattern === 'tiger'){
-    c.strokeStyle = 'rgba(0,0,0,0.6)'; c.lineWidth = r*0.12;
-    for(let i=-2;i<=2;i++){
-      c.beginPath(); c.moveTo(-r*1.3, i*r*0.4); c.lineTo(r*1.3, i*r*0.4); c.stroke();
-      c.beginPath(); c.moveTo(-r*1.3, i*r*0.4 + r*0.15); c.lineTo(r*0.5, i*r*0.4 - r*0.05); c.stroke();
-    }
-  }
-  else if(pattern === 'checker'){
-    const size = r*0.4;
-    for(let y=-r;y<r;y+=size){
-      for(let x=-r;x<r;x+=size){
-        const ix = Math.floor(x/size), iy = Math.floor(y/size);
-        if((ix+iy)%2===0){
-          c.fillStyle = 'rgba(0,0,0,0.35)';
-          c.fillRect(x,y,size,size);
-        }
-      }
-    }
-  }
-  else if(pattern === 'hex'){
-    c.strokeStyle = 'rgba(0,0,0,0.35)'; c.lineWidth = 1.2;
-    const sz = r*0.28;
-    for(let y=-r;y<r+sz;y+=sz*1.7){
-      for(let x=-r;x<r+sz;x+=sz*1.7){
-        c.beginPath();
-        for(let k=0;k<6;k++){
-          const a=(k/6)*Math.PI*2;
-          const px=x+Math.cos(a)*sz, py=y+Math.sin(a)*sz;
-          k===0?c.moveTo(px,py):c.lineTo(px,py);
-        }
-        c.closePath(); c.stroke();
-      }
-    }
-  }
-  else if(pattern === 'camo'){
-    c.fillStyle = 'rgba(0,0,0,0.28)';
-    const blobs = [[-r*0.5,-r*0.3,r*0.35],[r*0.4,r*0.2,r*0.3],[-r*0.3,r*0.5,r*0.28],[r*0.5,-r*0.4,r*0.32]];
-    for(const [bx,by,br] of blobs){ c.beginPath(); c.arc(bx,by,br,0,Math.PI*2); c.fill(); }
-  }
-  else if(pattern === 'circuit'){
-    c.strokeStyle = 'rgba(0,255,128,0.7)'; c.lineWidth = r*0.08;
-    c.beginPath();
-    c.moveTo(-r, -r*0.4); c.lineTo(-r*0.4,-r*0.4); c.lineTo(-r*0.4, r*0.3); c.lineTo(r*0.4, r*0.3); c.lineTo(r*0.4, -r*0.4); c.lineTo(r, -r*0.4);
-    c.moveTo(0, -r); c.lineTo(0, -r*0.6); c.moveTo(-r*0.6, r*0.7); c.lineTo(r*0.6, r*0.7);
-    c.stroke();
-    c.fillStyle = '#00FF80';
-    for(const [px,py] of [[-r*0.4,r*0.3],[r*0.4,r*0.3],[0,-r*0.6]]){
-      c.beginPath(); c.arc(px,py,r*0.11,0,Math.PI*2); c.fill();
-    }
-  }
-  else if(pattern === 'gradient'){
-    const g = c.createLinearGradient(-r,-r,r,r);
-    g.addColorStop(0,'rgba(255,200,220,0.6)');
-    g.addColorStop(1,'rgba(200,220,255,0.4)');
-    c.fillStyle = g; c.fillRect(-r,-r,r*2,r*2);
-  }
-  else if(pattern === 'lavaCracks'){
-    c.strokeStyle = 'rgba(255,80,20,0.85)'; c.lineWidth = r*0.08;
-    c.shadowColor = '#FF5020'; c.shadowBlur = 6;
-    const cracks = [
-      [[-r*0.8,-r*0.3],[-r*0.4,0],[-r*0.6,r*0.4],[-r*0.2,r*0.8]],
-      [[r*0.3,-r*0.9],[r*0.5,-r*0.3],[r*0.8,r*0.1]],
-      [[-r*0.1,r*0.3],[r*0.3,r*0.5],[r*0.1,r*0.9]]
-    ];
-    for(const crack of cracks){
-      c.beginPath();
-      crack.forEach(([px,py],i)=> i===0?c.moveTo(px,py):c.lineTo(px,py));
-      c.stroke();
-    }
-    c.shadowBlur = 0;
-  }
-  else if(pattern === 'crystalPattern'){
-    c.strokeStyle = 'rgba(255,255,255,0.5)'; c.lineWidth = 1;
-    for(let i=0;i<6;i++){
-      const a=(i/6)*Math.PI*2;
-      c.beginPath();
-      c.moveTo(0,0);
-      c.lineTo(Math.cos(a)*r*0.9, Math.sin(a)*r*0.9);
-      c.stroke();
-    }
-    c.beginPath();
-    for(let k=0;k<6;k++){
-      const a=(k/6)*Math.PI*2;
-      const px=Math.cos(a)*r*0.7, py=Math.sin(a)*r*0.7;
-      k===0?c.moveTo(px,py):c.lineTo(px,py);
-    }
-    c.closePath(); c.stroke();
-  }
-  else if(pattern === 'scales'){
-    c.strokeStyle = 'rgba(0,0,0,0.3)'; c.lineWidth = 1.2;
-    const sw = r*0.35;
-    for(let y=-r;y<r;y+=sw*0.7){
-      for(let x=-r;x<r;x+=sw){
-        const offset = (Math.floor(y/(sw*0.7))%2) * sw*0.5;
-        c.beginPath();
-        c.arc(x+offset, y, sw*0.5, Math.PI, 0);
-        c.stroke();
-      }
-    }
-  }
-  else if(pattern === 'galaxyPattern'){
-    const g = c.createRadialGradient(0,0,0,0,0,r);
-    g.addColorStop(0,'rgba(255,200,255,0.6)');
-    g.addColorStop(0.5,'rgba(160,80,200,0.4)');
-    g.addColorStop(1,'rgba(60,20,120,0.8)');
-    c.fillStyle = g; c.fillRect(-r,-r,r*2,r*2);
-    c.fillStyle = '#FFFFFF';
-    for(let i=0;i<12;i++){
-      const a=Math.random()*Math.PI*2;
-      const d=rand(r*0.2,r*0.9);
-      c.globalAlpha = rand(0.5,1);
-      c.beginPath(); c.arc(Math.cos(a)*d, Math.sin(a)*d, rand(0.8,1.8), 0, Math.PI*2); c.fill();
-    }
-    c.globalAlpha = 1;
-  }
-  else if(pattern === 'holo'){
-    const g = c.createLinearGradient(-r, -r, r, r);
-    g.addColorStop(0,'rgba(255,180,255,0.6)');
-    g.addColorStop(0.33,'rgba(180,255,255,0.5)');
-    g.addColorStop(0.66,'rgba(255,255,180,0.5)');
-    g.addColorStop(1,'rgba(180,180,255,0.6)');
-    c.fillStyle = g; c.fillRect(-r,-r,r*2,r*2);
-  }
-  else if(pattern === 'firePattern'){
-    const g = c.createRadialGradient(0,r*0.3,0,0,r*0.3,r*1.1);
-    g.addColorStop(0,'rgba(255,240,150,0.9)');
-    g.addColorStop(0.5,'rgba(255,120,40,0.6)');
-    g.addColorStop(1,'rgba(200,40,10,0)');
-    c.fillStyle = g; c.fillRect(-r,-r,r*2,r*2);
-  }
-  else if(pattern === 'clouds'){
-    c.fillStyle = 'rgba(255,255,255,0.35)';
-    const blobs = [[-r*0.5,-r*0.4,r*0.3],[0,-r*0.55,r*0.35],[r*0.5,-r*0.4,r*0.3],[-r*0.3,r*0.3,r*0.28],[r*0.4,r*0.4,r*0.3]];
-    for(const [bx,by,br] of blobs){ c.beginPath(); c.arc(bx,by,br,0,Math.PI*2); c.fill(); }
-  }
-  else if(pattern === 'voidPattern'){
-    const g = c.createRadialGradient(0,0,r*0.2,0,0,r);
-    g.addColorStop(0,'rgba(160,64,255,0.7)');
-    g.addColorStop(0.5,'rgba(80,20,140,0.6)');
-    g.addColorStop(1,'rgba(20,0,40,0.95)');
-    c.fillStyle = g; c.fillRect(-r,-r,r*2,r*2);
-  }
-  else if(pattern === 'craters'){
-    c.fillStyle = 'rgba(120,120,140,0.4)';
-    const cr = [[-r*0.4,-r*0.3,r*0.2],[r*0.35,r*0.15,r*0.22],[-r*0.2,r*0.5,r*0.16],[r*0.45,-r*0.5,r*0.13]];
-    for(const [cx,cy,crr] of cr){ c.beginPath(); c.arc(cx,cy,crr,0,Math.PI*2); c.fill(); }
-  }
-  else if(pattern === 'starfield'){
-    c.fillStyle = '#FFFFFF';
-    for(let i=0;i<20;i++){
-      const a=Math.random()*Math.PI*2;
-      const d=rand(r*0.1,r*0.95);
-      c.globalAlpha = rand(0.3,1);
-      const sz = rand(0.6,1.6);
-      c.beginPath(); c.arc(Math.cos(a)*d, Math.sin(a)*d, sz, 0, Math.PI*2); c.fill();
-    }
-    c.globalAlpha = 1;
-  }
-  else if(pattern === 'holyPattern'){
-    const g = c.createRadialGradient(0,0,0,0,0,r);
-    g.addColorStop(0,'rgba(255,255,200,0.9)');
-    g.addColorStop(1,'rgba(255,200,80,0.5)');
-    c.fillStyle = g; c.fillRect(-r,-r,r*2,r*2);
-  }
-  else if(pattern === 'prismatic'){
-    const g = c.createConicGradient ? c.createConicGradient(G.t*0.02, 0, 0) :
-      c.createLinearGradient(-r,-r,r,r);
-    if(g.addColorStop){
-      g.addColorStop(0,   'rgba(255,80,80,0.5)');
-      g.addColorStop(0.17,'rgba(255,180,80,0.5)');
-      g.addColorStop(0.33,'rgba(255,240,80,0.5)');
-      g.addColorStop(0.5, 'rgba(80,255,120,0.5)');
-      g.addColorStop(0.66,'rgba(80,180,255,0.5)');
-      g.addColorStop(0.83,'rgba(180,80,255,0.5)');
-      g.addColorStop(1,   'rgba(255,80,80,0.5)');
-    }
-    c.fillStyle = g; c.fillRect(-r,-r,r*2,r*2);
-  }
-  else if(pattern === 'rainbow'){
-    const g = c.createLinearGradient(-r,-r,r,r);
-    g.addColorStop(0,'rgba(255,80,140,0.4)');
-    g.addColorStop(0.25,'rgba(255,180,80,0.4)');
-    g.addColorStop(0.5,'rgba(255,240,80,0.4)');
-    g.addColorStop(0.75,'rgba(80,220,160,0.4)');
-    g.addColorStop(1,'rgba(80,160,255,0.4)');
-    c.fillStyle = g; c.fillRect(-r,-r,r*2,r*2);
-  }
-  c.restore();
-}
-
+   ═══════════ DRAW CHARACTER BODY v3 — IMAGE ONLY ═══════════
+   ═══════════════════════════════════════════════════════════ */
 function drawCharacterBody(c, r, skin, t){
-  /* ═══════════════════════════════════════════════════════
-     ═══ الحالة 1: زي مخصص بصورة (imageData أو imagePath) ═══
-     ═══════════════════════════════════════════════════════ */
+  /* ═══ صورة الزي ═══ */
   if(hasItemImage(skin)){
     const img = getItemImageEl(skin);
 
-    /* الصورة جاهزة */
+    /* جاهزة → ارسمها */
     if(img && img.complete && img.naturalWidth > 0){
       const size = r * 2.6;
       c.drawImage(img, -size/2, -size/2, size, size);
       return;
     }
 
-    /* الصورة لم تُحمّل بعد — أضف onload لرسمها عند الجاهزية */
-    if(img && !img._listenerAttached){
-      img._listenerAttached = true;
-      img.addEventListener('load', ()=>{ /* ستُرسم في الإطار التالي */ });
-      img.addEventListener('error', ()=>{ img._errored = true; });
-    }
-
-    /* احتياطي: ارسم دائرة بلون الزي */
-    const fallbackBody = skin.body || '#E07A3F';
-    const fallbackDark = skin.bodyDark || mixColor(fallbackBody, '#000', 0.3);
-    const fallbackAccent = skin.accent || '#FFB060';
-
-    /* ظل */
-    c.fillStyle = 'rgba(0,0,0,0.12)';
-    c.beginPath(); c.arc(0, 1.5, r + 0.8, 0, Math.PI*2); c.fill();
-
-    /* جسم دائري بتدرج */
-    const g = c.createRadialGradient(-r*0.35, -r*0.4, r*0.15, 0, 0, r*1.1);
-    g.addColorStop(0, mixColor(fallbackBody, '#FFFFFF', 0.35));
-    g.addColorStop(0.55, fallbackBody);
-    g.addColorStop(1, fallbackDark);
-    c.fillStyle = g;
-    c.beginPath(); c.arc(0, 0, r, 0, Math.PI*2); c.fill();
-
-    /* لمعة */
-    c.fillStyle = 'rgba(255,255,255,0.42)';
+    /* قيد التحميل → دائرة نابضة خفيفة */
+    const pulse = 0.5 + Math.sin(t * 0.15) * 0.2;
+    c.fillStyle = skin.body || '#E07A3F';
+    c.globalAlpha = pulse;
     c.beginPath();
-    c.ellipse(-r*0.32, -r*0.42, r*0.32, r*0.2, -0.6, 0, Math.PI*2);
+    c.arc(0, 0, r, 0, Math.PI * 2);
     c.fill();
-
-    /* نقطة صغيرة في الوسط لتمييز التحميل */
-    c.fillStyle = fallbackAccent;
-    c.globalAlpha = 0.4 + Math.sin(t * 0.2) * 0.4;
-    c.beginPath(); c.arc(0, 0, r * 0.25, 0, Math.PI*2); c.fill();
     c.globalAlpha = 1;
     return;
   }
 
-  /* ═══════════════════════════════════════════════════════
-     ═══ الحالة 2: زي من القائمة الأساسية (رسم برمجي) ═══
-     ═══════════════════════════════════════════════════════ */
-
-  const rainbow = skin.rainbow;
-
-  /* ظل خفيف */
-  c.fillStyle = 'rgba(0,0,0,0.12)';
-  c.beginPath(); c.arc(0, 1.5, r + 0.8, 0, Math.PI*2); c.fill();
-
-  /* ═══ لون الجسم ═══ */
-  if(rainbow && (skin.pattern === 'none' || !skin.pattern)){
-    /* تدرج قوس قزح قطري */
-    const g = c.createLinearGradient(-r, -r, r, r);
-    g.addColorStop(0,    '#FF6088');
-    g.addColorStop(0.25, '#FFB04C');
-    g.addColorStop(0.5,  '#FFE24C');
-    g.addColorStop(0.75, '#4CE0A8');
-    g.addColorStop(1,    '#4CA8FF');
-    c.fillStyle = g;
-  } else {
-    /* تدرج دائري عادي */
-    const bodyColor = skin.body || '#F5EFE6';
-    const bodyDark  = skin.bodyDark || mixColor(bodyColor, '#000', 0.2);
-    const g = c.createRadialGradient(-r*0.35, -r*0.4, r*0.15, 0, 0, r*1.1);
-    g.addColorStop(0,    mixColor(bodyColor, '#FFFFFF', 0.35));
-    g.addColorStop(0.55, bodyColor);
-    g.addColorStop(1,    bodyDark);
-    c.fillStyle = g;
-  }
-
-  /* رسم الدائرة الأساسية */
+  /* ═══ لا صورة → دائرة placeholder رمادية ═══ */
+  c.fillStyle = '#CCCCCC';
   c.beginPath();
-  c.arc(0, 0, r, 0, Math.PI*2);
+  c.arc(0, 0, r, 0, Math.PI * 2);
   c.fill();
 
-  /* ═══ ظل سفلي داخل الجسم ═══ */
-  c.fillStyle = 'rgba(0,0,0,0.08)';
-  c.beginPath();
-  c.arc(0, r*0.15, r*0.98, 0.15*Math.PI, 0.85*Math.PI);
-  c.fill();
-
-  /* ═══ نقشة الزي (spots, stripes, etc.) ═══ */
-  drawSkinPattern(c, r, skin.pattern);
-
-  /* ═══ لمعة علوية (Highlight) ═══ */
-  c.fillStyle = 'rgba(255,255,255,0.42)';
-  c.beginPath();
-  c.ellipse(-r*0.32, -r*0.42, r*0.32, r*0.2, -0.6, 0, Math.PI*2);
-  c.fill();
+  c.fillStyle = '#888888';
+  c.font = `bold ${r * 0.9}px "Space Grotesk", sans-serif`;
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.fillText('?', 0, 0);
 }
 
-function drawCharacterFace(c, r, skin){
-  /* ═══ لا ترسم العيون إذا كان الزي يحتوي على صورة ═══ */
-  if(skin.imageData) return;
-  if(skin.imagePath) return;
-  if(hasItemImage(skin)) return;
-
-  const eyes = currentEyes();
-
-  /* ✅ عيون مخصصة بصورة */
-  if(hasItemImage(eyes)){
-    const img = getItemImageEl(eyes);
-    if(img && img.complete && img.naturalWidth > 0){
-      const eyeY = -r * 0.15;
-      const sz = r * 0.55;
-      c.drawImage(img, -r*0.28 - sz/2, eyeY - sz/2, sz, sz);
-      c.drawImage(img,  r*0.28 - sz/2, eyeY - sz/2, sz, sz);
-      /* الخدود */
-      c.fillStyle = 'rgba(224,122,63,0.32)';
-      c.beginPath();
-      c.ellipse(-r*0.55, r*0.2, r*0.18, r*0.11, 0, 0, Math.PI*2);
-      c.ellipse( r*0.55, r*0.2, r*0.18, r*0.11, 0, 0, Math.PI*2);
-      c.fill();
-      /* الفم */
-      c.strokeStyle = skin.detail || '#1A1512';
-      c.lineWidth = Math.max(1.2, r*0.1);
-      c.lineCap = 'round';
-      c.beginPath(); c.arc(0, r*0.25, r*0.22, 0.15*Math.PI, 0.85*Math.PI); c.stroke();
-      return;
-    }
-  }
-  const eyeId = eyes.id || 'default';
-
-const eyeY = -r*0.15, eyeX = r*0.28, eyeR = r*0.24;
-const detailColor = skin.detail || '#1A1512';   /* ✅ حماية */
-
-  /* ═══════════ ارسم العيون حسب النمط ═══════════ */
-  if(eyeId === 'void'){
-    /* لا شيء — عيون فارغة */
-  }
-  else if(eyeId === 'dead'){
-    c.strokeStyle = skin.detail; c.lineWidth = r*0.1; c.lineCap = 'round';
-    for(const sx of [-1, 1]){
-      const cx = sx * eyeX;
-      c.beginPath();
-      c.moveTo(cx - r*0.18, eyeY - r*0.18);
-      c.lineTo(cx + r*0.18, eyeY + r*0.18);
-      c.moveTo(cx + r*0.18, eyeY - r*0.18);
-      c.lineTo(cx - r*0.18, eyeY + r*0.18);
-      c.stroke();
-    }
-  }
-  else if(eyeId === 'star'){
-    for(const sx of [-1, 1]){
-      const cx = sx * eyeX;
-      c.fillStyle = skin.detail;
-      c.beginPath();
-      for(let i=0;i<10;i++){
-        const a = (i/10)*Math.PI*2 - Math.PI/2;
-        const rr = i%2===0 ? r*0.22 : r*0.09;
-        const px = cx + Math.cos(a)*rr;
-        const py = eyeY + Math.sin(a)*rr;
-        i===0 ? c.moveTo(px,py) : c.lineTo(px,py);
-      }
-      c.closePath(); c.fill();
-    }
-  }
-  else if(eyeId === 'heart'){
-    for(const sx of [-1, 1]){
-      const cx = sx * eyeX;
-      c.fillStyle = '#FF4060';
-      c.beginPath();
-      c.moveTo(cx, eyeY + r*0.1);
-      c.bezierCurveTo(cx + r*0.25, eyeY - r*0.1, cx + r*0.15, eyeY - r*0.3, cx, eyeY - r*0.1);
-      c.bezierCurveTo(cx - r*0.15, eyeY - r*0.3, cx - r*0.25, eyeY - r*0.1, cx, eyeY + r*0.1);
-      c.fill();
-    }
-  }
-  else if(eyeId === 'robot'){
-    for(const sx of [-1, 1]){
-      const cx = sx * eyeX;
-      c.fillStyle = '#40E8FF';
-      c.shadowColor = '#40E8FF'; c.shadowBlur = 8;
-      c.fillRect(cx - r*0.18, eyeY - r*0.18, r*0.36, r*0.36);
-      c.shadowBlur = 0;
-      c.fillStyle = skin.detail;
-      c.fillRect(cx - r*0.1, eyeY - r*0.1, r*0.2, r*0.2);
-      c.fillStyle = '#40E8FF';
-      c.fillRect(cx - r*0.06, eyeY - r*0.06, r*0.08, r*0.08);
-    }
-  }
-  else if(eyeId === 'glowing'){
-    for(const sx of [-1, 1]){
-      const cx = sx * eyeX;
-      const glow = c.createRadialGradient(cx, eyeY, 0, cx, eyeY, r*0.4);
-      glow.addColorStop(0, '#FFF8C0');
-      glow.addColorStop(0.5, '#FFD040');
-      glow.addColorStop(1, 'rgba(255,208,64,0)');
-      c.fillStyle = glow;
-      c.beginPath(); c.arc(cx, eyeY, r*0.4, 0, Math.PI*2); c.fill();
-      c.fillStyle = '#FFFFFF';
-      c.beginPath(); c.arc(cx, eyeY, r*0.15, 0, Math.PI*2); c.fill();
-    }
-  }
-  else if(eyeId === 'rainbow'){
-    const hue = (G.t * 3) % 360;
-    for(const sx of [-1, 1]){
-      const cx = sx * eyeX;
-      c.fillStyle = `hsl(${hue}, 85%, 60%)`;
-      c.beginPath(); c.arc(cx, eyeY, r*0.24, 0, Math.PI*2); c.fill();
-      c.fillStyle = `hsl(${(hue + 180) % 360}, 85%, 60%)`;
-      c.beginPath(); c.arc(cx, eyeY, r*0.11, 0, Math.PI*2); c.fill();
-      c.fillStyle = '#FFFFFF';
-      c.beginPath(); c.arc(cx - r*0.05, eyeY - r*0.06, r*0.05, 0, Math.PI*2); c.fill();
-    }
-  }
-  else if(eyeId === 'cat'){
-    for(const sx of [-1, 1]){
-      const cx = sx * eyeX;
-      c.fillStyle = '#E8F040';
-      c.beginPath();
-      c.ellipse(cx, eyeY, r*0.24, r*0.28, 0, 0, Math.PI*2);
-      c.fill();
-      c.fillStyle = '#1A1512';
-      c.beginPath();
-      c.ellipse(cx, eyeY, r*0.06, r*0.24, 0, 0, Math.PI*2);
-      c.fill();
-      c.fillStyle = 'rgba(255,255,255,0.8)';
-      c.beginPath();
-      c.arc(cx - r*0.08, eyeY - r*0.1, r*0.05, 0, Math.PI*2);
-      c.fill();
-    }
-  }
-  else if(eyeId === 'cute'){
-    for(const sx of [-1, 1]){
-      const cx = sx * eyeX;
-      c.fillStyle = '#FFFFFF';
-      c.beginPath(); c.arc(cx, eyeY, r*0.28, 0, Math.PI*2); c.fill();
-      c.fillStyle = skin.detail;
-      c.beginPath(); c.arc(cx, eyeY + r*0.04, r*0.2, 0, Math.PI*2); c.fill();
-      c.fillStyle = '#FFFFFF';
-      c.beginPath(); c.arc(cx - r*0.08, eyeY - r*0.1, r*0.1, 0, Math.PI*2); c.fill();
-      c.beginPath(); c.arc(cx + r*0.06, eyeY + r*0.06, r*0.04, 0, Math.PI*2); c.fill();
-      c.strokeStyle = skin.detail; c.lineWidth = r*0.08; c.lineCap='round';
-      c.beginPath();
-      c.arc(cx, eyeY - r*0.22, r*0.2, Math.PI*1.15, Math.PI*1.85);
-      c.stroke();
-    }
-  }
-  else if(eyeId === 'sleepy'){
-    for(const sx of [-1, 1]){
-      const cx = sx * eyeX;
-      c.fillStyle = '#FFFFFF';
-      c.beginPath();
-      c.ellipse(cx, eyeY, r*0.24, r*0.16, 0, 0, Math.PI*2);
-      c.fill();
-      c.fillStyle = skin.detail;
-      c.beginPath();
-      c.ellipse(cx, eyeY + r*0.06, r*0.14, r*0.08, 0, 0, Math.PI*2);
-      c.fill();
-      c.strokeStyle = skin.detail; c.lineWidth = r*0.06;
-      c.beginPath();
-      c.moveTo(cx - r*0.25, eyeY - r*0.1);
-      c.lineTo(cx + r*0.25, eyeY - r*0.1);
-      c.stroke();
-    }
-  }
-  else if(eyeId === 'angry'){
-    for(const sx of [-1, 1]){
-      const cx = sx * eyeX;
-      c.fillStyle = '#FFFFFF';
-      c.beginPath(); c.arc(cx, eyeY, r*0.22, 0, Math.PI*2); c.fill();
-      c.fillStyle = skin.detail;
-      c.beginPath(); c.arc(cx + sx*r*0.05, eyeY + r*0.05, r*0.14, 0, Math.PI*2); c.fill();
-      c.strokeStyle = skin.detail; c.lineWidth = r*0.1; c.lineCap='round';
-      c.beginPath();
-      c.moveTo(cx - sx*r*0.3, eyeY - r*0.3);
-      c.lineTo(cx + sx*r*0.15, eyeY - r*0.12);
-      c.stroke();
-    }
-  }
-  else {
-    /* default */
-    c.fillStyle = '#FFFFFF';
-    c.beginPath(); c.arc(-eyeX, eyeY, eyeR, 0, Math.PI*2); c.arc( eyeX, eyeY, eyeR, 0, Math.PI*2); c.fill();
-    c.fillStyle = skin.detail;
-    c.beginPath();
-    c.arc(-eyeX + r*0.05, eyeY + r*0.05, eyeR*0.6, 0, Math.PI*2);
-    c.arc( eyeX + r*0.05, eyeY + r*0.05, eyeR*0.6, 0, Math.PI*2);
-    c.fill();
-    c.fillStyle = '#FFFFFF';
-    c.beginPath();
-    c.arc(-eyeX - r*0.05, eyeY - r*0.06, eyeR*0.25, 0, Math.PI*2);
-    c.arc( eyeX - r*0.05, eyeY - r*0.06, eyeR*0.25, 0, Math.PI*2);
-    c.fill();
-  }
-
-  /* ═══════════ الخدود ═══════════ */
-  c.fillStyle = skin.rainbow ? 'rgba(255,80,120,0.4)' : 'rgba(224,122,63,0.32)';
-  c.beginPath();
-  c.ellipse(-r*0.55, r*0.2, r*0.18, r*0.11, 0, 0, Math.PI*2);
-  c.ellipse( r*0.55, r*0.2, r*0.18, r*0.11, 0, 0, Math.PI*2);
-  c.fill();
-
-  /* ═══════════ الفم ═══════════ */
-  c.strokeStyle = skin.detail;
-  c.lineWidth = Math.max(1.2, r*0.1);
-  c.lineCap = 'round';
-  c.beginPath(); c.arc(0, r*0.25, r*0.22, 0.15*Math.PI, 0.85*Math.PI); c.stroke();
+function initCompanion(){
+  /* ❌ نظام الرفاق محذوف في v3 */
 }
 
-function drawCharacterAccessory(c, r, skin, t){
-  const kind = skin.accessory;
-  if(kind === 'none') return;
-
-  if(kind === 'horns' || kind === 'demonHorns' || kind === 'dragonHorns'){
-    const col = kind === 'demonHorns' ? '#1A0808' : kind === 'dragonHorns' ? '#E8D0A0' : skin.detail;
-    c.fillStyle = col;
-    const hh = kind === 'dragonHorns' ? 1.7 : 1.35;
-    c.beginPath();
-    c.moveTo(-r*0.45, -r*0.85); c.lineTo(-r*0.55, -r*hh); c.lineTo(-r*0.2, -r*0.95); c.closePath(); c.fill();
-    c.beginPath();
-    c.moveTo(r*0.45, -r*0.85); c.lineTo(r*0.55, -r*hh); c.lineTo(r*0.2, -r*0.95); c.closePath(); c.fill();
-    if(kind === 'dragonHorns'){
-      c.strokeStyle = col; c.lineWidth = r*0.12; c.lineCap='round';
-      c.beginPath(); c.moveTo(-r*0.55,-r*hh); c.quadraticCurveTo(-r*0.9,-r*1.9,-r*0.7,-r*2.2); c.stroke();
-      c.beginPath(); c.moveTo(r*0.55,-r*hh); c.quadraticCurveTo(r*0.9,-r*1.9,r*0.7,-r*2.2); c.stroke();
-    }
-  }
-  else if(kind === 'leaf'){
-    c.strokeStyle = '#3A6E28'; c.lineWidth = r*0.09;
-    c.beginPath(); c.moveTo(0, -r*0.95); c.lineTo(r*0.1, -r*1.2); c.stroke();
-    c.fillStyle = '#6BBF4C';
-    c.beginPath(); c.ellipse(r*0.2, -r*1.25, r*0.35, r*0.18, -0.5, 0, Math.PI*2); c.fill();
-    c.fillStyle = 'rgba(255,255,255,0.35)';
-    c.beginPath(); c.ellipse(r*0.15, -r*1.3, r*0.16, r*0.06, -0.5, 0, Math.PI*2); c.fill();
-  }
-  else if(kind === 'cloud'){
-    c.fillStyle = '#FFFFFF';
-    c.beginPath();
-    c.arc(-r*0.15, -r*1.15, r*0.22, 0, Math.PI*2);
-    c.arc( r*0.15, -r*1.2, r*0.28, 0, Math.PI*2);
-    c.arc( r*0.4, -r*1.05, r*0.2, 0, Math.PI*2);
-    c.arc(-r*0.4, -r*1.0, r*0.18, 0, Math.PI*2);
-    c.fill();
-  }
-  else if(kind === 'spikes'){
-    c.fillStyle = skin.accent;
-    const spikes = 7;
-    for(let i=0;i<spikes;i++){
-      const a = -Math.PI*0.85 + (i/(spikes-1))*Math.PI*0.7;
-      const bx = Math.cos(a)*r*0.98, by = Math.sin(a)*r*0.98;
-      const tipX = Math.cos(a)*r*1.35, tipY = Math.sin(a)*r*1.35;
-      const px = Math.cos(a + 0.22)*r*0.95, py = Math.sin(a + 0.22)*r*0.95;
-      c.beginPath(); c.moveTo(bx, by); c.lineTo(tipX, tipY); c.lineTo(px, py); c.closePath(); c.fill();
-    }
-  }
-  else if(kind === 'halo'){
-    c.save();
-    c.translate(0, -r*1.35); c.rotate(t*0.02);
-    c.strokeStyle = '#FFF4C0'; c.lineWidth = r*0.13;
-    c.beginPath(); c.ellipse(0, 0, r*0.7, r*0.22, 0, 0, Math.PI*2); c.stroke();
-    c.strokeStyle = '#E8B34E'; c.lineWidth = r*0.06;
-    c.beginPath(); c.ellipse(0, 0, r*0.7, r*0.22, 0, 0, Math.PI*2); c.stroke();
-    c.restore();
-  }
-  else if(kind === 'star'){
-    c.save();
-    c.translate(0, -r*1.4); c.rotate(t*0.05);
-    c.fillStyle = skin.accent;
-    c.shadowColor = skin.accent; c.shadowBlur = 12;
-    c.beginPath();
-    for(let i=0;i<10;i++){
-      const a = (i/10)*Math.PI*2 - Math.PI/2;
-      const radius = i%2===0 ? r*0.38 : r*0.16;
-      const px = Math.cos(a)*radius, py = Math.sin(a)*radius;
-      i===0 ? c.moveTo(px,py) : c.lineTo(px,py);
-    }
-    c.closePath(); c.fill();
-    c.shadowBlur = 0;
-    c.restore();
-  }
-  else if(kind === 'rainbow'){
-    c.save();
-    c.lineWidth = r*0.16; c.lineCap = 'round';
-    const colors = ['#FF6088','#FFA84C','#FFE24C','#4CE0A8','#4CA8FF','#A86AFF'];
-    for(let i=0;i<colors.length;i++){
-      c.strokeStyle = colors[i];
-      c.beginPath(); c.arc(0, 0, r*1.15 - i*(r*0.16), Math.PI*1.15, Math.PI*1.85); c.stroke();
-    }
-    c.restore();
-  }
-  else if(kind === 'wings'){
-    const flap = Math.sin(t*0.18)*0.15;
-    c.save(); c.translate(-r*1.05, -r*0.05); c.rotate(-0.5 + flap);
-    c.fillStyle = skin.accent;
-    c.beginPath(); c.ellipse(0, 0, r*0.55, r*0.22, 0, 0, Math.PI*2); c.fill();
-    c.restore();
-    c.save(); c.translate(r*1.05, -r*0.05); c.rotate(0.5 - flap);
-    c.fillStyle = skin.accent;
-    c.beginPath(); c.ellipse(0, 0, r*0.55, r*0.22, 0, 0, Math.PI*2); c.fill();
-    c.restore();
-  }
-  else if(kind === 'angelWings' || kind === 'phoenixWings' || kind === 'dragonWings' || kind === 'demonWings'){
-    const flap = Math.sin(t*0.15)*0.2;
-    const isAngel = kind === 'angelWings';
-    const isPhoenix = kind === 'phoenixWings';
-    const isDemon = kind === 'demonWings';
-    const featherCol = isAngel ? '#FFF8E0' : isPhoenix ? '#FF8040' : isDemon ? '#8A2020' : '#3A8040';
-    for(const side of [-1, 1]){
-      c.save();
-      c.translate(side*r*0.85, -r*0.15);
-      c.rotate(side * (0.4 - flap*0.3));
-      c.fillStyle = featherCol;
-      c.shadowColor = isPhoenix ? '#FF5020' : featherCol;
-      c.shadowBlur = isPhoenix ? 10 : 0;
-      for(let i=0;i<4;i++){
-        const size = r * (0.7 - i*0.1);
-        const yy = -r*0.3 + i*r*0.15;
-        c.beginPath();
-        c.ellipse(side * r*0.3, yy, size, r*0.15, side*0.3, 0, Math.PI*2);
-        c.fill();
-      }
-      c.shadowBlur = 0;
-      c.restore();
-    }
-  }
-  else if(kind === 'shadowWisps'){
-    for(let i=0;i<5;i++){
-      const a = t*0.06 + (i/5)*Math.PI*2;
-      const dist = r*1.3;
-      c.fillStyle = `rgba(60,20,90,${0.4 + Math.sin(t*0.1+i)*0.3})`;
-      c.beginPath();
-      c.ellipse(Math.cos(a)*dist, Math.sin(a)*dist + Math.sin(t*0.08+i)*4,
-                r*0.35, r*0.15, a, 0, Math.PI*2);
-      c.fill();
-    }
-  }
-  else if(kind === 'lightningBolts'){
-    for(let i=0;i<3;i++){
-      const a = t*0.1 + (i/3)*Math.PI*2;
-      const sx = Math.cos(a)*r*1.4, sy = Math.sin(a)*r*1.4 - r*0.5;
-      c.strokeStyle = '#FFE060'; c.lineWidth = 2;
-      c.shadowColor = '#FFE060'; c.shadowBlur = 10;
-      c.beginPath();
-      c.moveTo(sx, sy);
-      c.lineTo(sx + rand(-6,6), sy + 8);
-      c.lineTo(sx + rand(-4,4), sy + 16);
-      c.stroke();
-    }
-    c.shadowBlur = 0;
-  }
-  else if(kind === 'antenna'){
-    c.strokeStyle = skin.detail; c.lineWidth = r*0.1; c.lineCap = 'round';
-    c.beginPath();
-    c.moveTo(0, -r*0.9);
-    c.quadraticCurveTo(-r*0.2, -r*1.4, r*0.1, -r*1.6);
-    c.stroke();
-    c.fillStyle = '#00FF80';
-    c.shadowColor = '#00FF80'; c.shadowBlur = 10;
-    c.beginPath(); c.arc(r*0.1, -r*1.6, r*0.16, 0, Math.PI*2); c.fill();
-    c.shadowBlur = 0;
-    const pulse = 0.5 + Math.sin(t*0.15)*0.5;
-    c.globalAlpha = pulse;
-    c.beginPath(); c.arc(r*0.1, -r*1.6, r*0.25, 0, Math.PI*2); c.fill();
-    c.globalAlpha = 1;
-  }
-  else if(kind === 'crystalShards'){
-    for(let i=0;i<5;i++){
-      const a = -Math.PI*0.85 + (i/4)*Math.PI*0.7;
-      const bx = Math.cos(a)*r*0.95, by = Math.sin(a)*r*0.95;
-      const h = r * (0.4 + Math.random()*0.3);
-      c.save();
-      c.translate(bx, by); c.rotate(a + Math.PI/2);
-      c.fillStyle = '#A0E0FF';
-      c.shadowColor = '#80D8FF'; c.shadowBlur = 8;
-      c.beginPath();
-      c.moveTo(-r*0.08, 0); c.lineTo(0, -h); c.lineTo(r*0.08, 0);
-      c.closePath(); c.fill();
-      c.restore();
-    }
-    c.shadowBlur = 0;
-  }
-  else if(kind === 'ninjaMask'){
-    c.fillStyle = '#0A0A18';
-    c.beginPath();
-    c.ellipse(0, -r*0.05, r*1.02, r*0.45, 0, 0, Math.PI*2);
-    c.fill();
-    c.fillStyle = '#E83040';
-    c.beginPath();
-    c.ellipse(-r*0.3, -r*0.1, r*0.2, r*0.06, 0, 0, Math.PI*2);
-    c.ellipse(r*0.3, -r*0.1, r*0.2, r*0.06, 0, 0, Math.PI*2);
-    c.fill();
-  }
-  else if(kind === 'helmet'){
-    c.fillStyle = 'rgba(200,220,240,0.4)';
-    c.strokeStyle = '#A0B8D0'; c.lineWidth = 2;
-    c.beginPath();
-    c.arc(0, -r*0.1, r*1.15, Math.PI*1.1, Math.PI*1.9);
-    c.arc(0, r*0.4, r*1.15, Math.PI*0.05, Math.PI*0.95, true);
-    c.closePath();
-    c.fill(); c.stroke();
-    c.fillStyle = 'rgba(255,255,255,0.5)';
-    c.beginPath();
-    c.ellipse(-r*0.4, -r*0.4, r*0.2, r*0.1, -0.5, 0, Math.PI*2);
-    c.fill();
-  }
-  else if(kind === 'visor'){
-    c.fillStyle = 'rgba(0,20,40,0.9)';
-    c.strokeStyle = '#00FFFF'; c.lineWidth = 1.5;
-    c.shadowColor = '#00FFFF'; c.shadowBlur = 10;
-    c.beginPath();
-    c.ellipse(0, -r*0.12, r*0.85, r*0.28, 0, 0, Math.PI*2);
-    c.fill(); c.stroke();
-    c.shadowBlur = 0;
-    const scan = ((t*3)%100)/100;
-    c.strokeStyle = 'rgba(0,255,255,0.7)'; c.lineWidth = 1;
-    c.beginPath();
-    c.moveTo(-r*0.7, -r*0.12 + scan*r*0.4);
-    c.lineTo(r*0.7, -r*0.12 + scan*r*0.4);
-    c.stroke();
-  }
-  else if(kind === 'flowerCrown'){
-    const cols = ['#FF80A0','#FFB040','#FFE060','#C080FF','#80C0FF'];
-    for(let i=0;i<6;i++){
-      const a = -Math.PI*0.9 + (i/5)*Math.PI*0.8;
-      const px = Math.cos(a)*r*0.9;
-      const py = Math.sin(a)*r*0.9 - r*0.3;
-      c.fillStyle = cols[i % cols.length];
-      for(let k=0;k<5;k++){
-        const ak = (k/5)*Math.PI*2;
-        c.beginPath();
-        c.ellipse(px + Math.cos(ak)*r*0.1, py + Math.sin(ak)*r*0.1, r*0.09, r*0.05, ak, 0, Math.PI*2);
-        c.fill();
-      }
-      c.fillStyle = '#FFE060';
-      c.beginPath(); c.arc(px, py, r*0.06, 0, Math.PI*2); c.fill();
-    }
-  }
-  else if(kind === 'mushroomCap'){
-    c.fillStyle = '#E85040';
-    c.beginPath();
-    c.arc(0, -r*0.9, r*0.75, Math.PI, Math.PI*2);
-    c.fill();
-    c.fillStyle = '#FFFFFF';
-    for(let i=0;i<5;i++){
-      const px = -r*0.5 + i*r*0.25;
-      const py = -r*1.0 + Math.sin(i*1.3)*r*0.12;
-      c.beginPath(); c.arc(px, py, r*0.06, 0, Math.PI*2); c.fill();
-    }
-    c.fillStyle = '#F0E8D0';
-    c.fillRect(-r*0.12, -r*0.9, r*0.24, r*0.6);
-  }
-  else if(kind === 'pumpkinStem'){
-    c.strokeStyle = '#3A6E28'; c.lineWidth = r*0.15; c.lineCap='round';
-    c.beginPath();
-    c.moveTo(0, -r*0.9);
-    c.quadraticCurveTo(r*0.1, -r*1.25, r*0.25, -r*1.35);
-    c.stroke();
-    c.fillStyle = '#7BC44C';
-    c.beginPath(); c.ellipse(r*0.35, -r*1.3, r*0.15, r*0.08, -0.6, 0, Math.PI*2); c.fill();
-  }
-  else if(kind === 'moonCrown'){
-    c.fillStyle = '#FFF8D0';
-    c.shadowColor = '#F0F0FF'; c.shadowBlur = 10;
-    c.beginPath();
-    c.arc(0, -r*1.15, r*0.35, 0, Math.PI*2);
-    c.fill();
-    c.fillStyle = 'rgba(200,200,220,0.5)';
-    c.beginPath();
-    c.arc(r*0.05, -r*1.2, r*0.4, -0.3, 0.3, false);
-    c.fill();
-    c.shadowBlur = 0;
-  }
-  else if(kind === 'divineCrown'){
-    const pl = 0.7 + Math.sin(t*0.12)*0.3;
-    c.strokeStyle = '#FFF4C0'; c.lineWidth = r*0.15;
-    c.shadowColor = '#FFE060'; c.shadowBlur = 15*pl;
-    c.beginPath(); c.ellipse(0, -r*1.2, r*0.85, r*0.28, 0, 0, Math.PI*2); c.stroke();
-    c.shadowBlur = 0;
-    for(let i=0;i<3;i++){
-      const a = -Math.PI/2 + (i-1)*0.4;
-      const px = Math.cos(a)*r*0.85, py = -r*1.2 + Math.sin(a)*r*0.28;
-      c.fillStyle = '#FFFFFF';
-      c.shadowColor = '#FFF8C0'; c.shadowBlur = 12*pl;
-      c.beginPath(); c.arc(px, py, r*0.13, 0, Math.PI*2); c.fill();
-    }
-    c.shadowBlur = 0;
-  }
-  else if(kind === 'crystalCrown'){
-    for(let i=0;i<5;i++){
-      const px = -r*0.6 + i*r*0.3;
-      const h = r*(0.5 + Math.sin(i*1.3)*0.2);
-      c.fillStyle = `hsl(${(t*3 + i*40)%360},80%,65%)`;
-      c.shadowColor = c.fillStyle; c.shadowBlur = 10;
-      c.beginPath();
-      c.moveTo(px - r*0.08, -r*0.9);
-      c.lineTo(px, -r*0.9 - h);
-      c.lineTo(px + r*0.08, -r*0.9);
-      c.closePath(); c.fill();
-    }
-    c.shadowBlur = 0;
-  }
+function updateCompanion(){
+  /* ❌ نظام الرفاق محذوف في v3 */
 }
 
-function drawWalkLimbs(c, r, skin, flipped){
-  const legPhase = Math.sin(P.legPhase) * 5;
-  const armPhase = Math.sin(P.legPhase + Math.PI) * 4;
-  const bodyBob = P.onGround ? Math.sin(P.legPhase*2) * 1 : 0;
-
-  c.fillStyle = skin.bodyDark;
-  if(P.onGround){
-    roundRect(c, -5, (r-3 + bodyBob*0.3), 4.5, 10 + legPhase, 2.2); c.fill();
-    roundRect(c, 1, (r-3 + bodyBob*0.3), 4.5, 10 - legPhase, 2.2); c.fill();
-    c.beginPath();
-    c.arc(-2.8, (r+6+legPhase + bodyBob*0.3), 2.8, 0, Math.PI*2);
-    c.arc(3.2, (r+6-legPhase + bodyBob*0.3), 2.8, 0, Math.PI*2);
-    c.fill();
-  } else {
-    roundRect(c, -5, (r-3), 4.5, 7, 2.2); c.fill();
-    roundRect(c, 1, (r-3), 4.5, 7, 2.2); c.fill();
-  }
-
-  c.fillStyle = skin.body;
-  if(P.onGround){
-    roundRect(c, -r-2, -2 + armPhase*0.6, 3.5, 8, 1.8); c.fill();
-    roundRect(c, r-1.5, -2 - armPhase*0.6, 3.5, 8, 1.8); c.fill();
-  } else {
-    roundRect(c, -r-2, -6, 3.5, 6, 1.8); c.fill();
-    roundRect(c, r-1.5, -6, 3.5, 6, 1.8); c.fill();
-  }
+/* ═══════════════════════════════════════════════════════════
+   ═══════════ COMPANION REMOVED في v3 ═══════════════════════
+   ═══════════════════════════════════════════════════════════ */
+function drawCompanion(){
+  /* ❌ نظام الرفاق محذوف في v3 — لا يفعل شيئاً */
 }
 
-function drawEngineFlame(c, r, skin){
-  const flameLen = 12 + Math.sin(P.enginePhase)*4;
-  const flameCol = skin.accent;
-  const flameCol2 = mixColor(skin.accent, '#FFFFFF', 0.5);
-  const grad = c.createLinearGradient(-r*0.9, 0, -r*0.9 - flameLen, 0);
-  grad.addColorStop(0, flameCol); grad.addColorStop(0.5, flameCol2); grad.addColorStop(1, 'rgba(255,255,255,0)');
-  c.fillStyle = grad;
-  c.beginPath();
-  c.moveTo(-r*0.85, -r*0.5);
-  c.quadraticCurveTo(-r*0.85 - flameLen*0.5, -r*0.2, -r*0.85 - flameLen, 0);
-  c.quadraticCurveTo(-r*0.85 - flameLen*0.5, r*0.2, -r*0.85, r*0.5);
-  c.closePath(); c.fill();
-  c.fillStyle = 'rgba(255,255,255,0.85)';
-  c.beginPath();
-  c.moveTo(-r*0.85, -r*0.25);
-  c.quadraticCurveTo(-r*0.85 - flameLen*0.4, -r*0.1, -r*0.85 - flameLen*0.55, 0);
-  c.quadraticCurveTo(-r*0.85 - flameLen*0.4, r*0.1, -r*0.85, r*0.25);
-  c.closePath(); c.fill();
-}
-
-function drawSideFins(c, r, skin){
-  const flap = Math.sin(P.enginePhase*0.9) * 0.1;
-  c.save(); c.translate(-r*0.65, 0); c.rotate(-0.3 + flap);
-  c.fillStyle = skin.bodyDark;
-  c.beginPath(); c.ellipse(-r*0.25, 0, r*0.4, r*0.18, 0, 0, Math.PI*2); c.fill();
-  c.restore();
-  c.save(); c.translate(r*0.65, 0); c.rotate(0.3 - flap);
-  c.fillStyle = skin.bodyDark;
-  c.beginPath(); c.ellipse(r*0.25, 0, r*0.4, r*0.18, 0, 0, Math.PI*2); c.fill();
-  c.restore();
-}
-
-function drawSparklesAround(c, r, skin){
-  const t = G.t * 0.04;
-  for(let i=0;i<3;i++){
-    const a = t + i * (Math.PI*2/3);
-    const px = Math.cos(a) * r * 1.4;
-    const py = Math.sin(a) * r * 1.4;
-    const size = 1.6 + Math.sin(t*3 + i)*0.8;
-    c.fillStyle = skin.accent;
-    c.globalAlpha = 0.75;
-    c.beginPath();
-    for(let k=0;k<4;k++){
-      const ak = (k/4)*Math.PI*2;
-      const rr = k%2===0 ? size : size*0.35;
-      const qx = px + Math.cos(ak)*rr, qy = py + Math.sin(ak)*rr;
-      k===0 ? c.moveTo(qx,qy) : c.lineTo(qx,qy);
-    }
-    c.closePath(); c.fill();
-  }
-  c.globalAlpha = 1;
-}
-
+/* ============================================================
+   ═══════════ RENDER CHARACTER v3 — IMAGE ONLY ══════════════
+   ═══════════════════════════════════════════════════════════
+   كل العناصر من صور. لا يوجد أي رسم برمجي.
+   
+   ترتيب الطبقات (من الخلف للأمام):
+     0. back    — خلف الشخصية (أجنحة/عباءة)
+     1. body    — الجسم (صورة الزي)
+     2. eyes    — العيون (فقط إن لم تكن الشخصية صورة — نادر)
+     3. head    — فوق الرأس (تاج/قبعة)
+   ============================================================ */
 function renderCharacter(c, r, skin, opts){
   opts = opts || {};
   const mode = opts.mode || 'FLIP';
   const facingRot = opts.rot || 0;
-  const isWalk = mode === 'WALK' || mode === 'FLIP_WALK' || mode === 'SKY_JUMP';
   const isFlippedWalk = mode === 'FLIP_WALK';
   const isShip = mode === 'FLIP' || mode === 'FLAP' || mode === 'DRIFT';
   const alpha = opts.alpha ?? 1;
   const skipExtras = opts.skipExtras || false;
   const t = G.t;
 
-  /* ═══ كل الطبقات ═══ */
-  const aura       = currentAura();
-  const crown      = currentCrown();
-  const cape       = currentCape();
-  const headItem   = currentHeadItem();
-  const backItem   = currentBackItem();
-  const heldItem   = currentHeldItem();
-  const mark       = currentGroundMark();
-  const eyes       = currentEyes();
-
   c.save();
   c.globalAlpha = alpha;
 
   /* ═══════════════════════════════════════════════════════
-      طبقة 0: Ground Mark (أسفل الشخصية)
+     طبقة 0: الظهر (خلف الشخصية)
      ═══════════════════════════════════════════════════════ */
-  if(!skipExtras && mark.id !== 'none'){
-    const markSize = r * 4.5;
-    const bob = Math.sin(t * 0.05) * 2;
-    ASSET.drawItem(c, mark, {
-      x: 0, y: r * 1.8 + bob,
-      size: markSize,
-      alpha: 0.75 + Math.sin(t * 0.08) * 0.15,
-      rotation: t * 0.01,
-      anchorX: 0.5, anchorY: 0.5
-    });
-  }
-
-  /* ═══════════════════════════════════════════════════════
-      طبقة 1: Aura (خلف الشخصية)
-     ═══════════════════════════════════════════════════════ */
-  if(!skipExtras && aura.id !== 'none'){
-    if(hasItemImage(aura)){
-      const auraSize = r * 5;
-      const pulse = 1 + Math.sin(t * 0.08) * 0.08;
-      ASSET.drawItem(c, aura, {
-        x: 0, y: 0,
-        size: auraSize * pulse,
-        alpha: 0.85,
-        rotation: t * 0.008,
-        anchorX: 0.5, anchorY: 0.5
+  if(!skipExtras){
+    const back = currentBack();
+    if(back && back.id !== 'none' && hasItemImage(back)){
+      const cfg = getCategoryConfig('back').render;
+      ASSET.drawItem(c, back, {
+        x: 0,
+        y: r * (cfg.offsetY || 0),
+        size: r * (cfg.sizeMul || 4.5),
+        anchorX: cfg.anchor.x,
+        anchorY: cfg.anchor.y,
+        rotation: Math.sin(t * (cfg.rotationSpeed || 0.05)) * (cfg.rotationAmp || 0.03)
       });
-    } else {
-      try { drawAura(c, r, aura, t); } catch(err){}
     }
-  }
-
-  /* ═══════════════════════════════════════════════════════
-      طبقة 2: Back Item (أجنحة/حقائب خلف الشخصية)
-     ═══════════════════════════════════════════════════════ */
-  if(!skipExtras && backItem.id !== 'none'){
-    const backSize = r * 4.5;
-    const flap = Math.sin(t * 0.12) * 0.05;
-    ASSET.drawItem(c, backItem, {
-      x: -r * 0.3, y: r * 0.2,
-      size: backSize,
-      rotation: flap,
-      anchorX: 0.75, anchorY: 0.5,   /* نقطة ارتكاز قريبة من الجسم */
-      alpha: alpha
-    });
-  }
-
-  /* ═══════════════════════════════════════════════════════
-      طبقة 3: Cape (عباءة برمجية قديمة — fallback)
-     ═══════════════════════════════════════════════════════ */
-  if(!skipExtras && cape.id !== 'none' && P.cape){
-    try { drawCape(c, r, cape, t, P.x, P.y); }
-    catch(err){}
   }
 
   /* ═══ دوران المركبة / قلب المشي ═══ */
   if(isShip && facingRot !== 0) c.rotate(facingRot);
   if(isFlippedWalk) c.rotate(Math.PI);
 
-  /* ═══ توهج الشخصية ═══ */
-  if(skin.glow){
-    const glowCol = skin.glowColor || skin.accent;
-    const g = c.createRadialGradient(0, 0, r * 0.6, 0, 0, r * 2);
-    g.addColorStop(0, glowCol);
-    g.addColorStop(1, 'rgba(0,0,0,0)');
-    const prev = c.globalAlpha;
-    c.globalAlpha = alpha * 0.35;
-    c.fillStyle = g;
-    c.beginPath(); c.arc(0, 0, r * 2, 0, Math.PI * 2); c.fill();
-    c.globalAlpha = prev;
-  }
-
-  if(skin.sparkle) drawSparklesAround(c, r, skin);
-
   /* ═══════════════════════════════════════════════════════
-      طبقة 4: الجسم (صورة أو رسم برمجي)
+     طبقة 1: الجسم (صورة الزي)
      ═══════════════════════════════════════════════════════ */
-  if(isWalk) drawWalkLimbs(c, r, skin, false);
-  if(isShip){ drawEngineFlame(c, r, skin); drawSideFins(c, r, skin); }
-
   drawCharacterBody(c, r, skin, t);
 
   /* ═══════════════════════════════════════════════════════
-      طبقة 5: الوجه/العيون
+     طبقة 2: العيون — فقط إن لم يكن الجسم صورة
      ═══════════════════════════════════════════════════════ */
-  if(!skin.imageData && !skin.imagePath && !hasItemImage(skin)){
-    /* فقط للزي البرمجي */
-    if(hasItemImage(eyes)){
+  const skinIsImage = hasItemImage(skin);
+
+  if(!skinIsImage){
+    const eyes = currentEyes();
+    if(eyes && eyes.id !== 'none' && hasItemImage(eyes)){
+      const cfg = getCategoryConfig('eyes').render;
       ASSET.drawItem(c, eyes, {
-        x: 0, y: -r * 0.1,
-        size: r * 1.6,
-        anchorX: 0.5, anchorY: 0.5
+        x: 0,
+        y: r * (cfg.offsetY || -0.15),
+        size: r * (cfg.sizeMul || 1.6),
+        anchorX: cfg.anchor.x,
+        anchorY: cfg.anchor.y
       });
-    } else {
-      drawCharacterFace(c, r, skin);
     }
   }
 
   /* ═══════════════════════════════════════════════════════
-      طبقة 6: Crown + Head Item (فوق الرأس)
+     طبقة 3: الرأس (فوق كل شيء)
      ═══════════════════════════════════════════════════════ */
-  const skinHasImage = !!(skin.imageData || skin.imagePath || hasItemImage(skin));
-
-  if(!skipExtras && crown.id !== 'none'){
-    if(hasItemImage(crown)){
-      ASSET.drawItem(c, crown, {
-        x: 0, y: -r * 1.4,
-        size: r * 2.2,
-        anchorX: 0.5, anchorY: 1.0,   /* مرتكز على القاعدة */
+  if(!skipExtras){
+    const head = currentHead();
+    if(head && head.id !== 'none' && hasItemImage(head)){
+      const cfg = getCategoryConfig('head').render;
+      ASSET.drawItem(c, head, {
+        x: 0,
+        y: r * (cfg.offsetY || -1.15),
+        size: r * (cfg.sizeMul || 2.4),
+        anchorX: cfg.anchor.x,
+        anchorY: cfg.anchor.y,
+        rotation: Math.sin(t * (cfg.rotationSpeed || 0.04)) * (cfg.rotationAmp || 0.02)
       });
-    } else if(!skinHasImage){
-      try { drawCrown(c, r, crown, t); } catch(err){}
     }
-  }
-
-  if(!skipExtras && headItem.id !== 'none'){
-    ASSET.drawItem(c, headItem, {
-      x: 0, y: -r * 1.15,
-      size: r * 2.4,
-      rotation: Math.sin(t * 0.04) * 0.02,
-      anchorX: 0.5, anchorY: 1.0
-    });
-  }
-
-  /* ═══════════════════════════════════════════════════════
-      طبقة 7: Held Item (في اليد — يسار الشخصية)
-     ═══════════════════════════════════════════════════════ */
-  if(!skipExtras && heldItem.id !== 'none'){
-    const heldSize = r * 2.5;
-    const bob = Math.sin(t * 0.08) * r * 0.05;
-    ASSET.drawItem(c, heldItem, {
-      x: -r * 1.1, y: r * 0.3 + bob,
-      size: heldSize,
-      rotation: -0.3 + Math.sin(t * 0.06) * 0.05,
-      anchorX: 0.7, anchorY: 0.5,   /* نقطة الإمساك */
-    });
   }
 
   c.restore();
-}
-
-function initCompanion(){
-  G.companion = {
-    x: P.x - 40,
-    y: P.y - 40,
-    angle: 0,
-    t: 0,
-    trail: []
-  };
-}
-
-function updateCompanion(){
-  if(G.state !== 'PLAYING') return;
-  const comp = currentCompanion();
-  if(comp.id === 'none') return;
-
-  const c = G.companion;
-  if(!c) { initCompanion(); return; }
-
-  c.t++;
-
-  /* ═══ حركة دائرية حول اللاعب ═══ */
-  const orbitR = 38;
-  const orbitSpeed = 0.04;
-  const targetX = P.x + Math.cos(c.t * orbitSpeed) * orbitR;
-  const targetY = P.y - 30 + Math.sin(c.t * orbitSpeed * 1.4) * 12;
-
-  c.x = lerp(c.x, targetX, 0.12);
-  c.y = lerp(c.y, targetY, 0.12);
-
-  /* ═══ أثر خفيف ═══ */
-  if(c.t % 4 === 0){
-    c.trail.push({x: c.x, y: c.y, life: 1});
-    if(c.trail.length > 6) c.trail.shift();
-  }
-  for(let i=c.trail.length-1;i>=0;i--){
-    c.trail[i].life -= 0.06;
-    if(c.trail[i].life <= 0) c.trail.splice(i, 1);
-  }
-}
-
-function drawCompanion(){
-  if(G.state !== 'PLAYING') return;
-  const comp = currentCompanion();
-  if(comp.id === 'none') return;
-  const c = G.companion;
-  if(!c) return;
-
-  const r = P.r * 0.6;
-
-  /* ═══ أثر ═══ */
-  for(const t of c.trail){
-    ctx.globalAlpha = t.life * 0.3;
-    ctx.fillStyle = '#FFF8C0';
-    ctx.beginPath();
-    ctx.arc(t.x, t.y, r * t.life * 0.6, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-
-  ctx.save();
-  ctx.translate(c.x, c.y);
-
-  /* ✅ صورة رفيق مخصص */
-  if(hasItemImage(comp)){
-    const img = getItemImageEl(comp);
-    if(img && img.complete && img.naturalWidth > 0){
-      const size = r * 3.2;
-      const bob = Math.sin(c.t * 0.08) * 2;
-      ctx.drawImage(img, -size/2, -size/2 + bob, size, size);
-      ctx.restore();
-      return;
-    }
-    ctx.restore();
-    return;
-  }
-
-  const id = comp.id;
-
-  if(id === 'star'){
-    const rot = c.t * 0.05;
-    ctx.rotate(rot);
-    ctx.fillStyle = '#FFE060';
-    ctx.shadowColor = '#FFE060'; ctx.shadowBlur = 12;
-    ctx.beginPath();
-    for(let i=0;i<10;i++){
-      const a = (i/10)*Math.PI*2 - Math.PI/2;
-      const rr = i%2===0 ? r*0.9 : r*0.4;
-      const px = Math.cos(a)*rr, py = Math.sin(a)*rr;
-      i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
-    }
-    ctx.closePath(); ctx.fill();
-    ctx.shadowBlur = 0;
-  }
-  else if(id === 'heart'){
-    const pulse = 1 + Math.sin(c.t*0.15)*0.15;
-    ctx.fillStyle = '#FF4060';
-    ctx.shadowColor = '#FF4060'; ctx.shadowBlur = 10;
-    ctx.save(); ctx.scale(pulse, pulse);
-    ctx.beginPath();
-    ctx.moveTo(0, r*0.4);
-    ctx.bezierCurveTo(r*1.1, -r*0.5, r*0.6, -r*1.3, 0, -r*0.5);
-    ctx.bezierCurveTo(-r*0.6, -r*1.3, -r*1.1, -r*0.5, 0, r*0.4);
-    ctx.fill();
-    ctx.restore();
-    ctx.shadowBlur = 0;
-  }
-  else if(id === 'orb'){
-    const grad = ctx.createRadialGradient(0,0,0, 0,0,r*1.2);
-    grad.addColorStop(0, '#FFFFFF');
-    grad.addColorStop(0.4, '#80E0FF');
-    grad.addColorStop(1, 'rgba(80,180,255,0)');
-    ctx.fillStyle = grad;
-    ctx.beginPath(); ctx.arc(0, 0, r*1.2, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#FFFFFF';
-    ctx.beginPath(); ctx.arc(0, 0, r*0.35, 0, Math.PI*2); ctx.fill();
-  }
-  else if(id === 'butterfly'){
-    const flap = Math.sin(c.t * 0.3) * 0.4;
-    for(const side of [-1, 1]){
-      ctx.save();
-      ctx.scale(side, 1); ctx.rotate(flap * side * 0.5);
-      ctx.fillStyle = `hsl(${(c.t*3)%360}, 85%, 65%)`;
-      ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 8;
-      ctx.beginPath();
-      ctx.ellipse(r*0.5, -r*0.2, r*0.55, r*0.35, 0.3, 0, Math.PI*2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.ellipse(r*0.4, r*0.25, r*0.4, r*0.28, -0.3, 0, Math.PI*2);
-      ctx.fill();
-      ctx.restore();
-    }
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = '#1A1512';
-    ctx.beginPath(); ctx.ellipse(0, 0, r*0.08, r*0.35, 0, 0, Math.PI*2); ctx.fill();
-  }
-  else if(id === 'firefly'){
-    const pulse = 0.6 + Math.sin(c.t*0.15)*0.4;
-    const glow = ctx.createRadialGradient(0,0,0, 0,0,r*2);
-    glow.addColorStop(0, `rgba(255,240,160,${pulse})`);
-    glow.addColorStop(1, 'rgba(255,240,160,0)');
-    ctx.fillStyle = glow;
-    ctx.beginPath(); ctx.arc(0,0,r*2,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#FFF8C0';
-    ctx.beginPath(); ctx.arc(0,0,r*0.3,0,Math.PI*2); ctx.fill();
-  }
-  else if(id === 'bee'){
-    ctx.fillStyle = '#FFD040';
-    ctx.beginPath(); ctx.ellipse(0, 0, r*0.5, r*0.35, 0, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#1A1512';
-    for(let i=-1;i<=1;i++){
-      ctx.fillRect(i*r*0.15 - r*0.05, -r*0.3, r*0.1, r*0.6);
-    }
-    const flap = Math.sin(c.t * 0.8) * 0.6;
-    ctx.fillStyle = 'rgba(255,255,255,0.7)';
-    ctx.save(); ctx.translate(0, -r*0.35); ctx.rotate(flap);
-    ctx.beginPath(); ctx.ellipse(0, 0, r*0.4, r*0.15, 0, 0, Math.PI*2); ctx.fill();
-    ctx.restore();
-    ctx.save(); ctx.translate(0, -r*0.35); ctx.rotate(-flap);
-    ctx.beginPath(); ctx.ellipse(0, 0, r*0.4, r*0.15, 0, 0, Math.PI*2); ctx.fill();
-    ctx.restore();
-  }
-  else if(id === 'ghost'){
-    const wobble = Math.sin(c.t*0.1)*2;
-    ctx.fillStyle = 'rgba(240,240,255,0.85)';
-    ctx.shadowColor = '#C0D0FF'; ctx.shadowBlur = 8;
-    ctx.beginPath();
-    ctx.arc(0, -r*0.3, r*0.7, Math.PI, 0);
-    ctx.lineTo(r*0.7, r*0.4);
-    for(let i=5;i>=0;i--){
-      const wx = -r*0.7 + (i/5)*r*1.4;
-      const wy = r*0.4 + Math.sin(c.t*0.15+i)*2;
-      ctx.lineTo(wx, wy);
-    }
-    ctx.closePath(); ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = '#1A1512';
-    ctx.beginPath();
-    ctx.arc(-r*0.25, -r*0.3, r*0.1, 0, Math.PI*2);
-    ctx.arc(r*0.25, -r*0.3, r*0.1, 0, Math.PI*2);
-    ctx.fill();
-  }
-  else if(id === 'dragon'){
-    const flap = Math.sin(c.t * 0.25) * 0.3;
-    for(const side of [-1, 1]){
-      ctx.save(); ctx.scale(side, 1); ctx.rotate(flap * side);
-      ctx.fillStyle = '#3A8040';
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.quadraticCurveTo(r*0.8, -r*0.8, r*1.4, -r*0.3);
-      ctx.quadraticCurveTo(r*0.9, 0, r*0.8, r*0.3);
-      ctx.closePath(); ctx.fill();
-      ctx.restore();
-    }
-    ctx.fillStyle = '#3A8040';
-    ctx.beginPath(); ctx.ellipse(0, 0, r*0.5, r*0.3, 0, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#E8D0A0';
-    ctx.beginPath(); ctx.arc(r*0.3, -r*0.1, r*0.25, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#1A1512';
-    ctx.beginPath(); ctx.arc(r*0.35, -r*0.12, r*0.05, 0, Math.PI*2); ctx.fill();
-  }
-  else if(id === 'rocket'){
-    ctx.fillStyle = '#C0C8D8';
-    ctx.beginPath(); ctx.ellipse(0, 0, r*0.35, r*0.7, 0, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#E84040';
-    ctx.beginPath();
-    ctx.moveTo(0, -r*0.7); ctx.lineTo(r*0.35, 0); ctx.lineTo(-r*0.35, 0); ctx.closePath();
-    ctx.fill();
-    const flame = 0.8 + Math.sin(c.t*0.3)*0.3;
-    ctx.fillStyle = '#FF8040';
-    ctx.shadowColor = '#FF8040'; ctx.shadowBlur = 10*flame;
-    ctx.beginPath();
-    ctx.moveTo(-r*0.2, r*0.7); ctx.lineTo(r*0.2, r*0.7);
-    ctx.lineTo(0, r*1.3*flame); ctx.closePath(); ctx.fill();
-    ctx.shadowBlur = 0;
-  }
-  else if(id === 'moon'){
-    const pulse = 0.9 + Math.sin(c.t*0.08)*0.1;
-    ctx.shadowColor = '#F0F0FF'; ctx.shadowBlur = 12;
-    ctx.fillStyle = '#E8E8F0';
-    ctx.beginPath(); ctx.arc(0, 0, r*0.7*pulse, 0, Math.PI*2); ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = '#A8A8B8';
-    ctx.beginPath(); ctx.arc(-r*0.2, -r*0.15, r*0.15, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(r*0.15, r*0.2, r*0.1, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(r*0.2, -r*0.25, r*0.08, 0, Math.PI*2); ctx.fill();
-  }
-  else if(id === 'sun'){
-    const pulse = 1 + Math.sin(c.t*0.15)*0.08;
-    ctx.save(); ctx.scale(pulse, pulse);
-    ctx.fillStyle = '#FFD040';
-    ctx.shadowColor = '#FFD040'; ctx.shadowBlur = 15;
-    ctx.beginPath(); ctx.arc(0, 0, r*0.55, 0, Math.PI*2); ctx.fill();
-    ctx.rotate(c.t * 0.03);
-    for(let i=0;i<8;i++){
-      const a = (i/8)*Math.PI*2;
-      ctx.save(); ctx.rotate(a);
-      ctx.beginPath();
-      ctx.moveTo(-r*0.08, -r*0.6);
-      ctx.lineTo(0, -r*0.95);
-      ctx.lineTo(r*0.08, -r*0.6);
-      ctx.closePath(); ctx.fill();
-      ctx.restore();
-    }
-    ctx.shadowBlur = 0;
-    ctx.restore();
-  }
-  else if(id === 'cloud'){
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    ctx.shadowColor = '#C0D8F0'; ctx.shadowBlur = 6;
-    ctx.beginPath();
-    ctx.arc(-r*0.3, 0, r*0.4, 0, Math.PI*2);
-    ctx.arc(r*0.1, -r*0.15, r*0.5, 0, Math.PI*2);
-    ctx.arc(r*0.45, 0.05*r, r*0.35, 0, Math.PI*2);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-  }
-  else if(id === 'cube'){
-    ctx.rotate(c.t * 0.05);
-    ctx.fillStyle = '#4080E8';
-    ctx.shadowColor = '#4080E8'; ctx.shadowBlur = 8;
-    ctx.beginPath();
-    ctx.rect(-r*0.5, -r*0.5, r, r);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.rect(-r*0.5, -r*0.5, r, r);
-    ctx.stroke();
-  }
-  else if(id === 'sword'){
-    ctx.rotate(Math.sin(c.t*0.05) * 0.3);
-    ctx.fillStyle = '#C0C8D8';
-    ctx.beginPath();
-    ctx.moveTo(0, -r*1.1);
-    ctx.lineTo(r*0.15, -r*0.9);
-    ctx.lineTo(r*0.1, r*0.6);
-    ctx.lineTo(-r*0.1, r*0.6);
-    ctx.lineTo(-r*0.15, -r*0.9);
-    ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#8A6030';
-    ctx.fillRect(-r*0.3, r*0.6, r*0.6, r*0.15);
-    ctx.fillStyle = '#E8B34E';
-    ctx.fillRect(-r*0.08, r*0.75, r*0.16, r*0.35);
-    ctx.beginPath();
-    ctx.arc(0, r*1.15, r*0.12, 0, Math.PI*2);
-    ctx.fill();
-  }
-  else if(id === 'balloon'){
-    const hue = (c.t * 0.8) % 360;
-    ctx.fillStyle = `hsl(${hue}, 80%, 60%)`;
-    ctx.beginPath();
-    ctx.ellipse(0, -r*0.2, r*0.5, r*0.65, 0, 0, Math.PI*2);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(-r*0.3, -r*0.5);
-    ctx.quadraticCurveTo(0, -r*0.2, r*0.3, -r*0.5);
-    ctx.stroke();
-    ctx.strokeStyle = '#9098A0'; ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, r*0.45);
-    ctx.quadraticCurveTo(r*0.2, r*0.7, 0, r*1.0);
-    ctx.stroke();
-  }
-  else if(id === 'skull'){
-    ctx.fillStyle = '#F0E8E0';
-    ctx.beginPath(); ctx.arc(0, 0, r*0.6, 0, Math.PI*2); ctx.fill();
-    ctx.fillRect(-r*0.3, r*0.4, r*0.6, r*0.2);
-    ctx.fillStyle = '#1A0A0A';
-    ctx.beginPath();
-    ctx.arc(-r*0.2, -r*0.05, r*0.12, 0, Math.PI*2);
-    ctx.arc(r*0.2, -r*0.05, r*0.12, 0, Math.PI*2);
-    ctx.fill();
-    ctx.fillRect(-r*0.2, r*0.45, r*0.08, r*0.15);
-    ctx.fillRect(-r*0.05, r*0.45, r*0.08, r*0.15);
-    ctx.fillRect(r*0.1, r*0.45, r*0.08, r*0.15);
-  }
-  else if(id === 'diamond'){
-    const rot = c.t * 0.04;
-    ctx.rotate(rot);
-    ctx.fillStyle = '#80E0FF';
-    ctx.shadowColor = '#80E0FF'; ctx.shadowBlur = 12;
-    ctx.beginPath();
-    ctx.moveTo(0, -r*0.7);
-    ctx.lineTo(r*0.5, -r*0.1);
-    ctx.lineTo(r*0.3, r*0.6);
-    ctx.lineTo(-r*0.3, r*0.6);
-    ctx.lineTo(-r*0.5, -r*0.1);
-    ctx.closePath(); ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = 'rgba(255,255,255,0.8)';
-    ctx.beginPath();
-    ctx.moveTo(0, -r*0.7);
-    ctx.lineTo(r*0.2, -r*0.3);
-    ctx.lineTo(0, 0);
-    ctx.lineTo(-r*0.2, -r*0.3);
-    ctx.closePath(); ctx.fill();
-  }
-  else if(id === 'phoenix'){
-    const flap = Math.sin(c.t * 0.2) * 0.4;
-    for(const side of [-1, 1]){
-      ctx.save(); ctx.scale(side, 1); ctx.rotate(flap * side);
-      const grad = ctx.createLinearGradient(0,0, r, 0);
-      grad.addColorStop(0, '#FFD060');
-      grad.addColorStop(1, '#FF5020');
-      ctx.fillStyle = grad;
-      ctx.shadowColor = '#FF8040'; ctx.shadowBlur = 10;
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.quadraticCurveTo(r*0.8, -r*1.2, r*1.6, -r*0.3);
-      ctx.quadraticCurveTo(r*1.0, 0, r*0.9, r*0.4);
-      ctx.closePath(); ctx.fill();
-      ctx.restore();
-    }
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = '#FFD060';
-    ctx.beginPath(); ctx.ellipse(0, 0, r*0.4, r*0.28, 0, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#FF5020';
-    ctx.beginPath();
-    ctx.moveTo(r*0.4, 0); ctx.lineTo(r*0.7, -r*0.15); ctx.lineTo(r*0.7, r*0.15); ctx.closePath();
-    ctx.fill();
-  }
-  else if(id === 'cosmicPet'){
-    const rot = c.t * 0.02;
-    ctx.rotate(rot);
-    const grad = ctx.createRadialGradient(0,0,0, 0,0,r*0.9);
-    grad.addColorStop(0, '#C080FF');
-    grad.addColorStop(0.7, '#6020A0');
-    grad.addColorStop(1, '#200840');
-    ctx.fillStyle = grad;
-    ctx.shadowColor = '#8040D0'; ctx.shadowBlur = 15;
-    ctx.beginPath(); ctx.arc(0, 0, r*0.9, 0, Math.PI*2); ctx.fill();
-    ctx.shadowBlur = 0;
-    for(let i=0;i<6;i++){
-      const a = (i/6)*Math.PI*2;
-      const dist = r*0.5;
-      const twinkle = 0.5 + Math.sin(c.t*0.1 + i)*0.5;
-      ctx.fillStyle = `rgba(255,255,255,${twinkle})`;
-      ctx.beginPath();
-      ctx.arc(Math.cos(a)*dist, Math.sin(a)*dist, r*0.08, 0, Math.PI*2);
-      ctx.fill();
-    }
-  }
-
-  ctx.restore();
 }
 
 /* ============================================================
@@ -12367,71 +9197,26 @@ function drawPlayer(){
   const skin = currentSkin();
   const r = P.r;
   const ghostActive = G.ghost > 0;
-  const trailCos = currentTrail();
 
-  const trailColors = {
-    default: skin.accent, sparkle: '#FFE060', fire: '#FF6020', ice: '#88D8FF',
-    rainbow: null, shadow: '#2A2020', bubble: '#A8D8E8', matrix: '#00FF80'
-  };
-  const trailCol = trailColors[trailCos.id];
-
-  if(G.mode !== 'WALK' && G.mode !== 'FLIP_WALK' && G.mode !== 'SKY_JUMP'){
-    for(let i=0;i<P.trail.length;i++){
-      const t = P.trail[i];
-      const a = (i/P.trail.length)*0.36;
-      ctx.globalAlpha = a * (ghostActive ? 0.5 : 1);
-      if(trailCos.id === 'rainbow'){
-        const hue = (G.t*3 + i*20) % 360;
-        ctx.fillStyle = `hsl(${hue}, 80%, 60%)`;
-      } else if(trailCos.id === 'sparkle'){
-        const sz = r * (i/P.trail.length) * 0.9;
-        ctx.fillStyle = trailCol;
-        ctx.beginPath();
-        for(let k=0;k<4;k++){
-          const ak = (k/4)*Math.PI*2;
-          const rr = k%2===0 ? sz : sz*0.4;
-          const qx = t.x + Math.cos(ak)*rr, qy = t.y + Math.sin(ak)*rr;
-          k===0 ? ctx.moveTo(qx,qy) : ctx.lineTo(qx,qy);
-        }
-        ctx.closePath(); ctx.fill();
-        ctx.globalAlpha = 1;
-        continue;
-      } else if(trailCos.id === 'bubble'){
-        const sz = r * (i/P.trail.length) * 0.9;
-        ctx.strokeStyle = trailCol; ctx.lineWidth = 1.2;
-        ctx.beginPath(); ctx.arc(t.x, t.y, sz, 0, Math.PI*2); ctx.stroke();
-        ctx.globalAlpha = 1;
-        continue;
-      } else if(trailCos.id === 'matrix'){
-        const sz = r * (i/P.trail.length) * 0.9;
-        ctx.fillStyle = trailCol;
-        ctx.fillRect(t.x - sz/2, t.y - sz/2, sz, sz);
-        ctx.globalAlpha = 1;
-        continue;
-      } else {
-        ctx.fillStyle = trailCol;
-      }
-      ctx.beginPath();
-      ctx.arc(t.x, t.y, r * (i/P.trail.length) * 0.9, 0, Math.PI*2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-  }
-
+/* ═══ ظل الشخصية حسب النمط ═══ */
 if(G.mode === 'WALK'){
   ctx.fillStyle = 'rgba(0,0,0,0.2)';
-  ctx.beginPath(); ctx.ellipse(P.x, GROUND_Y + 4, r*1.05, 4, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(P.x, GROUND_Y + 4, r*1.05, 4, 0, 0, Math.PI*2);
+  ctx.fill();
+} else if(G.mode === 'FLIP_WALK'){
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.beginPath();
+  ctx.ellipse(P.x, CEILING_H, r*1.05, 4, 0, 0, Math.PI*2);
+  ctx.fill();
+} else if(G.mode === 'SKY_JUMP'){
+  const height = clamp((GROUND_Y - P.y) / 300, 0, 1);
+  const sw = r * (1.05 - height * 0.7);
+  ctx.fillStyle = 'rgba(0,0,0,' + (0.22 - height * 0.15) + ')';
+  ctx.beginPath();
+  ctx.ellipse(P.x, GROUND_Y + 4, sw, 4, 0, 0, Math.PI*2);
+  ctx.fill();
 }
-/* ASCEND: لا ظل أرضي — اللاعب حر في الفضاء */
- else if(G.mode === 'FLIP_WALK'){
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
-    ctx.beginPath(); ctx.ellipse(P.x, CEILING_H, r*1.05, 4, 0, 0, Math.PI*2); ctx.fill();
-  } else if(G.mode === 'SKY_JUMP'){
-    const height = clamp((GROUND_Y - P.y) / 300, 0, 1);
-    const sw = r * (1.05 - height * 0.7);
-    ctx.fillStyle = 'rgba(0,0,0,' + (0.22 - height * 0.15) + ')';
-    ctx.beginPath(); ctx.ellipse(P.x, GROUND_Y + 4, sw, 4, 0, 0, Math.PI*2); ctx.fill();
-  }
 
   const blink = G.invuln > 0 && Math.floor(G.invuln/5)%2===0;
   let alpha = blink ? 0.4 : 1;
@@ -16128,7 +12913,6 @@ function update(){
     G.currentScene = SCENES[G.sceneIdx];
     updateWeather();
     updateSparks();
-    if(P.cape) updateCapePhysics();
   }
   if(G.state==='PLAYING') updateGameplay();
 }
@@ -16463,143 +13247,64 @@ function buildShop(){
    ============================================================ */
 let currentCosTab = 'spark';
 
+/* ============================================================
+   ═══════════ RENDER COSMETIC PREVIEW v3 ════════════════════
+   ═══════════════════════════════════════════════════════════
+   نظام صور فقط — لا رسم برمجي
+   ============================================================ */
 function renderCosPreview(pctx, w, h, cat, item){
-  if(!pctx || !item) return;
-  const cx = w/2, cy = h/2;
+  if(!pctx || !item || typeof pctx !== 'object') return;
 
-  /* ✅ صورة مخصصة */
+  const cx = w / 2;
+  const cy = h / 2;
+
+  /* ═══════════════════════════════════════════════════════
+     ✅ الحالة الوحيدة: عنصر بصورة
+     ═══════════════════════════════════════════════════════ */
   if(hasItemImage(item)){
-    const img = getItemImageEl(item);
-    if(!img) return;
+    const img = ASSET.getImage(item);
 
-    const draw = () => {
-      if(!img.complete || img.naturalWidth <= 0) return;
-      const sz = Math.min(w, h) * 0.8;
+    /* الصورة جاهزة — ارسمها بحجم مناسب مع الحفاظ على النسبة */
+    if(img && img.complete && img.naturalWidth > 0){
+      const maxW = w * 0.9;
+      const maxH = h * 0.9;
       const ratio = img.naturalHeight / img.naturalWidth || 1;
-      pctx.clearRect(0, 0, w, h);
-      pctx.drawImage(img, cx - sz/2, cy - sz*ratio/2, sz, sz * ratio);
-    };
 
-    if(img.complete && img.naturalWidth > 0) draw();
-    else {
-      img.onload = draw;
-      img.onerror = () => {
-        pctx.clearRect(0, 0, w, h);
-        pctx.fillStyle = '#C14A4A';
-        pctx.font = 'bold 11px Tajawal, sans-serif';
-        pctx.textAlign = 'center';
-        pctx.fillText('⚠', cx, cy + 4);
-      };
+      let drawW = maxW;
+      let drawH = drawW * ratio;
+      if(drawH > maxH){
+        drawH = maxH;
+        drawW = drawH / ratio;
+      }
+
+      pctx.clearRect(0, 0, w, h);
+      pctx.drawImage(img, cx - drawW / 2, cy - drawH / 2, drawW, drawH);
+      return;
     }
+
+    /* الصورة قيد التحميل — ارسم placeholder */
+    pctx.clearRect(0, 0, w, h);
+    pctx.fillStyle = 'rgba(139,130,120,0.12)';
+    pctx.beginPath();
+    pctx.arc(cx, cy, Math.min(w, h) * 0.3, 0, Math.PI * 2);
+    pctx.fill();
     return;
   }
-  
-  if(cat === 'spark'){
-    pctx.fillStyle = '#E07A3F';
-    pctx.beginPath(); pctx.arc(w*0.82, h/2, 6, 0, Math.PI*2); pctx.fill();
-    if(item.id === 'none') return;
 
-    const palette = SPARK_PALETTES[item.id];
-    const colors = palette ? palette.colors : ['#E07A3F'];
-    const count = 12;
-    for(let i=0;i<count;i++){
-      const t = i/count;
-      const px = w*0.82 - t*(w*0.75);
-      const py = h/2 + Math.sin(i*0.9 + t*3)*4 + (Math.random()-0.5)*3;
-      const col = item.id==='rainbow' ? `hsl(${i*30},85%,65%)` : colors[i % colors.length];
-      const sz = 2.5 + (1-t)*1.5;
-      pctx.globalAlpha = 1 - t*0.85;
-      pctx.fillStyle = col;
-      if(item.id === 'hearts'){
-        pctx.beginPath();
-        pctx.moveTo(px, py+sz*0.4);
-        pctx.bezierCurveTo(px+sz*1.1, py-sz*0.5, px+sz*0.6, py-sz*1.3, px, py-sz*0.5);
-        pctx.bezierCurveTo(px-sz*0.6, py-sz*1.3, px-sz*1.1, py-sz*0.5, px, py+sz*0.4);
-        pctx.fill();
-      } else if(item.id === 'stars'){
-        pctx.beginPath();
-        for(let k=0;k<8;k++){
-          const a = (k/8)*Math.PI*2;
-          const rr = k%2===0 ? sz*1.1 : sz*0.45;
-          const qx = px+Math.cos(a)*rr, qy = py+Math.sin(a)*rr;
-          k===0 ? pctx.moveTo(qx,qy) : pctx.lineTo(qx,qy);
-        }
-        pctx.closePath(); pctx.fill();
-      } else if(item.id === 'bubbles'){
-        pctx.strokeStyle = col; pctx.lineWidth = 1.2;
-        pctx.beginPath(); pctx.arc(px,py,sz,0,Math.PI*2); pctx.stroke();
-      } else if(item.id === 'digital'){
-        pctx.fillRect(px-sz/2, py-sz/2, sz, sz);
-      } else {
-        pctx.beginPath(); pctx.arc(px, py, sz, 0, Math.PI*2); pctx.fill();
-      }
-    }
-    pctx.globalAlpha = 1;
+  /* ═══════════════════════════════════════════════════════
+     ⚠️ عنصر بدون صورة — placeholder تحذيري
+     ═══════════════════════════════════════════════════════ */
+  pctx.clearRect(0, 0, w, h);
+  pctx.fillStyle = 'rgba(139,130,120,0.12)';
+  pctx.beginPath();
+  pctx.arc(cx, cy, Math.min(w, h) * 0.3, 0, Math.PI * 2);
+  pctx.fill();
 
-  } else if(cat === 'trail'){
-    for(let i=0;i<6;i++){
-      const a = 1 - i/6;
-      pctx.globalAlpha = a*0.9;
-      let col = '#E07A3F';
-      if(item.id==='sparkle') col = '#FFE060';
-      else if(item.id==='fire') col = '#FF6020';
-      else if(item.id==='ice') col = '#88D8FF';
-      else if(item.id==='shadow') col = '#2A2020';
-      else if(item.id==='bubble') col = '#A8D8E8';
-      else if(item.id==='matrix') col = '#00FF80';
-      else if(item.id==='rainbow') col = `hsl(${i*60}, 80%, 60%)`;
-      pctx.fillStyle = col;
-      pctx.beginPath(); pctx.arc(w*0.15 + i*26, cy, 6 - i*0.6, 0, Math.PI*2); pctx.fill();
-    }
-    pctx.globalAlpha = 1;
-
-  } else if(cat === 'jump' || cat === 'death'){
-    pctx.fillStyle = '#E07A3F';
-    pctx.beginPath(); pctx.arc(cx, cy, 10, 0, Math.PI*2); pctx.fill();
-
-  } else if(cat === 'aura'){
-    const fakeR = 16;
-    pctx.save();
-    pctx.translate(cx, cy);
-    pctx.fillStyle = '#E07A3F';
-    pctx.beginPath(); pctx.arc(0, 0, fakeR*0.7, 0, Math.PI*2); pctx.fill();
-    pctx.fillStyle = '#FFF';
-    pctx.beginPath(); pctx.arc(-4, -3, 3, 0, Math.PI*2); pctx.arc(4, -3, 3, 0, Math.PI*2); pctx.fill();
-    pctx.restore();
-
-  } else if(cat === 'crown'){
-    const fakeR = 22;
-    pctx.save();
-    pctx.translate(cx, cy + 8);
-    pctx.fillStyle = '#E0A44C';
-    pctx.beginPath(); pctx.arc(0, 0, fakeR*0.75, 0, Math.PI*2); pctx.fill();
-    pctx.fillStyle = '#1A1512';
-    pctx.beginPath();
-    pctx.arc(-4, -2, 2, 0, Math.PI*2);
-    pctx.arc(4, -2, 2, 0, Math.PI*2);
-    pctx.fill();
-    if(item.id !== 'none') drawCrown(pctx, fakeR*0.75, item, 60);
-    pctx.restore();
-
-  } else if(cat === 'cape'){
-    const fakeR = 20;
-    pctx.save();
-    pctx.translate(cx - 8, cy);
-    const savedCape = P.cape;
-    P.cape = [];
-    for(let i=0;i<10;i++){
-      P.cape.push({ x: -i*4 + Math.sin(i*0.8)*3, y: i*1.2 });
-    }
-    if(item.id !== 'none'){
-      drawCape(pctx, fakeR, item, 60, 0, 0);
-    }
-    P.cape = savedCape;
-    pctx.fillStyle = '#E0A44C';
-    pctx.beginPath(); pctx.arc(0, 0, fakeR*0.7, 0, Math.PI*2); pctx.fill();
-    pctx.fillStyle = '#FFF';
-    pctx.beginPath(); pctx.arc(-4, -3, 3, 0, Math.PI*2); pctx.arc(4, -3, 3, 0, Math.PI*2); pctx.fill();
-    pctx.restore();
-  }
+  pctx.fillStyle = '#8B8278';
+  pctx.font = 'bold 20px "Space Grotesk", sans-serif';
+  pctx.textAlign = 'center';
+  pctx.textBaseline = 'middle';
+  pctx.fillText('🖼️', cx, cy);
 }
 
 /* ============================================================
@@ -16621,43 +13326,9 @@ let _cosBuildToken = 0;
 /* ═══ Cache للمعاينات المصغّرة ═══ */
 const _cosPreviewCache = new Map();
 
-/* ═══ إعدادات كل فئة ═══ */
-const COS_CATEGORY_CONFIG = {
-  /* ═══ قديمة ═══ */
-  spark:      { label:'الشرار',      en:'SPARK',      icon:'✨', color:'#E8B34E', aspect:'square'  },
-  eyes:       { label:'العيون',      en:'EYES',       icon:'👁️', color:'#4A88C8', aspect:'wide'    },
-  companion:  { label:'الرفاق',      en:'COMPANION',  icon:'🐾', color:'#C98A2E', aspect:'square'  },
-  footstep:   { label:'الآثار',      en:'FOOTSTEP',   icon:'👣', color:'#8B8278', aspect:'wide'    },
-  trail:      { label:'خط السير',    en:'TRAIL',      icon:'➰', color:'#6B9B6B', aspect:'wide'    },
-  jump:       { label:'القفز',       en:'JUMP',       icon:'⬆️', color:'#5A8FD8', aspect:'square'  },
-  death:      { label:'النهاية',     en:'DEATH',      icon:'💀', color:'#A06AD8', aspect:'square'  },
-  aura:       { label:'الهالات',     en:'AURA',       icon:'🌟', color:'#FFD060', aspect:'square'  },
-  crown:      { label:'الرأسيات',    en:'CROWN',      icon:'👑', color:'#E8B34E', aspect:'square'  },
-  cape:       { label:'العباءات',    en:'CAPE',       icon:'🦸', color:'#9A6AC8', aspect:'square'  },
-
-  /* ✨ جديدة */
-  headItem:   { label:'غطاء الرأس',  en:'HEADGEAR',   icon:'🎩', color:'#E85838', aspect:'square'  },
-  backItem:   { label:'الظهر',       en:'BACK ITEM',  icon:'🦋', color:'#4A88C8', aspect:'square'  },
-  heldItem:   { label:'المحمول',     en:'HELD ITEM',  icon:'⚔️', color:'#C98A2E', aspect:'square'  },
-  groundMark: { label:'العلامة الأرضية', en:'GROUND', icon:'⭕', color:'#6B9B6B', aspect:'square'  },
-  nameTag:    { label:'بطاقة الاسم', en:'NAME TAG',   icon:'🏷️', color:'#A06AD8', aspect:'wide'    },
-  badge:      { label:'الشارة',      en:'BADGE',      icon:'⭐', color:'#E8B34E', aspect:'square'  },
-  avatarFrame:{ label:'الإطار',      en:'FRAME',      icon:'🖼️', color:'#FFD060', aspect:'square'  },
-  banner:     { label:'الخلفية',     en:'BANNER',     icon:'🎨', color:'#E85838', aspect:'wide'    },
-  spawnEffect:{ label:'تأثير البداية', en:'SPAWN',    icon:'🚀', color:'#4A88C8', aspect:'square'  },
-  reviveEffect:{ label:'تأثير الإحياء', en:'REVIVE',  icon:'💫', color:'#FFD060', aspect:'square'  },
-  hitEffect:  { label:'تأثير الارتطام', en:'HIT',     icon:'💥', color:'#E85838', aspect:'square'  }
-};
-
-/* ═══ الحصول على إعدادات الفئة ═══ */
+/* ═══ COS_CATEGORY_CONFIG — مدمج مع COSMETIC_CATEGORIES v3 ═══ */
 function getCosCategoryConfig(cat){
-  return COS_CATEGORY_CONFIG[cat] || {
-    label: (typeof CATEGORY_LABELS !== 'undefined' && CATEGORY_LABELS[cat]) || cat,
-    en: cat.toUpperCase(),
-    icon: '✨',
-    color: '#8B8278',
-    aspect: 'square'
-  };
+  return getCategoryConfig(cat);
 }
 
 /* ============================================================
@@ -16676,10 +13347,14 @@ function buildCosmetics(){
     return;
   }
 
-  /* ═══ ضمان تهيئة الفئات ═══ */
+  /* ✅ ضمان أن currentCosTab صالح */
+  if(!COSMETIC_CATEGORIES[currentCosTab]){
+    currentCosTab = COSMETIC_CATEGORY_ORDER[0];
+  }
+
   const cat = currentCosTab;
-  if(!Save.data.cosmetics.owned[cat])  Save.data.cosmetics.owned[cat]  = [];
-  if(!Save.data.cosmetics.current[cat]) Save.data.cosmetics.current[cat] = '';
+  if(!Save.data.cosmetics.owned[cat])   Save.data.cosmetics.owned[cat]   = ['none'];
+  if(!Save.data.cosmetics.current[cat]) Save.data.cosmetics.current[cat] = 'none';
 
   /* ═══ الفئة وإعداداتها ═══ */
   const catConfig = getCosCategoryConfig(cat);
@@ -18824,8 +15499,6 @@ if(gg) gg.classList.remove('show');
   P.enginePhase = 0; P.legPhase = 0; P.bouncePhase = 0;
   P.jumpHeld = false; P.jumpHoldTimer = 0;
   P.coyoteTimer = 0; P.jumpBufferTimer = 0;
-  initCape();
-  initCompanion();
 
   /* ═══════════════ تحديد موضع البداية حسب النمط ═══════════════ */
   if(G.mode === 'ASCEND'){
@@ -18941,67 +15614,39 @@ nextRandomSwitchMeters = 0;
    ضع هذه الدوال في مكان منفصل — قبل startGame
    ============================================================ */
 
-/* ═══ تأثير البداية — استدعها في startGame() بعد resetRun() ═══ */
 function spawnSpawnEffect(){
-  const fx = currentSpawnEffect();
-  if(!fx || fx.id === 'none') return;
+  const item = currentSpawn();
+  if(!item || item.id === 'none' || !hasItemImage(item)) return;
 
-  if(hasItemImage(fx)){
-    /* ✅ صورة واحدة تتوسع تدريجياً */
-    particles.push({
-      x: P.x, y: P.y,
-      vx: 0, vy: 0,
-      life: 1.2, decay: 0.018,
-      item: fx,
-      size: 80,
-      scaleOverLife: 2.5,   /* يتضخم 2.5x خلال حياته */
-      color: '#FFFFFF'
-    });
-    return;
-  }
-
-  /* fallback برمجي — انفجار تقليدي */
-  for(let i = 0; i < 40; i++){
-    const a = (i / 40) * Math.PI * 2;
-    particles.push({
-      x: P.x, y: P.y,
-      vx: Math.cos(a) * rand(4, 10),
-      vy: Math.sin(a) * rand(4, 10),
-      life: 1.4, decay: 0.016,
-      color: '#FFFFFF', size: rand(3, 6)
-    });
-  }
+  const cfg = getCategoryConfig('spawn').render;
+  particles.push({
+    x: P.x, y: P.y,
+    vx: 0, vy: 0,
+    life: cfg.life || 1.4,
+    decay: cfg.fade || 0.018,
+    item,
+    size: P.r * (cfg.sizeMul || 8.0),
+    scaleOverLife: cfg.scaleOverLife || 2.5,
+    color: '#FFFFFF'
+  });
 }
 
 /* ═══ تأثير الإحياء — عند secondChance / phoenix ═══ */
 function spawnReviveEffect(){
-  const fx = currentReviveEffect();
-  if(!fx || fx.id === 'none') return;
+  const item = currentRevive();
+  if(!item || item.id === 'none' || !hasItemImage(item)) return;
 
-  if(hasItemImage(fx)){
-    particles.push({
-      x: P.x, y: P.y,
-      vx: 0, vy: 0,
-      life: 1.6, decay: 0.014,
-      item: fx,
-      size: 100,
-      scaleOverLife: 3,
-      color: '#FFFFFF'
-    });
-    return;
-  }
-
-  /* fallback — حلقة نور صاعدة */
-  for(let i = 0; i < 30; i++){
-    const a = (i / 30) * Math.PI * 2;
-    particles.push({
-      x: P.x, y: P.y,
-      vx: Math.cos(a) * rand(3, 7),
-      vy: Math.sin(a) * rand(3, 7) - 2,
-      life: 1.4, decay: 0.02,
-      color: '#FFF8C0', size: rand(3, 6)
-    });
-  }
+  const cfg = getCategoryConfig('revive').render;
+  particles.push({
+    x: P.x, y: P.y,
+    vx: 0, vy: 0,
+    life: cfg.life || 1.6,
+    decay: cfg.fade || 0.014,
+    item,
+    size: P.r * (cfg.sizeMul || 8.0),
+    scaleOverLife: cfg.scaleOverLife || 3.0,
+    color: '#FFFFFF'
+  });
 }
 
 /* ═══ تأثير الارتطام — عند صد الهجوم بالدرع ═══ */
@@ -20503,19 +17148,9 @@ function buildAdminContentList(){
   if(!list) return;
   list.innerHTML = '';
 
-const keyMap = {
-  skin:'customSkins', eyes:'customEyes', companion:'customCompanion',
-  footstep:'customFootstep', spark:'customSpark', trail:'customTrail',
-  jump:'customJump', death:'customDeath', aura:'customAura',
-  crown:'customCrown', cape:'customCape',
-  /* ✨ جديدة */
-  headItem:'customHeadItem', backItem:'customBackItem', heldItem:'customHeldItem',
-  groundMark:'customGroundMark', nameTag:'customNameTag', badge:'customBadge',
-  avatarFrame:'customAvatarFrame', banner:'customBanner',
-  spawnEffect:'customSpawnEffect', reviveEffect:'customReviveEffect', hitEffect:'customHitEffect'
-};
-
-  const key = keyMap[currentAdminTab];
+  /* ✅ استخدم المفتاح المركزي */
+  const key = ADMIN_KEY_MAP[currentAdminTab] ||
+              ('custom' + currentAdminTab.charAt(0).toUpperCase() + currentAdminTab.slice(1));
   const items = Save.data.admin[key] || [];
 
   if(items.length === 0){
@@ -20630,15 +17265,25 @@ function populateSourceSelect(selectedId){
   }
 }
 
+/* ═══ قائمة كل المفاتيح المخصصة (ثابتة — لا تعتمد على ترتيب التعريف) ═══ */
 const ALL_CUSTOM_KEYS = [
-  'customSkins','customEyes','customCompanion','customFootstep',
-  'customSpark','customTrail','customJump','customDeath',
-  'customAura','customCrown','customCape',
-  /* ✨ جديدة */
-  'customHeadItem','customBackItem','customHeldItem',
-  'customGroundMark','customNameTag','customBadge',
-  'customAvatarFrame','customBanner',
-  'customSpawnEffect','customReviveEffect','customHitEffect'
+  'customSkins',
+  /* ═══ التأثيرات (9) ═══ */
+  'customHead',
+  'customBack',
+  'customEyes',
+  'customTrail',
+  'customSpark',
+  'customJump',
+  'customSpawn',
+  'customRevive',
+  'customDeath',
+  /* ═══ الجماليات (5) ═══ */
+  'customAvatar',
+  'customAvatarFrame',
+  'customBanner',
+  'customNameTag',
+  'customBadge'
 ];
 
 async function pushAdminContent(){
@@ -20740,18 +17385,9 @@ async function pullAdminContent(){
 
 /* ═══ حذف عنصر (محلياً + السحابة) ═══ */
 async function deleteCustomItem(cat, idx){
-const keyMap = {
-  skin:'customSkins', eyes:'customEyes', companion:'customCompanion',
-  footstep:'customFootstep', spark:'customSpark', trail:'customTrail',
-  jump:'customJump', death:'customDeath', aura:'customAura',
-  crown:'customCrown', cape:'customCape',
-  /* ✨ جديدة */
-  headItem:'customHeadItem', backItem:'customBackItem', heldItem:'customHeldItem',
-  groundMark:'customGroundMark', nameTag:'customNameTag', badge:'customBadge',
-  avatarFrame:'customAvatarFrame', banner:'customBanner',
-  spawnEffect:'customSpawnEffect', reviveEffect:'customReviveEffect', hitEffect:'customHitEffect'
-};
-  const key = keyMap[cat];
+  const key = ADMIN_KEY_MAP[cat] ||
+              ('custom' + cat.charAt(0).toUpperCase() + cat.slice(1));
+  if(!Save.data.admin[key]) return;
   Save.data.admin[key].splice(idx, 1);
   Save.save();
   await pushAdminContent();
@@ -20810,31 +17446,14 @@ function getImageEl(dataUrl){
    ============================================================ */
 
 /* ═══ خريطة مفاتيح التصنيفات (ثابت مركزي) ═══ */
-const ADMIN_KEY_MAP = Object.freeze({
-  skin:        'customSkins',
-  eyes:        'customEyes',
-  companion:   'customCompanion',
-  footstep:    'customFootstep',
-  spark:       'customSpark',
-  trail:       'customTrail',
-  jump:        'customJump',
-  death:       'customDeath',
-  aura:        'customAura',
-  crown:       'customCrown',
-  cape:        'customCape',
-  /* ✨ الفئات الجديدة */
-  headItem:    'customHeadItem',
-  backItem:    'customBackItem',
-  heldItem:    'customHeldItem',
-  groundMark:  'customGroundMark',
-  nameTag:     'customNameTag',
-  badge:       'customBadge',
-  avatarFrame: 'customAvatarFrame',
-  banner:      'customBanner',
-  spawnEffect: 'customSpawnEffect',
-  reviveEffect:'customReviveEffect',
-  hitEffect:   'customHitEffect'
-});
+const ADMIN_KEY_MAP = Object.freeze(
+  Object.fromEntries(
+    COSMETIC_CATEGORY_ORDER.map(cat => [
+      cat,
+      'custom' + cat.charAt(0).toUpperCase() + cat.slice(1)
+    ])
+  )
+);
 
 /* ═══ حالة الربط (يمنع التنفيذ المزدوج) ═══ */
 let _adminWired = false;
@@ -21363,48 +17982,45 @@ function getAllSkins(){
       id: s.id,
       ar: s.name,
       en: s.nameEn || s.name,
+      imageData: s.imageData || null,
+      imagePath: s.imagePath || null,
       body: s.color || '#E07A3F',
       bodyDark: s.color2 || '#A05020',
       detail: '#1A1512',
       accent: s.color || '#E07A3F',
-      accessory: 'none',
-      pattern: 'none',
       price: (s.placements || []).find(p => p.type === 'shop')?.price || 0,
       rarity: s.rarity || 'common',
-      imagePath: s.imagePath || null,
       placements: s.placements || [],
       isCustom: true
     }));
-  return [...SKINS, ...custom];
+
+  return [DEFAULT_SKIN, ...custom];
 }
 
 function getAllCosmetics(cat){
-  const base = COSMETICS[cat] || [];
-const keyMap = {
-  skin:'customSkins', eyes:'customEyes', companion:'customCompanion',
-  footstep:'customFootstep', spark:'customSpark', trail:'customTrail',
-  jump:'customJump', death:'customDeath', aura:'customAura',
-  crown:'customCrown', cape:'customCape',
-  /* ✨ جديدة */
-  headItem:'customHeadItem', backItem:'customBackItem', heldItem:'customHeldItem',
-  groundMark:'customGroundMark', nameTag:'customNameTag', badge:'customBadge',
-  avatarFrame:'customAvatarFrame', banner:'customBanner',
-  spawnEffect:'customSpawnEffect', reviveEffect:'customReviveEffect', hitEffect:'customHitEffect'
-};
-  const key = keyMap[cat];
-  const custom = (Save.data.admin[key] || [])
+  const base = (typeof COSMETICS !== 'undefined' && COSMETICS[cat]) || [];
+
+  /* ═══ مفتاح الأدمن الموحّد ═══ */
+  const key = 'custom' + cat.charAt(0).toUpperCase() + cat.slice(1);
+  const customRaw = (Save.data.admin && Save.data.admin[key]) || [];
+
+  const custom = customRaw
     .filter(c => c.enabled !== false)
     .map(c => ({
       id: c.id,
-      name: c.name,
+      name: c.name || c.nameEn || 'بدون اسم',
       price: (c.placements || []).find(p => p.type === 'shop')?.price || 0,
-      desc: c.nameEn || c.name,
+      desc: c.nameEn || c.name || '',
       color: c.color,
       color2: c.color2,
+      rarity: c.rarity || 'common',
       imagePath: c.imagePath || null,
+      imageData: c.imageData || null,
       placements: c.placements || [],
-      isCustom: true
+      isCustom: true,
+      category: cat
     }));
+
   return [...base, ...custom];
 }
 
@@ -21476,15 +18092,17 @@ safe('reset-btn', async () => {
     });
   });
 
-  document.querySelectorAll('#cos-tabs .tab-chip').forEach(tab=>{
-    tab.addEventListener('click', ()=>{
-      document.querySelectorAll('#cos-tabs .tab-chip').forEach(t=>t.classList.remove('active'));
-      tab.classList.add('active');
-      currentCosTab = tab.dataset.cat;
-      buildCosmetics();
-      Sfx.tap();
-    });
+document.querySelectorAll('#cos-tabs .tab-chip, #cos-tabs-aesthetic .tab-chip').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    /* إزالة active من الكل */
+    document.querySelectorAll('#cos-tabs .tab-chip, #cos-tabs-aesthetic .tab-chip')
+      .forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentCosTab = tab.dataset.cat;
+    buildCosmetics();
+    Sfx.tap();
   });
+});
 
   document.querySelectorAll('#quest-tabs .tab-chip').forEach(tab=>{
     tab.addEventListener('click', ()=>{
@@ -23217,11 +19835,8 @@ const Admin = {
     const el = document.getElementById('admin-content-stats');
     if(!el) return;
 
-    const cats = [
-      'skin','eyes','companion','footstep','spark','trail','jump','death','aura','crown','cape',
-      'headItem','backItem','heldItem','groundMark','nameTag','badge',
-      'avatarFrame','banner','spawnEffect','reviveEffect','hitEffect'
-    ];
+    /* ✅ استخدم التصنيفات المركزية */
+    const cats = ['skin', ...COSMETIC_CATEGORY_ORDER];
 
     let total = 0;
     let enabled = 0;
@@ -23277,18 +19892,9 @@ const Admin = {
     const list = document.getElementById('admin-content-list');
     if(!list) return;
 
-    const keyMap = {
-      skin:'customSkins', eyes:'customEyes', companion:'customCompanion',
-      footstep:'customFootstep', spark:'customSpark', trail:'customTrail',
-      jump:'customJump', death:'customDeath', aura:'customAura',
-      crown:'customCrown', cape:'customCape',
-      headItem:'customHeadItem', backItem:'customBackItem', heldItem:'customHeldItem',
-      groundMark:'customGroundMark', nameTag:'customNameTag', badge:'customBadge',
-      avatarFrame:'customAvatarFrame', banner:'customBanner',
-      spawnEffect:'customSpawnEffect', reviveEffect:'customReviveEffect', hitEffect:'customHitEffect'
-    };
-
-    const key = keyMap[this.contentTab];
+    /* ✅ استخدم المفتاح المركزي */
+    const key = ADMIN_KEY_MAP[this.contentTab] ||
+                ('custom' + this.contentTab.charAt(0).toUpperCase() + this.contentTab.slice(1));
     const items = (Save.data.admin[key] || []);
 
     if(items.length === 0){
@@ -23371,16 +19977,8 @@ const Admin = {
   },
 
   getFolderForCategory(cat){
-    const folders = {
-      skin: 'skins', eyes: 'eyes', companion: 'companion', footstep: 'footstep',
-      spark: 'spark', trail: 'trail', jump: 'jump', death: 'death',
-      aura: 'aura', crown: 'crown', cape: 'cape',
-      headItem: 'head', backItem: 'back', heldItem: 'held',
-      groundMark: 'marks', nameTag: 'tags', badge: 'badges',
-      avatarFrame: 'frames', banner: 'banners',
-      spawnEffect: 'spawn', reviveEffect: 'revive', hitEffect: 'hit'
-    };
-    return folders[cat] || 'misc';
+    /* ✅ استخدم CATEGORY_FOLDERS المركزية */
+    return (typeof CATEGORY_FOLDERS !== 'undefined' && CATEGORY_FOLDERS[cat]) || 'misc';
   },
 
   /* ═══════════════ Players Tab ═══════════════ */
@@ -24203,17 +20801,13 @@ const Admin = {
     const container = document.getElementById('admin-preview-controls');
     if(!container) return;
 
+    /* ✅ التصنيفات v3 فقط */
     const cats = [
       { id: 'skin', label: 'الزي' },
-      { id: 'aura', label: 'الهالة' },
-      { id: 'crown', label: 'الرأسية' },
-      { id: 'cape', label: 'العباءة' },
-      { id: 'headItem', label: 'غطاء الرأس' },
-      { id: 'backItem', label: 'الظهر' },
-      { id: 'heldItem', label: 'المحمول' },
-      { id: 'groundMark', label: 'الأرضية' },
-      { id: 'eyes', label: 'العيون' },
-      { id: 'companion', label: 'الرفيق' }
+      ...COSMETIC_CATEGORY_ORDER.map(cat => ({
+        id: cat,
+        label: COSMETIC_CATEGORIES[cat].label
+      }))
     ];
 
     container.innerHTML = cats.map(c => {
@@ -24610,31 +21204,32 @@ resolve(item){
   },
 
   /* ═══ التحميل المسبق لمحتوى اللاعب الحالي ═══ */
-  async preloadPlayerAssets(){
-    const sources = [];
-    const add = (item) => {
-      const s = this.resolve(item);
-      if(s) sources.push(s);
-    };
+async preloadPlayerAssets(){
+  const sources = [];
+  const add = (item) => {
+    const s = this.resolve(item);
+    if(s) sources.push(s);
+  };
 
-    add(currentSkin());
-    add(currentEyes());
-    add(currentCrown());
-    add(currentCape());
-    add(currentCompanion());
-    add(currentAura());
-    add(currentTrail());
-    add(currentSpark());
-    add(currentJump());
-    add(currentDeath());
-    add(currentFootstep());
-    if(typeof currentHeadItem === 'function') add(currentHeadItem());
-    if(typeof currentBackItem === 'function') add(currentBackItem());
-    if(typeof currentHeldItem === 'function') add(currentHeldItem());
-    if(typeof currentNameTag === 'function') add(currentNameTag());
+  /* ═══ v3 categories فقط ═══ */
+  add(currentSkin());
+  add(currentHead());
+  add(currentBack());
+  add(currentEyes());
+  add(currentTrail());
+  add(currentSpark());
+  add(currentJump());
+  add(currentSpawn());
+  add(currentRevive());
+  add(currentDeath());
+  add(currentAvatar());
+  add(currentAvatarFrame());
+  add(currentBanner());
+  add(currentNameTag());
+  add(currentBadge());
 
-    return this.preload(sources);
-  }
+  return this.preload(sources);
+}
 };
 
 /* ═══ helper: رسم مع fallback برمجي ═══ */
@@ -24710,24 +21305,55 @@ function updatePlayerCard(){
   }
 
   /* الصورة/الإيموجي */
-  const emojiEl = document.getElementById('pch-emoji');
-  const imgEl = document.getElementById('pch-img');
-  if(emojiEl && imgEl){
-    if(photo){
-      emojiEl.style.display = 'none';
-      imgEl.src = photo;
-      imgEl.style.display = 'block';
-      imgEl.onerror = () => {
-        imgEl.style.display = 'none';
-        emojiEl.style.display = 'inline';
-        emojiEl.textContent = name.charAt(0).toUpperCase() || '👤';
-      };
-    } else {
-      emojiEl.style.display = 'inline';
-      emojiEl.textContent = name.charAt(0).toUpperCase() || '👤';
-      imgEl.style.display = 'none';
-    }
+/* ═══ الصورة الشخصية (أولوية: COSMETIC > Google) ═══ */
+const avatarCos = currentAvatar();
+const avatarImg = document.getElementById('pch-img');
+const avatarEmoji = document.getElementById('pch-emoji');
+
+if(avatarImg && avatarEmoji){
+  let finalPhoto = null;
+
+  /* 1) الصورة الشخصية من التجميل */
+  if(avatarCos && avatarCos.id !== 'none' && hasItemImage(avatarCos)){
+    finalPhoto = ASSET.resolve(avatarCos);
   }
+  /* 2) Google photo */
+  else if(photo){
+    finalPhoto = photo;
+  }
+
+  if(finalPhoto){
+    avatarImg.src = finalPhoto;
+    avatarImg.style.display = 'block';
+    avatarEmoji.style.display = 'none';
+    avatarImg.onerror = () => {
+      avatarImg.style.display = 'none';
+      avatarEmoji.style.display = 'inline';
+      avatarEmoji.textContent = name.charAt(0).toUpperCase() || '👤';
+    };
+  } else {
+    avatarImg.style.display = 'none';
+    avatarEmoji.style.display = 'inline';
+    avatarEmoji.textContent = name.charAt(0).toUpperCase() || '👤';
+  }
+}
+
+/* ═══ خلفية البطاقة ═══ */
+const bannerCos = currentBanner();
+const heroEl = document.getElementById('player-hero-merged');
+if(heroEl){
+  /* احذف القديمة */
+  const oldBg = heroEl.querySelector('.phm-bg-img');
+  if(oldBg) oldBg.remove();
+
+  if(bannerCos && bannerCos.id !== 'none' && hasItemImage(bannerCos)){
+    const bg = document.createElement('img');
+    bg.className = 'phm-bg-img';
+    bg.src = ASSET.resolve(bannerCos);
+    bg.alt = '';
+    heroEl.insertBefore(bg, heroEl.firstChild);
+  }
+}
 
   /* إطار الصورة الرمزية */
   const frameEl = document.getElementById('pch-frame');
