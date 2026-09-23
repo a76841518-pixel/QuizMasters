@@ -2090,15 +2090,16 @@ for(const cat of V3_CATEGORIES_LOCAL){
       this.data.dailyLogin = { streak: 0, lastClaim: null, claimedToday: false };
     }
 
-/* ═══ ownedSkins ═══ */
-if(!Array.isArray(this.data.ownedSkins) || this.data.ownedSkins.length === 0){
+/* ═══ ownedSkins — ضمان أن الافتراضي موجود دائماً ═══ */
+if(!Array.isArray(this.data.ownedSkins)){
   this.data.ownedSkins = ['default'];
 }
-
-/* ═══ currentSkin ═══ */
-if(!this.data.currentSkin || this.data.currentSkin === 'default'){
-  this.data.currentSkin = 'default';
+/* ✅ الإصلاح: أضف 'default' إذا كان مفقوداً (ليس فقط عندما تكون فارغة) */
+if(!this.data.ownedSkins.includes('default')){
+  this.data.ownedSkins.unshift('default');
 }
+/* تنظيف القيم غير النصية */
+this.data.ownedSkins = this.data.ownedSkins.filter(id => typeof id === 'string' && id.length > 0);
 
     /* ═══ settings ═══ */
     if(!this.data.settings || typeof this.data.settings !== 'object'){
@@ -9099,6 +9100,91 @@ function drawCompanion(){
   /* ❌ نظام الرفاق محذوف في v3 — لا يفعل شيئاً */
 }
 
+/* ═══════════════════════════════════════════════════════════
+   ═══════════ ARABIC FEET RENDERER (للنمط الأرضي) ═══════════
+   ═══════════════════════════════════════════════════════════ */
+function drawCharacterFeet(c, r, mode, legPhase, walkAnim, onGround, rot){
+  /* ✅ لا أرجل في أنماط المركبة */
+  if(mode === 'FLIP' || mode === 'FLAP' || mode === 'DRIFT') return;
+
+  /* الألوان حسب الجسم */
+  const footColor = '#2A2018';
+  const footLight = 'rgba(255,255,255,0.18)';
+  const footShadow = 'rgba(0,0,0,0.25)';
+
+  const footY = r * 0.88;
+  const footW = r * 0.34;
+  const footH = r * 0.16;
+
+  /* موضع افتراضي */
+  let lx = -r * 0.38;
+  let rx = r * 0.38;
+  let ly = 0;
+  let ry = 0;
+
+  if(onGround && (mode === 'WALK' || mode === 'FLIP_WALK')){
+    /* ═══ أنيميشن المشي ═══ */
+    const cycle = Math.sin(walkAnim * 0.5);
+    const swing = r * 0.14;
+
+    lx += cycle * swing;
+    rx -= cycle * swing;
+    ly -= Math.max(0, cycle) * r * 0.10;
+    ry -= Math.max(0, -cycle) * r * 0.10;
+
+  } else if(mode === 'WALK' || mode === 'ASCEND' || mode === 'SKY_JUMP'){
+    /* ═══ في الهواء: القدمان متباعدتان قليلاً ═══ */
+    const t = Math.min(1, Math.abs(rot || 0) * 2);
+    lx -= r * 0.08 + t * r * 0.05;
+    rx += r * 0.08 + t * r * 0.05;
+    ly -= r * 0.06;
+    ry -= r * 0.06;
+  }
+
+  /* ═══ ظل القدم اليسرى ═══ */
+  c.fillStyle = footShadow;
+  c.beginPath();
+  c.ellipse(lx, footY + ly + 1.5, footW * 1.05, footH * 1.05, 0, 0, Math.PI * 2);
+  c.fill();
+
+  /* ═══ ظل القدم اليمنى ═══ */
+  c.beginPath();
+  c.ellipse(rx, footY + ry + 1.5, footW * 1.05, footH * 1.05, 0, 0, Math.PI * 2);
+  c.fill();
+
+  /* ═══ القدم اليسرى ═══ */
+  c.fillStyle = footColor;
+  c.beginPath();
+  c.ellipse(lx, footY + ly, footW, footH, 0, 0, Math.PI * 2);
+  c.fill();
+
+  /* ═══ القدم اليمنى ═══ */
+  c.beginPath();
+  c.ellipse(rx, footY + ry, footW, footH, 0, 0, Math.PI * 2);
+  c.fill();
+
+  /* ═══ لمعة علوية ═══ */
+  c.fillStyle = footLight;
+  c.beginPath();
+  c.ellipse(lx, footY + ly - footH * 0.35, footW * 0.6, footH * 0.28, 0, 0, Math.PI * 2);
+  c.fill();
+  c.beginPath();
+  c.ellipse(rx, footY + ry - footH * 0.35, footW * 0.6, footH * 0.28, 0, 0, Math.PI * 2);
+  c.fill();
+
+  /* ═══ أصابع قدم بسيطة (خطان رقيقان) ═══ */
+  c.strokeStyle = 'rgba(0,0,0,0.35)';
+  c.lineWidth = 1;
+  c.beginPath();
+  c.moveTo(lx - footW * 0.5, footY + ly + footH * 0.2);
+  c.lineTo(lx + footW * 0.5, footY + ly + footH * 0.2);
+  c.stroke();
+  c.beginPath();
+  c.moveTo(rx - footW * 0.5, footY + ry + footH * 0.2);
+  c.lineTo(rx + footW * 0.5, footY + ry + footH * 0.2);
+  c.stroke();
+}
+
 /* ============================================================
    ═══════════ RENDER CHARACTER v3 — IMAGE ONLY ══════════════
    ═══════════════════════════════════════════════════════════
@@ -9120,12 +9206,15 @@ function renderCharacter(c, r, skin, opts){
   const skipExtras = opts.skipExtras || false;
   const t = G.t;
 
+  /* ✅ قراءة حالة الأرجل من opts (مع قيم افتراضية آمنة) */
+  const legPhase  = opts.legPhase  ?? (typeof P !== 'undefined' ? P.legPhase  : 0);
+  const walkAnim  = opts.walkAnim  ?? (typeof P !== 'undefined' ? P.walkAnim  : 0);
+  const onGround  = opts.onGround  ?? (typeof P !== 'undefined' ? P.onGround  : true);
+
   c.save();
   c.globalAlpha = alpha;
 
-  /* ═══════════════════════════════════════════════════════
-     طبقة 0: الظهر (خلف الشخصية)
-     ═══════════════════════════════════════════════════════ */
+  /* ═══ طبقة 0: الظهر ═══ */
   if(!skipExtras){
     const back = currentBack();
     if(back && back.id !== 'none' && hasItemImage(back)){
@@ -9146,15 +9235,29 @@ function renderCharacter(c, r, skin, opts){
   if(isFlippedWalk) c.rotate(Math.PI);
 
   /* ═══════════════════════════════════════════════════════
-     طبقة 1: الجسم (صورة الزي)
+     ✅ جديد: ارسم الأقدام قبل الجسم بقليل (في المستوى الأدنى)
      ═══════════════════════════════════════════════════════ */
+  const hasFeet = (mode === 'WALK' || mode === 'ASCEND' ||
+                   mode === 'SKY_JUMP' || mode === 'FLIP_WALK');
+  if(hasFeet){
+    /* ارسم الأرجل داخل نفس نظام الإحداثيات المُدوَّر */
+    c.save();
+    if(isFlippedWalk){
+      /* في FLIP_WALK، ارسم الأرجل قبل الدوران العكسي */
+      c.rotate(-Math.PI);
+      drawCharacterFeet(c, r, mode, legPhase, walkAnim, onGround, facingRot);
+      c.rotate(Math.PI);
+    } else {
+      drawCharacterFeet(c, r, mode, legPhase, walkAnim, onGround, facingRot);
+    }
+    c.restore();
+  }
+
+  /* ═══ طبقة 1: الجسم ═══ */
   drawCharacterBody(c, r, skin, t);
 
-  /* ═══════════════════════════════════════════════════════
-     طبقة 2: العيون — فقط إن لم يكن الجسم صورة
-     ═══════════════════════════════════════════════════════ */
+  /* ═══ طبقة 2: العيون ═══ */
   const skinIsImage = hasItemImage(skin);
-
   if(!skinIsImage){
     const eyes = currentEyes();
     if(eyes && eyes.id !== 'none' && hasItemImage(eyes)){
@@ -9169,9 +9272,7 @@ function renderCharacter(c, r, skin, opts){
     }
   }
 
-  /* ═══════════════════════════════════════════════════════
-     طبقة 3: الرأس (فوق كل شيء)
-     ═══════════════════════════════════════════════════════ */
+  /* ═══ طبقة 3: الرأس ═══ */
   if(!skipExtras){
     const head = currentHead();
     if(head && head.id !== 'none' && hasItemImage(head)){
@@ -9223,9 +9324,16 @@ if(G.mode === 'WALK'){
   if(ghostActive) alpha *= 0.6;
   if(skin.transparent) alpha *= 0.75;
 
-  ctx.save();
-  ctx.translate(P.x, P.y);
-  renderCharacter(ctx, r, skin, { mode: G.mode, rot: P.rot, alpha });
+ctx.save();
+ctx.translate(P.x, P.y);
+renderCharacter(ctx, r, skin, { 
+  mode: G.mode, 
+  rot: P.rot, 
+  alpha,
+  legPhase: P.legPhase,
+  walkAnim: P.walkAnim,
+  onGround: P.onGround
+});
 
   /* ✅✅✅ ضع الكود الجديد هنا ✅✅✅ */
   /* ═══ نسخة مرئية عند تفعيل تعزيز Clone ═══ */
@@ -17383,16 +17491,71 @@ async function pullAdminContent(){
   }
 }
 
-/* ═══ حذف عنصر (محلياً + السحابة) ═══ */
+/* ═══ حذف عنصر (محلياً + السحابة) — نسخة مُصحَّحة ═══ */
 async function deleteCustomItem(cat, idx){
+  /* ✅ الإصلاح: استخدم ADMIN_KEY_MAP المُصحَّح */
   const key = ADMIN_KEY_MAP[cat] ||
               ('custom' + cat.charAt(0).toUpperCase() + cat.slice(1));
-  if(!Save.data.admin[key]) return;
-  Save.data.admin[key].splice(idx, 1);
+
+  if(!Save.data.admin[key]){
+    console.warn('[Delete] Key not found:', key);
+    alert('⚠ خطأ: مفتاح التصنيف غير موجود');
+    return;
+  }
+
+  const list = Save.data.admin[key];
+  if(idx < 0 || idx >= list.length) return;
+
+  const item = list[idx];
+  if(!item) return;
+
+  /* تأكيد مزدوج مع تفاصيل */
+  const ok = confirm(
+    `⚠️ حذف العنصر نهائياً؟\n\n` +
+    `📦 الاسم: ${item.name || 'بدون اسم'}\n` +
+    `📁 التصنيف: ${CATEGORY_LABELS[cat] || cat}\n` +
+    `🌐 المصادر: ${(item.placements || []).map(p => p.type).join(', ') || 'لا شيء'}\n\n` +
+    `سيُحذف من جميع اللاعبين فوراً.`
+  );
+  if(!ok) return;
+
+  /* حذف */
+  list.splice(idx, 1);
   Save.save();
-  await pushAdminContent();
-  buildAdminContentList();
-  Sfx.tap();
+
+  /* مزامنة */
+  let syncOk = false;
+  if(typeof pushAdminContent === 'function'){
+    const r = await pushAdminContent();
+    syncOk = r.ok;
+  }
+
+  /* سجل */
+  if(typeof Admin !== 'undefined' && Admin.logAudit){
+    Admin.logAudit('content', 'deleted', `🗑 حذف "${item.name}" من ${cat}`);
+  }
+
+  /* تحديث الواجهات */
+  if(typeof Admin !== 'undefined' && Admin.initialized){
+    Admin.renderContentList();
+    Admin.renderContentStats();
+    if(Admin.addActivity) Admin.addActivity('🗑', `حذف "${item.name}"`);
+  }
+  if(typeof buildAdminContentList === 'function') buildAdminContentList();
+  if(typeof refreshContentEverywhere === 'function') refreshContentEverywhere();
+
+  /* إشعار */
+  if(syncOk){
+    if(typeof Toast !== 'undefined'){
+      Toast.success('تم الحذف', `حُذف "${item.name}" من كل اللاعبين`);
+    } else {
+      alert('✓ تم الحذف والنشر');
+    }
+  } else {
+    alert('⚠ حُذف محلياً — فشل النشر للسحابة');
+  }
+
+  Sfx.reward(); haptic(15);
 }
 
 function compressImage(file, maxSize = 256, quality = 0.85){
@@ -17445,15 +17608,18 @@ function getImageEl(dataUrl){
    ✅ الكود السري يُسجّل مرة واحدة فقط
    ============================================================ */
 
-/* ═══ خريطة مفاتيح التصنيفات (ثابت مركزي) ═══ */
-const ADMIN_KEY_MAP = Object.freeze(
-  Object.fromEntries(
+/* ═══ خريطة مفاتيح التصنيفات (ثابت مركزي — مُصحَّح) ═══ */
+const ADMIN_KEY_MAP = Object.freeze({
+  /* ✅ الإصلاح: أضف 'skin' أولاً */
+  skin: 'customSkins',
+  /* باقي التصنيفات تُبنى تلقائياً */
+  ...Object.fromEntries(
     COSMETIC_CATEGORY_ORDER.map(cat => [
       cat,
       'custom' + cat.charAt(0).toUpperCase() + cat.slice(1)
     ])
   )
-);
+});
 
 /* ═══ حالة الربط (يمنع التنفيذ المزدوج) ═══ */
 let _adminWired = false;
@@ -19888,28 +20054,101 @@ const Admin = {
     });
   },
 
-  renderContentList(){
-    const list = document.getElementById('admin-content-list');
-    if(!list) return;
+renderContentList(){
+  const list = document.getElementById('admin-content-list');
+  if(!list) return;
 
-    /* ✅ استخدم المفتاح المركزي */
-    const key = ADMIN_KEY_MAP[this.contentTab] ||
-                ('custom' + this.contentTab.charAt(0).toUpperCase() + this.contentTab.slice(1));
-    const items = (Save.data.admin[key] || []);
+  const key = ADMIN_KEY_MAP[this.contentTab] ||
+              ('custom' + this.contentTab.charAt(0).toUpperCase() + this.contentTab.slice(1));
+  const items = (Save.data.admin[key] || []);
 
-    if(items.length === 0){
-      list.innerHTML = `
-        <div style="text-align:center;padding:40px 20px;color:var(--ink-mute);">
-          <div style="font-size:40px;opacity:.3;margin-bottom:10px;">📦</div>
-          <div style="font-size:13px;font-weight:700;">لا توجد عناصر في هذا التصنيف</div>
-          <div style="font-size:11px;margin-top:6px;">اضغط "إضافة عنصر جديد" للبدء</div>
-        </div>
-      `;
-      return;
-    }
+  if(items.length === 0){
+    list.innerHTML = `
+      <div style="text-align:center;padding:40px 20px;color:var(--ink-mute);">
+        <div style="font-size:40px;opacity:.3;margin-bottom:10px;">📦</div>
+        <div style="font-size:13px;font-weight:700;">لا توجد عناصر في هذا التصنيف</div>
+        <div style="font-size:11px;margin-top:6px;">اضغط "إضافة عنصر جديد" للبدء</div>
+      </div>
+    `;
+    return;
+  }
 
-    list.innerHTML = '';
-    items.forEach((item, idx) => {
+  /* ═══ ✅ جديد: شريط أدوات القائمة ═══ */
+  let toolbar = document.getElementById('admin-content-toolbar');
+  if(!toolbar){
+    toolbar = document.createElement('div');
+    toolbar.id = 'admin-content-toolbar';
+    toolbar.style.cssText = `
+      display:flex;align-items:center;justify-content:space-between;
+      gap:8px;padding:10px 12px;margin-bottom:10px;
+      background:#fff;border-radius:12px;
+      border:1px solid var(--line);
+    `;
+    list.parentNode.insertBefore(toolbar, list);
+  }
+
+  toolbar.innerHTML = `
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span style="font-size:14px;">📊</span>
+      <span style="font-size:12px;font-weight:800;color:var(--ink);">
+        ${items.length} عنصر في "${CATEGORY_LABELS[this.contentTab] || this.contentTab}"
+      </span>
+    </div>
+    <button class="admin-mini-btn danger" id="admin-clear-category" title="حذف الكل">
+      🗑 حذف الكل
+    </button>
+  `;
+
+  /* ربط زر الحذف الكامل */
+  const clearBtn = toolbar.querySelector('#admin-clear-category');
+  if(clearBtn && !clearBtn._bound){
+    clearBtn._bound = true;
+    clearBtn.addEventListener('click', async () => {
+      const cat = this.contentTab;
+      const key2 = ADMIN_KEY_MAP[cat] || ('custom' + cat.charAt(0).toUpperCase() + cat.slice(1));
+      const catItems = Save.data.admin[key2] || [];
+
+      if(catItems.length === 0) return;
+
+      const ok = confirm(
+        `⚠️⚠️ تحذير شديد ⚠️⚠️\n\n` +
+        `سيتم حذف ${catItems.length} عنصر من تصنيف "${CATEGORY_LABELS[cat] || cat}"\n` +
+        `من جميع اللاعبين نهائياً!\n\n` +
+        `لا يمكن التراجع. متابعة؟`
+      );
+      if(!ok) return;
+
+      const ok2 = confirm('تأكيد أخير: هل أنت متأكد 100%؟');
+      if(!ok2) return;
+
+      Save.data.admin[key2] = [];
+      Save.save();
+
+      if(typeof pushAdminContent === 'function'){
+        const r = await pushAdminContent();
+        if(!r.ok){
+          alert('⚠ حُذف محلياً — فشل النشر');
+        }
+      }
+
+      if(typeof Admin !== 'undefined' && Admin.logAudit){
+        Admin.logAudit('content', 'clear-category', `🗑 حذف كل عناصر ${cat}`);
+      }
+
+      this.renderContentList();
+      this.renderContentStats();
+      if(this.addActivity) this.addActivity('🗑', `حذف كل "${CATEGORY_LABELS[cat] || cat}"`);
+      if(typeof refreshContentEverywhere === 'function') refreshContentEverywhere();
+
+      if(typeof Toast !== 'undefined'){
+        Toast.success('تم الحذف', `حُذف كل المحتوى من "${CATEGORY_LABELS[cat] || cat}"`);
+      }
+      Sfx.reward(); haptic(20);
+    });
+  }
+
+  list.innerHTML = '';
+  items.forEach((item, idx) => {
       const el = document.createElement('div');
       el.className = 'admin-content-item';
       el.style.position = 'relative';
@@ -19976,10 +20215,10 @@ const Admin = {
     return null;
   },
 
-  getFolderForCategory(cat){
-    /* ✅ استخدم CATEGORY_FOLDERS المركزية */
-    return (typeof CATEGORY_FOLDERS !== 'undefined' && CATEGORY_FOLDERS[cat]) || 'misc';
-  },
+getFolderForCategory(cat){
+  if(cat === 'skin') return 'skins';
+  return (typeof CATEGORY_FOLDERS !== 'undefined' && CATEGORY_FOLDERS[cat]) || 'misc';
+},
 
   /* ═══════════════ Players Tab ═══════════════ */
   renderPlayers(){
