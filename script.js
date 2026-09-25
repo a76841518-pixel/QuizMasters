@@ -449,8 +449,8 @@ function buildTitles(){
 function buildSeasonV2(){
   const pts = Save.data.season.points || 0;
   const rankIdx = getSeasonRankIdx();
-  const rank = SEASON_RANKS[rankIdx];
-  const nextRank = SEASON_RANKS[rankIdx + 1];
+  const rank = getSeasonRanks()[rankIdx];
+  const nextRank = getSeasonRanks()[rankIdx + 1];
 
   /* Hero */
   const hero = document.getElementById('season-hero');
@@ -481,7 +481,7 @@ function buildSeasonV2(){
   const list = document.getElementById('rank-list');
   if(list){
     list.innerHTML = '';
-    SEASON_RANKS.forEach((r, i) => {
+    getSeasonRanks().forEach((r, i) => {
       const isCurrent = i === rankIdx;
       const isUnlocked = i <= rankIdx;
 
@@ -672,7 +672,12 @@ function levelRewardFor(lv){ return { coins: 20 + lv*15 }; }
 /* ============================================================
    ==================== Season ===============================
    ============================================================ */
-const SEASON_RANKS = [
+/* ═══════════════════════════════════════════════════════════
+   ═══════════ SEASON DEFAULTS (احتياطي فقط) ═══════════════
+   ═══════════════════════════════════════════════════════════
+   هذه القيم تُستخدم فقط إذا لم يكن هناك موسم نشط
+   ============================================================ */
+const DEFAULT_SEASON_RANKS = [
   { name:'برونزي',   icon:'🥉', points:0 },
   { name:'فضي',      icon:'🥈', points:500 },
   { name:'ذهبي',     icon:'🥇', points:1500 },
@@ -682,8 +687,63 @@ const SEASON_RANKS = [
   { name:'أيقوني',   icon:'🌟', points:20000 }
 ];
 
-const BP_TIERS = 30;
-const BP_TIER_POINTS = 300;
+const DEFAULT_BP_TIERS = 30;
+const DEFAULT_BP_TIER_POINTS = 300;
+const DEFAULT_BP_PRICE = 1500;
+
+/* ═══════════════════════════════════════════════════════════
+   ═══════════ دوال جلب المواسم (Dynamic) ═══════════════════
+   ═══════════════════════════════════════════════════════════
+   كل دوال اللعبة تستدعي هذه الدوال بدلاً من المتغيرات الثابتة
+   ============================================================ */
+
+/**
+ * جلب رتب الموسم النشط
+ * @returns {Array} قائمة الرتب
+ */
+function getSeasonRanks(){
+  const season = getActiveSeason();
+  if(season && Array.isArray(season.ranks) && season.ranks.length > 0){
+    return season.ranks;
+  }
+  return DEFAULT_SEASON_RANKS;
+}
+
+/**
+ * جلب عدد مستويات Battle Pass
+ * @returns {number}
+ */
+function getBPTiers(){
+  const season = getActiveSeason();
+  if(season && season.battlePass && season.battlePass.tiers){
+    return season.battlePass.tiers;
+  }
+  return DEFAULT_BP_TIERS;
+}
+
+/**
+ * جلب عدد النقاط المطلوبة لكل مستوى BP
+ * @returns {number}
+ */
+function getBPTierPoints(){
+  const season = getActiveSeason();
+  if(season && season.battlePass && season.battlePass.tierPoints){
+    return season.battlePass.tierPoints;
+  }
+  return DEFAULT_BP_TIER_POINTS;
+}
+
+/**
+ * جلب سعر Premium Battle Pass
+ * @returns {number}
+ */
+function getBPPrice(){
+  const season = getActiveSeason();
+  if(season && season.battlePass && season.battlePass.premiumPrice){
+    return season.battlePass.premiumPrice;
+  }
+  return DEFAULT_BP_PRICE;
+}
 
 /* ============================================================
    ==================== Missions =============================
@@ -708,6 +768,109 @@ const MISSION_TEMPLATES = {
     { id:'orb50',   icon:'🔮', title:'التقط ٥٠ كرة طاقة', target:50,   key:'orbs',     reward:600 }
   ]
 };
+
+/* ═══════════════════════════════════════════════════════════
+   ═══════════ دوال جلب المهام من الموسم النشط ════════════
+   ============================================================ */
+/* ═══════════════════════════════════════════════════════════
+   ═══════════ MISSION HELPERS v2 — SAFE ═══════════════════
+   ═══════════════════════════════════════════════════════════
+   ⚠️ هذه النسخة تحتوي على:
+   - لقطة (snapshot) للمهام الافتراضية وقت التحميل
+   - حماية ضد الاستدعاء الذاتي (recursion guard)
+   - try/catch للتأكد من عدم تعطل أي شيء
+   ============================================================ */
+
+/* لقطة المهام الافتراضية — لا يمكن تغييرها */
+const _MISSION_FALLBACK = (function(){
+  try {
+    if(typeof MISSION_TEMPLATES !== 'undefined' && MISSION_TEMPLATES){
+      /* انسخ قائمة المهام الافتراضية */
+      return {
+        daily:   Array.isArray(MISSION_TEMPLATES.daily)   ? MISSION_TEMPLATES.daily.slice()   : [],
+        weekly:  Array.isArray(MISSION_TEMPLATES.weekly)  ? MISSION_TEMPLATES.weekly.slice()  : [],
+        monthly: Array.isArray(MISSION_TEMPLATES.monthly) ? MISSION_TEMPLATES.monthly.slice() : []
+      };
+    }
+  } catch(e){
+    console.warn('[Mission] Cannot snapshot MISSION_TEMPLATES:', e);
+  }
+  return { daily: [], weekly: [], monthly: [] };
+})();
+
+/* حماية من الحلقة اللانهائية */
+let _getSeasonMissions_guard = false;
+
+/**
+ * إرجاع قائمة المهام (موسم نشط أو احتياطي)
+ * ⚠️ لا تستدعي getMissionTemplate أو getMissionData
+ */
+function getSeasonMissions(tier){
+  /* ═══ حماية من الاستدعاء الذاتي ═══ */
+  if(_getSeasonMissions_guard){
+    console.warn('[Mission] Recursion detected! Returning fallback.');
+    return _MISSION_FALLBACK[tier] || [];
+  }
+  
+  _getSeasonMissions_guard = true;
+  try {
+    /* 1) حاول من الموسم النشط */
+    if(typeof getActiveSeason === 'function'){
+      const season = getActiveSeason();
+      if(season && season.missions && 
+         Array.isArray(season.missions[tier]) && 
+         season.missions[tier].length > 0){
+        return season.missions[tier];
+      }
+    }
+  } catch(e){
+    console.warn('[Mission] getActiveSeason failed:', e);
+  } finally {
+    _getSeasonMissions_guard = false;
+  }
+  
+  /* 2) احتياطي: من اللقطة */
+  return _MISSION_FALLBACK[tier] || [];
+}
+
+/**
+ * البحث عن مهمة واحدة بمعرّفها
+ * ⚠️ يستدعي getSeasonMissions فقط
+ */
+function getMissionTemplate(tier, id){
+  const missions = getSeasonMissions(tier);
+  if(!Array.isArray(missions)) return null;
+  
+  for(let i = 0; i < missions.length; i++){
+    const m = missions[i];
+    if(m && m.id === id) return m;
+  }
+  return null;
+}
+
+/**
+ * بيانات مهمة كاملة (مع التقدم)
+ * ⚠️ يستدعي getMissionTemplate فقط
+ */
+function getMissionData(tier, id){
+  const tmpl = getMissionTemplate(tier, id);
+  if(!tmpl) return null;
+  
+  try {
+    const progKey = 'progress' + tier.charAt(0).toUpperCase() + tier.slice(1);
+    const progData = (Save.data.missions && Save.data.missions[progKey]) || {};
+    const prog = progData[tmpl.key] || 0;
+    
+    return { 
+      tmpl, 
+      prog, 
+      done: prog >= (tmpl.target || 1)
+    };
+  } catch(e){
+    console.warn('[Mission] getMissionData failed:', e);
+    return { tmpl, prog: 0, done: false };
+  }
+}
 
 const LOGIN_REWARDS = [
   { day:1, icon:'◆',  label:'20',  value:20 },
@@ -1816,6 +1979,805 @@ const currentHeldItem   = () => ({ id:'none' });
 const currentGroundMark = () => ({ id:'none' });
 
 /* ============================================================
+   ═══════════════ SEASON SYSTEM v1 ══════════════════════════
+   ============================================================ */
+
+function createEmptySeason(id, number, name = 'موسم جديد', en = 'NEW SEASON'){
+  return {
+    /* ─── الهوية ─── */
+    id,
+    number,
+    name,
+    en,
+    icon: '🏅',
+    color: '#E8B34E',
+    desc: '',
+    
+    /* ─── التواريخ ─── */
+    startDate: new Date().toISOString().slice(0, 10),
+    endDate: '2099-12-31',
+    active: true,
+    featured: false,
+    
+    /* ─── Battle Pass ─── */
+    battlePass: {
+      tiers: 30,
+      tierPoints: 300,
+      premiumPrice: 1500,
+      customRewards: []    // عناصر مخصصة من لوحة المشرف
+    },
+    
+    /* ─── الرتب (Ranks) ─── */
+    ranks: [
+      { name: 'برونزي',  icon: '🥉', points: 0 },
+      { name: 'فضي',     icon: '🥈', points: 500 },
+      { name: 'ذهبي',    icon: '🥇', points: 1500 },
+      { name: 'بلاتيني', icon: '💎', points: 3500 },
+      { name: 'ماسي',    icon: '💠', points: 7000 },
+      { name: 'أسطوري',  icon: '👑', points: 12000 },
+      { name: 'أيقوني',  icon: '🌟', points: 20000 }
+    ],
+    
+    /* ─── المتجر ─── */
+    shop: [],      // عناصر حصرية تُضاف عبر المشرف
+    
+    /* ─── الصناديق ─── */
+    chests: [
+      { id: 'bronze', name: 'برونزي', icon: '📦', price: 100, color: '#A07048' },
+      { id: 'silver', name: 'فضي',    icon: '🎁', price: 500, color: '#B0B8C0' },
+      { id: 'gold',   name: 'ذهبي',   icon: '💎', price: 2000, color: '#E8B34E' }
+    ],
+    
+    /* ─── عجلة الحظ ─── */
+    wheel: [],     // قطاعات مخصصة (إن كانت فارغة يُستخدم الافتراضي)
+    
+    /* ─── الأحداث ─── */
+    events: [],
+    
+    /* ─── المهام ─── */
+    missions: {
+      daily: [],
+      weekly: [],
+      monthly: []
+    },
+    
+    createdAt: Date.now()
+  };
+}
+
+function createDefaultSeason(){
+  const s = createEmptySeason('s1', 1, 'موسم البداية', 'ORIGINS');
+  s.icon = '🏅';
+  s.featured = true;
+  s.active = true;
+  return s;
+}
+
+/* ═══ دوال مساعدة ═══ */
+function getActiveSeason(){
+  const seasons = Save.data.seasons || { list: {} };
+  const id = seasons.activeSeasonId;
+  return seasons.list[id] || null;
+}
+
+function getSeasonById(id){
+  return (Save.data.seasons && Save.data.seasons.list[id]) || null;
+}
+
+function listSeasons(){
+  const seasons = Save.data.seasons || { list: {} };
+  return Object.values(seasons.list).sort((a, b) => b.number - a.number);
+}
+
+function createNewSeason(name, en){
+  const seasons = Save.data.seasons.list;
+  const nextNum = Math.max(0, ...Object.values(seasons).map(s => s.number)) + 1;
+  const id = 's' + nextNum + '_' + Date.now().toString(36).slice(-4);
+  const season = createEmptySeason(id, nextNum, name || ('موسم ' + nextNum), en || 'SEASON ' + nextNum);
+  seasons[id] = season;
+  return season;
+}
+
+function activateSeason(id){
+  if(!Save.data.seasons) Save.data.seasons = { activeSeasonId: null, list: {} };
+  if(!Save.data.seasons.list[id]) return false;
+  /* داخل activateSeason() — أضف هذا */
+if(Save.data.seasons.activeSeasonId !== id){
+  Save.data.season.points = 0;
+  Save.data.battlePass = { claimedFree: [], claimedPremium: [] };
+  Save.save();
+}
+
+  /* إلغاء تفعيل البقية */
+  for(const s of Object.values(Save.data.seasons.list)){
+    s.active = false;
+  }
+  Save.data.seasons.list[id].active = true;
+  Save.data.seasons.activeSeasonId = id;
+  Save.save();
+  return true;
+}
+
+function deleteSeason(id){
+  if(!Save.data.seasons || !Save.data.seasons.list[id]) return false;
+  if(Save.data.seasons.activeSeasonId === id) return false;   // لا تحذف الموسم النشط
+  delete Save.data.seasons.list[id];
+  Save.save();
+  return true;
+}
+
+/* ============================================================
+   ═══════════ WORKSHOP ECONOMY v1 ═══════════
+   ============================================================ */
+
+/* ═══ نُدرة البطاقات ═══ */
+const CARD_RARITIES = {
+  common:    { label: 'عادي',     color: '#8B8278', shards: 5,    weight: 60 },
+  rare:      { label: 'نادر',     color: '#4A88C8', shards: 15,   weight: 25 },
+  epic:      { label: 'ملحمي',    color: '#9A6AC8', shards: 40,   weight: 10 },
+  legendary: { label: 'أسطوري',   color: '#E8B34E', shards: 100,  weight: 4 },
+  mythic:    { label: 'خرافي',    color: '#E85838', shards: 250,  weight: 1 }
+};
+
+/* ═══ البطاقات الافتراضية ═══ */
+const DEFAULT_CARDS = [
+  /* ═══════ COMMON (8) ═══════ */
+  { id:'c_flame',    name:'اللهب',       icon:'🔥', rarity:'common',    desc:'عنصر النار الأساسي' },
+  { id:'c_water',    name:'الموجة',      icon:'💧', rarity:'common',    desc:'عنصر الماء' },
+  { id:'c_leaf',     name:'الورقة',      icon:'🍃', rarity:'common',    desc:'عنصر الطبيعة' },
+  { id:'c_stone',    name:'الصخرة',      icon:'🪨', rarity:'common',    desc:'عنصر الأرض' },
+  { id:'c_bolt',     name:'البرق',       icon:'⚡', rarity:'common',    desc:'عنصر الكهرباء' },
+  { id:'c_wind',     name:'الريح',       icon:'🌪️', rarity:'common',    desc:'عنصر الهواء' },
+  { id:'c_snow',     name:'الثلج',       icon:'❄️', rarity:'common',    desc:'عنصر الجليد' },
+  { id:'c_sun',      name:'الشمس',       icon:'☀️', rarity:'common',    desc:'عنصر النور' },
+
+  /* ═══════ RARE (6) ═══════ */
+  { id:'c_knight',   name:'الفارس',      icon:'⚔️', rarity:'rare',      desc:'محارب شجاع' },
+  { id:'c_mage',     name:'الساحر',      icon:'🧙', rarity:'rare',      desc:'سيّد السحر' },
+  { id:'c_archer',   name:'القنّاص',     icon:'🏹', rarity:'rare',      desc:'رامي السهام' },
+  { id:'c_rogue',    name:'اللص',        icon:'🗡️', rarity:'rare',      desc:'ظل الليل' },
+  { id:'c_healer',   name:'المعالج',     icon:'💊', rarity:'rare',      desc:'حامل الشفاء' },
+  { id:'c_guard',    name:'الحارس',      icon:'🛡️', rarity:'rare',      desc:'درع الحماية' },
+
+  /* ═══════ EPIC (4) ═══════ */
+  { id:'c_dragon',   name:'التنين',      icon:'🐉', rarity:'epic',      desc:'ملك التنينات' },
+  { id:'c_phoenix',  name:'العنقاء',     icon:'🦅', rarity:'epic',      desc:'طائر النار' },
+  { id:'c_kraken',   name:'الكاراكن',    icon:'🦑', rarity:'epic',      desc:'وحش الأعماق' },
+  { id:'c_chimera',  name:'الكيميرا',    icon:'🦁', rarity:'epic',      desc:'الوحش الهجين' },
+
+  /* ═══════ LEGENDARY (3) ═══════ */
+  { id:'c_titan',    name:'العملاق',     icon:'👹', rarity:'legendary', desc:'أسطورة الجبال' },
+  { id:'c_god',      name:'إله الرعد',   icon:'🌩️', rarity:'legendary', desc:'زعيم الآلهة' },
+  { id:'c_goddess',  name:'إلهة الحب',   icon:'👼', rarity:'legendary', desc:'ملكة الجمال' },
+
+  /* ═══════ MYTHIC (2) ═══════ */
+  { id:'c_creator',  name:'الخالق',      icon:'🌟', rarity:'mythic',    desc:'أعظم قوة في اللعبة' },
+  { id:'c_void',     name:'الفراغ',      icon:'◉', rarity:'mythic',    desc:'قوة لا يمكن فهمها' }
+];
+
+/* ═══ قائمة موحدة للبطاقات (افتراضية + مخصصة من المشرف) ═══ */
+function getAllCards(){
+  const custom = (Save.data.admin.customCards || [])
+    .filter(c => c.enabled !== false)
+    .map(c => ({
+      id: c.id,
+      name: c.name,
+      icon: c.icon || '🃏',
+      rarity: c.rarity || 'common',
+      desc: c.desc || '',
+      color: c.color,
+      imagePath: c.imagePath || null,
+      imageData: c.imageData || null,
+      isCustom: true
+    }));
+
+  return [...DEFAULT_CARDS, ...custom];
+}
+
+/* ═══ جلب بطاقة حسب ID ═══ */
+function getCardById(id){
+  return getAllCards().find(c => c.id === id) || null;
+}
+
+/* ═══ نُدرة البطاقة ═══ */
+function getCardRarity(card){
+  return CARD_RARITIES[card?.rarity] || CARD_RARITIES.common;
+}
+
+/* ═══ اختيار بطاقة عشوائية حسب الوزن ═══ */
+function pickRandomCard(filterFn){
+  let pool = getAllCards();
+  if(filterFn) pool = pool.filter(filterFn);
+  if(pool.length === 0) return null;
+
+  /* الوزن حسب النُدرة */
+  let totalWeight = 0;
+  const weighted = pool.map(card => {
+    const w = CARD_RARITIES[card.rarity]?.weight || 1;
+    totalWeight += w;
+    return { card, weight: w };
+  });
+
+  let roll = Math.random() * totalWeight;
+  for(const { card, weight } of weighted){
+    roll -= weight;
+    if(roll <= 0) return card;
+  }
+  return weighted[0].card;
+}
+
+/* ═══ نُدرة البطاقة (نصوص) ═══ */
+const CARD_RARITY_LABELS = {
+  common: 'عادي',
+  rare: 'نادر',
+  epic: 'ملحمي',
+  legendary: 'أسطوري',
+  mythic: 'خرافي'
+};
+
+/* ============================================================
+   ═══════════ CURRENCY HELPERS ═══════════
+   ============================================================ */
+
+/* ═══ إضافة عملات مع تسجيل ═══ */
+function addCoins(amount, reason){
+  if(!amount) return;
+  Save.data.coins = (Save.data.coins || 0) + amount;
+  Save.data.stats.totalCoins = (Save.data.stats.totalCoins || 0) + Math.max(0, amount);
+  logWallet('coins', amount, reason);
+  updateCoinsUI();
+}
+
+/* ═══ إضافة جواهر ═══ */
+function addGems(amount, reason){
+  if(!amount) return;
+  Save.data.gems = (Save.data.gems || 0) + amount;
+  logWallet('gems', amount, reason);
+  updateWalletUI();
+}
+
+/* ═══ إضافة شظايا ═══ */
+function addShards(amount, reason){
+  if(!amount) return;
+  Save.data.shards = (Save.data.shards || 0) + amount;
+  logWallet('shards', amount, reason);
+  updateWalletUI();
+}
+
+/* ═══ إضافة قسيمة ═══ */
+function addVoucher(type, amount, reason){
+  if(!amount) return;
+  if(!Save.data.vouchers) Save.data.vouchers = {};
+  Save.data.vouchers[type] = (Save.data.vouchers[type] || 0) + amount;
+  logWallet('voucher_' + type, amount, reason);
+  updateWalletUI();
+}
+
+/* ═══ سجل المحفظة ═══ */
+function logWallet(currency, amount, reason){
+  if(!Save.data.walletLog) Save.data.walletLog = [];
+  Save.data.walletLog.unshift({
+    currency, amount, reason: reason || '',
+    time: Date.now()
+  });
+  if(Save.data.walletLog.length > 50){
+    Save.data.walletLog = Save.data.walletLog.slice(0, 50);
+  }
+}
+
+/* ═══ إنفاق آمن ═══ */
+function spendCoins(amount){
+  if((Save.data.coins || 0) < amount) return false;
+  Save.data.coins -= amount;
+  updateCoinsUI();
+  return true;
+}
+
+function spendGems(amount){
+  if((Save.data.gems || 0) < amount) return false;
+  Save.data.gems -= amount;
+  updateWalletUI();
+  return true;
+}
+
+function spendShards(amount){
+  if((Save.data.shards || 0) < amount) return false;
+  Save.data.shards -= amount;
+  updateWalletUI();
+  return true;
+}
+
+function useVoucher(type){
+  if(!Save.data.vouchers) return false;
+  if((Save.data.vouchers[type] || 0) <= 0) return false;
+  Save.data.vouchers[type]--;
+  updateWalletUI();
+  return true;
+}
+
+/* ============================================================
+   ═══════════ CARD GRANT LOGIC ═══════════
+   ============================================================ */
+
+/**
+ * منح بطاقة للاعب
+ * - إذا كانت جديدة → تُفتح وتُحفظ
+ * - إذا كانت مكررة → تُحوَّل إلى شظايا تلقائياً
+ * 
+ * @param {string} cardId
+ * @param {boolean} silent - إن كان true لا يعرض Toast
+ * @returns {object} { isNew, shards, card }
+ */
+function grantCard(cardId, silent){
+  const card = getCardById(cardId);
+  if(!card) return { isNew: false, shards: 0, card: null };
+
+  if(!Save.data.cards){
+    Save.data.cards = { owned: {}, seen: [], unlocked: [], favorite: null };
+  }
+
+  const owned = Save.data.cards.owned || {};
+  const currentCount = owned[cardId] || 0;
+  const isNew = currentCount === 0;
+
+  if(isNew){
+    /* ═══ بطاقة جديدة ═══ */
+    owned[cardId] = 1;
+    if(!Save.data.cards.unlocked.includes(cardId)){
+      Save.data.cards.unlocked.push(cardId);
+    }
+    Save.data.cards.owned = owned;
+
+    if(!silent){
+      const rarity = getCardRarity(card);
+      Toast.reward('🃏', 'بطاقة جديدة!', 
+        `${card.icon} ${card.name} · ${rarity.label}`, 
+        { duration: 4500 });
+      Sfx.reward();
+    }
+
+    return { isNew: true, shards: 0, card };
+  }
+
+  /* ═══ بطاقة مكررة → شظايا ═══ */
+  owned[cardId] = currentCount + 1;
+  Save.data.cards.owned = owned;
+
+  const rarity = getCardRarity(card);
+  const shardsGained = rarity.shards || 5;
+  addShards(shardsGained, `بطاقة مكررة: ${card.name}`);
+
+  if(!silent){
+    Toast.info('🃏 بطاقة مكررة', 
+      `${card.icon} → 🔷 +${shardsGained} شظايا`, 
+      { duration: 3000 });
+    Sfx.tap();
+  }
+
+  return { isNew: false, shards: shardsGained, card };
+}
+
+/**
+ * منح بطاقات عشوائية متعددة
+ * @param {number} count
+ * @param {object} opts - { filter, silent, minRarity }
+ */
+function grantRandomCards(count, opts = {}){
+  const results = { new: [], dup: [], totalShards: 0 };
+  
+  for(let i = 0; i < count; i++){
+    /* فلترة حسب الحد الأدنى للنُدرة */
+    let filter = opts.filter;
+    if(opts.minRarity){
+      const minWeight = CARD_RARITIES[opts.minRarity]?.weight || 0;
+      const allowed = Object.entries(CARD_RARITIES)
+        .filter(([k, v]) => v.weight <= minWeight)
+        .map(([k]) => k);
+      filter = card => allowed.includes(card.rarity);
+    }
+    
+    const card = pickRandomCard(filter);
+    if(!card) continue;
+    
+    const result = grantCard(card.id, opts.silent);
+    if(result.isNew) results.new.push(result.card);
+    else {
+      results.dup.push(result.card);
+      results.totalShards += result.shards;
+    }
+  }
+  
+  Save.save();
+  return results;
+}
+
+/* ═══ تحديث كل عملات الواجهة ═══ */
+function updateWalletUI(){
+  const unlimited = hasAdminAccess() && Save.data.admin.unlimitedCoins;
+  
+  /* الرئيسية */
+  const gEl = document.getElementById('home-gems');
+  if(gEl) gEl.textContent = unlimited ? '∞' : (Save.data.gems || 0).toLocaleString();
+  
+  const sEl = document.getElementById('home-shards');
+  if(sEl) sEl.textContent = unlimited ? '∞' : (Save.data.shards || 0).toLocaleString();
+  
+  /* المتجر */
+  const sgEl = document.getElementById('shop-gems');
+  if(sgEl) sgEl.textContent = unlimited ? '∞' : (Save.data.gems || 0).toLocaleString();
+  
+  const ssEl = document.getElementById('shop-shards');
+  if(ssEl) ssEl.textContent = unlimited ? '∞' : (Save.data.shards || 0).toLocaleString();
+  
+  /* صفحة المحفظة */
+  const wgEl = document.getElementById('wallet-gems');
+  if(wgEl) wgEl.textContent = (Save.data.gems || 0).toLocaleString();
+  
+  const wsEl = document.getElementById('wallet-shards');
+  if(wsEl) wsEl.textContent = (Save.data.shards || 0).toLocaleString();
+  
+  /* القسائم */
+  for(const key of ['chest_bronze', 'chest_silver', 'chest_gold', 'wheel_spin']){
+    const el = document.getElementById('wallet-voucher-' + key);
+    if(el) el.textContent = (Save.data.vouchers?.[key] || 0);
+  }
+  
+  /* wrap class */
+  const w = document.getElementById('wrap');
+  if(w) w.classList.toggle('unlimited-coins', unlimited);
+}
+
+/* استدعها مع تحديث العملات الحالي */
+const _origUpdateCoinsUI = updateCoinsUI;
+updateCoinsUI = function(){
+  _origUpdateCoinsUI.apply(this, arguments);
+  updateWalletUI();
+};
+
+/* ============================================================
+   ═══════════ WALLET PAGE ═══════════
+   ============================================================ */
+function buildWalletPage(){
+  updateWalletUI();
+
+  /* سجل المعاملات */
+  const logEl = document.getElementById('wallet-log');
+  if(!logEl) return;
+
+  const log = Save.data.walletLog || [];
+  if(log.length === 0){
+    logEl.innerHTML = '<div style="text-align:center;padding:30px;color:var(--ink-mute);font-size:12px;">لا توجد عمليات بعد</div>';
+    return;
+  }
+
+  const currencyIcons = {
+    coins: '◆', gems: '💎', shards: '🔷',
+    voucher_chest_bronze: '🎫', voucher_chest_silver: '🎫',
+    voucher_chest_gold: '🎫', voucher_wheel_spin: '🎡'
+  };
+
+  logEl.innerHTML = log.slice(0, 30).map(entry => {
+    const icon = currencyIcons[entry.currency] || '◆';
+    const sign = entry.amount > 0 ? '+' : '';
+    const color = entry.amount > 0 ? '#6B9B6B' : '#C14A4A';
+
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px;border-bottom:1px solid var(--line);">
+        <span style="font-size:16px;">${icon}</span>
+        <div style="flex:1;text-align:right;">
+          <div style="font-size:11.5px;font-weight:700;color:var(--ink);">${entry.reason || 'عملية'}</div>
+          <div style="font-size:9.5px;color:var(--ink-mute);">
+            ${new Date(entry.time).toLocaleString('ar-EG', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}
+          </div>
+        </div>
+        <span style="font-family:'Space Grotesk';font-size:14px;font-weight:700;color:${color};">
+          ${sign}${entry.amount}
+        </span>
+      </div>
+    `;
+  }).join('');
+}
+
+/* ============================================================
+   ═══════════ CARDS PAGE ═══════════
+   ============================================================ */
+let _currentCardFilter = 'all';
+
+function buildCardsPage(){
+  updateWalletUI();
+
+  /* إحصاءات */
+  const all = getAllCards();
+  const unlocked = Save.data.cards?.unlocked?.length || 0;
+
+  const uEl = document.getElementById('cards-unlocked');
+  const tEl = document.getElementById('cards-total');
+  if(uEl) uEl.textContent = unlocked;
+  if(tEl) tEl.textContent = all.length;
+
+  /* ربط التبويبات */
+  document.querySelectorAll('#cards-tabs .tab-chip').forEach(tab => {
+    if(tab._bound) return;
+    tab._bound = true;
+    tab.addEventListener('click', () => {
+      _currentCardFilter = tab.dataset.cardfilter;
+      document.querySelectorAll('#cards-tabs .tab-chip').forEach(t =>
+        t.classList.toggle('active', t === tab));
+      renderCardsGrid();
+      Sfx.tap();
+    });
+  });
+
+  renderCardsGrid();
+}
+
+function renderCardsGrid(){
+  const grid = document.getElementById('cards-grid');
+  if(!grid) return;
+  grid.innerHTML = '';
+
+  const all = getAllCards();
+  const owned = Save.data.cards?.owned || {};
+  const unlocked = Save.data.cards?.unlocked || [];
+
+  let filtered = all;
+  if(_currentCardFilter !== 'all'){
+    filtered = all.filter(c => c.rarity === _currentCardFilter);
+  }
+
+  filtered.forEach(card => {
+    const count = owned[card.id] || 0;
+    const isUnlocked = unlocked.includes(card.id);
+    const rarity = getCardRarity(card);
+
+    const el = document.createElement('div');
+    el.className = 'tcg-card' + (isUnlocked ? '' : ' locked');
+    el.style.setProperty('--rc', rarity.color);
+    el.style.setProperty('--rc1', rarity.color + '20');
+    el.style.setProperty('--rc2', rarity.color + '60');
+    el.style.setProperty('--rc-border', rarity.color);
+
+    el.innerHTML = `
+      ${count > 1 ? `<div class="tcg-count">×${count}</div>` : ''}
+      <div class="tcg-inner">
+        <div class="tcg-icon">${isUnlocked ? card.icon : '❓'}</div>
+        <div class="tcg-name">${isUnlocked ? card.name : '???'}</div>
+      </div>
+      <div class="tcg-rarity" style="background:${rarity.color};">
+        ${rarity.label}
+      </div>
+    `;
+
+    el.addEventListener('click', () => {
+      if(!isUnlocked) {
+        Toast.info('🔒 بطاقة مقفلة', 'افتح الصناديق للحصول عليها');
+        return;
+      }
+      showCardDetail(card, count);
+    });
+
+    grid.appendChild(el);
+  });
+
+  if(filtered.length === 0){
+    grid.innerHTML = '<div style="grid-column:span 3;text-align:center;padding:40px;color:var(--ink-mute);">لا بطاقات في هذه الفئة</div>';
+  }
+}
+
+function showCardDetail(card, count){
+  const rarity = getCardRarity(card);
+  const shardsIfDup = rarity.shards;
+
+  const modal = document.createElement('div');
+  modal.className = 'challenge-modal active';
+  modal.innerHTML = `
+    <div class="cm-box" style="max-width:340px;">
+      <div style="font-size:72px;margin-bottom:8px;">${card.icon}</div>
+      <div class="cm-title" style="color:${rarity.color};">${card.name}</div>
+      <div style="display:inline-block;padding:4px 12px;border-radius:100px;background:${rarity.color};color:#fff;font-size:10px;font-weight:800;letter-spacing:1px;margin-bottom:12px;">
+        ${rarity.label.toUpperCase()}
+      </div>
+      <div class="cm-desc">${card.desc || 'بطاقة من مجموعة SHIFT'}</div>
+      <div class="cm-rules">
+        <div class="cm-rule">
+          <span class="ic">📦</span>
+          <span>عدد النسخ: ${count}</span>
+        </div>
+        <div class="cm-rule">
+          <span class="ic">🔷</span>
+          <span>قيمة التكرار: ${shardsIfDup} شظايا</span>
+        </div>
+      </div>
+      <div class="cm-actions">
+        <button class="action-btn gold" id="card-close">إغلاق</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  modal.querySelector('#card-close').addEventListener('click', () => {
+    modal.remove();
+    Sfx.tap();
+  });
+}
+
+/* ============================================================
+   ═══════════ CRAFTING PAGE ═══════════
+   ============================================================ */
+let _currentCraftCat = 'cards';
+
+/* ═══ قائمة الأشياء القابلة للصناعة ═══ */
+const CRAFTABLE_ITEMS = {
+  cards: [
+    /* { cardId, shardsCost } */
+    { cardId: 'c_flame', shardsCost: 20 },
+    { cardId: 'c_knight', shardsCost: 60 },
+    { cardId: 'c_dragon', shardsCost: 150 },
+    { cardId: 'c_titan', shardsCost: 400 },
+    { cardId: 'c_creator', shardsCost: 1000 }
+  ],
+  cosmetics: [
+    /* { cat, itemId, shardsCost } */
+    { cat: 'spark', itemId: 'stars', shardsCost: 100 },
+    { cat: 'trail', itemId: 'rainbow', shardsCost: 200 },
+    { cat: 'head', itemId: 'gold', shardsCost: 300 },
+    { cat: 'back', itemId: 'wings_angel', shardsCost: 600 }
+  ],
+  skins: [
+    /* { skinId, shardsCost } */
+    { skinId: 'default', shardsCost: 0 }
+    /* أضف الأزياء المخصصة من المشرف */
+  ]
+};
+
+function buildCraftingPage(){
+  updateWalletUI();
+
+  const shardsEl = document.getElementById('craft-shards');
+  if(shardsEl) shardsEl.textContent = (Save.data.shards || 0).toLocaleString();
+
+  document.querySelectorAll('#craft-tabs .tab-chip').forEach(tab => {
+    if(tab._bound) return;
+    tab._bound = true;
+    tab.addEventListener('click', () => {
+      _currentCraftCat = tab.dataset.craftcat;
+      document.querySelectorAll('#craft-tabs .tab-chip').forEach(t =>
+        t.classList.toggle('active', t === tab));
+      renderCraftList();
+      Sfx.tap();
+    });
+  });
+
+  renderCraftList();
+}
+
+function renderCraftList(){
+  const list = document.getElementById('craft-list');
+  if(!list) return;
+  list.innerHTML = '';
+
+  const items = CRAFTABLE_ITEMS[_currentCraftCat] || [];
+  const shards = Save.data.shards || 0;
+
+  if(items.length === 0){
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-mute);">لا عناصر للصناعة</div>';
+    return;
+  }
+
+  items.forEach(entry => {
+    let item = null;
+    let displayName = '';
+    let displayIcon = '';
+    let displayColor = '#9A6AC8';
+
+    if(_currentCraftCat === 'cards'){
+      item = getCardById(entry.cardId);
+      if(!item) return;
+      displayName = item.name;
+      displayIcon = item.icon;
+      displayColor = getCardRarity(item).color;
+    } else if(_currentCraftCat === 'cosmetics'){
+      const all = getAllCosmetics(entry.cat);
+      item = all.find(x => x.id === entry.itemId);
+      if(!item) return;
+      displayName = item.name;
+      displayIcon = '🎁';
+      displayColor = '#E8B34E';
+    } else if(_currentCraftCat === 'skins'){
+      const all = getAllSkins();
+      item = all.find(x => x.id === entry.skinId);
+      if(!item) return;
+      displayName = item.ar;
+      displayIcon = '🎨';
+      displayColor = '#E07A3F';
+    }
+
+    /* هل اللاعب يملكه بالفعل؟ */
+    let alreadyOwned = false;
+    if(_currentCraftCat === 'cards'){
+      alreadyOwned = (Save.data.cards?.unlocked || []).includes(entry.cardId);
+    } else if(_currentCraftCat === 'cosmetics'){
+      alreadyOwned = Save.ownsCosmetic(entry.cat, entry.itemId);
+    } else if(_currentCraftCat === 'skins'){
+      alreadyOwned = Save.data.ownedSkins.includes(entry.skinId);
+    }
+
+    const canAfford = shards >= entry.shardsCost;
+
+    const el = document.createElement('div');
+    el.className = 'shard-shop-item';
+    el.style.setProperty('--ssi-c', displayColor);
+
+    el.innerHTML = `
+      <div class="ssi-icon">${displayIcon}</div>
+      <div class="ssi-info">
+        <div class="ssi-name">${displayName}</div>
+        <div class="ssi-price">🔷 ${entry.shardsCost.toLocaleString()}</div>
+      </div>
+      <button class="ssi-btn" 
+              ${alreadyOwned ? 'disabled' : ''}
+              ${!canAfford ? 'disabled' : ''}
+              data-craft='${JSON.stringify(entry)}'>
+        ${alreadyOwned ? '✓ مملوك' : (canAfford ? 'صناعة' : 'ناقص')}
+      </button>
+    `;
+
+    const btn = el.querySelector('.ssi-btn');
+    if(!alreadyOwned && canAfford){
+      btn.addEventListener('click', () => craftItem(_currentCraftCat, entry));
+    }
+
+    list.appendChild(el);
+  });
+}
+
+function craftItem(cat, entry){
+  const shards = Save.data.shards || 0;
+  if(shards < entry.shardsCost){
+    Toast.error('شظايا غير كافية');
+    return;
+  }
+
+  if(!confirm(`صناعة "${entry.cardId || entry.itemId || entry.skinId}" بـ 🔷 ${entry.shardsCost}؟`)) return;
+
+  if(!spendShards(entry.shardsCost)) return;
+
+  /* ═══ التنفيذ ═══ */
+  if(cat === 'cards'){
+    const card = getCardById(entry.cardId);
+    if(card){
+      /* بطاقة مصنوعة → تُمنح مباشرة */
+      const owned = Save.data.cards.owned || {};
+      owned[card.id] = (owned[card.id] || 0) + 1;
+      Save.data.cards.owned = owned;
+      if(!Save.data.cards.unlocked.includes(card.id)){
+        Save.data.cards.unlocked.push(card.id);
+      }
+      Toast.reward(card.icon, 'بطاقة مصنوعة!', card.name);
+    }
+  } else if(cat === 'cosmetics'){
+    Save.grantCosmetic(entry.cat, entry.itemId);
+    Toast.reward('🎁', 'عنصر مصنوع!', entry.itemId);
+  } else if(cat === 'skins'){
+    if(!Save.data.ownedSkins.includes(entry.skinId)){
+      Save.data.ownedSkins.push(entry.skinId);
+    }
+    Toast.reward('🎨', 'زي مصنوع!', entry.skinId);
+  }
+
+  if(!Save.data.crafting) Save.data.crafting = { crafted: [], blueprints: [] };
+  Save.data.crafting.crafted.push({
+    cat, entry, time: Date.now()
+  });
+
+  Save.save();
+  Sfx.reward(); haptic(30);
+  updateWalletUI();
+  renderCraftList();
+}
+
+/* ============================================================
    ==================== DEFAULT SAVE DATA ====================
    ============================================================ */
 const DEFAULT_SAVE_DATA = {
@@ -1884,8 +2846,10 @@ cosmetics: {
     unlimitedUnlock: false,
     godMode: false,
     infiniteJump: false,
+    showOwnNameTag: false,
 customSkins: [], customSpark: [], customTrail: [], customJump: [],
 customDeath: [], customAura: [], customCrown: [], customCape: [],
+customCards: [],
 customEyes: [], customCompanion: [], customFootstep: [],
 customHeadItem: [], customBackItem: [], customHeldItem: [],
 customGroundMark: [], customNameTag: [], customBadge: [],
@@ -1902,6 +2866,43 @@ customSpawnEffect: [], customReviveEffect: [], customHitEffect: [],
   },
   titles: { equipped: 'rookie', owned: ['rookie'] },
 inventory: { seen: [] },
+  /* ═══════════════ SEASONS SYSTEM ═══════════════ */
+  seasons: {
+    activeSeasonId: 's1',
+    list: {
+      's1': createDefaultSeason()   // دالة تُعرَّف أدناه
+    }
+  },
+  season: { number: 1, startDate: null, points: 0 },  // ← يبقى للتوافق
+
+  /* ═══════════════ WORKSHOP WALLET ═══════════════ */
+  gems: 0,
+  shards: 0,
+  
+  /* ═══ القسائم ═══ */
+  vouchers: {
+    chest_bronze: 0,
+    chest_silver: 0,
+    chest_gold: 0,
+    wheel_spin: 0
+  },
+  
+  /* ═══ البطاقات ═══ */
+  cards: {
+    owned: {},           /* { cardId: count } — عدد النسخ */
+    seen: [],            /* معرّفات البطاقات التي رأيتها */
+    unlocked: [],        /* معرّفات البطاقات المفتوحة (أول نسخة) */
+    favorite: null       /* البطاقة المفضلة */
+  },
+  
+  /* ═══ الصناعة بالشظايا ═══ */
+  crafting: {
+    crafted: [],         /* العناصر المصنوعة */
+    blueprints: []       /* مخططات مفتوحة */
+  },
+  
+  /* ═══ السجل ═══ */
+  walletLog: []          /* آخر 50 عملية (للشفافية) */
 };
 
 /* ============================================================
@@ -2055,7 +3056,7 @@ for(const cat of V3_CATEGORIES_LOCAL){
       /* ✨ جديدة */
       'customHeadItem','customBackItem','customHeldItem',
       'customGroundMark','customNameTag','customBadge',
-      'customAvatarFrame','customBanner',
+      'customAvatarFrame','customBanner', 'customCards',
       'customSpawnEffect','customReviveEffect','customHitEffect'
     ];
     allCustomKeys.forEach(k => {
@@ -2395,51 +3396,90 @@ function getCategoryConfig(cat){
 
 /* ═══ دالة بناء أنواع الأماكن (نسخة آمنة) ═══ */
 function buildPlacementTypes(){
-  /* ═══ حماية: تأكد من توفر البيانات الأساسية ═══ */
   const safeSeasonRanks = (typeof SEASON_RANKS !== 'undefined' && Array.isArray(SEASON_RANKS))
     ? SEASON_RANKS
-    : [{ name:'برونزي', icon:'🥉', points:0 }];
+    : (typeof DEFAULT_SEASON_RANKS !== 'undefined' ? DEFAULT_SEASON_RANKS : []);
 
   const safeEvents = (typeof EVENTS !== 'undefined' && Array.isArray(EVENTS))
     ? EVENTS
-    : [{ id:'volcanoWeek', name:'أسبوع البركان', icon:'🌋' }];
+    : (typeof DEFAULT_EVENTS !== 'undefined' ? DEFAULT_EVENTS : []);
 
-  const safeBPTiers = (typeof BP_TIERS !== 'undefined') ? BP_TIERS : 30;
+  const safeBPTiers = typeof getBPTiers === 'function' ? getBPTiers() : 30;
 
   return {
+    /* ═══════════════ 1) المتجر ═══════════════ */
     shop: {
-      label: 'المتجر', icon: '🛒', color: '#E8B34E',
+      label: 'المتجر',
+      icon: '🛒',
+      color: '#E8B34E',
       desc: 'يُشترى بالعملات',
       params: [
         { key: 'price', label: 'السعر (◆)', type: 'number', default: 500, min: 0, max: 1000000 }
       ]
     },
+
+    /* ═══════════════ 2) باتل باس ═══════════════ */
     battle_pass: {
-      label: 'باتل باس', icon: '🎫', color: '#8E6AA8',
+      label: 'باتل باس',
+      icon: '🎫',
+      color: '#8E6AA8',
       desc: 'مكافأة في مستوى معين',
       params: [
         { key: 'tier', label: 'المستوى', type: 'number', default: 1, min: 1, max: safeBPTiers },
         { key: 'track', label: 'المسار', type: 'select', default: 'free',
-          options: [{value:'free', label:'مجاني'}, {value:'premium', label:'مميز'}] }
+          options: [
+            { value: 'free', label: 'مجاني' },
+            { value: 'premium', label: 'مميز' }
+          ]
+        },
+        { key: 'rewardType', label: 'نوع المكافأة', type: 'select', default: 'content',
+          options: [
+            { value: 'content', label: '🎁 محتوى (هذا العنصر)' },
+            { value: 'coins',   label: '◆ عملات' },
+            { value: 'box',     label: '📦 صندوق' },
+            { value: 'card',    label: '🃏 بطاقة' }
+          ]
+        },
+        { key: 'coins', label: 'عدد العملات', type: 'number', default: 100, min: 0, max: 1000000 },
+        { key: 'boxType', label: 'نوع الصندوق', type: 'select', default: 'bronze',
+          options: [
+            { value: 'bronze', label: '📦 برونزي' },
+            { value: 'silver', label: '🎁 فضي' },
+            { value: 'gold',   label: '💎 ذهبي' }
+          ]
+        },
+        { key: 'cardId', label: 'معرّف البطاقة', type: 'text', default: '' }
       ]
     },
+
+    /* ═══════════════ 3) رتبة الموسم ═══════════════ */
     season_rank: {
-      label: 'رتبة الموسم', icon: '🏅', color: '#E8B34E',
+      label: 'رتبة الموسم',
+      icon: '🏅',
+      color: '#E8B34E',
       desc: 'مكافأة عند رتبة معينة',
       params: [
         { key: 'rankId', label: 'الرتبة', type: 'select', default: 0,
-          options: safeSeasonRanks.map((r, i) => ({ value: i, label: (r.icon||'') + ' ' + (r.name||'') })) }
+          options: safeSeasonRanks.map((r, i) => ({
+            value: i,
+            label: (r.icon || '') + ' ' + (r.name || '')
+          }))
+        },
+        { key: 'rewardType', label: 'نوع المكافأة', type: 'select', default: 'content',
+          options: [
+            { value: 'content', label: '🎁 محتوى (هذا العنصر)' },
+            { value: 'coins',   label: '◆ عملات' }
+          ]
+        },
+        { key: 'coins', label: 'عدد العملات', type: 'number', default: 500, min: 0, max: 1000000 }
       ]
     },
-    daily_login: {
-      label: 'التسجيل اليومي', icon: '📅', color: '#4A88C8',
-      desc: 'مكافأة يوم محدد',
-      params: [
-        { key: 'day', label: 'اليوم (1-7)', type: 'number', default: 1, min: 1, max: 7 }
-      ]
-    },
+
+    /* ═══════════════ 4) الصندوق ═══════════════ */
     chest: {
-      label: 'صندوق', icon: '📦', color: '#C98A2E',
+      label: 'صندوق',
+      icon: '📦',
+      color: '#C98A2E',
       desc: 'يظهر عشوائياً عند فتح الصندوق',
       params: [
         { key: 'chestType', label: 'نوع الصندوق', type: 'select', default: 'bronze',
@@ -2447,28 +3487,75 @@ function buildPlacementTypes(){
             { value: 'bronze', label: 'برونزي' },
             { value: 'silver', label: 'فضي' },
             { value: 'gold',   label: 'ذهبي' }
-          ] },
+          ]
+        },
         { key: 'weight', label: 'احتمال الظهور %', type: 'number', default: 5, min: 1, max: 100 }
       ]
     },
+
+    /* ═══════════════ 5) عجلة الحظ ═══════════════ */
     lucky_wheel: {
-      label: 'عجلة الحظ', icon: '🎡', color: '#E85838',
+      label: 'عجلة الحظ',
+      icon: '🎡',
+      color: '#E85838',
       desc: 'قطاع في عجلة الحظ',
       params: [
         { key: 'segment', label: 'القطاع (0-11)', type: 'number', default: 0, min: 0, max: 11 }
       ]
     },
+
+    /* ═══════════════ 6) حدث ═══════════════ */
     event: {
-      label: 'حدث', icon: '🎪', color: '#A06AD8',
+      label: 'حدث',
+      icon: '🎪',
+      color: '#A06AD8',
       desc: 'مكافأة حدث أسبوعي',
       params: [
-        { key: 'eventId', label: 'الحدث', type: 'select', default: safeEvents[0].id,
-          options: safeEvents.map(e => ({ value: e.id, label: (e.icon||'') + ' ' + (e.name||'') })) },
+        { key: 'eventId', label: 'الحدث', type: 'select', default: safeEvents[0]?.id || '',
+          options: safeEvents.map(e => ({
+            value: e.id,
+            label: (e.icon || '') + ' ' + (e.name || '')
+          }))
+        },
         { key: 'target', label: 'هدف المهمة', type: 'number', default: 10, min: 1, max: 10000 }
       ]
     },
+
+    /* ═══════════════ 7) الدخول اليومي ═══════════════ */
+    daily_login: {
+      label: 'التسجيل اليومي',
+      icon: '📅',
+      color: '#4A88C8',
+      desc: 'مكافأة يوم محدد',
+      params: [
+        { key: 'day', label: 'اليوم (1-7)', type: 'number', default: 1, min: 1, max: 7 }
+      ]
+    },
+
+/* داخل buildPlacementTypes، أضف: */
+card_pack: {
+  label: 'حزمة بطاقات',
+  icon: '🃏',
+  color: '#9A6AC8',
+  desc: 'يُفتح للحصول على بطاقات',
+  params: [
+    { key: 'count', label: 'عدد البطاقات', type: 'number', default: 3, min: 1, max: 20 },
+    { key: 'minRarity', label: 'الحد الأدنى', type: 'select', default: '',
+      options: [
+        { value: '', label: 'عشوائي' },
+        { value: 'rare', label: 'نادر+' },
+        { value: 'epic', label: 'ملحمي+' },
+        { value: 'legendary', label: 'أسطوري+' }
+      ]
+    }
+  ]
+},
+
+    /* ═══════════════ 8) افتراضي ═══════════════ */
     default_owned: {
-      label: 'افتراضي', icon: '✓', color: '#6B9B6B',
+      label: 'افتراضي',
+      icon: '✓',
+      color: '#6B9B6B',
       desc: 'مملوك تلقائياً لكل اللاعبين',
       params: []
     }
@@ -2491,30 +3578,61 @@ function ensurePlacementTypes(){
 function buildSourcesEditor(){
   const container = document.getElementById('sources-editor');
   if(!container){
-    console.error('[buildSourcesEditor] #sources-editor NOT FOUND in DOM!');
+    console.error('[buildSourcesEditor] #sources-editor NOT FOUND');
     return;
   }
 
-  /* ═══ تأكد من تهيئة الأنواع ═══ */
   ensurePlacementTypes();
 
+  /* ═══════════════════════════════════════════════════════
+     ═══ 1) بناء مُنتقي الموسم في الأعلى ═══
+     ═══════════════════════════════════════════════════════ */
+  const seasons = typeof listSeasons === 'function' ? listSeasons() : [];
+  const activeSeasonId = Save.data.seasons?.activeSeasonId || '';
+  const currentEditingId = document.getElementById('admin-form')?._editingSeasonId || activeSeasonId;
+
+  const seasonOptions = seasons.map(s => 
+    `<option value="${s.id}"${s.id === currentEditingId ? ' selected' : ''}>
+      ${s.icon || '🏅'} ${s.name} (S${s.number})
+    </option>`
+  ).join('');
+
+  const seasonPickerHtml = `
+    <div class="src-season-picker" 
+         style="padding:14px;margin-bottom:14px;border-radius:14px;
+                background:linear-gradient(135deg,#FFF9EC,#FBF1DC);
+                border:2px solid var(--amber);">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <span style="font-size:20px;">🎯</span>
+        <div style="flex:1;">
+          <div style="font-family:'Space Grotesk';font-size:12px;font-weight:700;
+                      color:#8A4A10;letter-spacing:1.5px;">
+            SEASON
+          </div>
+          <div style="font-size:11px;color:#8A4A10;opacity:.8;">
+            العنصر يُضاف لهذا الموسم فقط
+          </div>
+        </div>
+      </div>
+      <select id="src-season-id" 
+              class="af-input" 
+              style="width:100%;font-weight:700;text-align:center;">
+        ${seasonOptions || '<option value="">⚠ لا توجد مواسم</option>'}
+      </select>
+    </div>
+  `;
+
+  /* ═══════════════════════════════════════════════════════
+     ═══ 2) بناء بلوكات المصادر ═══
+     ═══════════════════════════════════════════════════════ */
   const types = Object.entries(PLACEMENT_TYPES);
   if(types.length === 0){
-    console.error('[buildSourcesEditor] PLACEMENT_TYPES is EMPTY!');
-    container.innerHTML = '<div style="text-align:center;padding:16px;color:#C14A4A;font-size:12px;">⚠ خطأ: أنواع المصادر غير مُعرّفة</div>';
+    container.innerHTML = '<div style="text-align:center;padding:16px;color:#C14A4A;">⚠ لا توجد أنواع مصادر</div>';
     return;
   }
 
-  container.innerHTML = '';
-  console.log('[buildSourcesEditor] Building', types.length, 'source blocks');
-
-  types.forEach(([typeId, def])=>{
-    const block = document.createElement('div');
-    block.className = 'src-block';
-    block.dataset.srcType = typeId;
-    block.style.setProperty('--src-c', def.color || '#888');
-
-    /* بناء صفوف المعاملات */
+  let blocksHtml = '';
+  types.forEach(([typeId, def]) => {
     let paramsHtml = '';
     if(def.params && def.params.length > 0){
       paramsHtml = def.params.map(p => {
@@ -2522,44 +3640,71 @@ function buildSourcesEditor(){
           return `<div class="src-param-row">
             <label>${p.label}</label>
             <select data-param="${p.key}">
-              ${(p.options||[]).map(o => 
-                `<option value="${o.value}"${o.value === p.default ? ' selected' : ''}>${o.label}</option>`
+              ${(p.options || []).map(o =>
+                `<option value="${o.value}"${o.value === p.default ? ' selected' : ''}>
+                  ${o.label}
+                </option>`
               ).join('')}
             </select>
           </div>`;
         }
+        if(p.type === 'number'){
+          return `<div class="src-param-row">
+            <label>${p.label}</label>
+            <input type="number" data-param="${p.key}"
+                   min="${p.min ?? ''}" max="${p.max ?? ''}"
+                   value="${p.default ?? 0}">
+          </div>`;
+        }
+        /* text */
         return `<div class="src-param-row">
           <label>${p.label}</label>
-          <input type="number" data-param="${p.key}"
-                 min="${p.min ?? ''}" max="${p.max ?? ''}"
-                 value="${p.default ?? 0}">
+          <input type="text" data-param="${p.key}"
+                 value="${p.default ?? ''}"
+                 placeholder="${p.placeholder || ''}">
         </div>`;
       }).join('');
     }
 
-    block.innerHTML = `
-      <div class="src-head">
-        <div class="src-ic">${def.icon || '📌'}</div>
-        <div class="src-info">
-          <div class="src-lbl">${def.label || typeId}</div>
-          <div class="src-desc">${def.desc || ''}</div>
+    blocksHtml += `
+      <div class="src-block" data-src-type="${typeId}" style="--src-c:${def.color || '#888'};">
+        <div class="src-head">
+          <div class="src-ic">${def.icon || '📌'}</div>
+          <div class="src-info">
+            <div class="src-lbl">${def.label || typeId}</div>
+            <div class="src-desc">${def.desc || ''}</div>
+          </div>
+          <div class="src-toggle">✓</div>
         </div>
-        <div class="src-toggle">✓</div>
+        ${paramsHtml ? `<div class="src-params">${paramsHtml}</div>` : ''}
       </div>
-      ${paramsHtml ? `<div class="src-params">${paramsHtml}</div>` : ''}
     `;
-
-    /* تفعيل/إلغاء */
-    const head = block.querySelector('.src-head');
-    if(head){
-      head.addEventListener('click', ()=>{
-        block.classList.toggle('active');
-        try { Sfx.tap(); haptic(4); } catch(e){}
-      });
-    }
-
-    container.appendChild(block);
   });
+
+  container.innerHTML = seasonPickerHtml + blocksHtml;
+
+  /* ═══════════════════════════════════════════════════════
+     ═══ 3) ربط الأحداث ═══
+     ═══════════════════════════════════════════════════════ */
+  container.querySelectorAll('.src-head').forEach(head => {
+    head.addEventListener('click', () => {
+      const block = head.closest('.src-block');
+      block.classList.toggle('active');
+      try { Sfx.tap(); haptic(4); } catch(e){}
+    });
+  });
+
+  /* حفظ الموسم المختار في النموذج */
+  const seasonSelect = container.querySelector('#src-season-id');
+  if(seasonSelect){
+    seasonSelect.addEventListener('change', () => {
+      const form = document.getElementById('admin-form');
+      if(form) form._editingSeasonId = seasonSelect.value;
+    });
+    /* حفظ القيمة الافتراضية */
+    const form = document.getElementById('admin-form');
+    if(form) form._editingSeasonId = seasonSelect.value;
+  }
 }
 
 /* ═══ جمع المصادر المختارة ═══ */
@@ -2567,12 +3712,23 @@ function collectPlacements(){
   ensurePlacementTypes();
   const placements = [];
 
+  /* ═══ الموسم المختار ═══ */
+  const seasonSelect = document.getElementById('src-season-id');
+  const seasonId = seasonSelect ? seasonSelect.value : '';
+
+  if(!seasonId){
+    console.warn('[collectPlacements] No season selected');
+    return [];
+  }
+
+  /* ═══ جمع المصادر المُفعّلة ═══ */
   document.querySelectorAll('#sources-editor .src-block.active').forEach(block => {
     const type = block.dataset.srcType;
     const def = PLACEMENT_TYPES[type];
     if(!def) return;
 
-    const placement = { type };
+    const placement = { type, seasonId };   /* ✅ seasonId مضاف */
+
     block.querySelectorAll('[data-param]').forEach(input => {
       const key = input.dataset.param;
       const p = (def.params || []).find(x => x.key === key);
@@ -2585,6 +3741,7 @@ function collectPlacements(){
         placement[key] = input.value;
       }
     });
+
     placements.push(placement);
   });
 
@@ -2614,14 +3771,20 @@ function getAllCustomItems(){
   return items;
 }
 
-/* ═══ جلب العناصر حسب نوع المكان ═══ */
-function getItemsByPlacement(placementType, filterFn){
+/* ═══════════════════════════════════════════════════════════
+   ═══════════ دوال جلب العناصر حسب المصدر + الموسم ════════
+   ═══════════════════════════════════════════════════════════ */
+
+/* جلب كل عناصر موسم معين من مصدر معين */
+function getItemsByPlacementInSeason(placementType, seasonId, filterFn){
   const items = getAllCustomItems();
   const result = [];
+  
   for(const item of items){
     const placements = item.placements || [];
     for(const p of placements){
       if(p.type !== placementType) continue;
+      if(seasonId && p.seasonId !== seasonId) continue;   /* ✅ فلتر الموسم */
       if(filterFn && !filterFn(p, item)) continue;
       result.push({ item, placement: p });
     }
@@ -2629,18 +3792,99 @@ function getItemsByPlacement(placementType, filterFn){
   return result;
 }
 
-function getShopCustomItems(){ return getItemsByPlacement('shop'); }
-function getBattlePassItems(tier, track){
-  return getItemsByPlacement('battle_pass', (p) => p.tier === tier && p.track === track);
+/* ═══ المتجر ═══ */
+function getShopCustomItems(seasonId){
+  const sid = seasonId || Save.data.seasons?.activeSeasonId;
+  return getItemsByPlacementInSeason('shop', sid);
 }
-function getSeasonRankItems(rankId){
-  return getItemsByPlacement('season_rank', (p) => p.rankId === rankId);
+
+/* ═══ Battle Pass ═══ */
+function getBattlePassItems(tier, track, seasonId){
+  const sid = seasonId || Save.data.seasons?.activeSeasonId;
+  return getItemsByPlacementInSeason('battle_pass', sid, (p) => 
+    p.tier === tier && p.track === track && p.rewardType === 'content'
+  );
 }
-function getDailyItems(day){
-  return getItemsByPlacement('daily_login', (p) => p.day === day);
+
+/* ═══ الحصول على كل مكافآت مستوى BP (محتوى + عملات + صناديق + بطاقات) ═══ */
+function getBPTierRewards(tier, track, seasonId){
+  const sid = seasonId || Save.data.seasons?.activeSeasonId;
+  const all = getItemsByPlacementInSeason('battle_pass', sid, (p) => 
+    p.tier === tier && p.track === track
+  );
+  
+  const rewards = {
+    content: [],   /* عناصر مخصصة */
+    coins: 0,      /* عملات إضافية */
+    boxes: [],     /* صناديق */
+    cards: []      /* بطاقات */
+  };
+  
+  for(const { item, placement } of all){
+    const rt = placement.rewardType || 'content';
+    if(rt === 'content')     rewards.content.push({ item, placement });
+    else if(rt === 'coins')  rewards.coins += (placement.coins || 0);
+    else if(rt === 'box')    rewards.boxes.push({ item, placement });
+    else if(rt === 'card')   rewards.cards.push({ item, placement });
+  }
+  
+  return rewards;
 }
-function getEventItems(eventId){
-  return getItemsByPlacement('event', (p) => p.eventId === eventId);
+
+/* ═══ الرتب ═══ */
+function getSeasonRankItems(rankId, seasonId){
+  const sid = seasonId || Save.data.seasons?.activeSeasonId;
+  return getItemsByPlacementInSeason('season_rank', sid, (p) => 
+    p.rankId === rankId && p.rewardType === 'content'
+  );
+}
+
+/* ═══ مكافآت الرتبة الكاملة (محتوى + عملات) ═══ */
+function getRankRewards(rankId, seasonId){
+  const sid = seasonId || Save.data.seasons?.activeSeasonId;
+  const all = getItemsByPlacementInSeason('season_rank', sid, (p) => 
+    p.rankId === rankId
+  );
+  
+  const rewards = { content: [], coins: 0 };
+  
+  for(const { item, placement } of all){
+    const rt = placement.rewardType || 'content';
+    if(rt === 'content')     rewards.content.push({ item, placement });
+    else if(rt === 'coins')  rewards.coins += (placement.coins || 0);
+  }
+  
+  return rewards;
+}
+
+/* ═══ الصندوق ═══ */
+function getChestItems(chestType, seasonId){
+  const sid = seasonId || Save.data.seasons?.activeSeasonId;
+  return getItemsByPlacementInSeason('chest', sid, (p) => 
+    p.chestType === chestType
+  );
+}
+
+/* ═══ عجلة الحظ ═══ */
+function getWheelItems(segment, seasonId){
+  const sid = seasonId || Save.data.seasons?.activeSeasonId;
+  return getItemsByPlacementInSeason('lucky_wheel', sid, (p) => 
+    p.segment === segment
+  );
+}
+
+/* ═══ الأحداث ═══ */
+function getEventItems(eventId, seasonId){
+  const sid = seasonId || Save.data.seasons?.activeSeasonId;
+  return getItemsByPlacementInSeason('event', sid, (p) => 
+    p.eventId === eventId
+  );
+}
+
+/* ═══ التسجيل اليومي ═══ */
+function getDailyItems(day, seasonId){
+  const sid = seasonId || Save.data.seasons?.activeSeasonId;
+  return getItemsByPlacementInSeason('daily_login', sid, (p) => p.day === day);
 }
 
 /* ═══ جلب العناصر من نوع معين ═══ */
@@ -4007,11 +5251,11 @@ function spawnSpark(){
     decay: cfg.fade || 0.028,
     item,
     rot: rand(0, Math.PI * 2),
-    rotSpd: rand(-0.04, 0.04)
+    rotSpd: rand(-0.04, 0.04),
+    layer: 'behind'    // ✅
   });
 }
 
-/* يُستدعى من updateGameplay كل إطار */
 function updateTrailEffect(){
   if(G.state !== 'PLAYING') return;
   const item = currentTrail();
@@ -4032,7 +5276,8 @@ function updateTrailEffect(){
       size: P.r * (cfg.sizeMul || 1.4),
       rotation: rand(0, Math.PI * 2),
       rotationSpeed: rand(-0.03, 0.03),
-      color: '#FFFFFF'
+      color: '#FFFFFF',
+      layer: 'behind'          // ✅ جديد — يُرسم خلف اللاعب
     });
   }
 }
@@ -9363,6 +10608,21 @@ renderCharacter(ctx, r, skin, {
     ctx.beginPath(); ctx.arc(P.x, P.y, r*2.4, 0, Math.PI*2); ctx.stroke();
     ctx.restore();
   }
+    /* ═══ اسم اللاعب فوق رأسه (وضع الأدمن فقط) ═══ */
+  if(hasAdminAccess() && Save.data.admin.showOwnNameTag){
+    ctx.save();
+    drawPlayerNameTag(
+      ctx,
+      P.x,
+      P.y - P.r * 2.4,
+      (Cloud.profile && Cloud.profile.username) || 'أنت',
+      {
+        tagColor: '#E8B34E',
+        showMeters: false
+      }
+    );
+    ctx.restore();
+  }
 }
 
 /* ============================================================
@@ -12826,8 +14086,14 @@ function drawPowerups(){
   }
 }
 
-function drawParticles(){
+function drawParticles(layer){
   for(const p of particles){
+    /* ✅ فلترة حسب الطبقة */
+    if(layer !== undefined){
+      const pLayer = p.layer || 'front';   // الافتراضي: أمام
+      if(pLayer !== layer) continue;
+    }
+
     const life = Math.max(0, p.life);
     ctx.globalAlpha = life * 0.95;
 
@@ -12835,7 +14101,6 @@ function drawParticles(){
       const img = ASSET.getImage(p.item);
       if(img){
         let sz = p.size;
-        /* تمدد تدريجي */
         if(p.scaleOverLife){
           const progress = 1 - life;
           sz = p.size * (1 + progress * p.scaleOverLife);
@@ -12953,15 +14218,18 @@ function draw(){
 
   drawGround();
 
-  if(G.state !== 'MENU'){
-    drawObstacles();
-    drawCoins();
-    drawOrbs();
-    drawPowerups();
-    drawSparks();
-    drawPlayer();
-    drawCompanion();
-  }
+if(G.state !== 'MENU'){
+  drawObstacles();
+  drawCoins();
+  drawOrbs();
+  drawPowerups();
+  drawSparks();
+
+  drawParticles('behind');   // ✅ خلف اللاعب (خط السير، الشرار)
+  drawPlayer();              // ← اللاعب
+  drawCompanion();
+  drawParticles('front');    // ✅ أمام اللاعب (انفجارات، عملات)
+}
   drawParticles();
   drawFloats();
 
@@ -13104,14 +14372,6 @@ function ensureMissions(){
   Save.save();
 }
 
-function getMissionData(tier, id){
-  const tmpl = MISSION_TEMPLATES[tier].find(x=>x.id===id);
-  if(!tmpl) return null;
-  const progKey = 'progress' + tier.charAt(0).toUpperCase() + tier.slice(1);
-  const prog = Save.data.missions[progKey][tmpl.key] || 0;
-  return { tmpl, prog, done: prog >= tmpl.target };
-}
-
 function buildMissions(tier){
   const list = document.getElementById('quest-list');
   if(!list) return;
@@ -13149,24 +14409,26 @@ function buildMissions(tier){
 function getSeasonRankIdx(){
   const pts = Save.data.season.points;
   let idx = 0;
-  for(let i=0;i<SEASON_RANKS.length;i++){ if(pts >= SEASON_RANKS[i].points) idx = i; }
+  for(let i=0;i<getSeasonRanks().length;i++){ if(pts >= getSeasonRanks()[i].points) idx = i; }
   return idx;
 }
 function buildSeason(){
   const pts = Save.data.season.points;
+  const ranks = getSeasonRanks();        // ✅
   const rankIdx = getSeasonRankIdx();
-  const rank = SEASON_RANKS[rankIdx];
+  const rank = ranks[rankIdx];
+  
   document.getElementById('season-rank').textContent = rank.icon + ' ' + rank.name;
   document.getElementById('season-points').textContent = pts;
 
-  const cur = SEASON_RANKS[rankIdx].points;
-  const next = SEASON_RANKS[rankIdx+1] ? SEASON_RANKS[rankIdx+1].points : (cur + 10000);
-  const prog = clamp((pts-cur)/(next-cur), 0, 1) * 100;
+  const cur = ranks[rankIdx].points;
+  const next = ranks[rankIdx + 1] ? ranks[rankIdx + 1].points : (cur + 10000);
+  const prog = clamp((pts - cur) / (next - cur), 0, 1) * 100;
   document.getElementById('season-prog').style.width = prog + '%';
 
   const rl = document.getElementById('rank-list');
   rl.innerHTML = '';
-  SEASON_RANKS.forEach((r, i)=>{
+  ranks.forEach((r, i) => {              // ✅
     const el = document.createElement('div');
     el.className = 'list-item' + (i <= rankIdx ? ' done' : '');
     el.innerHTML = `
@@ -13186,7 +14448,7 @@ function buildSeason(){
 /* ============================================================
    ==================== Battle Pass ==========================
    ============================================================ */
-function getBPTier(){ return Math.min(Math.floor(Save.data.season.points / BP_TIER_POINTS), BP_TIERS); }
+function getBPTier(){ return Math.min(Math.floor(Save.data.season.points / getBPTierPoints()), getBPTiers()); }
 
 /* ============================================================
    ==================== Daily login ==========================
@@ -14097,10 +15359,10 @@ function buildPlayerCard(){
   }
 }
 
-/* ============================================================
-   ==================== EVENTS ===============================
+/* ═══════════════════════════════════════════════════════════
+   ═══════════ EVENT DEFAULTS (احتياطي) ════════════════════
    ============================================================ */
-const EVENTS = [
+const DEFAULT_EVENTS = [
   {
     id:'volcanoWeek', name:'أسبوع البركان', en:'VOLCANO WEEK',
     icon:'🌋', color:'#E85838',
@@ -14136,6 +15398,28 @@ const EVENTS = [
     ]
   }
 ];
+
+/* ═══ دالة جلب الأحداث من الموسم النشط ═══ */
+function getSeasonEvents(){
+  const season = getActiveSeason();
+  if(season && Array.isArray(season.events) && season.events.length > 0){
+    return season.events;
+  }
+  return DEFAULT_EVENTS;
+}
+
+/* ═══ متوافق مع الكود القديم ═══ */
+const EVENTS = new Proxy([], {
+  get(target, prop){
+    const events = getSeasonEvents();
+    if(prop === 'length') return events.length;
+    if(prop === Symbol.iterator) return events[Symbol.iterator].bind(events);
+    if(typeof prop === 'string' && !isNaN(parseInt(prop, 10))){
+      return events[parseInt(prop, 10)];
+    }
+    return events[prop];
+  }
+});
 
 function getActiveEvents(){
   const now = today();
@@ -17276,7 +18560,7 @@ function buildAdminContentList(){
           let extra = '';
           if(p.type === 'shop')       extra = ` ◆${p.price}`;
           if(p.type === 'battle_pass') extra = ` L${p.tier} · ${p.track === 'premium' ? 'مميز' : 'مجاني'}`;
-          if(p.type === 'season_rank') extra = ` ${SEASON_RANKS[p.rankId]?.name || ''}`;
+          if(p.type === 'season_rank') extra = ` ${getSeasonRanks()[p.rankId]?.name || ''}`;
           if(p.type === 'daily_login') extra = ` يوم ${p.day}`;
           if(p.type === 'chest')       extra = ` ${p.chestType}`;
           if(p.type === 'lucky_wheel') extra = ` قطاع ${p.segment}`;
@@ -17483,40 +18767,170 @@ async function pushAdminContent(){
   }
 }
 
-/* ═══ يرسم شارة الاسم فوق اللاعب (في multiplayer) ═══ */
+/* ============================================================
+   ═══════════ PLAYER NAME TAG v3 — CARD STYLE ═══════════════
+   ═══════════════════════════════════════════════════════════
+   بطاقة أنيقة تعرض:
+   - اسم اللاعب
+   - الشارة (صورة اختيارية)
+   - المسافة أسفل البطاقة (اختياري)
+   - سهم صغير يشير للاعب
+   
+   إن وُجدت صورة nameTag → تُستخدم كخلفية
+   وإلا → بطاقة برمجية أنيقة
+   ============================================================ */
 function drawPlayerNameTag(ctx, x, y, name, opts = {}){
-  const tag = currentNameTag();
-  const badge = currentBadge();
+  if(!ctx || !name) return;
+
+  /* ═══ خيارات ═══ */
+  const tag       = opts.tag       || currentNameTag();
+  const badge     = opts.badge     || currentBadge();
+  const tagColor  = opts.tagColor  || getCategoryConfig('nameTag').color;
+  const meters    = opts.meters;
+  const showMeters = (typeof meters === 'number') && opts.showMeters !== false;
+  const alpha     = opts.alpha ?? 1;
+
+  /* ═══ القياسات ═══ */
+  const padding = 12;
+  const cardH = 26;
+  const radius = 13;
+  const pointerH = 5;
+  const fontSize = 11;
+  const badgeSize = 16;
 
   ctx.save();
+  ctx.globalAlpha = alpha;
 
-  /* صورة بطاقة الاسم */
+  /* ═══ قياس النص ═══ */
+  ctx.font = `bold ${fontSize}px "Space Grotesk", sans-serif`;
+  const textW = ctx.measureText(name).width;
+
+  /* ═══ قياس الشارة ═══ */
+  const hasBadge = badge && badge.id !== 'none' && hasItemImage(badge);
+  const badgeSpace = hasBadge ? badgeSize + 6 : 0;
+
+  /* ═══ قياس البطاقة ═══ */
+  const cardW = Math.max(64, textW + padding * 2 + badgeSpace);
+  const cardX = x - cardW / 2;
+  const cardY = y - cardH - pointerH;
+
+  /* ═══════════════════════════════════════════════════════
+     الحالة 1: بطاقة بصورة (nameTag بصورة)
+     ═══════════════════════════════════════════════════════ */
   if(hasItemImage(tag)){
-    const tagW = 120;
-    ASSET.drawItem(ctx, tag, {
-      x, y: y - 34,
-      size: tagW,
-      anchorX: 0.5, anchorY: 0.5
-    });
+    const img = getItemImageEl(tag);
+    if(img && img.complete && img.naturalWidth > 0){
+      const ratio = img.naturalHeight / img.naturalWidth || 0.3;
+      const imgW = cardW + 12;
+      const imgH = imgW * ratio;
+      ctx.drawImage(img, x - imgW / 2, y - imgH + pointerH, imgW, imgH);
+    }
+  }
+  /* ═══════════════════════════════════════════════════════
+     الحالة 2: بطاقة برمجية أنيقة
+     ═══════════════════════════════════════════════════════ */
+  else {
+    /* ─── الظل ─── */
+    ctx.shadowColor = 'rgba(0,0,0,0.35)';
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetY = 2;
+
+    /* ─── خلفية متدرجة ─── */
+    const grad = ctx.createLinearGradient(0, cardY, 0, cardY + cardH);
+    grad.addColorStop(0, 'rgba(26,21,18,0.94)');
+    grad.addColorStop(1, 'rgba(26,21,18,0.82)');
+    ctx.fillStyle = grad;
+
+    roundRect(ctx, cardX, cardY, cardW, cardH, radius);
+    ctx.fill();
+
+    /* ─── إلغاء الظل قبل الحدود ─── */
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+
+    /* ─── حدود بلون الفئة ─── */
+    ctx.strokeStyle = tagColor + 'AA';
+    ctx.lineWidth = 1.5;
+    roundRect(ctx, cardX, cardY, cardW, cardH, radius);
+    ctx.stroke();
+
+    /* ─── لمعة علوية ─── */
+    const shine = ctx.createLinearGradient(0, cardY, 0, cardY + cardH / 2);
+    shine.addColorStop(0, 'rgba(255,255,255,0.14)');
+    shine.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = shine;
+    roundRect(ctx, cardX + 2, cardY + 2, cardW - 4, cardH / 2, radius - 2);
+    ctx.fill();
+
+    /* ─── سهم صغير أسفل البطاقة ─── */
+    ctx.fillStyle = 'rgba(26,21,18,0.88)';
+    ctx.beginPath();
+    ctx.moveTo(x - 5, cardY + cardH - 1);
+    ctx.lineTo(x, cardY + cardH + pointerH);
+    ctx.lineTo(x + 5, cardY + cardH - 1);
+    ctx.closePath();
+    ctx.fill();
   }
 
-  /* النص */
-  ctx.font = 'bold 12px "Space Grotesk", sans-serif';
+  /* ═══════════════════════════════════════════════════════
+     الشارة (على يسار البطاقة)
+     ═══════════════════════════════════════════════════════ */
+  if(hasBadge){
+    const badgeImg = getItemImageEl(badge);
+    if(badgeImg && badgeImg.complete && badgeImg.naturalWidth > 0){
+      const bx = cardX + padding - 2;
+      const by = cardY + (cardH - badgeSize) / 2;
+      ctx.drawImage(badgeImg, bx, by, badgeSize, badgeSize);
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     النص الرئيسي (اسم اللاعب)
+     ═══════════════════════════════════════════════════════ */
   ctx.fillStyle = '#FFFFFF';
+  ctx.font = `bold ${fontSize}px "Space Grotesk", sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.shadowColor = 'rgba(0,0,0,.8)';
-  ctx.shadowBlur = 4;
-  ctx.fillText(name, x, y - 34);
+  ctx.shadowColor = 'rgba(0,0,0,0.6)';
+  ctx.shadowBlur = 2;
+  ctx.shadowOffsetY = 1;
 
-  /* شارة صغيرة بجانب الاسم */
-  if(badge.id !== 'none' && hasItemImage(badge)){
-    const textW = ctx.measureText(name).width;
-    ASSET.drawItem(ctx, badge, {
-      x: x + textW / 2 + 12, y: y - 34,
-      size: 18,
-      anchorX: 0.5, anchorY: 0.5
-    });
+  /* إزاحة النص لتفادي الشارة */
+  const textX = hasBadge ? x + badgeSpace / 2 : x;
+  ctx.fillText(name, textX, cardY + cardH / 2 + 0.5);
+
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
+
+  /* ═══════════════════════════════════════════════════════
+     المسافة (اختياري — شارة صغيرة أسفل البطاقة)
+     ═══════════════════════════════════════════════════════ */
+  if(showMeters){
+    const meterText = meters + 'm';
+    ctx.font = `bold 9px "Space Grotesk", sans-serif`;
+    const meterW = ctx.measureText(meterText).width;
+    const meterPadX = 7;
+    const meterW2 = meterW + meterPadX * 2;
+    const meterH = 14;
+    const meterX = x - meterW2 / 2;
+    const meterY = cardY + cardH + pointerH + 3;
+
+    /* خلفية دائرية */
+    ctx.fillStyle = 'rgba(232,179,78,0.95)';
+    ctx.shadowColor = 'rgba(232,179,78,0.4)';
+    ctx.shadowBlur = 6;
+    roundRect(ctx, meterX, meterY, meterW2, meterH, meterH / 2);
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+
+    /* النص */
+    ctx.fillStyle = '#1A1512';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(meterText, x, meterY + meterH / 2 + 0.5);
   }
 
   ctx.restore();
@@ -17685,6 +19099,7 @@ function getImageEl(dataUrl){
 const ADMIN_KEY_MAP = Object.freeze({
   /* ✅ الإصلاح: أضف 'skin' أولاً */
   skin: 'customSkins',
+  cards: 'customCards',
   /* باقي التصنيفات تُبنى تلقائياً */
   ...Object.fromEntries(
     COSMETIC_CATEGORY_ORDER.map(cat => [
@@ -17959,11 +19374,17 @@ function openAdminItemForm(){
   const form = $('admin-form');
   if(form){
     form.classList.add('active');
-    form.style.display = '';           /* ⬅️ نظّف أي inline style قديم */
+    form.style.display = '';
     requestAnimationFrame(() => {
       form.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   }
+
+  /* ✅ تهيئة المعاينة المباشرة */
+  setTimeout(() => {
+    updateAdminImagePreview();
+    updateAdminLivePreview();
+  }, 150);
 
   Sfx.tap(); haptic(6);
 }
@@ -17973,23 +19394,41 @@ function closeAdminItemForm(){
   const form = document.getElementById('admin-form');
   if(form){
     form.classList.remove('active');
-    form.style.display = 'none';       /* ⬅️ أبقِ هذا للتوافق */
+    form.style.display = 'none';
+  }
+  /* ✅ إيقاف أنيميشن المعاينة */
+  if(typeof stopAdminLivePreview === 'function'){
+    stopAdminLivePreview();
   }
 }
 
-/* ═══ 4) ربط حقول النموذج (معاينة الصورة) ═══ */
+/* ═══ 4) ربط حقول النموذج ═══ */
 function wireAdminFormFields($){
   const pathInput = $('af-image-path');
   if(pathInput && !pathInput._bound){
     pathInput._bound = true;
 
-    /* debounce بسيط */
     let timer = null;
     pathInput.addEventListener('input', () => {
       clearTimeout(timer);
-      timer = setTimeout(() => updateAdminImagePreview(), 180);
+      timer = setTimeout(() => {
+        updateAdminImagePreview();
+        updateAdminLivePreview();
+      }, 180);
     });
   }
+
+  /* ✅ ربط بقية الحقول المؤثرة على المعاينة */
+  ['af-name', 'af-color', 'af-color2'].forEach(id => {
+    const el = $(id);
+    if(el && !el._bound){
+      el._bound = true;
+      el.addEventListener('input', () => {
+        clearTimeout(el._liveTimer);
+        el._liveTimer = setTimeout(() => updateAdminLivePreview(), 200);
+      });
+    }
+  });
 }
 
 /* ═══ 5) تحديث معاينة الصورة ═══ */
@@ -18029,6 +19468,171 @@ function updateAdminImagePreview(){
     preview.classList.add('err');
   };
   testImg.src = src;
+}
+
+/* ============================================================
+   ═══════════ ADMIN LIVE PREVIEW v3 ═════════════════════════
+   ═══════════════════════════════════════════════════════════
+   يعرض العنصر المُضاف على الشخصية مباشرة أثناء الكتابة
+   ============================================================ */
+
+let _adminPreviewRAF = null;
+
+/* ═══ رسم placeholder ═══ */
+function drawAdminPreviewPlaceholder(canvas){
+  if(_adminPreviewRAF){
+    cancelAnimationFrame(_adminPreviewRAF);
+    _adminPreviewRAF = null;
+  }
+  if(!canvas) return;
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const W = 200, H = 240;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+
+  const c = canvas.getContext('2d');
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const bg = c.createRadialGradient(W/2, H/2, 10, W/2, H/2, W/2);
+  bg.addColorStop(0, '#FBF7F0');
+  bg.addColorStop(1, '#E8E0D2');
+  c.fillStyle = bg;
+  c.fillRect(0, 0, W, H);
+
+  c.fillStyle = 'rgba(139,130,120,0.3)';
+  c.font = 'bold 48px sans-serif';
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.fillText('🖼️', W/2, H/2 - 20);
+
+  c.fillStyle = '#8B8278';
+  c.font = 'bold 11px "Tajawal", sans-serif';
+  c.fillText('أدخل اسم الصورة', W/2, H/2 + 30);
+  c.fillText('للمعاينة المباشرة', W/2, H/2 + 48);
+}
+
+/* ═══ رسم الشخصية بالعنصر ═══ */
+function drawAdminPreviewCanvas(canvas){
+  if(_adminPreviewRAF){
+    cancelAnimationFrame(_adminPreviewRAF);
+    _adminPreviewRAF = null;
+  }
+  if(!canvas) return;
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const W = 200, H = 240;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+
+  const c = canvas.getContext('2d');
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const groundY = H * 0.82;
+
+  const drawFrame = () => {
+    /* خلفية */
+    const bg = c.createRadialGradient(W/2, H/2, 10, W/2, H/2, W/2);
+    bg.addColorStop(0, '#FBF7F0');
+    bg.addColorStop(1, '#E8E0D2');
+    c.fillStyle = bg;
+    c.fillRect(0, 0, W, H);
+
+    /* أرضية خفيفة */
+    const groundGrad = c.createLinearGradient(0, groundY - 20, 0, H);
+    groundGrad.addColorStop(0, 'rgba(232,179,78,0.10)');
+    groundGrad.addColorStop(1, 'rgba(232,179,78,0)');
+    c.fillStyle = groundGrad;
+    c.fillRect(0, groundY, W, H - groundY);
+
+    /* ظل */
+    c.fillStyle = 'rgba(0,0,0,0.18)';
+    c.beginPath();
+    c.ellipse(W/2, groundY + 5, 40, 7, 0, 0, Math.PI * 2);
+    c.fill();
+
+    /* الشخصية */
+    c.save();
+    c.translate(W/2, groundY - 60);
+    try {
+      renderCharacter(c, 30, currentSkin(), {
+        mode: 'WALK',
+        rot: 0,
+        alpha: 1,
+        skipExtras: false
+      });
+    } catch(e){
+      console.warn('[AdminPreview] renderCharacter failed:', e);
+    }
+    c.restore();
+
+    _adminPreviewRAF = requestAnimationFrame(drawFrame);
+  };
+
+  drawFrame();
+}
+
+/* ═══ المُحدِّث الرئيسي — يحقن العنصر المؤقت ويرسم ═══ */
+function updateAdminLivePreview(){
+  const canvas = document.getElementById('af-live-canvas');
+  if(!canvas) return;
+
+  const cat = currentAdminTab;
+  const pathInput = document.getElementById('af-image-path');
+  const path = pathInput ? pathInput.value.trim() : '';
+
+  /* لا مسار → placeholder */
+  if(!path){
+    drawAdminPreviewPlaceholder(canvas);
+    return;
+  }
+
+  /* ═══ بناء العنصر المؤقت ═══ */
+  const nameEl = document.getElementById('af-name');
+  const colorEl = document.getElementById('af-color');
+  const color2El = document.getElementById('af-color2');
+
+  const tempItem = {
+    id: '__admin_preview__',
+    name: (nameEl && nameEl.value.trim()) || 'Preview',
+    category: cat,
+    color: (colorEl && colorEl.value) || '#E07A3F',
+    color2: (color2El && color2El.value) || '#E8B34E',
+    imagePath: path,
+    enabled: true,
+    placements: [],
+    isPreview: true
+  };
+
+  /* ═══ حقن مؤقت في admin data ═══ */
+  const key = (typeof ADMIN_KEY_MAP !== 'undefined' && ADMIN_KEY_MAP[cat]) ||
+              ('custom' + cat.charAt(0).toUpperCase() + cat.slice(1));
+
+  if(!Save.data.admin[key]) Save.data.admin[key] = [];
+  Save.data.admin[key].push(tempItem);
+
+  /* ═══ حقنها كـ current ═══ */
+  const prevCurrent = Save.data.cosmetics.current[cat];
+  Save.data.cosmetics.current[cat] = '__admin_preview__';
+
+  /* ═══ الرسم ═══ */
+  try {
+    drawAdminPreviewCanvas(canvas);
+  } catch(e){
+    console.warn('[AdminLivePreview] Failed:', e);
+  }
+
+  /* ═══ تنظيف فوري بعد الرسم ═══ */
+  Save.data.admin[key].pop();
+  Save.data.cosmetics.current[cat] = prevCurrent;
+}
+
+/* ═══ إيقاف المعاينة (عند إغلاق النموذج) ═══ */
+function stopAdminLivePreview(){
+  if(_adminPreviewRAF){
+    cancelAnimationFrame(_adminPreviewRAF);
+    _adminPreviewRAF = null;
+  }
 }
 
 /* ═══ 6) حفظ عنصر جديد (مع منع النقر المزدوج) ═══ */
@@ -18079,9 +19683,15 @@ async function handleAdminItemSave(){
     }
 
     /* ═══ جمع الأماكن ═══ */
-    const placements = (typeof collectPlacements === 'function')
-      ? collectPlacements()
-      : [];
+const placements = (typeof collectPlacements === 'function')
+  ? collectPlacements()
+  : [];
+
+if(placements.length === 0){
+  setStatus('✗ اختر الموسم ومكاناً واحداً على الأقل', 'err');
+  Sfx.play(220, 0.15, 'sine', 0.05, 180); haptic(20);
+  return;
+}
 
     if(placements.length === 0){
       setStatus('✗ اختر مكاناً واحداً على الأقل', 'err');
@@ -18453,15 +20063,15 @@ buildSettings = function() {
 function buildBP(){
   const tier = getBPTier();
   const pts = Save.data.season.points;
-  document.getElementById('bp-tier').textContent = tier + '/' + BP_TIERS;
+  document.getElementById('bp-tier').textContent = tier + '/' + getBPTiers();
   document.getElementById('bp-points').textContent = pts;
-  const prog = clamp((pts % BP_TIER_POINTS) / BP_TIER_POINTS, 0, 1) * 100;
-  document.getElementById('bp-prog').style.width = (tier >= BP_TIERS ? 100 : prog) + '%';
+  const prog = clamp((pts % getBPTierPoints()) / getBPTierPoints(), 0, 1) * 100;
+  document.getElementById('bp-prog').style.width = (tier >= getBPTiers() ? 100 : prog) + '%';
 
   const list = document.getElementById('bp-tiers');
   list.innerHTML = '';
 
-  for(let i=1;i<=BP_TIERS;i++){
+  for(let i=1;i<=getBPTiers();i++){
     const unlocked = i <= tier;
     const claimedFree = Save.data.battlePass.claimedFree.includes(i);
     const claimedPrem = Save.data.battlePass.claimedPremium.includes(i);
@@ -19574,19 +21184,22 @@ function mpDrawGhosts(){
     const sk = getAllSkins().find(s => s.id === interpData.skin) || SKINS[0];
     const alpha = interpData.alive ? 0.72 : 0.25;
 
-    // اسم اللاعب
+    // ═══ بطاقة الاسم ═══
     ctx.save();
-    ctx.globalAlpha = interpData.alive ? 0.9 : 0.4;
-    ctx.fillStyle = interpData.alive ? '#4A88C8' : '#8B8278';
-    ctx.font = 'bold 11px "Space Grotesk", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText(interpData.name || 'لاعب', ghostX, ghostY - P.r * 2.6);
+    ctx.globalAlpha = interpData.alive ? 1 : 0.5;
 
-    // المسافة أسفل الاسم
-    ctx.font = 'bold 9px "Space Grotesk", sans-serif';
-    ctx.fillStyle = 'rgba(74, 136, 200, 0.7)';
-    ctx.fillText((interpData.meters || 0) + 'm', ghostX, ghostY - P.r * 2.6 + 11);
+    drawPlayerNameTag(
+      ctx,
+      ghostX,
+      ghostY - P.r * 2.4,
+      interpData.name || 'لاعب',
+      {
+        tagColor: '#4A88C8',
+        alpha: interpData.alive ? 1 : 0.5,
+        showMeters: true,
+        meters: interpData.meters || 0
+      }
+    );
     ctx.restore();
 
     // سهم إذا كان خارج الشاشة
@@ -19975,6 +21588,7 @@ const Admin = {
     else if(tabName === 'preview') this.initPreview();
     else if(tabName === 'system') this.renderSystemPanel();
     else if(tabName === 'audit') this.renderAudit();
+    else if(tabName === 'seasons') this.renderSeasons();   // ✅ جديد
   },
 
   /* ═══════════════ Dashboard ═══════════════ */
@@ -20160,85 +21774,48 @@ renderContentList(){
     return;
   }
 
-  /* ═══ ✅ جديد: شريط أدوات القائمة ═══ */
-  let toolbar = document.getElementById('admin-content-toolbar');
-  if(!toolbar){
-    toolbar = document.createElement('div');
-    toolbar.id = 'admin-content-toolbar';
-    toolbar.style.cssText = `
-      display:flex;align-items:center;justify-content:space-between;
-      gap:8px;padding:10px 12px;margin-bottom:10px;
-      background:#fff;border-radius:12px;
-      border:1px solid var(--line);
-    `;
-    list.parentNode.insertBefore(toolbar, list);
-  }
-
-  toolbar.innerHTML = `
-    <div style="display:flex;align-items:center;gap:6px;">
-      <span style="font-size:14px;">📊</span>
-      <span style="font-size:12px;font-weight:800;color:var(--ink);">
-        ${items.length} عنصر في "${CATEGORY_LABELS[this.contentTab] || this.contentTab}"
-      </span>
-    </div>
-    <button class="admin-mini-btn danger" id="admin-clear-category" title="حذف الكل">
-      🗑 حذف الكل
-    </button>
-  `;
-
-  /* ربط زر الحذف الكامل */
-  const clearBtn = toolbar.querySelector('#admin-clear-category');
-  if(clearBtn && !clearBtn._bound){
-    clearBtn._bound = true;
-    clearBtn.addEventListener('click', async () => {
-      const cat = this.contentTab;
-      const key2 = ADMIN_KEY_MAP[cat] || ('custom' + cat.charAt(0).toUpperCase() + cat.slice(1));
-      const catItems = Save.data.admin[key2] || [];
-
-      if(catItems.length === 0) return;
-
-      const ok = confirm(
-        `⚠️⚠️ تحذير شديد ⚠️⚠️\n\n` +
-        `سيتم حذف ${catItems.length} عنصر من تصنيف "${CATEGORY_LABELS[cat] || cat}"\n` +
-        `من جميع اللاعبين نهائياً!\n\n` +
-        `لا يمكن التراجع. متابعة؟`
-      );
-      if(!ok) return;
-
-      const ok2 = confirm('تأكيد أخير: هل أنت متأكد 100%؟');
-      if(!ok2) return;
-
-      Save.data.admin[key2] = [];
-      Save.save();
-
-      if(typeof pushAdminContent === 'function'){
-        const r = await pushAdminContent();
-        if(!r.ok){
-          alert('⚠ حُذف محلياً — فشل النشر');
-        }
-      }
-
-      if(typeof Admin !== 'undefined' && Admin.logAudit){
-        Admin.logAudit('content', 'clear-category', `🗑 حذف كل عناصر ${cat}`);
-      }
-
-      this.renderContentList();
-      this.renderContentStats();
-      if(this.addActivity) this.addActivity('🗑', `حذف كل "${CATEGORY_LABELS[cat] || cat}"`);
-      if(typeof refreshContentEverywhere === 'function') refreshContentEverywhere();
-
-      if(typeof Toast !== 'undefined'){
-        Toast.success('تم الحذف', `حُذف كل المحتوى من "${CATEGORY_LABELS[cat] || cat}"`);
-      }
-      Sfx.reward(); haptic(20);
+  /* ═══ تجميع العناصر حسب الموسم ═══ */
+  const bySeason = {};
+  items.forEach((item, idx) => {
+    const seasons = new Set((item.placements || []).map(p => p.seasonId || 'unknown'));
+    seasons.forEach(sid => {
+      if(!bySeason[sid]) bySeason[sid] = [];
+      bySeason[sid].push({ item, idx });
     });
-  }
+  });
 
   list.innerHTML = '';
-  items.forEach((item, idx) => {
+
+  /* ═══ عرض لكل موسم ═══ */
+  const seasonIds = Object.keys(bySeason).sort();
+  seasonIds.forEach(sid => {
+    const season = typeof getSeasonById === 'function' ? getSeasonById(sid) : null;
+    const seasonName = season ? `${season.icon} ${season.name}` : `⚠ ${sid}`;
+
+    /* رأس الموسم */
+    const header = document.createElement('div');
+    header.style.cssText = `
+      display:flex;align-items:center;gap:8px;
+      padding:10px 12px;margin:14px 0 8px;
+      background:linear-gradient(135deg, ${season?.color || '#888'}22, transparent);
+      border-radius:12px;
+      border-left:4px solid ${season?.color || '#888'};
+    `;
+    header.innerHTML = `
+      <span style="font-size:16px;">🎯</span>
+      <span style="font-family:'Space Grotesk';font-size:13px;font-weight:700;">
+        ${seasonName}
+      </span>
+      <span style="margin-left:auto;font-size:11px;color:var(--ink-mute);">
+        ${bySeason[sid].length} عنصر
+      </span>
+    `;
+    list.appendChild(header);
+
+    /* عناصر الموسم */
+    bySeason[sid].forEach(({ item, idx }) => {
       const el = document.createElement('div');
       el.className = 'admin-content-item';
-      el.style.position = 'relative';
 
       const src = this.resolveItemSrc(item);
       const thumb = src
@@ -20247,6 +21824,19 @@ renderContentList(){
 
       const disabled = item.enabled === false;
 
+      /* ═══ عرض كل المصادر داخل هذا الموسم ═══ */
+      const sources = (item.placements || []).filter(p => (p.seasonId || 'unknown') === sid);
+      const sourcesHtml = sources.map(p => {
+        const info = getSourceTypeInfo(p.type);
+        let extra = '';
+        if(p.type === 'shop')        extra = ` ◆${p.price}`;
+        if(p.type === 'battle_pass') extra = ` L${p.tier} · ${p.track} · ${p.rewardType || 'content'}`;
+        if(p.type === 'season_rank') extra = ` رتبة ${p.rankId} · ${p.rewardType || 'content'}`;
+        if(p.type === 'chest')       extra = ` ${p.chestType}`;
+        if(p.type === 'lucky_wheel') extra = ` قطاع ${p.segment}`;
+        return `<span class="aci-place" style="--pc:${info.color};">${info.icon} ${info.label}${extra}</span>`;
+      }).join('');
+
       el.innerHTML = `
         <div class="aci-thumb">${thumb}</div>
         <div class="aci-info">
@@ -20254,7 +21844,8 @@ renderContentList(){
             ${this.escape(item.name || 'بدون اسم')}
             ${disabled ? '<span style="color:#C14A4A;font-size:10px;"> · مُخفي</span>' : ''}
           </div>
-          <div class="aci-meta">${item.rarity || 'common'} · ${src ? '🖼️' : '⚠ بلا صورة'}</div>
+          <div class="aci-meta">${item.rarity || 'common'}</div>
+          <div class="aci-placements">${sourcesHtml}</div>
         </div>
         <button class="aci-del" data-del="${idx}" title="حذف">🗑</button>
       `;
@@ -20266,7 +21857,8 @@ renderContentList(){
 
       list.appendChild(el);
     });
-  },
+  });
+},
 
   async confirmDelete(key, idx, item){
     if(!confirm(`حذف "${item.name}" نهائياً من جميع اللاعبين؟`)) return;
@@ -21172,6 +22764,430 @@ getFolderForCategory(cat){
         Sfx.tap(); haptic(4);
       });
     });
+  },
+
+  /* ═══════════════════════════════════════════════════════
+     ═══════════════ SEASONS MANAGEMENT ═══════════════
+     ═══════════════════════════════════════════════════════ */
+
+  /* متغير داخلي لتخزين الموسم الجاري تحريره */
+  _editingSeasonId: null,
+
+  /* ═══ العرض الرئيسي للتبويب ═══ */
+  renderSeasons(){
+    this.renderActiveSeasonCard();
+    this.renderSeasonsList();
+    this.bindSeasonsActions();
+  },
+
+  /* ═══ بطاقة الموسم النشط ═══ */
+  renderActiveSeasonCard(){
+    const container = document.getElementById('admin-active-season');
+    if(!container) return;
+
+    const season = getActiveSeason();
+    if(!season){
+      container.innerHTML = '<div style="text-align:center;padding:20px;color:rgba(255,255,255,.7);">لا يوجد موسم نشط</div>';
+      return;
+    }
+
+    const tiers = season.battlePass.tiers || 30;
+    const ranksCount = (season.ranks || []).length;
+    const chestsCount = (season.chests || []).length;
+    const eventsCount = (season.events || []).length;
+
+    container.innerHTML = `
+      <div class="ahv3-content">
+        <div class="ahv3-title" style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:28px;">${season.icon || '🏅'}</span>
+          <div>
+            <div style="font-family:'Space Grotesk';font-size:16px;font-weight:700;">
+              ${season.name}
+            </div>
+            <div style="font-size:10px;opacity:.7;letter-spacing:2px;">
+              ${season.en}
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px;">
+          <div style="text-align:center;padding:8px;background:rgba(255,255,255,.1);border-radius:10px;">
+            <div style="font-size:16px;font-weight:700;">${tiers}</div>
+            <div style="font-size:9px;opacity:.7;">مستوى BP</div>
+          </div>
+          <div style="text-align:center;padding:8px;background:rgba(255,255,255,.1);border-radius:10px;">
+            <div style="font-size:16px;font-weight:700;">${ranksCount}</div>
+            <div style="font-size:9px;opacity:.7;">رتبة</div>
+          </div>
+          <div style="text-align:center;padding:8px;background:rgba(255,255,255,.1);border-radius:10px;">
+            <div style="font-size:16px;font-weight:700;">${chestsCount}</div>
+            <div style="font-size:9px;opacity:.7;">صندوق</div>
+          </div>
+          <div style="text-align:center;padding:8px;background:rgba(255,255,255,.1);border-radius:10px;">
+            <div style="font-size:16px;font-weight:700;">${eventsCount}</div>
+            <div style="font-size:9px;opacity:.7;">حدث</div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;display:flex;gap:6px;">
+          <button class="admin-mini-btn" 
+                  style="flex:1;width:auto;height:34px;background:rgba(255,255,255,.15);color:#fff;" 
+                  id="ase-edit-active">
+            ✏️ تحرير
+          </button>
+          <button class="admin-mini-btn" 
+                  style="flex:1;width:auto;height:34px;background:rgba(255,255,255,.15);color:#fff;" 
+                  id="ase-view-stats">
+            📊 إحصائيات
+          </button>
+        </div>
+      </div>
+    `;
+
+    const editBtn = container.querySelector('#ase-edit-active');
+    if(editBtn){
+      editBtn.addEventListener('click', () => this.openSeasonEditor(season.id));
+    }
+
+    const statsBtn = container.querySelector('#ase-view-stats');
+    if(statsBtn){
+      statsBtn.addEventListener('click', () => {
+        const s = Save.data.season;
+        alert(
+          `📊 إحصائيات الموسم\n\n` +
+          `🎫 نقاطك: ${(s.points || 0).toLocaleString()}\n` +
+          `📈 مستواك: ${getBPTier()}/${tiers}\n` +
+          `🏅 رتبتك: ${getSeasonRanks()[getSeasonRankIdx()]?.name || '—'}`
+        );
+      });
+    }
+  },
+
+  /* ═══ قائمة كل المواسم ═══ */
+  renderSeasonsList(){
+    const list = document.getElementById('admin-seasons-list');
+    if(!list) return;
+
+    const seasons = listSeasons();
+    if(seasons.length === 0){
+      list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--ink-mute);">لا توجد مواسم</div>';
+      return;
+    }
+
+    list.innerHTML = '';
+    seasons.forEach(season => {
+      const el = document.createElement('div');
+      el.className = 'admin-content-item';
+      el.style.cssText = 'cursor:pointer;border-left:4px solid ' + (season.color || '#E8B34E') + ';';
+
+      const isActive = Save.data.seasons.activeSeasonId === season.id;
+
+      el.innerHTML = `
+        <div class="aci-thumb" 
+             style="background:${season.color}22;font-size:28px;color:${season.color};">
+          ${season.icon || '🏅'}
+        </div>
+        <div class="aci-info">
+          <div class="aci-name">
+            ${season.name}
+            ${isActive ? '<span style="color:#6B9B6B;font-size:10px;"> ● نشط</span>' : ''}
+          </div>
+          <div class="aci-meta">
+            S${season.number} · ${season.en} · ${season.startDate} → ${season.endDate}
+          </div>
+        </div>
+        <div style="display:flex;gap:4px;">
+          <button class="admin-mini-btn" data-action="edit" title="تحرير">✏️</button>
+          ${!isActive ? `
+            <button class="admin-mini-btn" data-action="activate" title="تفعيل">▶️</button>
+            <button class="admin-mini-btn danger" 
+                    data-action="delete" 
+                    title="حذف" 
+                    style="width:34px;">🗑</button>
+          ` : ''}
+        </div>
+      `;
+
+      el.querySelector('[data-action="edit"]').addEventListener('click', e => {
+        e.stopPropagation();
+        this.openSeasonEditor(season.id);
+      });
+
+      const activateBtn = el.querySelector('[data-action="activate"]');
+      if(activateBtn){
+        activateBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          if(!confirm(`تفعيل "${season.name}"؟\n\nسيتم إلغاء تفعيل الموسم الحالي وتصفير نقاطك.`)) return;
+          activateSeason(season.id);
+          Toast.success('تم التفعيل', season.name);
+          this.renderSeasons();
+        });
+      }
+
+      const deleteBtn = el.querySelector('[data-action="delete"]');
+      if(deleteBtn){
+        deleteBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          if(!confirm(`⚠️ حذف "${season.name}" نهائياً؟`)) return;
+          if(deleteSeason(season.id)){
+            Toast.success('تم الحذف');
+            this.renderSeasons();
+          } else {
+            Toast.error('فشل الحذف');
+          }
+        });
+      }
+
+      list.appendChild(el);
+    });
+  },
+
+  /* ═══ ربط أزرار التبويب ═══ */
+  bindSeasonsActions(){
+    const createBtn = document.getElementById('admin-create-season');
+    if(createBtn && !createBtn._bound){
+      createBtn._bound = true;
+      createBtn.addEventListener('click', () => {
+        const name = prompt('اسم الموسم الجديد:', 'موسم ' + (listSeasons().length + 1));
+        if(!name) return;
+        const en = prompt('الاسم الإنجليزي:', 'SEASON ' + (listSeasons().length + 1));
+        if(en === null) return;
+
+        const season = createNewSeason(name, en || 'SEASON');
+        Save.save();
+        Toast.success('تم إنشاء الموسم', name);
+        this.openSeasonEditor(season.id);
+      });
+    }
+  },
+
+  /* ═══ فتح محرر الموسم ═══ */
+  openSeasonEditor(seasonId){
+    const season = getSeasonById(seasonId);
+    if(!season) return;
+
+    this._editingSeasonId = seasonId;
+
+    /* ملء الحقول */
+    document.getElementById('ase-title').textContent = season.name;
+    document.getElementById('ase-name').value = season.name || '';
+    document.getElementById('ase-name-en').value = season.en || '';
+    document.getElementById('ase-icon').value = season.icon || '🏅';
+    document.getElementById('ase-color').value = season.color || '#E8B34E';
+    document.getElementById('ase-desc').value = season.desc || '';
+    document.getElementById('ase-start').value = season.startDate || '';
+    document.getElementById('ase-end').value = season.endDate || '';
+
+    document.getElementById('ase-bp-tiers').value = season.battlePass.tiers || 30;
+    document.getElementById('ase-bp-points').value = season.battlePass.tierPoints || 300;
+    document.getElementById('ase-bp-price').value = season.battlePass.premiumPrice || 1500;
+
+    this.renderSeasonRanksEditor(season.ranks || []);
+    this.renderSeasonChestsEditor(season.chests || []);
+
+    /* إظهار المحرر */
+    const editor = document.getElementById('admin-season-editor');
+    editor.style.display = 'flex';
+    editor.classList.add('active');
+
+    const close = () => {
+      editor.style.display = 'none';
+      editor.classList.remove('active');
+    };
+
+    /* ربط أزرار الإغلاق */
+    document.getElementById('ase-close').onclick = close;
+    document.getElementById('ase-cancel').onclick = close;
+    document.getElementById('admin-season-editor-backdrop').onclick = close;
+
+    /* ربط أزرار الإضافة */
+    document.getElementById('ase-add-rank').onclick = () => this.addSeasonRank();
+    document.getElementById('ase-add-chest').onclick = () => this.addSeasonChest();
+
+    /* ربط زر الحفظ */
+    document.getElementById('ase-save').onclick = () => this.saveSeasonEditor();
+
+    setTimeout(() => editor.scrollIntoView({ behavior: 'smooth' }), 100);
+  },
+
+  /* ═══ محرر الرتب ═══ */
+  renderSeasonRanksEditor(ranks){
+    const c = document.getElementById('ase-ranks-editor');
+    if(!c) return;
+    c.innerHTML = '';
+
+    ranks.forEach((r, i) => {
+      const el = document.createElement('div');
+      el.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;align-items:center;';
+      el.innerHTML = `
+        <input class="af-input" 
+               style="width:50px;text-align:center;" 
+               value="${r.icon || '🏅'}" 
+               data-rank-icon="${i}" 
+               maxlength="4">
+        <input class="af-input" 
+               style="flex:1;" 
+               value="${r.name || ''}" 
+               data-rank-name="${i}" 
+               placeholder="اسم الرتبة">
+        <input class="af-input" 
+               type="number" 
+               style="width:90px;" 
+               value="${r.points || 0}" 
+               data-rank-points="${i}" 
+               placeholder="نقاط">
+        <button class="aci-del" 
+                style="width:34px;height:34px;" 
+                data-rank-del="${i}">🗑</button>
+      `;
+      c.appendChild(el);
+    });
+
+    /* ربط زر الحذف */
+    c.querySelectorAll('[data-rank-del]').forEach(b => {
+      b.addEventListener('click', () => {
+        const idx = parseInt(b.dataset.rankDel, 10);
+        const season = getSeasonById(this._editingSeasonId);
+        if(season && season.ranks){
+          this.collectSeasonRanksFromEditor(season);
+          season.ranks.splice(idx, 1);
+          this.renderSeasonRanksEditor(season.ranks);
+        }
+      });
+    });
+  },
+
+  collectSeasonRanksFromEditor(season){
+    const c = document.getElementById('ase-ranks-editor');
+    if(!c) return;
+    const ranks = [];
+    const icons = c.querySelectorAll('[data-rank-icon]');
+    const names = c.querySelectorAll('[data-rank-name]');
+    const points = c.querySelectorAll('[data-rank-points]');
+
+    for(let i = 0; i < icons.length; i++){
+      ranks.push({
+        icon: icons[i].value || '🏅',
+        name: names[i].value || 'رتبة',
+        points: parseInt(points[i].value, 10) || 0
+      });
+    }
+    ranks.sort((a, b) => a.points - b.points);
+    season.ranks = ranks;
+  },
+
+  addSeasonRank(){
+    const season = getSeasonById(this._editingSeasonId);
+    if(!season) return;
+    this.collectSeasonRanksFromEditor(season);
+    season.ranks.push({ icon: '🏅', name: 'رتبة جديدة', points: 0 });
+    this.renderSeasonRanksEditor(season.ranks);
+  },
+
+  /* ═══ محرر الصناديق ═══ */
+  renderSeasonChestsEditor(chests){
+    const c = document.getElementById('ase-chests-editor');
+    if(!c) return;
+    c.innerHTML = '';
+
+    chests.forEach((ch, i) => {
+      const el = document.createElement('div');
+      el.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;align-items:center;';
+      el.innerHTML = `
+        <input class="af-input" 
+               style="width:50px;text-align:center;" 
+               value="${ch.icon || '📦'}" 
+               data-chest-icon="${i}" 
+               maxlength="4">
+        <input class="af-input" 
+               style="flex:1;" 
+               value="${ch.name || ''}" 
+               data-chest-name="${i}">
+        <input class="af-input" 
+               type="number" 
+               style="width:90px;" 
+               value="${ch.price || 0}" 
+               data-chest-price="${i}">
+        <button class="aci-del" 
+                style="width:34px;height:34px;" 
+                data-chest-del="${i}">🗑</button>
+      `;
+      c.appendChild(el);
+    });
+
+    c.querySelectorAll('[data-chest-del]').forEach(b => {
+      b.addEventListener('click', () => {
+        const idx = parseInt(b.dataset.chestDel, 10);
+        const season = getSeasonById(this._editingSeasonId);
+        if(season && season.chests){
+          this.collectSeasonChestsFromEditor(season);
+          season.chests.splice(idx, 1);
+          this.renderSeasonChestsEditor(season.chests);
+        }
+      });
+    });
+  },
+
+  collectSeasonChestsFromEditor(season){
+    const c = document.getElementById('ase-chests-editor');
+    if(!c) return;
+    const chests = [];
+    const icons = c.querySelectorAll('[data-chest-icon]');
+    const names = c.querySelectorAll('[data-chest-name]');
+    const prices = c.querySelectorAll('[data-chest-price]');
+
+    for(let i = 0; i < icons.length; i++){
+      chests.push({
+        id: 'chest_' + i,
+        icon: icons[i].value || '📦',
+        name: names[i].value || 'صندوق',
+        price: parseInt(prices[i].value, 10) || 0
+      });
+    }
+    season.chests = chests;
+  },
+
+  addSeasonChest(){
+    const season = getSeasonById(this._editingSeasonId);
+    if(!season) return;
+    this.collectSeasonChestsFromEditor(season);
+    season.chests.push({ id: 'chest_new', icon: '🎁', name: 'صندوق جديد', price: 100 });
+    this.renderSeasonChestsEditor(season.chests);
+  },
+
+  /* ═══ حفظ المحرر ═══ */
+  saveSeasonEditor(){
+    const season = getSeasonById(this._editingSeasonId);
+    if(!season) return;
+
+    const name = document.getElementById('ase-name').value.trim();
+    if(!name){
+      document.getElementById('ase-status').textContent = '✗ الاسم مطلوب';
+      document.getElementById('ase-status').className = 'af-status err';
+      return;
+    }
+
+    season.name = name;
+    season.en = document.getElementById('ase-name-en').value.trim() || 'SEASON';
+    season.icon = document.getElementById('ase-icon').value || '🏅';
+    season.color = document.getElementById('ase-color').value;
+    season.desc = document.getElementById('ase-desc').value.trim();
+    season.startDate = document.getElementById('ase-start').value;
+    season.endDate = document.getElementById('ase-end').value;
+
+    season.battlePass.tiers = parseInt(document.getElementById('ase-bp-tiers').value, 10) || 30;
+    season.battlePass.tierPoints = parseInt(document.getElementById('ase-bp-points').value, 10) || 300;
+    season.battlePass.premiumPrice = parseInt(document.getElementById('ase-bp-price').value, 10) || 1500;
+
+    this.collectSeasonRanksFromEditor(season);
+    this.collectSeasonChestsFromEditor(season);
+
+    Save.save();
+
+    Toast.success('تم الحفظ', season.name);
+    document.getElementById('admin-season-editor').style.display = 'none';
+    document.getElementById('admin-season-editor').classList.remove('active');
+    this.renderSeasons();
   },
 
   /* ═══════════════ Helpers ═══════════════ */
@@ -22337,7 +24353,7 @@ function buildSettingsV2(){
 function buildBattlePassV2(){
   const tier = getBPTier();
   const pts = Save.data.season.points || 0;
-  const tierProgress = ((pts % BP_TIER_POINTS) / BP_TIER_POINTS) * 100;
+  const tierProgress = ((pts % getBPTierPoints()) / getBPTierPoints()) * 100;
 
   /* ═══ Hero ═══ */
   const tierEl = document.getElementById('bp-v2-tier');
@@ -22346,10 +24362,10 @@ function buildBattlePassV2(){
 
   if(tierEl) tierEl.textContent = tier;
   if(fillEl){
-    fillEl.style.width = (tier >= BP_TIERS ? 100 : tierProgress) + '%';
+    fillEl.style.width = (tier >= getBPTiers() ? 100 : tierProgress) + '%';
   }
   if(ptsEl){
-    const nextTierPts = (tier + 1) * BP_TIER_POINTS;
+    const nextTierPts = (tier + 1) * getBPTierPoints();
     ptsEl.textContent = pts.toLocaleString() + ' / ' + nextTierPts.toLocaleString();
   }
 
@@ -22422,8 +24438,9 @@ function renderBPTiersV2(){
     ? (Save.data.battlePass.claimedFree || [])
     : (Save.data.battlePass.claimedPremium || []);
 
+  const maxTiers = getBPTiers();
   const startTier = Math.max(1, tier - 2);
-  const endTier = Math.min(BP_TIERS, tier + 12);
+  const endTier = Math.min(maxTiers, tier + 12);
 
   /* ═══ فاصل المستويات السابقة ═══ */
   if(startTier > 1){
@@ -22442,23 +24459,58 @@ function renderBPTiersV2(){
     const unlocked = i <= tier;
     const isCurrent = i === tier;
     const claimed = claimedArr.includes(i);
-    const coinReward = 5 + i * 2;
-    const rewardAmount = track === 'free' ? coinReward : coinReward * 3;
 
-    /* عناصر مخصصة لهذا المستوى */
-    const customItems = track === 'free'
-      ? (typeof getBattlePassItems === 'function' ? getBattlePassItems(i, 'free') : [])
-      : (typeof getBattlePassItems === 'function' ? getBattlePassItems(i, 'premium') : []);
+    /* ═══ جلب كل مكافآت هذا المستوى ═══ */
+    const rewards = getBPTierRewards(i, track);
+
+    /* ═══ المكافأة الافتراضية (عملات) ═══ */
+    const defaultCoins = track === 'free' ? (5 + i * 2) : ((5 + i * 2) * 3);
+    const totalCoins = defaultCoins + (rewards.coins || 0);
 
     const el = document.createElement('div');
     el.className = 'bp-tier-row-v2' +
       (unlocked ? ' unlocked' : '') +
       (isCurrent ? ' current' : '');
 
-    /* badge "أنت هنا" */
     const hereBadge = isCurrent
       ? '<div class="bp-here-badge">📍 أنت هنا</div>'
       : '';
+
+    /* ═══ بناء HTML للصناديق ═══ */
+    const boxesHtml = rewards.boxes.map(({ item, placement }) => `
+      <div class="bp-custom-item" style="--bc:#C98A2E;">
+        <span class="bp-ci-ic">📦</span>
+        <span class="bp-ci-name">صندوق ${placement.boxType || 'برونزي'}</span>
+        ${unlocked
+          ? `<button class="bp-claim-btn small gold" data-tier="${i}" data-reward="box" data-box="${placement.boxType || 'bronze'}">استلام</button>`
+          : '<span style="font-size:10px;opacity:.5;">🔒</span>'
+        }
+      </div>
+    `).join('');
+
+    /* ═══ بطاقات ═══ */
+    const cardsHtml = rewards.cards.map(({ item, placement }) => `
+      <div class="bp-custom-item" style="--bc:#9A6AC8;">
+        <span class="bp-ci-ic">🃏</span>
+        <span class="bp-ci-name">${item.name || 'بطاقة'}</span>
+        ${unlocked
+          ? `<button class="bp-claim-btn small gold" data-tier="${i}" data-reward="card" data-card="${placement.cardId || ''}">استلام</button>`
+          : '<span style="font-size:10px;opacity:.5;">🔒</span>'
+        }
+      </div>
+    `).join('');
+
+    /* ═══ عناصر مخصصة ═══ */
+    const contentHtml = rewards.content.map(({ item }) => `
+      <div class="bp-custom-item" style="--bc:${item.color || '#E8B34E'};">
+        <span class="bp-ci-ic">🎁</span>
+        <span class="bp-ci-name">${item.name}</span>
+        ${unlocked
+          ? `<button class="bp-claim-btn small gold" data-tier="${i}" data-custom="${item.id}">استلام</button>`
+          : '<span style="font-size:10px;opacity:.5;">🔒</span>'
+        }
+      </div>
+    `).join('');
 
     el.innerHTML = `
       ${hereBadge}
@@ -22470,102 +24522,136 @@ function renderBPTiersV2(){
         <div class="bp-reward-row ${track === 'premium' ? 'premium' : ''}">
           <div class="bp-reward-icon">${track === 'free' ? '◆' : '👑'}</div>
           <div class="bp-reward-info">
-            <div class="bp-reward-name">${rewardAmount.toLocaleString()} عملة</div>
+            <div class="bp-reward-name">${totalCoins.toLocaleString()} عملة</div>
             <div class="bp-reward-meta">${track === 'free' ? 'FREE REWARD' : 'PREMIUM REWARD'}</div>
           </div>
           ${claimed
             ? '<button class="bp-claim-btn done" disabled>✓</button>'
             : unlocked && (track === 'free' || Save.data.battlePass.premiumOwned)
-              ? `<button class="bp-claim-btn ${track === 'premium' ? 'gold' : ''}" data-tier="${i}">استلام</button>`
+              ? `<button class="bp-claim-btn ${track === 'premium' ? 'gold' : ''}" 
+                         data-tier="${i}" 
+                         data-reward="coins" 
+                         data-amount="${totalCoins}">استلام</button>`
               : !unlocked
                 ? '<button class="bp-claim-btn locked" disabled>🔒</button>'
                 : '<button class="bp-claim-btn premium-locked" disabled>قفل مميز</button>'
           }
         </div>
-        ${customItems.map(({item}) => `
-          <div class="bp-custom-item" style="--bc:${item.color || '#E8B34E'};">
-            <span class="bp-ci-ic">🎁</span>
-            <span class="bp-ci-name">${item.name}</span>
-            ${unlocked
-              ? `<button class="bp-claim-btn small gold" data-tier="${i}" data-custom="${item.id}">استلام</button>`
-              : '<span style="font-size:10px;opacity:.5;">🔒</span>'
-            }
-          </div>
-        `).join('')}
+        ${contentHtml}
+        ${boxesHtml}
+        ${cardsHtml}
       </div>
     `;
 
     list.appendChild(el);
   }
 
-  /* ═══ أزرار الاستلام ═══ */
+  /* ═══ ربط أزرار الاستلام ═══ */
   list.querySelectorAll('.bp-claim-btn[data-tier]:not([disabled])').forEach(btn => {
     btn.addEventListener('click', () => {
       const tierNum = parseInt(btn.dataset.tier, 10);
-      claimBPRewardV2(tierNum, track, btn.dataset.custom);
+      const rewardType = btn.dataset.reward || 'content';
+      
+      claimBPRewardV2(tierNum, track, {
+        type: rewardType,
+        customId: btn.dataset.custom,
+        boxType: btn.dataset.box,
+        cardId: btn.dataset.card,
+        amount: parseInt(btn.dataset.amount || '0', 10)
+      });
     });
   });
 }
 
 /* ═══ استلام مكافأة ═══ */
-function claimBPRewardV2(tier, track, customItemId){
+function claimBPRewardV2(tier, track, rewardInfo){
   const tierProgress = getBPTier();
-  if(tier > tierProgress){
-    Sfx.play(220, 0.15, 'sine', 0.05, 180);
-    haptic(20);
-    return;
-  }
-
-  if(track === 'premium' && !Save.data.battlePass.premiumOwned){
-    Sfx.play(220, 0.15, 'sine', 0.05, 180);
-    haptic(20);
-    return;
-  }
+  if(tier > tierProgress) return;
+  if(track === 'premium' && !Save.data.battlePass.premiumOwned) return;
 
   const arr = track === 'free' ? 'claimedFree' : 'claimedPremium';
   if(!Save.data.battlePass[arr]) Save.data.battlePass[arr] = [];
-  if(Save.data.battlePass[arr].includes(tier)) return;
 
-  /* إذا كان عنصراً مخصصاً */
-  if(customItemId){
-    const allCats = [
-      'spark','eyes','companion','footstep','trail','jump','death',
-      'aura','crown','cape','headItem','backItem','heldItem','groundMark',
-      'nameTag','badge','avatarFrame','banner',
-      'spawnEffect','reviveEffect','hitEffect'
-    ];
-    let found = false;
-    for(const cat of allCats){
-      const all = getAllCosmetics(cat);
-      const item = all.find(x => x.id === customItemId);
-      if(item){
-        if(Save.grantCosmetic(cat, customItemId)){
-          addFloat(P.x, P.y - 40, '🎁 ' + item.name, '#FFD060', 16);
-        }
-        found = true;
-        break;
-      }
-    }
-    if(!found){
-      const allSkins = getAllSkins();
-      const skin = allSkins.find(x => x.id === customItemId);
-      if(skin && !Save.data.ownedSkins.includes(customItemId)){
-        Save.data.ownedSkins.push(customItemId);
-        addFloat(P.x, P.y - 40, '🎨 ' + skin.ar, '#FFD060', 16);
-      }
-    }
-  } else {
-    const coinReward = track === 'free' ? (5 + tier * 2) : ((5 + tier * 2) * 3);
-    Save.data.coins += coinReward;
-    Save.data.stats.totalCoins += coinReward;
+  /* ═══ التحقق من عدم الاستلام المسبق ═══ */
+  const claimKey = `${tier}_${rewardInfo.type}_${rewardInfo.customId || rewardInfo.boxType || rewardInfo.cardId || 'coins'}`;
+  if(!Save.data.battlePass._claimedKeys) Save.data.battlePass._claimedKeys = [];
+  if(Save.data.battlePass._claimedKeys.includes(claimKey)){
+    Toast.info('تم استلام هذه المكافأة مسبقاً');
+    return;
   }
 
+  /* ═══ معالجة حسب النوع ═══ */
+  if(rewardInfo.type === 'coins'){
+    Save.data.coins += rewardInfo.amount;
+    Save.data.stats.totalCoins += rewardInfo.amount;
+    Toast.reward('◆', 'مكافأة BP', '+' + rewardInfo.amount + ' عملة');
+    
+  } else if(rewardInfo.type === 'box'){
+    Save.data.pendingBoxes = Save.data.pendingBoxes || [];
+    Save.data.pendingBoxes.push(rewardInfo.boxType);
+    Toast.reward('📦', 'صندوق جديد!', 'افتحه من صفحة الصناديق');
+    
+  } else if(rewardInfo.type === 'card'){
+    Save.data.cards = Save.data.cards || [];
+    if(!Save.data.cards.includes(rewardInfo.cardId)){
+      Save.data.cards.push(rewardInfo.cardId);
+    }
+    Toast.reward('🃏', 'بطاقة جديدة!', rewardInfo.cardId);
+    
+  } else if(rewardInfo.type === 'content' && rewardInfo.customId){
+    /* البحث عن العنصر في كل التصنيفات */
+    grantCustomItemToPlayer(rewardInfo.customId);
+  }
+
+  Save.data.battlePass._claimedKeys.push(claimKey);
   Save.data.battlePass[arr].push(tier);
   Save.save();
 
   Sfx.reward(); haptic(20);
   updateCoinsUI();
-  buildBattlePassV2();
+  renderBPTiersV2();
+}
+
+/* ═══ دالة مساعدة لمنح عنصر مخصص للاعب ═══ */
+function grantCustomItemToPlayer(customId){
+  const cats = ['skins', ...COSMETIC_CATEGORY_ORDER];
+  for(const cat of cats){
+    const all = getAllCosmetics(cat);
+    const item = all.find(x => x.id === customId);
+    if(item){
+      let alreadyOwned = false;
+
+      if(cat === 'skins'){
+        alreadyOwned = Save.data.ownedSkins.includes(customId);
+        if(!alreadyOwned){
+          Save.data.ownedSkins.push(customId);
+        }
+      } else {
+        alreadyOwned = Save.ownsCosmetic(cat, customId);
+        if(!alreadyOwned){
+          Save.grantCosmetic(cat, customId);
+        }
+      }
+
+      if(alreadyOwned){
+        /* ═══ تكرار → شظايا حسب النُدرة ═══ */
+        const rarity = item.rarity || 'common';
+        const shardMap = {
+          common: 25, uncommon: 40, rare: 75,
+          epic: 150, legendary: 400, mythic: 1000
+        };
+        const shards = shardMap[rarity] || 25;
+        addShards(shards, `عنصر مكرر: ${item.name || customId}`);
+        Toast.info('🎁 عنصر مكرر', `${item.name} → 🔷 +${shards} شظايا`);
+      } else {
+        Toast.reward('🎁', 'عنصر جديد!', item.name);
+      }
+
+      Save.save();
+      return true;
+    }
+  }
+  return false;
 }
 
 /* ============================================================
@@ -22575,10 +24661,10 @@ function claimBPRewardV2(tier, track, customItemId){
 function buildSeasonV2Page(){
   const pts = Save.data.season.points || 0;
   const rankIdx = getSeasonRankIdx();
-  const rank = SEASON_RANKS[rankIdx];
-  const nextRank = SEASON_RANKS[rankIdx + 1];
+  const ranks = getSeasonRanks();
+  const rank = ranks[rankIdx];
+  const nextRank = ranks[rankIdx + 1];
 
-  /* ═══ Hero ═══ */
   const hero = document.getElementById('rank-hero-v2');
   if(hero){
     const progressToNext = nextRank
@@ -22591,12 +24677,9 @@ function buildSeasonV2Page(){
         <div class="rhv2-icon">${rank.icon}</div>
         <div class="rhv2-info">
           <div class="rhv2-rank-name">${rank.name}</div>
-          <div class="rhv2-rank-points">
-            ${pts.toLocaleString()} نقطة موسم
-          </div>
+          <div class="rhv2-rank-points">${pts.toLocaleString()} نقطة موسم</div>
         </div>
       </div>
-
       ${nextRank ? `
         <div class="rhv2-next">
           <div class="rhv2-next-labels">
@@ -22607,16 +24690,11 @@ function buildSeasonV2Page(){
             <div class="rhv2-bar-fill" style="width:${progressToNext * 100}%"></div>
           </div>
         </div>
-      ` : `
-        <div class="rhv2-maxed">
-          🌟 وصلت لأعلى رتبة!
-        </div>
-      `}
-
+      ` : `<div class="rhv2-maxed">🌟 وصلت لأعلى رتبة!</div>`}
       <div class="rhv2-stats">
         <div class="rhv2-stat">
           <div class="k">الرتبة</div>
-          <div class="v">${rankIdx + 1}/${SEASON_RANKS.length}</div>
+          <div class="v">${rankIdx + 1}/${ranks.length}</div>
         </div>
         <div class="rhv2-stat">
           <div class="k">النقاط</div>
@@ -22630,15 +24708,19 @@ function buildSeasonV2Page(){
     `;
   }
 
-  /* ═══ قائمة الرتب ═══ */
+  /* ═══ قائمة الرتب مع المكافآت ═══ */
   const list = document.getElementById('rank-list-v2');
   if(list){
     list.innerHTML = '';
 
-    SEASON_RANKS.forEach((r, i) => {
+    ranks.forEach((r, i) => {
       const isCurrent = i === rankIdx;
       const isUnlocked = i <= rankIdx;
       const isNext = i === rankIdx + 1;
+
+      /* ═══ جلب مكافآت هذه الرتبة ═══ */
+      const rewards = getRankRewards(i);
+      const totalCoins = rewards.coins;
 
       const el = document.createElement('div');
       el.className = 'rank-item-v3' +
@@ -22646,11 +24728,39 @@ function buildSeasonV2Page(){
         (isUnlocked ? ' unlocked' : '') +
         (isNext ? ' next' : '');
 
+      /* ═══ بناء HTML للمكافآت ═══ */
+      let rewardsHtml = '';
+      if(totalCoins > 0){
+        rewardsHtml += `
+          <div class="rank-reward-chip" style="--rc:#E8B34E;">
+            <span>◆</span>
+            <span>${totalCoins}</span>
+            ${isUnlocked
+              ? `<button class="rank-claim-btn" data-rank="${i}" data-type="coins" data-amount="${totalCoins}">استلام</button>`
+              : ''
+            }
+          </div>
+        `;
+      }
+      rewards.content.forEach(({ item }) => {
+        rewardsHtml += `
+          <div class="rank-reward-chip" style="--rc:${item.color || '#E07A3F'};">
+            <span>🎁</span>
+            <span>${item.name}</span>
+            ${isUnlocked
+              ? `<button class="rank-claim-btn" data-rank="${i}" data-type="content" data-custom="${item.id}">استلام</button>`
+              : ''
+            }
+          </div>
+        `;
+      });
+
       el.innerHTML = `
         <div class="riv3-icon">${r.icon}</div>
         <div class="riv3-info">
           <div class="riv3-name">${r.name}</div>
           <div class="riv3-req">${r.points.toLocaleString()} نقطة</div>
+          ${rewardsHtml ? `<div class="rank-rewards-list">${rewardsHtml}</div>` : ''}
         </div>
         <div class="riv3-status">
           ${isCurrent
@@ -22663,6 +24773,34 @@ function buildSeasonV2Page(){
       `;
 
       list.appendChild(el);
+    });
+
+    /* ═══ ربط أزرار الاستلام ═══ */
+    list.querySelectorAll('.rank-claim-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const rankId = parseInt(btn.dataset.rank, 10);
+        const type = btn.dataset.type;
+        
+        if(type === 'coins'){
+          const amount = parseInt(btn.dataset.amount, 10);
+          Save.data.coins += amount;
+          Save.data.stats.totalCoins += amount;
+          Toast.reward('◆', 'مكافأة الرتبة', '+' + amount + ' عملة');
+          
+        } else if(type === 'content'){
+          grantCustomItemToPlayer(btn.dataset.custom);
+        }
+        
+        /* تسجيل الاستلام */
+        Save.data.claimedRankRewards = Save.data.claimedRankRewards || [];
+        const key = `rank_${rankId}_${btn.dataset.custom || 'coins'}`;
+        Save.data.claimedRankRewards.push(key);
+        Save.save();
+        
+        Sfx.reward(); haptic(20);
+        updateCoinsUI();
+        buildSeasonV2Page();
+      });
     });
   }
 }
@@ -22754,20 +24892,39 @@ function buildShopV2(){
 
   grid.innerHTML = '';
 
-  /* الأزياء */
+  /* ═══ الحصول على عناصر الموسم النشط ═══ */
+  const activeSeasonId = Save.data.seasons?.activeSeasonId;
+  const seasonShopItems = getShopCustomItems(activeSeasonId);
+
+  /* ═══ الأزياء ═══ */
   if(currentShopTab === 'skins'){
+    /* 1) الأزياء الأساسية */
     const allSkins = getAllSkins();
     allSkins.forEach(skin => {
+      /* إذا كان الزي من عنصر مخصص وليس في الموسم النشط، تجاهله */
+      if(skin.isCustom){
+        const inSeason = seasonShopItems.some(({item}) => item.id === skin.id);
+        if(!inSeason) return;
+      }
       const card = buildShopCard(skin, 'skin');
       grid.appendChild(card);
     });
     return;
   }
 
-  /* التأثيرات */
-  const items = getAllCosmetics(currentShopTab) || [];
-  items.forEach(item => {
+  /* ═══ التأثيرات ═══ */
+  /* 1) التأثيرات الأساسية (الافتراضية) */
+  const baseItems = (COSMETICS[currentShopTab] || []);
+  baseItems.forEach(item => {
     const card = buildShopCard(item, currentShopTab);
+    grid.appendChild(card);
+  });
+
+  /* 2) عناصر الموسم المخصصة */
+  seasonShopItems.forEach(({ item, placement }) => {
+    /* تحقق أن العنصر ينتمي لهذا التصنيف */
+    if(item._category !== currentShopTab && item._sourceCat !== currentShopTab) return;
+    const card = buildShopCard(item, currentShopTab, placement);
     grid.appendChild(card);
   });
 
@@ -22776,7 +24933,7 @@ function buildShopV2(){
   }
 }
 
-function buildShopCard(item, cat){
+function buildShopCard(item, cat, explicitPlacement){
   const isSkin = cat === 'skin';
   const ownedList = isSkin ? (Save.data.ownedSkins || []) : (Save.data.cosmetics.owned[cat] || []);
   const currentId = isSkin ? Save.data.currentSkin : Save.data.cosmetics.current[cat];
@@ -22784,8 +24941,9 @@ function buildShopCard(item, cat){
   const isOwned = ownedList.includes(item.id);
   const isEquipped = currentId === item.id;
 
-  const shopPlacement = (item.placements || []).find(p => p.type === 'shop') ||
-    (item.price !== undefined ? { price: item.price } : null);
+const shopPlacement = explicitPlacement || 
+  (item.placements || []).find(p => p.type === 'shop') ||
+  (item.price !== undefined ? { price: item.price } : null);
   const price = shopPlacement ? shopPlacement.price : 0;
   const canBuy = shopPlacement && price > 0;
 
@@ -23063,65 +25221,466 @@ function renderDailyLoginV2(container){
   container.appendChild(btn);
 }
 
-/* ============================================================
-   ═══════════════ CHESTS ════════════════════════════════════
-   ============================================================ */
-
-const CHEST_DEFS = {
-  bronze: { name: 'برونزي', icon: '📦', price: 100, color: '#A07048',
-    rewards: { coins: [50, 200], cosmetics: 0.1, powerup: 0.05 } },
-  silver: { name: 'فضي', icon: '🎁', price: 500, color: '#B0B8C0',
-    rewards: { coins: [300, 800], cosmetics: 0.25, powerup: 0.15 } },
-  gold:   { name: 'ذهبي', icon: '💎', price: 2000, color: '#E8B34E',
-    rewards: { coins: [1000, 4000], cosmetics: 0.55, powerup: 0.35 } }
+/* ═══════════ CHEST DEFINITIONS v2 ═══════════ */
+const DEFAULT_CHEST_DEFS = {
+  bronze: {
+    name: 'برونزي',
+    icon: '📦',
+    color: '#A07048',
+    currency: 'coins',      /* ← عملة الفتح */
+    price: 100,
+    voucher: null,          /* ← قسيمة اختيارية */
+    rewards: {
+      coins: [50, 200],
+      cards: { min: 1, max: 2, rarityBonus: 0 },
+      cosmetics: 0.10,
+      powerup: 0.05
+    }
+  },
+  silver: {
+    name: 'فضي',
+    icon: '🎁',
+    color: '#B0B8C0',
+    currency: 'coins',
+    price: 500,
+    voucher: 'chest_silver',
+    rewards: {
+      coins: [300, 800],
+      cards: { min: 2, max: 3, rarityBonus: 0.1 },
+      cosmetics: 0.25,
+      powerup: 0.15
+    }
+  },
+  gold: {
+    name: 'ذهبي',
+    icon: '💎',
+    color: '#E8B34E',
+    currency: 'coins',
+    price: 2000,
+    voucher: 'chest_gold',
+    rewards: {
+      coins: [1000, 4000],
+      cards: { min: 3, max: 5, rarityBonus: 0.25 },
+      cosmetics: 0.55,
+      powerup: 0.35
+    }
+  },
+  
+  /* ═══ صناديق VIP بالجواهر ═══ */
+  vip_bronze: {
+    name: 'VIP برونزي',
+    icon: '🌟',
+    color: '#7A9AC8',
+    currency: 'gems',
+    price: 30,
+    voucher: null,
+    rewards: {
+      coins: [500, 1500],
+      cards: { min: 2, max: 4, rarityBonus: 0.3 },
+      cosmetics: 0.35,
+      powerup: 0.3,
+      gemsBack: [0, 5]      /* ← قد يُعيد بعض الجواهر */
+    }
+  },
+  vip_gold: {
+    name: 'VIP ذهبي',
+    icon: '👑',
+    color: '#E8B34E',
+    currency: 'gems',
+    price: 100,
+    voucher: null,
+    rewards: {
+      coins: [2000, 6000],
+      cards: { min: 4, max: 6, rarityBonus: 0.6 },
+      cosmetics: 0.7,
+      powerup: 0.5,
+      gemsBack: [5, 20],
+      guaranteedEpic: true    /* ← يضمن بطاقة Epic على الأقل */
+    }
+  },
+  vip_mythic: {
+    name: 'VIP خرافي',
+    icon: '🔥',
+    color: '#E85838',
+    currency: 'gems',
+    price: 500,
+    voucher: null,
+    rewards: {
+      coins: [10000, 30000],
+      cards: { min: 6, max: 10, rarityBonus: 1.0 },
+      cosmetics: 1.0,
+      powerup: 1.0,
+      gemsBack: [20, 100],
+      guaranteedEpic: true,
+      guaranteedLegendary: true   /* ← يضمن Legendary */
+    }
+  }
 };
 
-function buildChestPage(){
-  const cards = document.querySelectorAll('.chest-card');
-  cards.forEach(card => {
-    if(card._bound) return;
-    card._bound = true;
-    card.addEventListener('click', () => {
-      openChest(card.dataset.chest);
+/* ═══ جلب الصناديق النشطة ═══ */
+function getActiveChests(){
+  const season = getActiveSeason();
+  if(season && Array.isArray(season.chests) && season.chests.length > 0){
+    const result = {};
+    season.chests.forEach(ch => {
+      const defaults = DEFAULT_CHEST_DEFS[ch.id] || DEFAULT_CHEST_DEFS.bronze;
+      result[ch.id] = {
+        ...defaults,
+        ...ch,
+        rewards: { ...defaults.rewards, ...(ch.rewards || {}) }
+      };
     });
+    return result;
+  }
+  return DEFAULT_CHEST_DEFS;
+}
+
+/* ═══ فتح صندوق (نسخة كاملة) ═══ */
+async function openChest(type){
+  const chests = getActiveChests();
+  const def = chests[type];
+  if(!def) return;
+
+  const unlimited = hasAdminAccess() && Save.data.admin.unlimitedCoins;
+  const voucherType = def.voucher;
+
+  /* ═══════════════════════════════════════════════════════
+     ═══ 1) تحديد طريقة الدفع ═══
+     ═══════════════════════════════════════════════════════
+     الأولوية: قسيمة → عملة عادية
+  */
+  let paidWith = null;
+
+  if(!unlimited && voucherType && (Save.data.vouchers?.[voucherType] || 0) > 0){
+    /* ─── استخدم قسيمة ─── */
+    if(confirm(`استخدام قسيمة ${def.name}؟\n(لديك ${Save.data.vouchers[voucherType]} قسيمة)`)){
+      if(useVoucher(voucherType)){
+        paidWith = 'voucher';
+      }
+    }
+  }
+
+  /* ─── إذا لم يُستخدم القسيمة، استخدم العملة ─── */
+  if(!paidWith){
+    if(!unlimited){
+      const currency = def.currency || 'coins';
+      const balance = Save.data[currency] || 0;
+      
+      if(balance < def.price){
+        const label = currency === 'gems' ? '💎 جواهر' : '◆ عملات';
+        Toast.error('رصيد غير كافٍ', 
+          `تحتاج ${label} ${def.price - balance}`);
+        Sfx.play(220, 0.15, 'sine', 0.05, 180);
+        haptic(20);
+        return;
+      }
+      
+      /* الخصم */
+      if(currency === 'gems') spendGems(def.price);
+      else spendCoins(def.price);
+      
+      paidWith = currency;
+    } else {
+      paidWith = 'admin';
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     ═══ 2) توليد المكافآت ═══
+  */
+  const rewards = [];
+  const rw = def.rewards || {};
+
+  /* ─── عملات ─── */
+  if(rw.coins){
+    const coinsWon = Math.floor(rand(rw.coins[0], rw.coins[1]));
+    addCoins(coinsWon, `فتح صندوق ${def.name}`);
+    rewards.push({ icon: '◆', name: 'عملات', value: '+' + coinsWon });
+  }
+
+  /* ─── جواهر (استرجاع) ─── */
+  if(rw.gemsBack && Math.random() < 0.5){
+    const gemsWon = Math.floor(rand(rw.gemsBack[0], rw.gemsBack[1]));
+    if(gemsWon > 0){
+      addGems(gemsWon, `صندوق ${def.name}`);
+      rewards.push({ icon: '💎', name: 'جواهر', value: '+' + gemsWon });
+    }
+  }
+
+  /* ─── بطاقات ─── */
+  if(rw.cards){
+    const count = Math.floor(rand(rw.cards.min, rw.cards.max + 1));
+    
+    /* تحديد الحد الأدنى للنُدرة */
+    let minRarity = null;
+    if(rw.guaranteedLegendary) minRarity = 'legendary';
+    else if(rw.guaranteedEpic) minRarity = 'epic';
+    
+    const cardResults = grantRandomCards(count, {
+      silent: true,
+      minRarity
+    });
+    
+    cardResults.new.forEach(c => {
+      const rar = getCardRarity(c);
+      rewards.push({ 
+        icon: c.icon, 
+        name: '🃏 ' + c.name, 
+        value: rar.label + ' · جديد!',
+        color: rar.color
+      });
+    });
+    
+    if(cardResults.dup.length > 0){
+      rewards.push({
+        icon: '🔷',
+        name: `${cardResults.dup.length} بطاقة مكررة`,
+        value: `+${cardResults.totalShards} شظايا`
+      });
+    }
+  }
+
+  /* ─── عنصر تجميلي ─── */
+  if(Math.random() < (rw.cosmetics || 0)){
+    const cats = ['spark','trail','jump','death','head','back'];
+    const cat = cats[Math.floor(Math.random() * cats.length)];
+    const items = getAllCosmetics(cat).filter(i => i.id !== 'none');
+    if(items.length){
+      const item = items[Math.floor(Math.random() * items.length)];
+      
+      const alreadyOwned = Save.ownsCosmetic(cat, item.id);
+      if(!alreadyOwned){
+        Save.grantCosmetic(cat, item.id);
+        rewards.push({ icon: '🎁', name: item.name, value: 'جديد!' });
+      } else {
+        /* مكرر → شظايا */
+        const shardsRefund = 25;
+        addShards(shardsRefund, 'عنصر تجميلي مكرر');
+        rewards.push({ 
+          icon: '🔷', 
+          name: item.name + ' (مكرر)', 
+          value: `+${shardsRefund} شظايا` 
+        });
+      }
+    }
+  }
+
+  /* ─── تعزيز ─── */
+  if(Math.random() < (rw.powerup || 0)){
+    rewards.push({ icon: '⚡', name: 'تعزيز نادر', value: '× 1' });
+  }
+
+  /* ─── فرصة نادرة للقسيمة ─── */
+  if(Math.random() < 0.02){  /* 2% */
+    const voucherTypes = ['chest_silver', 'wheel_spin'];
+    const v = voucherTypes[Math.floor(Math.random() * voucherTypes.length)];
+    addVoucher(v, 1, `صندوق ${def.name}`);
+    rewards.push({ 
+      icon: '🎫', 
+      name: 'قسيمة!', 
+      value: v === 'wheel_spin' ? 'عجلة حظ' : 'صندوق فضي' 
+    });
+  }
+
+  /* ─── فرصة نادرة جداً للجواهر ─── */
+  if(Math.random() < 0.01){  /* 1% */
+    const gemsBonus = 10;
+    addGems(gemsBonus, `مكافأة نادرة من ${def.name}`);
+    rewards.push({ icon: '💎', name: 'جواهر نادرة!', value: '+' + gemsBonus });
+  }
+
+  /* ═══ 3) الحفظ والعرض ═══ */
+  Save.save();
+  updateWalletUI();
+  updateCoinsUI();
+
+  Sfx.reward(); haptic(25);
+  showChestOpenModal(def, rewards, paidWith);
+}
+
+/* ═══ نافذة عرض المكافآت (محدّثة) ═══ */
+function showChestOpenModal(def, rewards, paidWith){
+  let modal = document.getElementById('chest-open-modal');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'chest-open-modal';
+    modal.className = 'chest-open-modal';
+    document.body.appendChild(modal);
+  }
+
+  const payLabel = {
+    coins: '◆ عملات',
+    gems: '💎 جواهر',
+    voucher: '🎫 قسيمة',
+    admin: '👑 مشرف'
+  }[paidWith] || '';
+
+  modal.innerHTML = `
+    <div class="com-box">
+      <div class="com-icon" style="color:${def.color};">${def.icon}</div>
+      <div class="com-title">فتحت صندوق ${def.name}!</div>
+      ${payLabel ? `<div style="font-size:10px;color:var(--ink-mute);margin-bottom:12px;">دفعت: ${payLabel}</div>` : ''}
+      <div class="com-rewards">
+        ${rewards.map(r => `
+          <div class="com-reward" ${r.color ? `style="border-color:${r.color}40;"` : ''}>
+            <span class="ic">${r.icon}</span>
+            <span class="nm">${r.name}</span>
+            <span class="vl" ${r.color ? `style="color:${r.color};"` : ''}>${r.value}</span>
+          </div>
+        `).join('')}
+      </div>
+      <button class="action-btn gold" style="width:100%;" id="com-close">استلام</button>
+    </div>
+  `;
+
+  modal.classList.add('active');
+
+  const close = modal.querySelector('#com-close');
+  if(close){
+    close.addEventListener('click', () => {
+      modal.classList.remove('active');
+      Sfx.tap();
+    });
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ═══════════ دالة جلب الصناديق من الموسم النشط ═══════════
+   ═══════════════════════════════════════════════════════════ */
+function getActiveChests(){
+  const season = getActiveSeason();
+  
+  /* إذا كان الموسم يحتوي صناديق مخصصة */
+  if(season && Array.isArray(season.chests) && season.chests.length > 0){
+    const result = {};
+    season.chests.forEach(ch => {
+      /* استخدم الإعدادات الافتراضية للمكافآت إن لم يُحدّدها المشرف */
+      const defaults = DEFAULT_CHEST_DEFS[ch.id] || DEFAULT_CHEST_DEFS.bronze;
+      result[ch.id] = {
+        name: ch.name || defaults.name,
+        icon: ch.icon || defaults.icon,
+        price: ch.price !== undefined ? ch.price : defaults.price,
+        color: ch.color || defaults.color,
+        rewards: ch.rewards || defaults.rewards
+      };
+    });
+    return result;
+  }
+  
+  return DEFAULT_CHEST_DEFS;
+}
+
+/* ═══ اجعل CHEST_DEFS متوافقاً مع الكود القديم ═══ */
+const CHEST_DEFS = new Proxy({}, {
+  get(target, prop){
+    if(prop === 'then') return undefined;  /* للسماح بـ await */
+    return getActiveChests()[prop];
+  },
+  has(target, prop){
+    return prop in getActiveChests();
+  },
+  ownKeys(){
+    return Object.keys(getActiveChests());
+  },
+  getOwnPropertyDescriptor(target, prop){
+    return { enumerable: true, configurable: true, value: getActiveChests()[prop] };
+  }
+});
+
+function buildChestPage(){
+  const grid = document.getElementById('chest-grid');
+  if(!grid) return;
+  
+  const chests = getActiveChests();
+  grid.innerHTML = '';
+  
+  Object.entries(chests).forEach(([id, def]) => {
+    const voucherCount = def.voucher ? (Save.data.vouchers?.[def.voucher] || 0) : 0;
+    const balance = Save.data[def.currency || 'coins'] || 0;
+    const canAfford = balance >= def.price || voucherCount > 0;
+    const unlimited = hasAdminAccess() && Save.data.admin.unlimitedCoins;
+    
+    const card = document.createElement('div');
+    card.className = 'chest-card';
+    card.style.setProperty('--ch', def.color);
+    card.dataset.chest = id;
+    
+    const currencyLabel = def.currency === 'gems' ? '💎' : '◆';
+    
+    card.innerHTML = `
+      <div class="cc-icon">${def.icon}</div>
+      <div style="flex:1;">
+        <div class="cc-name">${def.name}</div>
+        <div class="cc-desc">${def.rewards.cards ? def.rewards.cards.min + '-' + def.rewards.cards.max + ' بطاقات' : ''}</div>
+        <div class="cc-price" style="opacity:${(!canAfford && !unlimited) ? 0.5 : 1};">
+          ${currencyLabel} ${def.price.toLocaleString()}
+        </div>
+        ${voucherCount > 0 ? `
+          <div style="font-size:10px;color:#E8B34E;font-weight:700;margin-top:4px;">
+            🎫 لديك ${voucherCount} قسيمة
+          </div>
+        ` : ''}
+      </div>
+    `;
+    
+    card.addEventListener('click', () => openChest(id));
+    grid.appendChild(card);
   });
 }
 
-function openChest(type){
-  const def = CHEST_DEFS[type];
+async function openChest(type){
+  const chests = getActiveChests();
+  const def = chests[type];
   if(!def) return;
 
   const unlimited = hasAdminAccess() && Save.data.admin.unlimitedCoins;
   if(!unlimited && Save.data.coins < def.price){
     Sfx.play(220, 0.15, 'sine', 0.05, 180);
     haptic(20);
-    alert('رصيدك غير كافٍ');
+    Toast.error('رصيد غير كافٍ', 'تحتاج ◆ ' + (def.price - Save.data.coins));
     return;
   }
 
   if(!unlimited) Save.data.coins -= def.price;
 
-  /* حساب المكافآت */
   const rewards = [];
+
+  /* ═══ 1) عملات افتراضية ═══ */
   const coinRange = def.rewards.coins;
   const coinsWon = Math.floor(rand(coinRange[0], coinRange[1]));
   Save.data.coins += coinsWon;
   rewards.push({ icon: '◆', name: 'عملات', value: '+' + coinsWon });
 
-  /* عنصر عرضي */
-  if(Math.random() < def.rewards.cosmetics){
-    const cats = ['spark','trail','jump','death','aura','crown','cape'];
-    const cat = cats[Math.floor(Math.random() * cats.length)];
-    const items = getAllCosmetics(cat).filter(i => i.id !== 'none');
-    if(items.length){
-      const item = items[Math.floor(Math.random() * items.length)];
-      if(Save.grantCosmetic(cat, item.id)){
-        rewards.push({ icon: '✨', name: item.name, value: 'جديد!' });
+  /* ═══ 2) عناصر مخصصة من الموسم (وزن عشوائي) ═══ */
+  const customItems = getChestItems(type);
+  if(customItems.length > 0){
+    /* اختيار عنصر عشوائي حسب الوزن */
+    let totalWeight = 0;
+    const weighted = customItems.map(({ item, placement }) => {
+      const w = placement.weight || 5;
+      totalWeight += w;
+      return { item, placement, weight: w };
+    });
+
+    let roll = Math.random() * totalWeight;
+    let picked = null;
+    for(const entry of weighted){
+      roll -= entry.weight;
+      if(roll <= 0){ picked = entry; break; }
+    }
+
+    if(picked && picked.item){
+      if(grantCustomItemToPlayer(picked.item.id)){
+        rewards.push({ 
+          icon: '🎁', 
+          name: picked.item.name, 
+          value: 'جديد!' 
+        });
       }
     }
   }
 
-  /* تعزيز */
+  /* ═══ 3) تعزيز نادر (احتمال افتراضي) ═══ */
   if(Math.random() < def.rewards.powerup){
     rewards.push({ icon: '⚡', name: 'تعزيز نادر', value: '× 1' });
   }
@@ -23173,7 +25732,7 @@ function showChestOpenModal(def, rewards){
    ═══════════════ LUCKY WHEEL ═══════════════════════════════
    ============================================================ */
 
-const WHEEL_SEGMENTS = [
+const DEFAULT_WHEEL_SEGMENTS = [
   { icon: '◆', value: 50, color: '#E8B34E' },
   { icon: '◆', value: 100, color: '#E07A3F' },
   { icon: '✨', value: 0, color: '#9A6AC8', type: 'cosmetic' },
@@ -23183,6 +25742,27 @@ const WHEEL_SEGMENTS = [
   { icon: '🎁', value: 500, color: '#E85838' },
   { icon: '◆', value: 150, color: '#6B9B6B' }
 ];
+
+function getActiveWheelSegments(){
+  const season = getActiveSeason();
+  if(season && Array.isArray(season.wheel) && season.wheel.length >= 4){
+    return season.wheel;
+  }
+  return DEFAULT_WHEEL_SEGMENTS;
+}
+
+/* ═══ متوافق مع الكود القديم ═══ */
+const WHEEL_SEGMENTS = new Proxy([], {
+  get(target, prop){
+    const segs = getActiveWheelSegments();
+    if(prop === 'length') return segs.length;
+    if(prop === Symbol.iterator) return segs[Symbol.iterator].bind(segs);
+    if(typeof prop === 'string' && !isNaN(parseInt(prop, 10))){
+      return segs[parseInt(prop, 10)];
+    }
+    return segs[prop];
+  }
+});
 
 let _wheelRotation = 0;
 let _wheelSpinning = false;
@@ -23217,27 +25797,60 @@ function drawWheel(){
 
   ctx.clearRect(0, 0, size, size);
 
-  const segCount = WHEEL_SEGMENTS.length;
+  /* ═══════════════════════════════════════════════════════
+     ═══ جلب القطاعات من الموسم النشط ═══
+     ═══════════════════════════════════════════════════════
+     - إذا كان للموسم wheel مخصص → استخدمه
+     - وإلا → استخدم الافتراضي (WHEEL_SEGMENTS)
+  */
+  const activeSegments = (typeof getActiveWheelSegments === 'function')
+    ? getActiveWheelSegments()
+    : WHEEL_SEGMENTS;
+
+  const segCount = activeSegments.length;
+  if(segCount === 0) return;
+
   const segAngle = (Math.PI * 2) / segCount;
 
-  WHEEL_SEGMENTS.forEach((seg, i) => {
+  /* ═══════════════════════════════════════════════════════
+     ═══ رسم القطاعات ═══
+  */
+  activeSegments.forEach((seg, i) => {
     const startAngle = i * segAngle + _wheelRotation;
     const endAngle = startAngle + segAngle;
 
+    /* ─── القطاع ─── */
     ctx.beginPath();
     ctx.moveTo(cx, cy);
     ctx.arc(cx, cy, r, startAngle, endAngle);
     ctx.closePath();
 
-    ctx.fillStyle = seg.color;
+    ctx.fillStyle = seg.color || '#E8B34E';
     ctx.fill();
 
-    /* حدود */
+    /* ─── الحدود ─── */
     ctx.strokeStyle = 'rgba(255,255,255,.6)';
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    /* الأيقونة */
+    /* ═══════════════════════════════════════════════════════
+       ═══ رسم الأيقونة (مخصصة أو افتراضية) ═══
+       ═══════════════════════════════════════════════════════
+       - إذا كان للموسم عنصر مخصص في هذا القطاع → نرسم 🎁
+       - وإلا → نرسم الأيقونة الافتراضية (seg.icon)
+    */
+    let iconToDraw = seg.icon || '◆';
+    let hasCustomItem = false;
+
+    if(typeof getWheelItems === 'function'){
+      const customItems = getWheelItems(i);
+      if(customItems.length > 0){
+        hasCustomItem = true;
+        iconToDraw = '🎁';   /* استبدل الأيقونة بأيقونة الهدية */
+      }
+    }
+
+    /* ─── رسم الأيقونة ─── */
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(startAngle + segAngle / 2);
@@ -23249,30 +25862,67 @@ function drawWheel(){
     ctx.textBaseline = 'middle';
     ctx.shadowColor = 'rgba(0,0,0,.3)';
     ctx.shadowBlur = 4;
-    ctx.fillText(seg.icon, 0, 0);
+    ctx.fillText(iconToDraw, 0, 0);
     ctx.restore();
+
+    /* ─── مؤشر صغير للعناصر المخصصة ─── */
+    if(hasCustomItem){
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(startAngle + segAngle / 2);
+      ctx.translate(r * 0.85, -20);
+      ctx.fillStyle = '#FFD060';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = '#FFD060';
+      ctx.shadowBlur = 6;
+      ctx.fillText('★', 0, 0);
+      ctx.restore();
+    }
   });
 }
 
 function spinWheel(){
   if(_wheelSpinning) return;
 
-  const cost = 50;
+  const COST_GEMS = 20;
   const unlimited = hasAdminAccess() && Save.data.admin.unlimitedCoins;
+  const voucherCount = Save.data.vouchers?.wheel_spin || 0;
 
-  if(!unlimited && Save.data.coins < cost){
-    Sfx.play(220, 0.15, 'sine', 0.05, 180);
-    haptic(20);
-    alert('رصيدك غير كافٍ');
-    return;
+  /* ═══════════════════════════════════════════════════════
+     ═══ 1) طريقة الدفع ═══
+  */
+  let paidWith = null;
+
+  /* القسيمة لها الأولوية */
+  if(!unlimited && voucherCount > 0){
+    if(confirm(`استخدام قسيمة عجلة الحظ؟\n(لديك ${voucherCount})`)){
+      if(useVoucher('wheel_spin')){
+        paidWith = 'voucher';
+      }
+    }
   }
 
-  if(!unlimited) Save.data.coins -= cost;
-  updateCoinsUI();
+  if(!paidWith && !unlimited){
+    if((Save.data.gems || 0) < COST_GEMS){
+      Toast.error('رصيد غير كافٍ', `تحتاج 💎 ${COST_GEMS - Save.data.gems} جواهر`);
+      Sfx.play(220, 0.15, 'sine', 0.05, 180);
+      haptic(20);
+      return;
+    }
+    if(!spendGems(COST_GEMS)) return;
+    paidWith = 'gems';
+  } else if(unlimited && !paidWith){
+    paidWith = 'admin';
+  }
+
+  updateWalletUI();
 
   const balanceEl = document.getElementById('wheel-balance');
-  if(balanceEl) balanceEl.textContent = Save.data.coins.toLocaleString();
+  if(balanceEl) balanceEl.textContent = (Save.data.gems || 0).toLocaleString();
 
+  /* ═══ 2) التدوير ═══ */
   _wheelSpinning = true;
   Sfx.play(440, 0.3, 'sine', 0.06, 880);
 
@@ -23298,25 +25948,59 @@ function spinWheel(){
   requestAnimationFrame(animate);
 }
 
+/* ═══ تحديث initWheel لعرض الجواهر ═══ */
+function initWheel(){
+  drawWheel();
+  
+  const balanceEl = document.getElementById('wheel-balance');
+  if(balanceEl) balanceEl.textContent = (Save.data.gems || 0).toLocaleString();
+
+  /* عرض التكلفة */
+  const costEl = document.getElementById('wheel-cost');
+  if(costEl) costEl.textContent = '20';
+
+  const spinBtn = document.getElementById('wheel-spin-btn');
+  if(spinBtn && !spinBtn._bound){
+    spinBtn._bound = true;
+    spinBtn.addEventListener('click', spinWheel);
+  }
+  
+  updateWalletUI();
+}
+
 function onWheelStop(){
-  /* تحديد القطاع */
   const segCount = WHEEL_SEGMENTS.length;
   const segAngle = (Math.PI * 2) / segCount;
 
-  /* المؤشر في الأعلى (-PI/2) */
   const normalized = ((-Math.PI / 2 - _wheelRotation) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
   const segIdx = Math.floor(normalized / segAngle) % segCount;
   const seg = WHEEL_SEGMENTS[segIdx];
 
-  /* منح المكافأة */
   const rewards = [];
 
+  /* ═══ 1) عملات ═══ */
   if(seg.value > 0){
     Save.data.coins += seg.value;
     Save.data.stats.totalCoins += seg.value;
     rewards.push({ icon: '◆', name: 'عملات', value: '+' + seg.value });
+  }
+
+  /* ═══ 2) عنصر مخصص من الموسم ═══ */
+  const customItems = getWheelItems(segIdx);
+  if(customItems.length > 0){
+    const picked = customItems[Math.floor(Math.random() * customItems.length)];
+    if(picked && picked.item){
+      if(grantCustomItemToPlayer(picked.item.id)){
+        rewards.push({ 
+          icon: '🎁', 
+          name: picked.item.name, 
+          value: 'جديد!' 
+        });
+      }
+    }
   } else if(seg.type === 'cosmetic'){
-    const cats = ['spark', 'trail', 'jump', 'aura', 'crown', 'cape'];
+    /* العنصر الافتراضي (توافق خلفي) */
+    const cats = ['spark', 'trail', 'jump', 'death'];
     const cat = cats[Math.floor(Math.random() * cats.length)];
     const items = getAllCosmetics(cat).filter(i => i.id !== 'none');
     if(items.length){
@@ -23734,6 +26418,18 @@ function wireV2Buttons(){
           buildEventsV2();
           showScreen('s-events-v2');
           break;
+          case 'wallet':
+  buildWalletPage();
+  showScreen('s-wallet');
+  break;
+case 'cards':
+  buildCardsPage();
+  showScreen('s-cards');
+  break;
+case 'crafting':
+  buildCraftingPage();
+  showScreen('s-crafting');
+  break;
       }
     });
   });
@@ -24806,7 +27502,7 @@ function formatLbValue(val){
    ═══════════════ PREMIUM BATTLE PASS ═══════════════════════
    ============================================================ */
 
-const PREMIUM_BP_PRICE = 1500;
+const PREMIUM_BP_GEMS = 500;   /* ← السعر بالجواهر */
 
 function buildPremiumBPCard(){
   const container = document.getElementById('bp-v2-tiers');
@@ -24848,7 +27544,7 @@ function buildPremiumBPCard(){
         : `<div class="bppc-price">
              <span class="old">◆ 2500</span>
              <span class="c">◆</span>
-             <span>${PREMIUM_BP_PRICE}</span>
+             <span>${getBPPrice()}</span>
            </div>
            <button class="bppc-buy" id="bp-premium-buy">شراء الآن</button>`
       }
@@ -24867,26 +27563,28 @@ function buildPremiumBPCard(){
 
 async function purchasePremiumBP(){
   const unlimited = hasAdminAccess() && Save.data.admin.unlimitedCoins;
-  const canAfford = Save.data.coins >= PREMIUM_BP_PRICE;
+  const canAfford = (Save.data.gems || 0) >= PREMIUM_BP_GEMS;
 
   if(!unlimited && !canAfford){
-    Toast.error('رصيد غير كافٍ', `تحتاج ◆ ${PREMIUM_BP_PRICE - Save.data.coins}`);
+    Toast.error('جواهر غير كافية', 
+      `تحتاج 💎 ${PREMIUM_BP_GEMS - Save.data.gems} إضافية`);
     Sfx.play(220, 0.15, 'sine', 0.05, 180);
     haptic(20);
     return;
   }
 
-  if(!confirm(`شراء Premium Battle Pass بـ ◆ ${PREMIUM_BP_PRICE}؟`)) return;
+  if(!confirm(`شراء Premium Battle Pass بـ 💎 ${PREMIUM_BP_GEMS} جواهر؟`)) return;
 
-  if(!unlimited) Save.data.coins -= PREMIUM_BP_PRICE;
+  if(!unlimited) spendGems(PREMIUM_BP_GEMS);
+  
   Save.data.battlePass.premiumOwned = true;
   Save.save();
 
-  updateCoinsUI();
+  updateWalletUI();
   Sfx.reward(); haptic(40);
 
-  /* تأثيرات */
-  Toast.reward('👑', 'تم تفعيل Premium!', 'استمتع بالمكافآت المضاعفة', { duration: 5000 });
+  Toast.reward('👑', 'تم تفعيل Premium!', 
+    'استمتع بالمكافآت المضاعفة', { duration: 5000 });
 
   /* احتفال بصري */
   for(let i = 0; i < 40; i++){
@@ -24901,7 +27599,6 @@ async function purchasePremiumBP(){
     });
   }
 
-  /* إعادة بناء القائمة */
   if(typeof buildBattlePassV2Page === 'function'){
     buildBattlePassV2Page();
   }
@@ -25187,13 +27884,6 @@ function updateChallengeProgress(runStats){
         try { buildPremiumBPCard(); } catch(e){ console.warn('[PremiumBP]', e); }
       }, 80);
     }
-
-    if(id === 's-missions-v2'){
-      setTimeout(() => {
-        try { buildDailyChallengeCard(); } catch(e){ console.warn('[Challenge]', e); }
-      }, 80);
-    }
-
     return result;
   };
 })();
@@ -25224,9 +27914,6 @@ function updateChallengeProgress(runStats){
       Save.data.stats.noPowerupMeters = runStats.noPowerupMeters;
     }
 
-    /* تحديث التحدي اليومي */
-    try { updateChallengeProgress(runStats); } catch(e){ console.warn('[Challenge]', e); }
-
     /* استدعاء الأصلي */
     return origGameOver.apply(this, arguments);
   };
@@ -25254,26 +27941,6 @@ function updateChallengeProgress(runStats){
 (function initV25(){
   /* تهيئة Toast */
   Toast.init();
-
-  /* فحص التحدي اليومي عند البدء */
-  setTimeout(() => {
-    const challenge = getDailyChallenge();
-    if(!challenge.completed){
-      setTimeout(() => {
-        Toast.reward(challenge.icon, 'تحدي اليوم!', challenge.title, {
-          duration: 4500,
-          action: {
-            label: 'اعرض',
-            callback: () => {
-              currentMissionTab = 'daily';
-              buildMissionsV2Page();
-              showScreen('s-missions-v2');
-            }
-          }
-        });
-      }, 2000);
-    }
-  }, 1500);
 
   /* فحص طلبات الصداقة */
   setInterval(async () => {
@@ -26535,6 +29202,23 @@ async function createClan(){
         try { buildCreateClanPage(); } catch(e){ console.warn('[CreateClan]', e); }
       }, 80);
     }
+    if(id === 's-wallet'){
+  setTimeout(() => {
+    try { buildWalletPage(); } catch(e){ console.warn('[Wallet]', e); }
+  }, 80);
+}
+
+if(id === 's-cards'){
+  setTimeout(() => {
+    try { buildCardsPage(); } catch(e){ console.warn('[Cards]', e); }
+  }, 80);
+}
+
+if(id === 's-crafting'){
+  setTimeout(() => {
+    try { buildCraftingPage(); } catch(e){ console.warn('[Craft]', e); }
+  }, 80);
+}
 
     return result;
   };

@@ -307,9 +307,25 @@ canvas{display:block;width:100%;height:100%;}
   position:absolute;inset:0;width:100%;height:100%;
   display:none;flex-direction:column;
   overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
-  /* ❌ أزلنا transition — لا داعي له مع animation */
+  
+  /* ✅ خلفية صلبة افتراضية — تحل مشكلة الغباش */
+  background:var(--paper);
 }
+
 .screen.active{display:flex;}
+
+/* ═══════════════════════════════════════════════════════════
+   استثناءات: الشاشات التي يجب أن تظهر اللعبة خلفها
+   ═══════════════════════════════════════════════════════════ */
+#s-home.active,
+#s-login.active,
+#s-profile-setup.active,
+#s-pause.active,
+#s-over.active,
+#s-multiplayer-result.active,
+#s-mode-select.active{
+  background:transparent;
+}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
 
 /* ============ Home ============ */
@@ -468,7 +484,20 @@ canvas{display:block;width:100%;height:100%;}
 .qa-btn.highlight .ic{filter:drop-shadow(0 0 6px var(--gold));}
 
 /* ============ Sub screens ============ */
-.sub{flex:1;display:flex;flex-direction:column;padding:18px 16px 100px;min-height:100%;}
+.sub{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  padding:18px 16px 100px;
+  min-height:100%;
+  background:var(--paper);
+}
+
+/* استثناءات: الصفحات ذات التصميم الخاص */
+.sub.admin-v3,
+.sub.chat-screen{
+  background:transparent;
+}
 .sub-top{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
 .back-btn{
   width:40px;height:40px;border-radius:14px;background:#fff;border:1px solid var(--line);
@@ -7688,4 +7717,340 @@ kbd {
   max-height: 92%;
   object-fit: contain;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,.1));
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ═══════════ ADMIN LIVE PREVIEW ═══════════════════════════
+   ═══════════════════════════════════════════════════════════ */
+
+.af-preview-row{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.af-path-preview{
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 14px;
+  background: var(--paper-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--ink-mute);
+  overflow: hidden;
+  border: 1.5px solid var(--line);
+  padding: 8px;
+  transition: border-color .2s, background .2s;
+}
+.af-path-preview img{
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.af-path-preview.err{
+  border-color: #C14A4A;
+  color: #C14A4A;
+  background: #FCE8E8;
+}
+
+.af-live-preview{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.af-live-preview canvas{
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 200 / 240;
+  border-radius: 14px;
+  border: 1.5px solid var(--line);
+  box-shadow: 0 3px 10px rgba(26,21,18,.06);
+  background: radial-gradient(circle at center, #FBF7F0, #E8E0D2);
+}
+
+.af-live-label{
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  color: var(--ink-mute);
+  text-align: center;
+  text-transform: uppercase;
+}
+
+@media (max-width: 380px){
+  .af-preview-row{
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ═══ مكافآت الرتب ═══ */
+.rank-rewards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.rank-reward-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--rc) 15%, #fff);
+  border: 1px solid color-mix(in srgb, var(--rc) 35%, transparent);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.rank-claim-btn {
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 100px;
+  border: none;
+  background: var(--ink);
+  color: #fff;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rank-claim-btn:active {
+  transform: scale(.94);
+}
+
+/* ═══════════ WORKSHOP CURRENCIES ═══════════ */
+
+.gem-pill {
+  background: linear-gradient(135deg, #E0F0FF, #B0D8FF);
+  border-color: #80B8E0;
+}
+.gem-pill .c { color: #4A88C8; }
+
+.shard-pill {
+  background: linear-gradient(135deg, #F0E0FF, #D8B8FF);
+  border-color: #B080E0;
+}
+.shard-pill .c { color: #9A6AC8; }
+
+/* ═══ بطاقة العملة ═══ */
+.currency-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--cc1, #FFF9EC), var(--cc2, #FBF1DC));
+  border: 1.5px solid color-mix(in srgb, var(--cc) 40%, transparent);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--cc) 20%, transparent);
+  margin-bottom: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.currency-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--cc) 25%, transparent), transparent 60%);
+  pointer-events: none;
+}
+
+.currency-card .cc-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  background: color-mix(in srgb, var(--cc) 25%, #fff);
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,.1);
+  position: relative;
+  z-index: 1;
+}
+
+.currency-card .cc-info {
+  flex: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.currency-card .cc-label {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: var(--cc);
+  text-transform: uppercase;
+}
+
+.currency-card .cc-value {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-top: 4px;
+}
+
+.currency-card .cc-desc {
+  font-size: 10.5px;
+  color: var(--ink-mute);
+  margin-top: 2px;
+}
+
+/* ═══ بطاقة البطاقة (Card) ═══ */
+.tcg-card {
+  position: relative;
+  aspect-ratio: 2 / 3;
+  border-radius: 14px;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--rc1), var(--rc2));
+  border: 2px solid var(--rc-border);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--rc) 35%, transparent);
+  cursor: pointer;
+  transition: transform .2s cubic-bezier(.34,1.56,.64,1);
+}
+
+.tcg-card:active { transform: scale(.96); }
+
+.tcg-card.locked {
+  filter: grayscale(1);
+  opacity: 0.35;
+}
+
+.tcg-card .tcg-inner {
+  position: absolute;
+  inset: 6px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(255,255,255,.35), rgba(255,255,255,.05));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  text-align: center;
+  backdrop-filter: blur(6px);
+}
+
+.tcg-card .tcg-icon {
+  font-size: 40px;
+  margin-bottom: 6px;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.3));
+}
+
+.tcg-card .tcg-name {
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,.6);
+  line-height: 1.15;
+}
+
+.tcg-card .tcg-count {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 2px 8px;
+  border-radius: 100px;
+  background: rgba(0,0,0,.6);
+  color: #fff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  backdrop-filter: blur(6px);
+}
+
+.tcg-card .tcg-rarity {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  padding: 2px 8px;
+  border-radius: 100px;
+  background: var(--rc);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* ═══ شبكة البطاقات ═══ */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+/* ═══ متجر الشظايا ═══ */
+.shard-shop-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 16px;
+  background: #fff;
+  border: 1.5px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 8px;
+}
+
+.shard-shop-item .ssi-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--ssi-c, #9A6AC8) 20%, #fff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.shard-shop-item .ssi-info {
+  flex: 1;
+  text-align: right;
+}
+
+.shard-shop-item .ssi-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.shard-shop-item .ssi-price {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #9A6AC8;
+  margin-top: 3px;
+}
+
+.shard-shop-item .ssi-btn {
+  padding: 8px 16px;
+  border-radius: 100px;
+  border: none;
+  background: linear-gradient(135deg, #9A6AC8, #7A4AA8);
+  color: #fff;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.shard-shop-item .ssi-btn:disabled {
+  background: var(--paper-2);
+  color: var(--ink-mute);
+  cursor: not-allowed;
 }

@@ -22,7 +22,7 @@
       <div class="hud-left">
         <div class="stat-cluster">
           <div class="stat-chip coins">
-            <span class="chip-ic">◆</span>
+            <span class="chip-ic">​🪙</span>
             <span class="chip-val" id="hud-coins">0</span>
           </div>
           <div class="stat-chip meters">
@@ -77,7 +77,7 @@
   <div id="levelup">
     <div class="lvl-title">LEVEL UP</div>
     <div class="lvl-num" id="lvl-num-display">2</div>
-    <div class="lvl-reward" id="lvl-reward-display">◆ +30</div>
+    <div class="lvl-reward" id="lvl-reward-display">​🪙 +30</div>
   </div>
 
   <!-- ============================================================
@@ -165,6 +165,7 @@
       <button class="admin-tab active" data-tab="dashboard">📊 الرئيسية</button>
       <button class="admin-tab" data-tab="content">🎨 المحتوى</button>
       <button class="admin-tab" data-tab="players">👥 اللاعبون</button>
+      <button class="admin-tab" data-tab="seasons">🎯 المواسم</button>
       <button class="admin-tab" data-tab="economy">💰 الاقتصاد</button>
       <button class="admin-tab" data-tab="events">🎪 الأحداث</button>
       <button class="admin-tab" data-tab="preview">👁️ معاينة</button>
@@ -289,6 +290,7 @@
   <button class="act-chip" data-act="banner">🎨 خلفية</button>
   <button class="act-chip" data-act="nameTag">🏷️ بطاقة اسم</button>
   <button class="act-chip" data-act="badge">⭐ شارة</button>
+  <button class="act-chip" data-act="cards">🃏 بطاقات</button>
 </div>
 
       <!-- Add New Button -->
@@ -349,7 +351,7 @@
       <div class="admin-coins-panel-v3">
         <div class="acpv3-label">رصيدك</div>
         <div class="acpv3-value">
-          <span class="acpv3-c">◆</span>
+          <span class="acpv3-c">​🪙</span>
           <span id="admin-coins-value">0</span>
         </div>
         <div class="acpv3-quick">
@@ -457,7 +459,7 @@
 
 <div class="admin-toggles">
   <button class="admin-toggle" data-toggle="unlimitedCoins">
-    <span class="at-ic">◆</span>
+    <span class="at-ic">​🪙</span>
     <span class="at-lbl">نقود لا نهائية</span>
     <span class="at-sw" id="sw-unlimitedCoins"></span>
   </button>
@@ -530,8 +532,133 @@
       <div class="admin-audit-list" id="admin-audit-list">
         <div class="aal-empty">لا يوجد سجل بعد</div>
       </div>
-
     </div>
+
+<!-- ═══════════════════════════════════════════════════════
+     TAB: SEASONS
+     ═══════════════════════════════════════════════════════ -->
+<div class="admin-tab-content" data-tab="seasons">
+
+  <div class="admin-section-head">
+    <div class="admin-section-title">إدارة المواسم</div>
+    <div class="admin-section-sub">SEASONS MANAGER</div>
+  </div>
+
+  <!-- الموسم النشط -->
+  <div id="admin-active-season" class="admin-hero-v3" style="background:linear-gradient(135deg,#2A1830 0%,#5A2880 100%);">
+    <!-- يُبنى ديناميكياً -->
+  </div>
+
+  <!-- زر إنشاء موسم جديد -->
+  <button class="admin-add-btn" id="admin-create-season">
+    <span style="font-size:18px;">➕</span>
+    <span>إنشاء موسم جديد</span>
+  </button>
+
+  <!-- قائمة المواسم -->
+  <div id="admin-seasons-list" class="admin-content-list"></div>
+
+  <!-- محرر الموسم -->
+  <div id="admin-season-editor" class="admin-form-v3" style="display:none;">
+    <div class="afv3-backdrop" id="admin-season-editor-backdrop"></div>
+    <div class="afv3-panel">
+      <div class="afv3-head">
+        <div class="afv3-title">تحرير الموسم: <span id="ase-title">—</span></div>
+        <button class="afv3-close" id="ase-close">✕</button>
+      </div>
+      <div class="afv3-body">
+
+        <!-- الهوية -->
+        <div class="afv3-section">
+          <div class="afv3-section-head">🎨 هوية الموسم</div>
+          <div class="af-row-2">
+            <div class="af-group">
+              <label class="af-label">الاسم بالعربية</label>
+              <input class="af-input" id="ase-name" type="text" maxlength="24">
+            </div>
+            <div class="af-group">
+              <label class="af-label">الاسم بالإنجليزية</label>
+              <input class="af-input" id="ase-name-en" type="text" maxlength="24">
+            </div>
+          </div>
+          <div class="af-row-2">
+            <div class="af-group">
+              <label class="af-label">الأيقونة</label>
+              <input class="af-input" id="ase-icon" type="text" maxlength="4" placeholder="🏅">
+            </div>
+            <div class="af-group">
+              <label class="af-label">اللون</label>
+              <input class="af-input color" id="ase-color" type="color">
+            </div>
+          </div>
+          <div class="af-group">
+            <label class="af-label">الوصف</label>
+            <input class="af-input" id="ase-desc" type="text" maxlength="80">
+          </div>
+          <div class="af-row-2">
+            <div class="af-group">
+              <label class="af-label">تاريخ البداية</label>
+              <input class="af-input" id="ase-start" type="date">
+            </div>
+            <div class="af-group">
+              <label class="af-label">تاريخ النهاية</label>
+              <input class="af-input" id="ase-end" type="date">
+            </div>
+          </div>
+        </div>
+
+        <!-- Battle Pass -->
+        <div class="afv3-section">
+          <div class="afv3-section-head">🎫 Battle Pass</div>
+          <div class="af-row-2">
+            <div class="af-group">
+              <label class="af-label">عدد المستويات</label>
+              <input class="af-input" id="ase-bp-tiers" type="number" min="5" max="100" value="30">
+            </div>
+            <div class="af-group">
+              <label class="af-label">نقاط لكل مستوى</label>
+              <input class="af-input" id="ase-bp-points" type="number" min="50" max="5000" value="300">
+            </div>
+          </div>
+          <div class="af-group">
+            <label class="af-label">سعر Premium (​🪙)</label>
+            <input class="af-input" id="ase-bp-price" type="number" min="0" max="100000" value="1500">
+          </div>
+        </div>
+
+        <!-- الرتب -->
+        <div class="afv3-section">
+          <div class="afv3-section-head">🏅 الرتب</div>
+          <div class="af-hint">
+            اختر الرتب المتوفرة في هذا الموسم. تُرتَّب تلقائياً حسب النقاط.
+          </div>
+          <div id="ase-ranks-editor"></div>
+          <button class="admin-add-btn" id="ase-add-rank" style="margin-top:8px;">
+            ➕ إضافة رتبة
+          </button>
+        </div>
+
+        <!-- الصناديق -->
+        <div class="afv3-section">
+          <div class="afv3-section-head">📦 الصناديق</div>
+          <div id="ase-chests-editor"></div>
+          <button class="admin-add-btn" id="ase-add-chest" style="margin-top:8px;">
+            ➕ إضافة صندوق
+          </button>
+        </div>
+
+      </div>
+      <div class="afv3-foot">
+        <div class="af-status" id="ase-status"></div>
+        <div class="afv3-actions">
+          <button class="admin-btn-full soft" id="ase-cancel">إلغاء</button>
+          <button class="admin-btn-full gold" id="ase-save">💾 حفظ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
 
     <!-- ═══════════════════════════════════════════════════════
          CONTENT FORM MODAL
@@ -584,21 +711,28 @@
         </div>
       </div>
 
-      <!-- ═══ الصورة ═══ -->
-      <div class="afv3-section">
-        <div class="afv3-section-head">🖼️ الصورة</div>
-        <div class="af-hint">
-          ضع ملف PNG في:
-          <code>assets/custom/<span id="af-path-cat">skins</span>/</code>
-          <br>ثم اكتب اسم الملف فقط
-        </div>
-        <input class="af-input" id="af-image-path" type="text"
-               placeholder="dragon-gold.png"
-               autocomplete="off" spellcheck="false">
-        <div class="af-path-preview" id="af-path-preview">
-          <span>لا توجد معاينة</span>
-        </div>
-      </div>
+<!-- ═══ الصورة + المعاينة المباشرة ═══ -->
+<div class="afv3-section">
+  <div class="afv3-section-head">🖼️ الصورة والمعاينة المباشرة</div>
+  <div class="af-hint">
+    ضع ملف PNG في:
+    <code>assets/custom/<span id="af-path-cat">skins</span>/</code>
+    <br>ثم اكتب اسم الملف فقط
+  </div>
+  <input class="af-input" id="af-image-path" type="text"
+         placeholder="dragon-gold.png"
+         autocomplete="off" spellcheck="false">
+  
+  <div class="af-preview-row">
+    <div class="af-path-preview" id="af-path-preview">
+      <span>لا توجد معاينة</span>
+    </div>
+    <div class="af-live-preview">
+      <canvas id="af-live-canvas" width="200" height="240"></canvas>
+      <div class="af-live-label">معاينة مباشرة على الشخصية</div>
+    </div>
+  </div>
+</div>
 
       <!-- ═══ الألوان ═══ -->
       <div class="afv3-section">
@@ -677,13 +811,27 @@
         <div class="brand-name">SH<span class="accent">I</span>FT</div>
         <div class="brand-sub">CALM ARCADE</div>
       </div>
-      <div class="top-pills">
-        <div class="coin-pill">
-          <span class="c">◆</span>
-          <span id="home-coins">0</span>
-        </div>
-        <button class="menu-btn" id="menu-btn" title="القائمة">☰</button>
-      </div>
+<div class="top-pills">
+  <!-- ​🪙 عملات -->
+  <div class="coin-pill" data-currency="coins" title="العملات">
+    <span class="c">​🪙</span>
+    <span id="home-coins">0</span>
+  </div>
+  
+  <!-- 💎 جواهر -->
+  <div class="coin-pill gem-pill" data-currency="gems" title="الجواهر">
+    <span class="c">💎</span>
+    <span id="home-gems">0</span>
+  </div>
+  
+  <!-- ❄️ شظايا -->
+  <div class="coin-pill shard-pill" data-currency="shards" title="الشظايا">
+    <span class="c">❄️</span>
+    <span id="home-shards">0</span>
+  </div>
+  
+  <button class="menu-btn" id="menu-btn" title="القائمة">☰</button>
+</div>
     </div>
 
 <!-- ═══ Merged Player Hero: Avatar + Name + Character ═══ -->
@@ -813,6 +961,18 @@
       <div class="hs-ic">🎡</div>
       <div class="hs-lbl">عجلة الحظ</div>
     </button>
+    <button class="hs-action" data-page="wallet" style="--hs:#4A88C8;">
+  <div class="hs-ic">💰</div>
+  <div class="hs-lbl">المحفظة</div>
+</button>
+<button class="hs-action" data-page="cards" style="--hs:#9A6AC8;">
+  <div class="hs-ic">🃏</div>
+  <div class="hs-lbl">البطاقات</div>
+</button>
+<button class="hs-action" data-page="crafting" style="--hs:#C080FF;">
+  <div class="hs-ic">🔷</div>
+  <div class="hs-lbl">الورشة</div>
+</button>
     <button class="hs-action" data-page="referral" style="--hs:#E8B34E;">
       <div class="hs-ic">🎁</div>
       <div class="hs-lbl">الإحالة</div>
@@ -1103,7 +1263,7 @@
     </div>
 
     <div class="shop-coins-hero">
-      <span class="c">◆</span>
+      <span class="c">​🪙</span>
       <span id="shop-v2-coins">0</span>
     </div>
 
@@ -1167,19 +1327,19 @@
         <div class="cc-icon">📦</div>
         <div class="cc-name">صندوق برونزي</div>
         <div class="cc-desc">مكافآت أساسية</div>
-        <div class="cc-price">◆ 100</div>
+        <div class="cc-price">​🪙 100</div>
       </div>
       <div class="chest-card" data-chest="silver" style="--ch:#B0B8C0;">
         <div class="cc-icon">🎁</div>
         <div class="cc-name">صندوق فضي</div>
         <div class="cc-desc">مكافآت نادرة</div>
-        <div class="cc-price">◆ 500</div>
+        <div class="cc-price">​🪙 500</div>
       </div>
       <div class="chest-card" data-chest="gold" style="--ch:#E8B34E;">
         <div class="cc-icon">💎</div>
         <div class="cc-name">صندوق ذهبي</div>
         <div class="cc-desc">مكافآت ملحمية</div>
-        <div class="cc-price">◆ 2000</div>
+        <div class="cc-price">​🪙 2000</div>
       </div>
     </div>
 
@@ -1211,8 +1371,8 @@
     </div>
 
     <div class="wheel-info">
-      <div class="wi-cost">◆ <span id="wheel-cost">50</span> / دورة</div>
-      <div class="wi-balance">رصيدك: ◆ <span id="wheel-balance">0</span></div>
+<div class="wi-cost">💎 <span id="wheel-cost">20</span> / دورة</div>
+<div class="wi-balance">رصيدك: 💎 <span id="wheel-balance">0</span></div>
     </div>
 
     <button class="action-btn gold" id="wheel-spin-btn" style="margin-top:14px;">
@@ -1422,7 +1582,7 @@
 
     <div class="ref-hero">
       <div class="ref-hero-icon">🎁</div>
-      <div class="ref-hero-title">ادعُ أصدقاءك واكسب ◆</div>
+      <div class="ref-hero-title">ادعُ أصدقاءك واكسب ​🪙</div>
       <div class="ref-hero-sub">احصل على مكافآت متدرّجة عند انضمام أصدقائك</div>
     </div>
 
@@ -1532,7 +1692,7 @@
 
       <div class="clan-create-cost">
         <span class="cc-label">تكلفة الإنشاء:</span>
-        <span class="cc-value">◆ <span id="clan-cost">500</span></span>
+        <span class="cc-value">​🪙 <span id="clan-cost">500</span></span>
       </div>
 
       <div class="af-status" id="clan-create-status"></div>
@@ -1724,7 +1884,7 @@
           <div class="sub-spacer"></div>
         </div>
         <div style="text-align:center;padding:12px;border-radius:16px;background:linear-gradient(135deg,#FFF9EC,#FBF1DC);border:1px solid var(--line);margin-bottom:16px;">
-          <span style="color:var(--gold);font-size:18px;">◆</span>
+          <span style="color:var(--gold);font-size:18px;">​🪙</span>
           <span style="font-family:'Space Grotesk';font-size:22px;font-weight:700;margin-right:6px;" id="shop-coins">0</span>
         </div>
         <div class="skin-grid" id="skin-grid"></div>
@@ -2040,7 +2200,163 @@
         </div>
       </div>
     </div>
+
+<!-- ═══════════ WALLET PAGE ═══════════ -->
+<div class="screen" id="s-wallet">
+  <div class="sub">
+    <div class="sub-top">
+      <button class="back-btn" data-back>←</button>
+      <div>
+        <div class="sub-title">المحفظة</div>
+        <div class="sub-eyebrow">WALLET</div>
+      </div>
+      <div class="sub-spacer"></div>
+    </div>
+
+    <!-- ◆ عملات -->
+    <div class="currency-card" style="--cc:#E8B34E;--cc1:#FFF9EC;--cc2:#FBF1DC;">
+      <div class="cc-icon">◆</div>
+      <div class="cc-info">
+        <div class="cc-label">COINS</div>
+        <div class="cc-value" id="wallet-coins">0</div>
+        <div class="cc-desc">اكتسبها من اللعب، المهام، والإنجازات</div>
+      </div>
+    </div>
+
+    <!-- 💎 جواهر -->
+    <div class="currency-card" style="--cc:#4A88C8;--cc1:#E0F0FF;--cc2:#B0D8FF;">
+      <div class="cc-icon">💎</div>
+      <div class="cc-info">
+        <div class="cc-label">GEMS · نادرة</div>
+        <div class="cc-value" id="wallet-gems">0</div>
+        <div class="cc-desc">للـ BP المميز، عجلة الحظ، والصناديق VIP</div>
+      </div>
+    </div>
+
+    <!-- 🔷 شظايا -->
+    <div class="currency-card" style="--cc:#9A6AC8;--cc1:#F0E0FF;--cc2:#D8B8FF;">
+      <div class="cc-icon">🔷</div>
+      <div class="cc-info">
+        <div class="cc-label">SHARDS · من التكرار</div>
+        <div class="cc-value" id="wallet-shards">0</div>
+        <div class="cc-desc">حوّل التكرارات إلى عناصر نادرة</div>
+      </div>
+    </div>
+
+    <!-- 🎫 قسائم -->
+    <div class="admin-section-head">
+      <div class="admin-section-title">🎫 القسائم</div>
+      <div class="admin-section-sub">VOUCHERS · نادرة جداً</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div class="currency-card" style="--cc:#C98A2E;margin:0;">
+        <div class="cc-icon">🎫</div>
+        <div class="cc-info">
+          <div class="cc-label">برونزي</div>
+          <div class="cc-value" id="wallet-voucher-chest_bronze">0</div>
+        </div>
+      </div>
+      <div class="currency-card" style="--cc:#B0B8C0;margin:0;">
+        <div class="cc-icon">🎫</div>
+        <div class="cc-info">
+          <div class="cc-label">فضي</div>
+          <div class="cc-value" id="wallet-voucher-chest_silver">0</div>
+        </div>
+      </div>
+      <div class="currency-card" style="--cc:#E8B34E;margin:0;">
+        <div class="cc-icon">🎫</div>
+        <div class="cc-info">
+          <div class="cc-label">ذهبي</div>
+          <div class="cc-value" id="wallet-voucher-chest_gold">0</div>
+        </div>
+      </div>
+      <div class="currency-card" style="--cc:#FF00D8;margin:0;">
+        <div class="cc-icon">🎡</div>
+        <div class="cc-info">
+          <div class="cc-label">عجلة</div>
+          <div class="cc-value" id="wallet-voucher-wheel_spin">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- سجل المعاملات -->
+    <div class="admin-section-head" style="margin-top:20px;">
+      <div class="admin-section-title">📜 آخر العمليات</div>
+      <div class="admin-section-sub">RECENT</div>
+    </div>
+    <div id="wallet-log" style="background:#fff;border-radius:14px;border:1px solid var(--line);padding:6px;max-height:300px;overflow-y:auto;"></div>
   </div>
+</div>
+
+<!-- ═══════════ CARDS COLLECTION PAGE ═══════════ -->
+<div class="screen" id="s-cards">
+  <div class="sub">
+    <div class="sub-top">
+      <button class="back-btn" data-back>←</button>
+      <div>
+        <div class="sub-title">مجموعة البطاقات</div>
+        <div class="sub-eyebrow">CARD COLLECTION</div>
+      </div>
+      <div class="sub-spacer"></div>
+    </div>
+
+    <!-- Hero -->
+    <div class="ach-hero-v2" style="background:linear-gradient(135deg,#2A1830 0%,#4A2858 100%);">
+      <div class="ah2-icon">🃏</div>
+      <div class="ah2-info">
+        <div class="ah2-label">COLLECTION</div>
+        <div class="ah2-val">
+          <span id="cards-unlocked">0</span>
+          <span class="of">/ <span id="cards-total">0</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- فلترة النُدرة -->
+    <div class="tab-row" id="cards-tabs">
+      <button class="tab-chip active" data-cardfilter="all">الكل</button>
+      <button class="tab-chip" data-cardfilter="common">عادي</button>
+      <button class="tab-chip" data-cardfilter="rare">نادر</button>
+      <button class="tab-chip" data-cardfilter="epic">ملحمي</button>
+      <button class="tab-chip" data-cardfilter="legendary">أسطوري</button>
+      <button class="tab-chip" data-cardfilter="mythic">خرافي</button>
+    </div>
+
+    <div class="cards-grid" id="cards-grid"></div>
+  </div>
+</div>
+
+<!-- ═══════════ SHARD CRAFTING PAGE ═══════════ -->
+<div class="screen" id="s-crafting">
+  <div class="sub">
+    <div class="sub-top">
+      <button class="back-btn" data-back>←</button>
+      <div>
+        <div class="sub-title">ورشة الشظايا</div>
+        <div class="sub-eyebrow">CRAFTING</div>
+      </div>
+      <div class="sub-spacer"></div>
+    </div>
+
+    <div class="currency-card" style="--cc:#9A6AC8;--cc1:#F0E0FF;--cc2:#D8B8FF;">
+      <div class="cc-icon">🔷</div>
+      <div class="cc-info">
+        <div class="cc-label">رصيدك</div>
+        <div class="cc-value" id="craft-shards">0</div>
+        <div class="cc-desc">حوّل الشظايا إلى عناصر محددة</div>
+      </div>
+    </div>
+
+    <div class="tab-row" id="craft-tabs">
+      <button class="tab-chip active" data-craftcat="cards">🃏 بطاقات</button>
+      <button class="tab-chip" data-craftcat="cosmetics">🎁 تأثيرات</button>
+      <button class="tab-chip" data-craftcat="skins">🎨 أزياء</button>
+    </div>
+
+    <div id="craft-list"></div>
+  </div>
+</div>
 
   <!-- ============================================================
        REWARD MODAL
