@@ -444,74 +444,6 @@ function buildTitles(){
 }
 
 /* ============================================================
-   ============ الرتب v2 =====================================
-   ============================================================ */
-function buildSeasonV2(){
-  const pts = Save.data.season.points || 0;
-  const rankIdx = getSeasonRankIdx();
-  const rank = getSeasonRanks()[rankIdx];
-  const nextRank = getSeasonRanks()[rankIdx + 1];
-
-  /* Hero */
-  const hero = document.getElementById('season-hero');
-  if(hero){
-    hero.innerHTML = `
-      <div class="rank-current">
-        <div class="rank-current-icon">${rank.icon}</div>
-        <div class="rank-current-info">
-          <div class="rank-current-name">${rank.name}</div>
-          <div class="rank-current-points">${pts.toLocaleString()} نقطة موسم</div>
-        </div>
-      </div>
-      ${nextRank ? `
-        <div class="rank-progress-v2">
-          <div class="rp-labels">
-            <span>${rank.name}</span>
-            <span>${nextRank.name}</span>
-          </div>
-          <div class="rp-bar">
-            <div class="rp-fill" style="width:${clamp((pts - rank.points) / (nextRank.points - rank.points), 0, 1) * 100}%"></div>
-          </div>
-        </div>
-      ` : '<div style="text-align:center;margin-top:14px;font-size:12px;opacity:.8;">🌟 أعلى رتبة!</div>'}
-    `;
-  }
-
-  /* List */
-  const list = document.getElementById('rank-list');
-  if(list){
-    list.innerHTML = '';
-    getSeasonRanks().forEach((r, i) => {
-      const isCurrent = i === rankIdx;
-      const isUnlocked = i <= rankIdx;
-
-      const el = document.createElement('div');
-      el.className = 'rank-item' + (isCurrent ? ' current' : '') + (!isUnlocked ? ' locked' : '');
-
-      el.innerHTML = `
-        <div class="rank-icon-v2">${r.icon}</div>
-        <div class="rank-info-v2">
-          <div class="rank-name-v2">${r.name}</div>
-          <div class="rank-req-v2">${r.points.toLocaleString()} نقطة</div>
-        </div>
-        <div class="rank-status-v2">${isUnlocked ? '✓' : '🔒'}</div>
-      `;
-      list.appendChild(el);
-    });
-  }
-
-  /* عيّن النصوص القديمة إن وُجدت */
-  const el1 = document.getElementById('season-rank');
-  const el2 = document.getElementById('season-points');
-  const el3 = document.getElementById('season-prog');
-  if(el1) el1.textContent = rank.icon + ' ' + rank.name;
-  if(el2) el2.textContent = pts;
-  if(el3 && nextRank){
-    el3.style.width = clamp((pts - rank.points) / (nextRank.points - rank.points), 0, 1) * 100 + '%';
-  }
-}
-
-/* ============================================================
    ============ الدخول اليومي v2 ============================
    ============================================================ */
 function buildDailyV2(){
@@ -1827,6 +1759,17 @@ const POWERUP_DEFS = {
 
 const POWERUP_LIST = Object.values(POWERUP_DEFS);
 const POWERUP_MAX_LEVEL = 5;
+
+/* ═══ دعم النمطين الجديدين في كل التعزيزات ═══ */
+(function patchPowerupModes(){
+  const NEW_MODES = ['SOAR', 'PULSE'];
+  POWERUP_LIST.forEach(def => {
+    if(!Array.isArray(def.modes)) return;
+    NEW_MODES.forEach(m => {
+      if(!def.modes.includes(m)) def.modes.push(m);
+    });
+  });
+})();
 const POWERUP_BASE_SECONDS = 5;
 const POWERUP_STEP_SECONDS = 5;
 
@@ -4124,8 +4067,10 @@ function blendScene(a,b,t){
 const MODES = [
   { id:'FLIP',   ar:'قلب الجاذبية', en:'FLIP',   icon:'⇅', color:'#4A7FA0', desc:'اضغط لقلب الاتجاه' },
   { id:'FLAP',   ar:'التحليق',      en:'THRUST', icon:'▲', color:'#8E6AA8', desc:'اضغط للارتفاع' },
+  { id:'SOAR',   ar:'التحليق الحر', en:'SOAR',   icon:'🕊️', color:'#5AA0D8', desc:'اضغط باستمرار للطيران' },
   { id:'DRIFT',  ar:'الانسياق',     en:'DRIFT',  icon:'✦', color:'#C98A2E', desc:'اسحب بحرية' },
   { id:'WALK',   ar:'المشي والقفز', en:'RUN',    icon:'♟', color:'#4A8040', desc:'اقفز فوق العقبات' },
+  { id:'PULSE',  ar:'النبض',        en:'PULSE',  icon:'⇕', color:'#A05AD8', desc:'اضغط لقلب الاتجاه صعوداً وهبوطاً' },
   { id:'ASCEND', ar:'الصعود',       en:'ASCEND', icon:'↑', color:'#5A8FD8', desc:'اقفز بين المنصات نحو الفضاء' },
   { id:'MIXED',  ar:'المتنوّع',     en:'MIXED',  icon:'◆', color:'#A06AD8', desc:'تحوّل عشوائي بين الأنماط' }
 ];
@@ -5055,6 +5000,8 @@ spawnCdMul: 1,   /* مضاعف المسافة بين العقبات */
 const P = {
   x:0,y:0,vx:0,vy:0,r:13,baseX:100,
   gravityDir:1, rot:0,
+  pulseReady: 0,
+  pulseRejectFlash: 0,
   onGround:false, jumps:0, trail:[],
   enginePhase: 0, legPhase: 0, bouncePhase: 0,
   cape: null,
@@ -6367,6 +6314,13 @@ function spawnObstacle(){
   /* ═══ ASCEND له مولّد خاص ═══ */
   if(G.mode === 'ASCEND') return;
 
+  /* ═══ PULSE — مولّد مخصص (عوائق أرضية + سقفية) ═══ */
+  if(G.mode === 'PULSE'){
+    spawnPulseObstacle();
+    return;
+  }
+
+  /* ═══ SOAR — مثل FLAP/FLIP/DRIFT (tunnel) ═══ */
   if(G.mode !== 'WALK'){
     spawnTunnelObstacle();
     return;
@@ -6737,6 +6691,402 @@ function spawnSkyCity(){
   }
 
   showBanner('☁ SKY CITY', 'مدينة السماء');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ═══════════ PULSE SMART STATE ═════════════════════════════
+   ═══════════════════════════════════════════════════════════
+   يتتبع آخر عائق طويل لتجنب العقبات المستحيلة
+   ============================================================ */
+const _pulseState = {
+  lastTallX: -9999,
+  lastTallType: null,         /* 'floor' | 'ceiling' */
+  consecutiveSameType: 0
+};
+
+function resetPulseState(){
+  _pulseState.lastTallX = -9999;
+  _pulseState.lastTallType = null;
+  _pulseState.consecutiveSameType = 0;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ═══════════ فحص أمان: هل يوجد عائق معاكس قريب؟ ═══════════
+   ═══════════════════════════════════════════════════════════ */
+function _hasOppositeObstacleNearby(xHere, wantFloor){
+  for(const o of obstacles){
+    if(!o.isPulseObstacle || o.dead) continue;
+
+    const otherX = o.x + (o.w || 0) / 2;
+    const dist = Math.abs(otherX - xHere);
+
+    /* ✅ نطاق الفحص: 320px قبل وبعد */
+    if(dist > 320) continue;
+
+    const isFloor = !!o.isPulseFloor;
+    const isCeiling = !!o.isPulseCeiling;
+
+    /* ═══ نريد أرضياً وهناك سقفي قريب ═══ */
+    if(wantFloor && isCeiling) return true;
+    /* ═══ نريد سقفياً وهناك أرضي قريب ═══ */
+    if(!wantFloor && isFloor) return true;
+  }
+  return false;
+}
+
+/* ═══ فحص المسافة الحرة الأفقية ═══ */
+function _pulseHorizontalClear(xHere, w){
+  const myLeft = xHere;
+  const myRight = xHere + w;
+
+  for(const o of obstacles){
+    if(!o.isPulseObstacle || o.dead) continue;
+
+    const oLeft = o.x;
+    const oRight = o.x + (o.w || 0);
+
+    /* ═══ تداخل أفقي؟ ═══ */
+    const overlap = !(myRight < oLeft - 20 || myLeft > oRight + 20);
+    if(overlap){
+      /* نفس المكان تقريباً — لا تولّد */
+      if(Math.abs(oLeft - xHere) < 30) return false;
+    }
+  }
+  return true;
+}
+
+/* ═══ اختيار نوع العائق بذكاء ═══ */
+function _choosePulseObstacleType(){
+  const roll = Math.random();
+  const xHere = W + 40;
+  const distFromTall = xHere - _pulseState.lastTallX;
+  const canSwitchSide = distFromTall >= 520;   /* ✅ زدناها من 420 إلى 520 */
+
+  const lastType = _pulseState.lastTallType;
+
+  /* ═══ لا يوجد تاريخ ═══ */
+  if(!lastType){
+    if(roll < 0.28) return 'floorTall';
+    if(roll < 0.56) return 'ceilingTall';
+    if(roll < 0.82) return 'mixed';
+    return roll < 0.91 ? 'floorShort' : 'ceilingShort';
+  }
+
+  /* ═══ آخر عائق كان أرضياً طويلاً ═══ */
+  if(lastType === 'floor'){
+    if(canSwitchSide){
+      if(roll < 0.32) return 'ceilingTall';
+      if(roll < 0.52) return 'floorTall';
+      if(roll < 0.78) return 'mixed';
+      return roll < 0.90 ? 'ceilingShort' : 'floorShort';
+    } else {
+      /* مسافة غير كافية — لا نسمح بالمعاكس */
+      if(roll < 0.40) return 'floorTall';
+      if(roll < 0.78) return 'mixed';
+      return 'floorShort';
+    }
+  }
+
+  /* ═══ آخر عائق كان سقفياً طويلاً ═══ */
+  if(lastType === 'ceiling'){
+    if(canSwitchSide){
+      if(roll < 0.32) return 'floorTall';
+      if(roll < 0.52) return 'ceilingTall';
+      if(roll < 0.78) return 'mixed';
+      return roll < 0.90 ? 'floorShort' : 'ceilingShort';
+    } else {
+      if(roll < 0.40) return 'ceilingTall';
+      if(roll < 0.78) return 'mixed';
+      return 'ceilingShort';
+    }
+  }
+
+  return 'floorShort';
+}
+
+/* ═══ تسجيل عائق طويل جديد ═══ */
+function _recordPulseTall(x, type){
+  _pulseState.lastTallX = x;
+  _pulseState.lastTallType = type;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ═══════════ تنظيف العوائق المتقاربة جداً (احتياطي) ═══════
+   ═══════════════════════════════════════════════════════════ */
+function _cleanupPulseCrowding(){
+  const active = obstacles.filter(o =>
+    o.isPulseObstacle && !o.dead && o.x > -200
+  );
+  if(active.length < 2) return;
+
+  /* ترتيب حسب X */
+  active.sort((a, b) => a.x - b.x);
+
+  /* ═══ ابحث عن عقبتين متعاكستين متقاربتين ═══ */
+  for(let i = 0; i < active.length; i++){
+    for(let j = i + 1; j < active.length; j++){
+      const a = active[i], b = active[j];
+      const dist = b.x - a.x;
+
+      /* ═══ تجاوزنا النطاق ═══ */
+      if(dist > 200) break;
+
+      /* ═══ عقبتان متعاكستان ═══ */
+      const opposite =
+        (a.isPulseFloor && b.isPulseCeiling) ||
+        (a.isPulseCeiling && b.isPulseFloor);
+
+      if(opposite && dist < 180){
+        /* احذف واحدة منهما (الأبعد عن اللاعب) */
+        const toRemove = b.x > a.x ? b : a;
+        toRemove.dead = true;
+      }
+    }
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ═══════════ PULSE OBSTACLE SPAWNER v4 — SAFE ══════════════
+   ═══════════════════════════════════════════════════════════
+   ✅ 4 طبقات حماية:
+   1) مسافة توليد أوسع (modeMul = 1.75)
+   2) فحص عائق معاكس قريب — يرفض التوليد
+   3) مساحة ممر وسطية إلزامية 100px في mixed
+   4) ارتفاع محدود للعائق (32% للنفق)
+   ============================================================ */
+function spawnPulseObstacle(){
+  const prog = getProgression();
+  const s = G.currentScene;
+  const tunnelH = GROUND_Y - CEILING_H;
+  const xHere = W + 40;
+
+  /* ═══ قيود السلامة المُشدَّدة ═══ */
+  const MAX_TALL_H = Math.min(
+    Math.floor(tunnelH * 0.58),         /* ✅ 58% بدل 62% */
+    tunnelH - 130                        /* ✅ مساحة أمان 130px */
+  );
+  const MAX_SHORT_H = Math.floor(tunnelH * 0.30);   /* ✅ 30% بدل 38% */
+
+  /* ═══ اختيار النوع ═══ */
+  const type = _choosePulseObstacleType();
+  if(!type) return;   /* احتياطي */
+
+  /* ═══════════════════════════════════════════════════════
+     ═══ ✅ الطبقة 2: فحص التضارب ═══
+     ═══════════════════════════════════════════════════════ */
+
+  /* ═══ عائق أرضي: لا يوجد سقفي قريب ═══ */
+  if(type === 'floorTall' || type === 'floorShort'){
+    if(_hasOppositeObstacleNearby(xHere, true)){
+      G.spawnCd = 80;   /* أعد المحاولة بعد 80 إطاراً */
+      return;
+    }
+    if(!_pulseHorizontalClear(xHere, 55)){
+      G.spawnCd = 60;
+      return;
+    }
+  }
+
+  /* ═══ عائق سقفي: لا يوجد أرضي قريب ═══ */
+  if(type === 'ceilingTall' || type === 'ceilingShort'){
+    if(_hasOppositeObstacleNearby(xHere, false)){
+      G.spawnCd = 80;
+      return;
+    }
+    if(!_pulseHorizontalClear(xHere, 55)){
+      G.spawnCd = 60;
+      return;
+    }
+  }
+
+  /* ═══ المختلط: له فحصه الخاص أدناه ═══ */
+  if(type === 'mixed'){
+    if(_hasOppositeObstacleNearby(xHere, true) ||
+       _hasOppositeObstacleNearby(xHere, false)){
+      G.spawnCd = 80;
+      return;
+    }
+    if(!_pulseHorizontalClear(xHere, 60)){
+      G.spawnCd = 60;
+      return;
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     ═══ 1) عمود أرضي طويل ═══
+     ═══════════════════════════════════════════════════════ */
+  if(type === 'floorTall'){
+    const w = WR(46, 62);
+    const h = Math.floor(MAX_TALL_H * WR(0.85, 1.0));
+
+    obstacles.push({
+      x: xHere, w, h,
+      type: 'block',
+      t: 0, passed: false, dead: false,
+      isWalk: true,
+      isPulseObstacle: true,
+      isPulseFloor: true,
+      color: s.wall, colorDark: s.wallDark, accent: s.accent
+    });
+
+    _recordPulseTall(xHere, 'floor');
+
+    orbs.push({
+      x: xHere + w/2, y: CEILING_H + WR(55, 85),
+      r: 13, t: 0, dead: false,
+      color: s.accent, isSkyOrb: true, value: 10
+    });
+    return;
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     ═══ 2) عمود سقفي طويل ═══
+     ═══════════════════════════════════════════════════════ */
+  if(type === 'ceilingTall'){
+    const w = WR(46, 62);
+    const h = Math.floor(MAX_TALL_H * WR(0.85, 1.0));
+
+    obstacles.push({
+      x: xHere, w, h,
+      y: CEILING_H,
+      type: 'block',
+      t: 0, passed: false, dead: false,
+      isWalk: true,
+      isPulseObstacle: true,
+      isPulseCeiling: true,
+      color: s.wall, colorDark: s.wallDark, accent: s.accent
+    });
+
+    _recordPulseTall(xHere, 'ceiling');
+
+    orbs.push({
+      x: xHere + w/2, y: GROUND_Y - WR(55, 85),
+      r: 13, t: 0, dead: false,
+      color: s.accent, isSkyOrb: true, value: 10
+    });
+    return;
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     ═══ 3) عائق مختلط — ✅ ممر وسطي مضمون 100px ═══
+     ═══════════════════════════════════════════════════════ */
+  if(type === 'mixed'){
+    const w = WR(46, 60);
+
+    /* ═══ الحد الأدنى الإلزامي للممر الوسطي ═══ */
+    const MIN_MID_GAP = Math.max(110, P.r * 7);   /* ✅ 110px على الأقل */
+
+    /* ═══ أقصى ارتفاع لكل عمود = (النفق - الممر) / 2 ═══ */
+    const MAX_MIXED_TOTAL = tunnelH - MIN_MID_GAP;
+    const MAX_MIXED_EACH = Math.floor(MAX_MIXED_TOTAL / 2);
+
+    let floorH = Math.floor(MAX_MIXED_EACH * WR(0.55, 0.95));
+    let ceilH  = Math.floor(MAX_MIXED_EACH * WR(0.55, 0.95));
+
+    /* ═══ تحقق نهائي: الممر لا يقل عن الحد الأدنى ═══ */
+    let midGap = tunnelH - floorH - ceilH;
+    if(midGap < MIN_MID_GAP){
+      const excess = MIN_MID_GAP - midGap;
+      /* قلل من الأعلى أولاً */
+      const reduceCeil = Math.min(excess, Math.floor(ceilH * 0.5));
+      ceilH -= reduceCeil;
+      const reduceFloor = excess - reduceCeil;
+      floorH -= reduceFloor;
+      /* حماية من السالب */
+      floorH = Math.max(20, floorH);
+      ceilH = Math.max(20, ceilH);
+    }
+
+    /* ═══ تحقق نهائي ═══ */
+    midGap = tunnelH - floorH - ceilH;
+    if(midGap < MIN_MID_GAP){
+      /* احتياطي: ألغِ العائق بالكامل */
+      G.spawnCd = 80;
+      return;
+    }
+
+    /* ═══ عمود أرضي ═══ */
+    obstacles.push({
+      x: xHere, w, h: floorH,
+      type: 'block',
+      t: 0, passed: false, dead: false,
+      isWalk: true,
+      isPulseObstacle: true,
+      isPulseFloor: true,
+      color: s.wall, colorDark: s.wallDark, accent: s.accent
+    });
+
+    /* ═══ عمود سقفي ═══ */
+    obstacles.push({
+      x: xHere, w, h: ceilH,
+      y: CEILING_H,
+      type: 'block',
+      t: 0, passed: false, dead: false,
+      isWalk: true,
+      isPulseObstacle: true,
+      isPulseCeiling: true,
+      color: s.wall, colorDark: s.wallDark, accent: s.accent
+    });
+
+    /* ═══ مكافأة في المنتصف ═══ */
+    const midY = CEILING_H + ceilH + midGap / 2;
+    if(Math.random() < 0.5){
+      spawnCoinCluster(xHere + w/2, midY, 4);
+    } else {
+      orbs.push({
+        x: xHere + w/2, y: midY,
+        r: 12, t: 0, dead: false,
+        color: '#FFD700', isSkyOrb: true, value: 8
+      });
+    }
+    return;
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     ═══ 4) عمود أرضي قصير ═══
+     ═══════════════════════════════════════════════════════ */
+  if(type === 'floorShort'){
+    const w = WR(40, 55);
+    const h = Math.floor(MAX_SHORT_H * WR(0.7, 1.0));
+
+    obstacles.push({
+      x: xHere, w, h,
+      type: 'block',
+      t: 0, passed: false, dead: false,
+      isWalk: true,
+      isPulseObstacle: true,
+      isPulseFloor: true,
+      color: s.wall, colorDark: s.wallDark, accent: s.accent
+    });
+
+    maybeReward(xHere + w/2, GROUND_Y - h - WR(60, 100), s);
+    return;
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     ═══ 5) عمود سقفي قصير ═══
+     ═══════════════════════════════════════════════════════ */
+  if(type === 'ceilingShort'){
+    const w = WR(40, 55);
+    const h = Math.floor(MAX_SHORT_H * WR(0.7, 1.0));
+
+    obstacles.push({
+      x: xHere, w, h,
+      y: CEILING_H,
+      type: 'block',
+      t: 0, passed: false, dead: false,
+      isWalk: true,
+      isPulseObstacle: true,
+      isPulseCeiling: true,
+      color: s.wall, colorDark: s.wallDark, accent: s.accent
+    });
+
+    const oy = CEILING_H + h + WR(60, 100);
+    if(oy < GROUND_Y - 40){
+      maybeReward(xHere + w/2, oy, s);
+    }
+    return;
+  }
 }
 
 function spawnWalkObstacle(){
@@ -7351,6 +7701,11 @@ if(o.isPlatform){
       return false;
     }
 
+    /* ✅ دعم العوائق بموضع y صريح (PULSE السقفية) */
+    if(o.y !== undefined){
+      return circleRect(P.x, P.y, pr, o.x, o.y, o.w, o.h);
+    }
+
     return circleRect(P.x,P.y,pr, o.x, GROUND_Y - o.h, o.w, o.h);
   }
 
@@ -7381,6 +7736,64 @@ function handleTap(cx, cy){
       if(o.isElevator) o.isCarryingPlayer = false;
     }
   }
+  
+  /* ═══════════════ SOAR — اضغط باستمرار للطيران ═══════════════ */
+  if(G.mode === 'SOAR'){
+    P.jumpHeld = true;
+    P.jumpHoldTimer = 0;
+    Sfx.play(660, 0.08, 'sine', 0.03, 990);
+    haptic(4);
+    return;
+  }
+
+  /* ═══════════════ PULSE — اضغط لقلب الاتجاه ═══════════════ */
+  if(G.mode === 'PULSE'){
+    /* ⛔ ممنوع التحكم أثناء الانتقال (في الهواء) */
+    if(!P.onGround){
+      /* تأثير بصري بسيط يوضح الرفض */
+      P.pulseRejectFlash = 6;
+      Sfx.play(180, 0.08, 'square', 0.02, 140);
+      haptic(3);
+      return;
+    }
+
+    P.gravityDir *= -1;
+    P.vy = 4.5 * P.gravityDir;   /* ✅ السالب الآن صحيح — انطلاق مباشر بالاتجاه الصحيح */
+    P.onGround = false;
+    P.jumps = 0;
+
+    /* تأثير بصري قوي عند الانطلاق */
+    spawnJumpEffect(P.x, P.y + P.r * P.gravityDir, G.currentScene.accent);
+    for(let i = 0; i < 20; i++){
+      const a = (i / 20) * Math.PI * 2;
+      particles.push({
+        x: P.x, y: P.y,
+        vx: Math.cos(a) * rand(4, 8),
+        vy: Math.sin(a) * rand(4, 8),
+        life: 0.9, decay: 0.03,
+        color: G.currentScene.accent,
+        size: rand(2, 5)
+      });
+    }
+
+    /* حلقة انفجار مميزة */
+    particles.push({
+      x: P.x, y: P.y,
+      vx: 0, vy: 0,
+      life: 0.7, decay: 0.04,
+      color: G.currentScene.accent,
+      size: P.r * 0.5,
+      isPulseRing: true,
+      ringRadius: P.r * 1.5,
+      ringSpeed: 4
+    });
+
+    shake(5);
+    Sfx.play(520, 0.15, 'sine', 0.05, 880);
+    haptic(12);
+    return;
+  }
+
   if(G.mode==='FLIP'){
     P.gravityDir *= -1;
     P.vy = -5.5 * P.gravityDir;
@@ -9013,7 +9426,7 @@ function checkShiftGateSpawn(){
     G.distSinceGate = 0;
 
     /* اختر نمطاً عشوائياً مختلفاً عن الحالي */
-    const allModes = ['FLIP','FLAP','DRIFT','WALK'];
+    const allModes = ['FLIP','FLAP','SOAR','DRIFT','WALK','PULSE'];
     const available = allModes.filter(m => m !== G.mode);
     const nextMode = available[Math.floor(Math.random() * available.length)];
 
@@ -9192,6 +9605,112 @@ else if(G.mode !== 'ASCEND' && G.camY > 0.5){   // ✅ استثناء ASCEND
     P.y += P.vy;
     P.rot = clamp(P.vy*0.08,-0.5,0.85);
     P.x = P.baseX;
+
+  } else if(G.mode==='SOAR'){
+    /* ═══════════════════════════════════════════════════════
+       ═══ SOAR — طيران بالضغط المطوّل ═══
+       ═══════════════════════════════════════════════════════
+       - الضغط المستمر → دفع للأعلى (طيران)
+       - الإفلات → جاذبية عادية تسحب للأسفل
+    */
+    const held = P.jumpHeld;
+
+    if(held){
+      /* دفع للأعلى */
+      P.vy -= 1.15;
+      P.vy = Math.max(P.vy, -7.5);
+
+      /* جسيمات الدفع */
+      if(G.t % 2 === 0){
+        particles.push({
+          x: P.x + rand(-8, 8),
+          y: P.y + P.r + rand(-2, 6),
+          vx: rand(-1.5, 1.5),
+          vy: rand(3, 6),
+          life: 0.6, decay: 0.04,
+          color: ['#80D0FF', '#C0E8FF', '#FFFFFF'][Math.floor(Math.random()*3)],
+          size: rand(2, 4)
+        });
+      }
+    } else {
+      /* جاذبية ناعمة */
+      P.vy += 0.38;
+      P.vy = Math.min(P.vy, 7);
+    }
+
+    P.y += P.vy;
+    P.rot = clamp(P.vy * 0.055, -0.5, 0.55);
+    P.x = P.baseX;
+    P.legPhase += 0.08;
+    P.enginePhase += 0.15;
+
+    /* حدود */
+    if(P.y - P.r < CEILING_H){ P.y = CEILING_H + P.r; P.vy = 0; }
+    if(P.y + P.r > GROUND_Y){ P.y = GROUND_Y - P.r; P.vy = 0; }
+
+  } else if(G.mode==='PULSE'){
+    /* ═══════════════════════════════════════════════════════
+       ═══ PULSE — مشي مع قلب جاذبية ═══
+       ═══════════════════════════════════════════════════════
+       - الجاذبية تتبع P.gravityDir
+       - عند الوصول للأرض أو السقف → وقوف
+       - الضغط يقلب الاتجاه (من handleTap)
+    */
+    const gravity = 0.68 * P.gravityDir;
+
+    /* Coyote time للوقوف */
+    if(P.onGround){ P.coyoteTimer = 8; }
+    else if(P.coyoteTimer > 0){ P.coyoteTimer--; }
+
+    P.vy += gravity;
+    P.vy = clamp(P.vy, -20, 20);
+    P.y += P.vy;
+
+    if(P.gravityDir > 0){
+      /* ═══ السقوط نحو الأرض ═══ */
+      if(P.y + P.r >= GROUND_Y){
+        P.y = GROUND_Y - P.r;
+        P.vy = 0;
+        if(!P.onGround){
+          spawnJumpEffect(P.x, GROUND_Y, G.currentScene.groundDark);
+          Sfx.bounce(); haptic(5);
+          /* ✅ إشعار "جاهز للقلب" */
+          P.pulseReady = 20;
+        }
+        P.onGround = true;
+        P.jumps = 0;
+      } else {
+        P.onGround = false;
+      }
+    } else {
+      /* ═══ الصعود نحو السقف ═══ */
+      const ceilY = CEILING_H + P.r;
+      if(P.y <= ceilY){
+        P.y = ceilY;
+        P.vy = 0;
+        if(!P.onGround){
+          spawnJumpEffect(P.x, CEILING_H, G.currentScene.accent);
+          Sfx.bounce(); haptic(5);
+          /* ✅ إشعار "جاهز للقلب" */
+          P.pulseReady = 20;
+        }
+        P.onGround = true;
+        P.jumps = 0;
+      } else {
+        P.onGround = false;
+      }
+    }
+
+    /* ✅ عدّاد وميض "جاهز" */
+    if(P.pulseReady > 0) P.pulseReady--;
+    if(P.pulseRejectFlash > 0) P.pulseRejectFlash--;
+
+    P.x = P.baseX;
+    P.rot = 0;
+    P.legPhase += P.onGround ? 0.55 : 0.15;
+    P.walkAnim += P.onGround ? 0.35 : 0.1;
+
+    if(P.onGround && G.t % 5 === 0) spawnFootstep();
 
   } else if(G.mode==='DRIFT'){
     const ctrl = pointer.down || pointer.hasHover;
@@ -9747,6 +10266,10 @@ if(P.onGround && G.t % 5 === 0){
     if(P.y>GROUND_Y-P.r){ P.y=GROUND_Y-P.r; P.vy=-Math.abs(P.vy)*0.3; }
   } else if(G.mode==='WALK'){
     // fine
+      } else if(G.mode === 'SOAR'){
+    /* تم التعامل مع الحدود داخل فيزياء SOAR */
+  } else if(G.mode === 'PULSE'){
+    /* تم التعامل مع الحدود داخل فيزياء PULSE */
   } else if(G.mode==='FLIP_WALK'){
     // handled
   } else if(G.mode==='SKY_JUMP'){
@@ -9773,6 +10296,7 @@ if(G.spawnCd <= 0){
   const modeMul = (G.mode==='WALK') ? 1.30
                 : (G.mode==='FLIP_WALK') ? 1.40
                 : (G.mode==='SKY_JUMP') ? 1.45
+                : (G.mode==='PULSE') ? 1.75      /* ✅ مسافة أوسع بكثير */
                 : 1.25;
   const cdMul = G.spawnCdMul || 1;
   G.spawnCd = prog.spawnDist * modeMul * realmMul * cdMul * rand(0.95, 1.08);
@@ -10253,6 +10777,11 @@ if(G.realm === REALM.PLANET){
     }
   }
 
+  /* ✅ تنظيف دوري لعوائق PULSE المتقاربة */
+  if(G.mode === 'PULSE' && G.t % 30 === 0){
+    _cleanupPulseCrowding();
+  }
+
   if(G.hintTimer > 0){
     G.hintTimer--;
     if(G.hintTimer === 0) document.getElementById('hint').classList.remove('show');
@@ -10364,7 +10893,7 @@ function drawCompanion(){
    ═══════════════════════════════════════════════════════════ */
 function drawCharacterFeet(c, r, mode, legPhase, walkAnim, onGround, rot){
   /* ✅ لا أرجل في أنماط المركبة */
-  if(mode === 'FLIP' || mode === 'FLAP' || mode === 'DRIFT') return;
+  if(mode === 'FLIP' || mode === 'FLAP' || mode === 'DRIFT' || mode === 'SOAR') return;
 
   const footColor  = '#2A2018';
   const footLight  = 'rgba(255,255,255,0.22)';
@@ -10494,7 +11023,8 @@ function renderCharacter(c, r, skin, opts){
      ✅✅✅ الجديد: طبقة 1.5 — الأقدام بعد الجسم لتظهر فوقه
      ═══════════════════════════════════════════════════════ */
   const hasFeet = (mode === 'WALK' || mode === 'ASCEND' ||
-                   mode === 'SKY_JUMP' || mode === 'FLIP_WALK');
+                   mode === 'SKY_JUMP' || mode === 'FLIP_WALK' ||
+                   mode === 'PULSE');
   if(hasFeet){
     c.save();
     if(isFlippedWalk){
@@ -10578,6 +11108,13 @@ if(G.mode === 'WALK'){
 
 ctx.save();
 ctx.translate(P.x, P.y);
+
+/* ✅ PULSE: اقلب الشخصية بالكامل عند السقف */
+if(G.mode === 'PULSE' && P.gravityDir < 0){
+  ctx.rotate(Math.PI);
+  ctx.scale(1, 1);   /* للتوضيح: لا قلب أفقي إضافي */
+}
+
 renderCharacter(ctx, r, skin, { 
   mode: G.mode, 
   rot: P.rot, 
@@ -10601,6 +11138,50 @@ renderCharacter(ctx, r, skin, {
     ctx.restore();
   }
   ctx.restore();
+
+  /* ═══════════════ PULSE — مؤشرات بصرية ═══════════════ */
+  if(G.mode === 'PULSE'){
+    /* ✅ وميض "جاهز للقلب" عند الوقوف */
+    if(P.onGround && P.pulseReady > 0){
+      const alpha = (P.pulseReady / 20) * 0.6;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = G.currentScene.accent;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 6]);
+      ctx.beginPath();
+      ctx.arc(P.x, P.y, P.r * 2.4, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    /* ✅ وميض أحمر عند رفض الضغط */
+    if(P.pulseRejectFlash > 0){
+      const alpha = (P.pulseRejectFlash / 6) * 0.7;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = '#C14A4A';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(P.x, P.y, P.r * 2.2, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    /* ✅ سهم إرشادي أثناء الطيران (يظهر للاعب أن الاتجاه) */
+    if(!P.onGround){
+      const dir = P.gravityDir > 0 ? 1 : -1;
+      const alpha = 0.35 + Math.sin(G.t * 0.2) * 0.15;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = G.currentScene.accent;
+      ctx.font = 'bold 18px "Space Grotesk", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(dir > 0 ? '▼' : '▲', P.x + P.r * 2.2, P.y);
+      ctx.restore();
+    }
+  }
 
   if(G.shield){
     ctx.save();
@@ -12487,6 +13068,90 @@ if(G.realm === REALM.SKY) return;
   }
 
   /* ═══════════════════════════════════════════════════════
+     ═══════════════ PULSE: أرضية + سقف بلوري ═══════════════
+     ═══════════════════════════════════════════════════════ */
+  if(G.mode === 'PULSE'){
+    /* ═══ الأرضية ═══ */
+    ctx.fillStyle = s.ground;
+    ctx.fillRect(0, GROUND_Y, W, GROUND_H);
+
+    ctx.fillStyle = s.groundDark;
+    ctx.fillRect(0, GROUND_Y, W, 5);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fillRect(0, GROUND_Y + 5, W, 2);
+
+    /* تفاصيل الأرضية */
+    const gOff = (G.dist * 0.5) % 70;
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = s.groundDark;
+    for(let x = -gOff; x < W; x += 70){
+      ctx.beginPath();
+      ctx.arc(x + 12, GROUND_Y + 16, 2.5, 0, Math.PI*2);
+      ctx.arc(x + 42, GROUND_Y + 28, 1.8, 0, Math.PI*2);
+      ctx.arc(x + 58, GROUND_Y + 20, 1.5, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    /* تدرج سفلي */
+    const gGrad = ctx.createLinearGradient(0, GROUND_Y, 0, H);
+    gGrad.addColorStop(0, 'rgba(0,0,0,0)');
+    gGrad.addColorStop(1, 'rgba(0,0,0,0.2)');
+    ctx.fillStyle = gGrad;
+    ctx.fillRect(0, GROUND_Y, W, GROUND_H);
+
+    /* ═══ السقف ═══ */
+    /* تدرج السقف */
+    const ceilGrad = ctx.createLinearGradient(0, 0, 0, CEILING_H);
+    ceilGrad.addColorStop(0, s.groundDark);
+    ceilGrad.addColorStop(1, s.ground);
+    ctx.fillStyle = ceilGrad;
+    ctx.fillRect(0, 0, W, CEILING_H);
+
+    /* حافة السقف السفلية */
+    ctx.fillStyle = s.groundDark;
+    ctx.fillRect(0, CEILING_H - 5, W, 5);
+
+    /* لمعة الحافة */
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.fillRect(0, CEILING_H - 7, W, 2);
+
+    /* زخرفة السقف — أسنان صغيرة للأسفل */
+    const cOff = (G.dist * 0.5) % 90;
+    ctx.globalAlpha = 0.7;
+    ctx.fillStyle = s.groundDark;
+    for(let x = -cOff; x < W; x += 90){
+      /* سن صغير للأسفل */
+      ctx.beginPath();
+      ctx.moveTo(x + 15, CEILING_H);
+      ctx.lineTo(x + 22, CEILING_H + 8);
+      ctx.lineTo(x + 29, CEILING_H);
+      ctx.closePath();
+      ctx.fill();
+
+      /* نقطة مضيئة */
+      ctx.fillStyle = s.accent;
+      ctx.globalAlpha = 0.35;
+      ctx.beginPath();
+      ctx.arc(x + 60, CEILING_H + 14, 2.5, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = s.groundDark;
+      ctx.globalAlpha = 0.7;
+    }
+    ctx.globalAlpha = 1;
+
+    /* توهج عند الحافة العلوية */
+    const ceilGlow = ctx.createLinearGradient(0, CEILING_H, 0, CEILING_H + 30);
+    ceilGlow.addColorStop(0, s.accent + '40');
+    ceilGlow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = ceilGlow;
+    ctx.fillRect(0, CEILING_H, W, 30);
+
+    return;
+  }
+
+  /* ═══════════════════════════════════════════════════════
      ═══════════════ FLIP_WALK: أرضية الجحيم الحمراء ═══════
      ═══════════════════════════════════════════════════════ */
   if(G.mode === 'FLIP_WALK'){
@@ -13413,35 +14078,88 @@ function drawWalkObstacle(o){
   }
 
   /* ═══════════════ SPIKE / BLOCK (الافتراضي) ═══════════════ */
+
+  /* ✅ دعم الموضع الصريح y (للنمط PULSE) */
+  const isCeiling = (o.y !== undefined) && (o.y < GROUND_Y / 2);
+  const drawBaseY = (o.y !== undefined) ? (o.y + o.h) : GROUND_Y;
+  const drawTopY  = (o.y !== undefined) ? o.y       : (GROUND_Y - o.h);
+
   if(o.type === 'spike'){
     const peaks = 3, pw = o.w/peaks;
+
+    /* ═══ مثلثات الشوكة ═══ */
     ctx.fillStyle = wall;
     ctx.beginPath();
-    for(let i=0;i<peaks;i++){
-      const px = o.x + i*pw;
-      ctx.moveTo(px, GROUND_Y);
-      ctx.lineTo(px+pw/2, GROUND_Y - o.h);
-      ctx.lineTo(px+pw, GROUND_Y);
+    for(let i = 0; i < peaks; i++){
+      const px = o.x + i * pw;
+      if(isCeiling){
+        /* سقفية: المثلثات تتجه للأسفل */
+        ctx.moveTo(px, drawTopY);
+        ctx.lineTo(px + pw/2, drawTopY + o.h);
+        ctx.lineTo(px + pw, drawTopY);
+      } else {
+        /* أرضية: المثلثات تتجه للأعلى */
+        ctx.moveTo(px, drawBaseY);
+        ctx.lineTo(px + pw/2, drawBaseY - o.h);
+        ctx.lineTo(px + pw, drawBaseY);
+      }
     }
-    ctx.closePath(); ctx.fill();
+    ctx.closePath();
+    ctx.fill();
+
+    /* لمعة */
     ctx.fillStyle = 'rgba(255,255,255,0.25)';
-    for(let i=0;i<peaks;i++){
-      const px = o.x + i*pw;
+    for(let i = 0; i < peaks; i++){
+      const px = o.x + i * pw;
       ctx.beginPath();
-      ctx.moveTo(px+pw*0.25, GROUND_Y);
-      ctx.lineTo(px+pw/2, GROUND_Y - o.h);
-      ctx.lineTo(px+pw*0.75, GROUND_Y);
-      ctx.closePath(); ctx.fill();
+      if(isCeiling){
+        ctx.moveTo(px + pw*0.25, drawTopY);
+        ctx.lineTo(px + pw/2, drawTopY + o.h);
+        ctx.lineTo(px + pw*0.75, drawTopY);
+      } else {
+        ctx.moveTo(px + pw*0.25, drawBaseY);
+        ctx.lineTo(px + pw/2, drawBaseY - o.h);
+        ctx.lineTo(px + pw*0.75, drawBaseY);
+      }
+      ctx.closePath();
+      ctx.fill();
     }
+
   } else {
+    /* ═══ صندوق ═══ */
     ctx.fillStyle = wall;
-    roundRect(ctx, o.x, GROUND_Y - o.h, o.w, o.h, 12); ctx.fill();
+    roundRect(ctx, o.x, drawTopY, o.w, o.h, 12);
+    ctx.fill();
+
+    /* لمعة علوية (أو سفلية إن كان سقفياً) */
     ctx.fillStyle = 'rgba(255,255,255,0.22)';
-    roundRect(ctx, o.x+6, GROUND_Y-o.h+6, o.w-12, 5, 3); ctx.fill();
+    if(isCeiling){
+      /* اللمعة في الأسفل للعوائق السقفية */
+      roundRect(ctx, o.x + 6, drawTopY + o.h - 11, o.w - 12, 5, 3);
+    } else {
+      roundRect(ctx, o.x + 6, drawTopY + 6, o.w - 12, 5, 3);
+    }
+    ctx.fill();
+
+    /* شريط accent على الحد الخارجي */
     ctx.fillStyle = accent;
     ctx.globalAlpha = 0.8;
-    roundRect(ctx, o.x+6, GROUND_Y-8, o.w-12, 4, 2); ctx.fill();
+    if(isCeiling){
+      /* الشريط عند الحافة السفلية للعائق السقفي */
+      roundRect(ctx, o.x + 6, drawTopY + o.h - 8, o.w - 12, 4, 2);
+    } else {
+      /* الشريط عند الحافة العلوية للعائق الأرضي */
+      roundRect(ctx, o.x + 6, drawTopY + 4, o.w - 12, 4, 2);
+    }
+    ctx.fill();
     ctx.globalAlpha = 1;
+
+    /* ظل داخلي للعوائق السقفية */
+    if(isCeiling){
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      roundRect(ctx, o.x + o.w - 10, drawTopY, 8, o.h, 6);
+      ctx.fill();
+    }
   }
 }
 
@@ -14148,6 +14866,19 @@ function drawParticles(layer){
         ctx.restore();
         continue;
       }
+    }
+
+    /* ✅ حلقة انفجار PULSE */
+    if(p.isPulseRing){
+      const prog = 1 - life;
+      const r = p.ringRadius + prog * p.ringSpeed * 30;
+      ctx.globalAlpha = life * 0.7;
+      ctx.strokeStyle = p.color || '#FFFFFF';
+      ctx.lineWidth = 3 * life;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+      ctx.stroke();
+      continue;
     }
 
     /* جسيمات بسيطة (دوائر) */
@@ -16826,7 +17557,7 @@ function resetRun(){
   G.isMixedMode = (G.selectedMode === 'MIXED');
 
   if(G.isMixedMode){
-    const allModes = ['FLIP','FLAP','DRIFT','WALK'];
+    const allModes = ['FLIP','FLAP','SOAR','DRIFT','WALK','PULSE'];
     const startMode = allModes[Math.floor(Math.random() * allModes.length)];
     G.mode = startMode;
   } else {
@@ -16968,6 +17699,31 @@ if(gg) gg.classList.remove('show');
 
     /* ═══ ملء الشاشة الأولى ═══ */
     updateAscendSpawner();
+  } else if(G.mode === 'SOAR'){
+    /* يبدأ في الهواء مثل FLAP */
+    P.y = H / 2;
+    P.vx = 0;
+    P.vy = 0;
+    P.onGround = false;
+    P.x = P.baseX;
+    P.jumpHeld = false;
+
+  } else if(G.mode === 'PULSE'){
+    /* يبدأ واقفاً على الأرض */
+    P.y = GROUND_Y - P.r;
+    P.vx = 0;
+    P.vy = 0;
+    P.gravityDir = 1;
+    P.onGround = true;
+    P.jumps = 0;
+    P.x = P.baseX;
+    P.rot = 0;
+    P.pulseReady = 0;
+    P.pulseRejectFlash = 0;
+
+    /* ✅ تصفير حالة المولّد الذكي */
+    resetPulseState();
+
   } else if(G.mode === 'WALK'){
     P.y = GROUND_Y - P.r;
     P.onGround = true;
@@ -17137,6 +17893,10 @@ function startGame(){
     txt = 'اضغط لقلب الجاذبية';
   } else if(G.mode === 'FLAP'){
     txt = 'اضغط باستمرار للارتفاع';
+  } else if(G.mode === 'SOAR'){
+    txt = '🕊️ اضغط باستمرار للطيران — ارفع إصبعك للهبوط ببطء';
+  } else if(G.mode === 'PULSE'){
+    txt = '⇕ اضغط لقلب الاتجاه — تنقل بين الأرض والسقف';
   } else if(G.mode === 'DRIFT'){
     txt = 'اسحب إصبعك لتحريك السفينة';
   } else if(G.mode === 'WALK'){
@@ -24394,68 +25154,459 @@ function buildSettingsV2(){
   });
 }
 
-function buildBattlePassV2(){
-  const tier = getBPTier();
-  const pts = Save.data.season.points || 0;
-  const tierProgress = ((pts % getBPTierPoints()) / getBPTierPoints()) * 100;
+/* ============================================================
+   ═══════════════ BATTLE PASS v3 — FULL REDESIGN ════════════
+   ============================================================ */
 
-  /* ═══ Hero ═══ */
+let _bpFilter = 'all';        /* all | claimable | unlocked | locked */
+let _bpShowSep = true;        /* إظهار الفواصل */
+
+/* ═══ نقطة الدخول الرئيسية ═══ */
+function buildBattlePassV2(){
+  renderBPHero();
+  buildPremiumBPCard();
+  renderBPFilters();
+  renderBPTiersV3();
+}
+
+/* ═══ Hero (مع progress دقيق) ═══ */
+function renderBPHero(){
+  const tier = getBPTier();
+  const maxTier = getBPTiers();
+  const pts = Save.data.season.points || 0;
+  const tierPoints = getBPTierPoints();
+
+  const currentTierStart = tier * tierPoints;
+  const inTierPts = Math.max(0, pts - currentTierStart);
+  const isMaxed = tier >= maxTier;
+
   const tierEl = document.getElementById('bp-v2-tier');
   const fillEl = document.getElementById('bp-v2-fill');
   const ptsEl = document.getElementById('bp-v2-points');
 
   if(tierEl) tierEl.textContent = tier;
   if(fillEl){
-    fillEl.style.width = (tier >= getBPTiers() ? 100 : tierProgress) + '%';
+    fillEl.style.width = isMaxed ? '100%' : Math.min(100, (inTierPts / tierPoints) * 100) + '%';
   }
   if(ptsEl){
-    const nextTierPts = (tier + 1) * getBPTierPoints();
-    ptsEl.textContent = pts.toLocaleString() + ' / ' + nextTierPts.toLocaleString();
+    ptsEl.textContent = isMaxed
+      ? `🏆 مكتمل · ${pts.toLocaleString()} نقطة`
+      : `${inTierPts.toLocaleString()} / ${tierPoints.toLocaleString()} للمستوى التالي`;
   }
 
-  /* ═══ عرض المكافآت القادمة على المسار ═══ */
+  /* معالم المسار */
   renderBPTierMilestones(tier);
+}
 
-  /* ═══ Track toggle ═══ */
-  document.querySelectorAll('.bpt-btn').forEach(btn => {
+/* ═══ شريط الفلاتر ═══ */
+function renderBPFilters(){
+  let filters = document.getElementById('bp-filters-v3');
+  if(!filters){
+    filters = document.createElement('div');
+    filters.id = 'bp-filters-v3';
+    filters.className = 'bp-filters';
+
+    /* أدخله قبل قائمة المستويات */
+    const tiers = document.getElementById('bp-v2-tiers');
+    if(tiers && tiers.parentNode){
+      tiers.parentNode.insertBefore(filters, tiers);
+    }
+  }
+
+  /* احسب الأعداد */
+  const tier = getBPTier();
+  const maxTier = getBPTiers();
+  const claimedFree = Save.data.battlePass.claimedFree || [];
+  const claimedPrem = Save.data.battlePass.claimedPremium || [];
+
+  let claimableCount = 0;
+  for(let i = 1; i <= tier; i++){
+    if(!claimedFree.includes(i)) claimableCount++;
+  }
+
+  filters.innerHTML = `
+    <button class="bp-filter ${_bpFilter === 'all' ? 'active' : ''}" data-bpf="all">
+      📋 الكل (${maxTier})
+    </button>
+    <button class="bp-filter ${_bpFilter === 'claimable' ? 'active' : ''}" data-bpf="claimable">
+      🎁 للاستلام
+      ${claimableCount > 0 ? `<span class="bp-filter-badge">${claimableCount}</span>` : ''}
+    </button>
+    <button class="bp-filter ${_bpFilter === 'unlocked' ? 'active' : ''}" data-bpf="unlocked">
+      ✓ مفتوحة (${tier})
+    </button>
+    <button class="bp-filter ${_bpFilter === 'locked' ? 'active' : ''}" data-bpf="locked">
+      🔒 مقفلة (${maxTier - tier})
+    </button>
+  `;
+
+  filters.querySelectorAll('.bp-filter').forEach(btn => {
     if(btn._bound) return;
     btn._bound = true;
     btn.addEventListener('click', () => {
-      currentBPTrack2 = btn.dataset.track;
-      document.querySelectorAll('.bpt-btn').forEach(b =>
+      _bpFilter = btn.dataset.bpf;
+      filters.querySelectorAll('.bp-filter').forEach(b =>
         b.classList.toggle('active', b === btn));
-      renderBPTiersV2();
-      Sfx.tap();
+      renderBPTiersV3();
+      Sfx.tap(); haptic(4);
     });
   });
-  document.querySelectorAll('.bpt-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.track === currentBPTrack2);
-  });
-
-  renderBPTiersV2();
 }
 
-/* ═══ شريط المعالم الأفقية (Milestones) ═══ */
-function renderBPTierMilestones(currentTier){
-  const container = document.getElementById('bp-v2-tier-milestones');
-  if(!container){
-    /* أنشئ العنصر إن لم يكن موجوداً */
-    const hero = document.querySelector('.bp-hero-v2');
-    if(!hero) return;
-    const el = document.createElement('div');
-    el.id = 'bp-v2-tier-milestones';
-    el.className = 'bp-milestones';
-    hero.appendChild(el);
-    return renderBPTierMilestones(currentTier);
+/* ═══ القائمة الرئيسية (كل المستويات + فلاتر) ═══ */
+function renderBPTiersV3(){
+  const list = document.getElementById('bp-v2-tiers');
+  if(!list) return;
+
+  list.innerHTML = '';
+
+  const tier = getBPTier();
+  const maxTier = getBPTiers();
+  const claimedFree = Save.data.battlePass.claimedFree || [];
+  const claimedPrem = Save.data.battlePass.claimedPremium || [];
+
+  /* ═══ فحص وجود عناصر بعد الفلترة ═══ */
+  let visibleCount = 0;
+  for(let i = 1; i <= maxTier; i++){
+    if(isBPTierVisible(i, tier)) visibleCount++;
   }
 
+  if(visibleCount === 0){
+    list.innerHTML = `
+      <div class="bp-empty">
+        <div class="bpe-icon">📭</div>
+        <div class="bpe-title">لا مستويات مطابقة</div>
+        <div class="bpe-desc">جرّب فلتراً آخر</div>
+      </div>
+    `;
+    return;
+  }
+
+  /* ═══ عرض كل المستويات ═══ */
+  let lastWasLocked = null;
+
+  for(let i = 1; i <= maxTier; i++){
+    const isVisible = isBPTierVisible(i, tier);
+    const isLocked = i > tier;
+
+    /* ═══ فاصل بين المفتوح والمقفل ═══ */
+    if(_bpFilter === 'all' && lastWasLocked !== null && lastWasLocked !== isLocked && isVisible){
+      const sep = document.createElement('div');
+      sep.className = 'bp-tier-sep-v3';
+      sep.textContent = isLocked ? '🔒 المستويات القادمة' : '';
+      if(isLocked) list.appendChild(sep);
+    }
+
+    lastWasLocked = isLocked;
+
+    if(!isVisible) continue;
+
+    const card = buildBPTierCardV3(i, tier);
+    list.appendChild(card);
+  }
+}
+
+/* ═══ فحص الفلتر ═══ */
+function isBPTierVisible(tierNum, currentTier){
+  const claimedFree = Save.data.battlePass.claimedFree || [];
+
+  switch(_bpFilter){
+    case 'all':       return true;
+    case 'claimable': return tierNum <= currentTier && !claimedFree.includes(tierNum);
+    case 'unlocked':  return tierNum <= currentTier;
+    case 'locked':    return tierNum > currentTier;
+    default:          return true;
+  }
+}
+
+/* ═══ بناء بطاقة المستوى ═══ */
+function buildBPTierCardV3(tierNum, currentTier){
+  const claimedFree = (Save.data.battlePass.claimedFree || []).includes(tierNum);
+  const claimedPrem = (Save.data.battlePass.claimedPremium || []).includes(tierNum);
+  const isUnlocked = tierNum <= currentTier;
+  const isCurrent = tierNum === currentTier;
+  const premiumOwned = !!Save.data.battlePass.premiumOwned;
+
+  /* ═══ جلب المكافآت ═══ */
+  const rewards = getBPTierRewards(tierNum, 'free');
+  const premRewards = getBPTierRewards(tierNum, 'premium');
+
+  /* ═══ القيم الافتراضية (عملات) ═══ */
+  const defaultFreeCoins = 5 + tierNum * 2;
+  const defaultPremCoins = defaultFreeCoins * 3;
+
+  const totalFreeCoins = defaultFreeCoins + (rewards.coins || 0);
+  const totalPremCoins = defaultPremCoins + (premRewards.coins || 0);
+
+  /* ═══ عدد المكافآت المخصصة ═══ */
+  const hasFreeCustom = rewards.content.length > 0 ||
+                        rewards.boxes.length > 0 ||
+                        rewards.cards.length > 0;
+  const hasPremCustom = premRewards.content.length > 0 ||
+                        premRewards.boxes.length > 0 ||
+                        premRewards.cards.length > 0;
+
+  /* ═══ بناء البطاقة ═══ */
+  const el = document.createElement('div');
+  el.className = 'bp-tier-v3' +
+    (isUnlocked ? ' unlocked' : ' locked') +
+    (isCurrent ? ' current' : '');
+  el.style.animationDelay = Math.min(tierNum * 15, 400) + 'ms';
+
+  /* ═══ HTML المكافآت المخصصة ═══ */
+  const freeCustomHtml = renderBPCustomRewards(rewards, 'free', isUnlocked, tierNum);
+  const premCustomHtml = renderBPCustomRewards(premRewards, 'premium', isUnlocked, tierNum);
+
+  el.innerHTML = `
+    ${isCurrent ? '<div class="bp-here-pill">📍 أنت هنا</div>' : ''}
+
+    <div class="bp-tier-badge">
+      <div class="bp-tier-num">${tierNum}</div>
+      <div class="bp-tier-label">TIER</div>
+      ${claimedFree && claimedPrem ? '<div class="bp-tier-check">✓</div>' : ''}
+    </div>
+
+    <div class="bp-tier-body">
+      <div class="bp-tier-title">
+        <span style="font-family:'Space Grotesk';font-size:12px;font-weight:700;color:var(--ink);">
+          المستوى ${tierNum}
+        </span>
+        <span class="bp-tier-points">${(tierNum * getBPTierPoints()).toLocaleString()} نقطة</span>
+      </div>
+
+      <div class="bp-rewards-grid">
+        <!-- ═══ FREE TRACK ═══ -->
+        <div class="bp-reward-block free ${!isUnlocked ? 'locked' : ''}">
+          <div class="bp-reward-head">
+            <span class="ic">🎁</span>
+            <span>FREE</span>
+          </div>
+          <div class="bp-reward-main">
+            <span class="bp-reward-value">
+              <span class="c">◆</span> ${totalFreeCoins.toLocaleString()}
+            </span>
+          </div>
+          ${freeCustomHtml}
+          ${renderBPClaimButton(tierNum, 'free', 'coins', totalFreeCoins, isUnlocked, claimedFree, premiumOwned)}
+        </div>
+
+        <!-- ═══ PREMIUM TRACK ═══ -->
+        <div class="bp-reward-block premium ${!isUnlocked ? 'locked' : ''}">
+          <div class="bp-reward-head">
+            <span class="ic">👑</span>
+            <span>PREMIUM</span>
+          </div>
+          <div class="bp-reward-main">
+            <span class="bp-reward-value">
+              <span class="c">◆</span> ${totalPremCoins.toLocaleString()}
+            </span>
+          </div>
+          ${premCustomHtml}
+          ${renderBPClaimButton(tierNum, 'premium', 'coins', totalPremCoins, isUnlocked, claimedPrem, premiumOwned)}
+        </div>
+      </div>
+    </div>
+  `;
+
+  /* ═══ ربط أزرار الاستلام ═══ */
+  el.querySelectorAll('.bp-reward-claim:not(.done):not(.locked)').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const track = btn.dataset.track;
+      const rewardType = btn.dataset.rewardType;
+      const amount = parseInt(btn.dataset.amount || '0', 10);
+      const customId = btn.dataset.customId;
+      const boxType = btn.dataset.boxType;
+      const cardId = btn.dataset.cardId;
+
+      claimBPRewardV3(tierNum, track, {
+        type: rewardType,
+        amount,
+        customId,
+        boxType,
+        cardId
+      });
+    });
+  });
+
+  return el;
+}
+
+/* ═══ بناء HTML للمكافآت المخصصة ═══ */
+function renderBPCustomRewards(rewards, track, isUnlocked, tierNum){
+  let html = '';
+
+  /* عناصر مخصصة */
+  rewards.content.slice(0, 2).forEach(({ item }) => {
+    html += `
+      <div class="bp-custom-reward" style="--bc:${item.color || '#E8B34E'};">
+        <span class="ci">🎁</span>
+        <span class="cn">${item.name}</span>
+        ${isUnlocked ? `
+          <button class="bp-reward-claim gold"
+                  data-track="${track}"
+                  data-reward-type="content"
+                  data-custom-id="${item.id}"
+                  style="padding:3px 8px;font-size:9px;">استلام</button>
+        ` : ''}
+      </div>
+    `;
+  });
+
+  /* صناديق */
+  rewards.boxes.slice(0, 1).forEach(({ placement }) => {
+    const boxType = placement.boxType || 'bronze';
+    const boxIcons = { bronze: '📦', silver: '🎁', gold: '💎' };
+    const boxNames = { bronze: 'برونزي', silver: 'فضي', gold: 'ذهبي' };
+    html += `
+      <div class="bp-custom-reward" style="--bc:#C98A2E;">
+        <span class="ci">${boxIcons[boxType] || '📦'}</span>
+        <span class="cn">صندوق ${boxNames[boxType] || ''}</span>
+        ${isUnlocked ? `
+          <button class="bp-reward-claim gold"
+                  data-track="${track}"
+                  data-reward-type="box"
+                  data-box-type="${boxType}"
+                  style="padding:3px 8px;font-size:9px;">استلام</button>
+        ` : ''}
+      </div>
+    `;
+  });
+
+  /* بطاقات */
+  rewards.cards.slice(0, 1).forEach(({ placement }) => {
+    html += `
+      <div class="bp-custom-reward" style="--bc:#9A6AC8;">
+        <span class="ci">🃏</span>
+        <span class="cn">بطاقة</span>
+        ${isUnlocked ? `
+          <button class="bp-reward-claim gold"
+                  data-track="${track}"
+                  data-reward-type="card"
+                  data-card-id="${placement.cardId || ''}"
+                  style="padding:3px 8px;font-size:9px;">استلام</button>
+        ` : ''}
+      </div>
+    `;
+  });
+
+  return html;
+}
+
+/* ═══ بناء زر الاستلام ═══ */
+function renderBPClaimButton(tierNum, track, rewardType, amount, isUnlocked, isClaimed, premiumOwned){
+  if(isClaimed){
+    return `<button class="bp-reward-claim done">✓ مستلم</button>`;
+  }
+
+  if(!isUnlocked){
+    return `<button class="bp-reward-claim locked">🔒 مقفل</button>`;
+  }
+
+  /* premium غير مشترى */
+  if(track === 'premium' && !premiumOwned){
+    return `<button class="bp-reward-claim locked">👑 Premium فقط</button>`;
+  }
+
+  return `
+    <button class="bp-reward-claim gold"
+            data-track="${track}"
+            data-reward-type="${rewardType}"
+            data-amount="${amount}">
+      استلام ◆ ${amount}
+    </button>
+  `;
+}
+
+/* ═══ استلام المكافأة v3 ═══ */
+function claimBPRewardV3(tierNum, track, rewardInfo){
+  const currentTier = getBPTier();
+  if(tierNum > currentTier){
+    Toast.warning('المستوى غير مفتوح بعد');
+    return;
+  }
+
+  if(track === 'premium' && !Save.data.battlePass.premiumOwned){
+    Toast.warning('اشترِ Premium أولاً');
+    return;
+  }
+
+  const arr = track === 'free' ? 'claimedFree' : 'claimedPremium';
+  if(!Save.data.battlePass[arr]) Save.data.battlePass[arr] = [];
+
+  /* ═══ منع الاستلام المزدوج ═══ */
+  const claimKey = `${tierNum}_${rewardInfo.type}_${rewardInfo.customId || rewardInfo.boxType || rewardInfo.cardId || 'coins'}`;
+  if(!Save.data.battlePass._claimedKeys) Save.data.battlePass._claimedKeys = [];
+  if(Save.data.battlePass._claimedKeys.includes(claimKey)){
+    Toast.info('تم استلام هذه المكافأة مسبقاً');
+    return;
+  }
+
+  /* ═══ معالجة حسب النوع ═══ */
+  let claimedSomething = false;
+
+  if(rewardInfo.type === 'coins' && rewardInfo.amount > 0){
+    addCoins(rewardInfo.amount, `BP T${tierNum} ${track}`);
+    Toast.reward('◆', 'مكافأة BP', `+${rewardInfo.amount.toLocaleString()} عملة`);
+    claimedSomething = true;
+  }
+  else if(rewardInfo.type === 'box'){
+    Save.data.pendingBoxes = Save.data.pendingBoxes || [];
+    Save.data.pendingBoxes.push(rewardInfo.boxType || 'bronze');
+    Toast.reward('📦', 'صندوق جديد!', 'افتحه من صفحة الصناديق');
+    claimedSomething = true;
+  }
+  else if(rewardInfo.type === 'card' && rewardInfo.cardId){
+    const res = grantCard(rewardInfo.cardId, false);
+    if(res.card) claimedSomething = true;
+  }
+  else if(rewardInfo.type === 'content' && rewardInfo.customId){
+    if(grantCustomItemToPlayer(rewardInfo.customId)){
+      claimedSomething = true;
+    }
+  }
+
+  if(!claimedSomething){
+    Toast.error('فشل الاستلام');
+    return;
+  }
+
+  /* ═══ تسجيل الاستلام ═══ */
+  Save.data.battlePass._claimedKeys.push(claimKey);
+  if(!Save.data.battlePass[arr].includes(tierNum)){
+    Save.data.battlePass[arr].push(tierNum);
+  }
+  Save.save();
+
+  Sfx.reward(); haptic(20);
+  updateCoinsUI();
+  updateWalletUI();
+
+  /* إعادة الرسم + تحديث الفلاتر (لأن العدد تغيّر) */
+  renderBPFilters();
+  renderBPTiersV3();
+}
+
+/* ═══ معالم المسار (تحسين) ═══ */
+function renderBPTierMilestones(currentTier){
+  let container = document.getElementById('bp-v2-tier-milestones');
+  if(!container){
+    const hero = document.querySelector('.bp-hero-v2');
+    if(!hero) return;
+    container = document.createElement('div');
+    container.id = 'bp-v2-tier-milestones';
+    container.className = 'bp-milestones';
+    hero.appendChild(container);
+  }
+
+  const maxTier = getBPTiers();
   const milestones = [
-    { tier: 5,  icon: '🎁', label: 'عنصر' },
-    { tier: 10, icon: '💎', label: 'جواهر' },
-    { tier: 15, icon: '🎨', label: 'زي' },
-    { tier: 20, icon: '⚡', label: 'تعزيز' },
-    { tier: 25, icon: '👑', label: 'Premium' },
-    { tier: 30, icon: '🏆', label: 'أسطورة' }
+    { tier: Math.floor(maxTier * 0.15), icon: '🎁', label: 'عنصر' },
+    { tier: Math.floor(maxTier * 0.33), icon: '💎', label: 'جواهر' },
+    { tier: Math.floor(maxTier * 0.5),  icon: '🎨', label: 'زي' },
+    { tier: Math.floor(maxTier * 0.66), icon: '⚡', label: 'تعزيز' },
+    { tier: Math.floor(maxTier * 0.83), icon: '👑', label: 'Premium' },
+    { tier: maxTier,                    icon: '🏆', label: 'أسطورة' }
   ];
 
   container.innerHTML = milestones.map(m => {
@@ -24470,190 +25621,305 @@ function renderBPTierMilestones(currentTier){
   }).join('');
 }
 
-/* ═══ قائمة المستويات (Tiers List) ═══ */
-function renderBPTiersV2(){
-  const list = document.getElementById('bp-v2-tiers');
+
+/* ============================================================
+   ═══════════════ SEASON RANKS v3 — FULL REDESIGN ═══════════
+   ============================================================ */
+
+function buildSeasonV2Page(){
+  renderRankHeroV3();
+  renderRankPathV3();
+  renderRankListV3();
+}
+
+/* ═══ Hero الرتبة ═══ */
+function renderRankHeroV3(){
+  const hero = document.getElementById('rank-hero-v2');
+  if(!hero) return;
+
+  /* ترقية الـ class */
+  hero.className = 'rank-hero-v3';
+
+  const pts = Save.data.season.points || 0;
+  const rankIdx = getSeasonRankIdx();
+  const ranks = getSeasonRanks();
+  const rank = ranks[rankIdx];
+  const nextRank = ranks[rankIdx + 1];
+
+  const remaining = nextRank ? Math.max(0, nextRank.points - pts) : 0;
+  const progressToNext = nextRank
+    ? clamp((pts - rank.points) / (nextRank.points - rank.points), 0, 1)
+    : 1;
+
+  hero.innerHTML = `
+    <div class="rank-hero-top">
+      <div class="rank-hero-icon">${rank.icon}</div>
+      <div class="rank-hero-info">
+        <div class="rank-hero-label">RANK ${rankIdx + 1} / ${ranks.length}</div>
+        <div class="rank-hero-name">${rank.name}</div>
+        <div class="rank-hero-points">${pts.toLocaleString()} نقطة موسم</div>
+      </div>
+    </div>
+
+    ${nextRank ? `
+      <div class="rank-hero-progress">
+        <div class="rank-hero-progress-labels">
+          <span>${rank.icon} ${rank.name}</span>
+          <span class="remaining">${remaining.toLocaleString()} → ${nextRank.icon} ${nextRank.name}</span>
+        </div>
+        <div class="rank-progress-bar">
+          <div class="rank-progress-fill" style="width:${progressToNext * 100}%"></div>
+        </div>
+      </div>
+    ` : `
+      <div class="rank-maxed-banner">
+        🌟 وصلت لأعلى رتبة في الموسم!
+      </div>
+    `}
+
+    <div class="rank-hero-stats">
+      <div class="rank-hero-stat">
+        <div class="k">الرتبة</div>
+        <div class="v">${rankIdx + 1}/${ranks.length}</div>
+      </div>
+      <div class="rank-hero-stat">
+        <div class="k">النقاط</div>
+        <div class="v">${pts.toLocaleString()}</div>
+      </div>
+      <div class="rank-hero-stat">
+        <div class="k">القادم</div>
+        <div class="v">${nextRank ? nextRank.icon : '—'}</div>
+      </div>
+    </div>
+  `;
+}
+
+/* ═══ مسار الرتب (Timeline) ═══ */
+function renderRankPathV3(){
+  /* ابحث أو أنشئ حاوية */
+  let path = document.getElementById('rank-path-v3');
+  if(!path){
+    const hero = document.getElementById('rank-hero-v2');
+    if(!hero || !hero.parentNode) return;
+
+    path = document.createElement('div');
+    path.id = 'rank-path-v3';
+    path.className = 'rank-path';
+
+    /* أدخله بعد الـ hero */
+    hero.parentNode.insertBefore(path, hero.nextSibling);
+  }
+
+  const ranks = getSeasonRanks();
+  const rankIdx = getSeasonRankIdx();
+
+  let inner = '<div class="rank-path-inner">';
+
+  ranks.forEach((r, i) => {
+    const isUnlocked = i <= rankIdx;
+    const isCurrent = i === rankIdx;
+    const isLast = i === ranks.length - 1;
+
+    inner += `
+      <div class="rank-path-item${isUnlocked ? ' unlocked' : ''}${isCurrent ? ' current' : ''}">
+        <div class="rank-path-icon">${r.icon}</div>
+        <div class="rank-path-name">${r.name}</div>
+      </div>
+    `;
+
+    if(!isLast){
+      inner += `<div class="rank-path-line${i < rankIdx ? ' done' : ''}"></div>`;
+    }
+  });
+
+  inner += '</div>';
+  path.innerHTML = inner;
+
+  /* تمرير تلقائي للرتبة الحالية */
+  setTimeout(() => {
+    const currentEl = path.querySelector('.rank-path-item.current');
+    if(currentEl){
+      currentEl.scrollIntoView({
+        behavior: 'smooth',
+        inline: 'center',
+        block: 'nearest'
+      });
+    }
+  }, 200);
+}
+
+/* ═══ قائمة الرتب الكاملة ═══ */
+function renderRankListV3(){
+  const list = document.getElementById('rank-list-v2');
   if(!list) return;
   list.innerHTML = '';
 
-  const tier = getBPTier();
-  const track = currentBPTrack2;
-  const claimedArr = track === 'free'
-    ? (Save.data.battlePass.claimedFree || [])
-    : (Save.data.battlePass.claimedPremium || []);
+  const pts = Save.data.season.points || 0;
+  const rankIdx = getSeasonRankIdx();
+  const ranks = getSeasonRanks();
 
-  const maxTiers = getBPTiers();
-  const startTier = Math.max(1, tier - 2);
-  const endTier = Math.min(maxTiers, tier + 12);
+  ranks.forEach((r, i) => {
+    const isCurrent = i === rankIdx;
+    const isUnlocked = i <= rankIdx;
 
-  /* ═══ فاصل المستويات السابقة ═══ */
-  if(startTier > 1){
-    const sep = document.createElement('div');
-    sep.className = 'bp-tier-sep';
-    sep.innerHTML = `
-      <div class="bp-sep-line"></div>
-      <span>··· ${startTier - 1} مستوى سابق ···</span>
-      <div class="bp-sep-line"></div>
-    `;
-    list.appendChild(sep);
-  }
+    /* ═══ جلب مكافآت هذه الرتبة ═══ */
+    const rewards = getRankRewards(i);
+    const totalCoins = rewards.coins || 0;
+    const hasContent = rewards.content.length > 0;
+    const hasAnyReward = totalCoins > 0 || hasContent;
 
-  /* ═══ عرض المستويات ═══ */
-  for(let i = startTier; i <= endTier; i++){
-    const unlocked = i <= tier;
-    const isCurrent = i === tier;
-    const claimed = claimedArr.includes(i);
-
-    /* ═══ جلب كل مكافآت هذا المستوى ═══ */
-    const rewards = getBPTierRewards(i, track);
-
-    /* ═══ المكافأة الافتراضية (عملات) ═══ */
-    const defaultCoins = track === 'free' ? (5 + i * 2) : ((5 + i * 2) * 3);
-    const totalCoins = defaultCoins + (rewards.coins || 0);
-
+    /* ═══ بناء البطاقة ═══ */
     const el = document.createElement('div');
-    el.className = 'bp-tier-row-v2' +
-      (unlocked ? ' unlocked' : '') +
+    el.className = 'rank-card-v3' +
+      (isUnlocked ? ' unlocked' : '') +
       (isCurrent ? ' current' : '');
 
-    const hereBadge = isCurrent
-      ? '<div class="bp-here-badge">📍 أنت هنا</div>'
-      : '';
+    /* ═══ حالة الرتبة ═══ */
+    let statusPill = '';
+    if(isCurrent){
+      statusPill = `<span class="rank-status-pill here">📍 أنت هنا</span>`;
+    } else if(isUnlocked){
+      statusPill = `<span class="rank-status-pill done">✓ مفتوحة</span>`;
+    } else {
+      const needed = r.points - pts;
+      statusPill = `<span class="rank-status-pill locked">${needed.toLocaleString()} 🔒</span>`;
+    }
 
-    /* ═══ بناء HTML للصناديق ═══ */
-    const boxesHtml = rewards.boxes.map(({ item, placement }) => `
-      <div class="bp-custom-item" style="--bc:#C98A2E;">
-        <span class="bp-ci-ic">📦</span>
-        <span class="bp-ci-name">صندوق ${placement.boxType || 'برونزي'}</span>
-        ${unlocked
-          ? `<button class="bp-claim-btn small gold" data-tier="${i}" data-reward="box" data-box="${placement.boxType || 'bronze'}">استلام</button>`
-          : '<span style="font-size:10px;opacity:.5;">🔒</span>'
-        }
-      </div>
-    `).join('');
+    /* ═══ المكافآت ═══ */
+    let rewardsHtml = '';
 
-    /* ═══ بطاقات ═══ */
-    const cardsHtml = rewards.cards.map(({ item, placement }) => `
-      <div class="bp-custom-item" style="--bc:#9A6AC8;">
-        <span class="bp-ci-ic">🃏</span>
-        <span class="bp-ci-name">${item.name || 'بطاقة'}</span>
-        ${unlocked
-          ? `<button class="bp-claim-btn small gold" data-tier="${i}" data-reward="card" data-card="${placement.cardId || ''}">استلام</button>`
-          : '<span style="font-size:10px;opacity:.5;">🔒</span>'
-        }
-      </div>
-    `).join('');
+    /* عملات */
+    if(totalCoins > 0){
+      const claimedKey = `rank_${i}_coins`;
+      const isClaimed = (Save.data.claimedRankRewards || []).includes(claimedKey);
 
-    /* ═══ عناصر مخصصة ═══ */
-    const contentHtml = rewards.content.map(({ item }) => `
-      <div class="bp-custom-item" style="--bc:${item.color || '#E8B34E'};">
-        <span class="bp-ci-ic">🎁</span>
-        <span class="bp-ci-name">${item.name}</span>
-        ${unlocked
-          ? `<button class="bp-claim-btn small gold" data-tier="${i}" data-custom="${item.id}">استلام</button>`
-          : '<span style="font-size:10px;opacity:.5;">🔒</span>'
-        }
-      </div>
-    `).join('');
-
-    el.innerHTML = `
-      ${hereBadge}
-      <div class="bp-tier-num-v2">
-        <span class="bp-tier-num-val">${i}</span>
-        <span class="bp-tier-num-k">TIER</span>
-      </div>
-      <div class="bp-rewards-v2">
-        <div class="bp-reward-row ${track === 'premium' ? 'premium' : ''}">
-          <div class="bp-reward-icon">${track === 'free' ? '◆' : '👑'}</div>
-          <div class="bp-reward-info">
-            <div class="bp-reward-name">${totalCoins.toLocaleString()} عملة</div>
-            <div class="bp-reward-meta">${track === 'free' ? 'FREE REWARD' : 'PREMIUM REWARD'}</div>
+      rewardsHtml += `
+        <div class="rank-reward-row coins">
+          <div class="rank-reward-icon">◆</div>
+          <div class="rank-reward-info">
+            <div class="rank-reward-name">${totalCoins.toLocaleString()} عملة</div>
+            <div class="rank-reward-meta">COINS REWARD</div>
           </div>
-          ${claimed
-            ? '<button class="bp-claim-btn done" disabled>✓</button>'
-            : unlocked && (track === 'free' || Save.data.battlePass.premiumOwned)
-              ? `<button class="bp-claim-btn ${track === 'premium' ? 'gold' : ''}" 
-                         data-tier="${i}" 
-                         data-reward="coins" 
+          ${isClaimed
+            ? '<button class="rank-reward-claim done">✓</button>'
+            : isUnlocked
+              ? `<button class="rank-reward-claim gold"
+                         data-rank="${i}"
+                         data-reward="coins"
                          data-amount="${totalCoins}">استلام</button>`
-              : !unlocked
-                ? '<button class="bp-claim-btn locked" disabled>🔒</button>'
-                : '<button class="bp-claim-btn premium-locked" disabled>قفل مميز</button>'
+              : '<button class="rank-reward-claim locked">🔒</button>'
           }
         </div>
-        ${contentHtml}
-        ${boxesHtml}
-        ${cardsHtml}
+      `;
+    }
+
+    /* عناصر مخصصة */
+    rewards.content.forEach(({ item }) => {
+      const claimedKey = `rank_${i}_${item.id}`;
+      const isClaimed = (Save.data.claimedRankRewards || []).includes(claimedKey);
+
+      rewardsHtml += `
+        <div class="rank-reward-row content" style="--rc:${item.color || '#E8B34E'};">
+          <div class="rank-reward-icon">🎁</div>
+          <div class="rank-reward-info">
+            <div class="rank-reward-name">${item.name}</div>
+            <div class="rank-reward-meta">عنصر حصري</div>
+          </div>
+          ${isClaimed
+            ? '<button class="rank-reward-claim done">✓</button>'
+            : isUnlocked
+              ? `<button class="rank-reward-claim gold"
+                         data-rank="${i}"
+                         data-reward="content"
+                         data-custom-id="${item.id}">استلام</button>`
+              : '<button class="rank-reward-claim locked">🔒</button>'
+          }
+        </div>
+      `;
+    });
+
+    if(!hasAnyReward){
+      rewardsHtml = `
+        <div style="text-align:center;padding:10px;color:var(--ink-mute);font-size:11px;">
+          لا مكافآت مُعرّفة لهذه الرتبة
+        </div>
+      `;
+    }
+
+    el.innerHTML = `
+      <div class="rank-card-header">
+        <div class="rank-card-icon">${r.icon}</div>
+        <div class="rank-card-info">
+          <div class="rank-card-name">${r.name}</div>
+          <div class="rank-card-req">${r.points.toLocaleString()} نقطة</div>
+        </div>
+        <div class="rank-card-status">${statusPill}</div>
+      </div>
+      <div class="rank-card-rewards">
+        ${rewardsHtml}
       </div>
     `;
 
     list.appendChild(el);
-  }
+  });
 
   /* ═══ ربط أزرار الاستلام ═══ */
-  list.querySelectorAll('.bp-claim-btn[data-tier]:not([disabled])').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const tierNum = parseInt(btn.dataset.tier, 10);
-      const rewardType = btn.dataset.reward || 'content';
-      
-      claimBPRewardV2(tierNum, track, {
-        type: rewardType,
-        customId: btn.dataset.custom,
-        boxType: btn.dataset.box,
-        cardId: btn.dataset.card,
-        amount: parseInt(btn.dataset.amount || '0', 10)
-      });
+  list.querySelectorAll('.rank-reward-claim:not(.done):not(.locked)').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const rankId = parseInt(btn.dataset.rank, 10);
+      const rewardType = btn.dataset.reward;
+
+      if(rewardType === 'coins'){
+        const amount = parseInt(btn.dataset.amount, 10);
+        claimRankReward(rankId, 'coins', amount);
+      } else if(rewardType === 'content'){
+        const customId = btn.dataset.customId;
+        claimRankReward(rankId, 'content', customId);
+      }
     });
   });
 }
 
-/* ═══ استلام مكافأة ═══ */
-function claimBPRewardV2(tier, track, rewardInfo){
-  const tierProgress = getBPTier();
-  if(tier > tierProgress) return;
-  if(track === 'premium' && !Save.data.battlePass.premiumOwned) return;
+/* ═══ استلام مكافأة الرتبة ═══ */
+function claimRankReward(rankId, type, value){
+  const currentRankIdx = getSeasonRankIdx();
+  if(rankId > currentRankIdx){
+    Toast.warning('الرتبة غير مفتوحة');
+    return;
+  }
 
-  const arr = track === 'free' ? 'claimedFree' : 'claimedPremium';
-  if(!Save.data.battlePass[arr]) Save.data.battlePass[arr] = [];
+  const claimedKey = type === 'coins'
+    ? `rank_${rankId}_coins`
+    : `rank_${rankId}_${value}`;
 
-  /* ═══ التحقق من عدم الاستلام المسبق ═══ */
-  const claimKey = `${tier}_${rewardInfo.type}_${rewardInfo.customId || rewardInfo.boxType || rewardInfo.cardId || 'coins'}`;
-  if(!Save.data.battlePass._claimedKeys) Save.data.battlePass._claimedKeys = [];
-  if(Save.data.battlePass._claimedKeys.includes(claimKey)){
+  if((Save.data.claimedRankRewards || []).includes(claimedKey)){
     Toast.info('تم استلام هذه المكافأة مسبقاً');
     return;
   }
 
-  /* ═══ معالجة حسب النوع ═══ */
-  if(rewardInfo.type === 'coins'){
-    Save.data.coins += rewardInfo.amount;
-    Save.data.stats.totalCoins += rewardInfo.amount;
-    Toast.reward('◆', 'مكافأة BP', '+' + rewardInfo.amount + ' عملة');
-    
-  } else if(rewardInfo.type === 'box'){
-    Save.data.pendingBoxes = Save.data.pendingBoxes || [];
-    Save.data.pendingBoxes.push(rewardInfo.boxType);
-    Toast.reward('📦', 'صندوق جديد!', 'افتحه من صفحة الصناديق');
-    
-  } else if(rewardInfo.type === 'card'){
-    Save.data.cards = Save.data.cards || [];
-    if(!Save.data.cards.includes(rewardInfo.cardId)){
-      Save.data.cards.push(rewardInfo.cardId);
+  /* ═══ التنفيذ ═══ */
+  if(type === 'coins'){
+    addCoins(value, `مكافأة رتبة #${rankId}`);
+    Toast.reward('◆', 'مكافأة الرتبة', `+${value.toLocaleString()} عملة`);
+  } else if(type === 'content'){
+    if(!grantCustomItemToPlayer(value)){
+      Toast.error('فشل الاستلام');
+      return;
     }
-    Toast.reward('🃏', 'بطاقة جديدة!', rewardInfo.cardId);
-    
-  } else if(rewardInfo.type === 'content' && rewardInfo.customId){
-    /* البحث عن العنصر في كل التصنيفات */
-    grantCustomItemToPlayer(rewardInfo.customId);
   }
 
-  Save.data.battlePass._claimedKeys.push(claimKey);
-  Save.data.battlePass[arr].push(tier);
+  /* ═══ تسجيل ═══ */
+  if(!Save.data.claimedRankRewards) Save.data.claimedRankRewards = [];
+  Save.data.claimedRankRewards.push(claimedKey);
   Save.save();
 
   Sfx.reward(); haptic(20);
   updateCoinsUI();
-  renderBPTiersV2();
+  updateWalletUI();
+
+  /* إعادة الرسم */
+  renderRankListV3();
 }
 
 /* ═══ دالة مساعدة لمنح عنصر مخصص للاعب ═══ */
@@ -24696,157 +25962,6 @@ function grantCustomItemToPlayer(customId){
     }
   }
   return false;
-}
-
-/* ============================================================
-   ═══════════════ SEASON RANKS v2 ═══════════════════════════
-   ============================================================ */
-
-function buildSeasonV2Page(){
-  const pts = Save.data.season.points || 0;
-  const rankIdx = getSeasonRankIdx();
-  const ranks = getSeasonRanks();
-  const rank = ranks[rankIdx];
-  const nextRank = ranks[rankIdx + 1];
-
-  const hero = document.getElementById('rank-hero-v2');
-  if(hero){
-    const progressToNext = nextRank
-      ? clamp((pts - rank.points) / (nextRank.points - rank.points), 0, 1)
-      : 1;
-    const remainingPts = nextRank ? nextRank.points - pts : 0;
-
-    hero.innerHTML = `
-      <div class="rhv2-current">
-        <div class="rhv2-icon">${rank.icon}</div>
-        <div class="rhv2-info">
-          <div class="rhv2-rank-name">${rank.name}</div>
-          <div class="rhv2-rank-points">${pts.toLocaleString()} نقطة موسم</div>
-        </div>
-      </div>
-      ${nextRank ? `
-        <div class="rhv2-next">
-          <div class="rhv2-next-labels">
-            <span>${rank.name}</span>
-            <span>${nextRank.name} · ${remainingPts.toLocaleString()} نقطة متبقية</span>
-          </div>
-          <div class="rhv2-bar">
-            <div class="rhv2-bar-fill" style="width:${progressToNext * 100}%"></div>
-          </div>
-        </div>
-      ` : `<div class="rhv2-maxed">🌟 وصلت لأعلى رتبة!</div>`}
-      <div class="rhv2-stats">
-        <div class="rhv2-stat">
-          <div class="k">الرتبة</div>
-          <div class="v">${rankIdx + 1}/${ranks.length}</div>
-        </div>
-        <div class="rhv2-stat">
-          <div class="k">النقاط</div>
-          <div class="v">${pts.toLocaleString()}</div>
-        </div>
-        <div class="rhv2-stat">
-          <div class="k">المستوى القادم</div>
-          <div class="v">${nextRank ? nextRank.icon : '—'}</div>
-        </div>
-      </div>
-    `;
-  }
-
-  /* ═══ قائمة الرتب مع المكافآت ═══ */
-  const list = document.getElementById('rank-list-v2');
-  if(list){
-    list.innerHTML = '';
-
-    ranks.forEach((r, i) => {
-      const isCurrent = i === rankIdx;
-      const isUnlocked = i <= rankIdx;
-      const isNext = i === rankIdx + 1;
-
-      /* ═══ جلب مكافآت هذه الرتبة ═══ */
-      const rewards = getRankRewards(i);
-      const totalCoins = rewards.coins;
-
-      const el = document.createElement('div');
-      el.className = 'rank-item-v3' +
-        (isCurrent ? ' current' : '') +
-        (isUnlocked ? ' unlocked' : '') +
-        (isNext ? ' next' : '');
-
-      /* ═══ بناء HTML للمكافآت ═══ */
-      let rewardsHtml = '';
-      if(totalCoins > 0){
-        rewardsHtml += `
-          <div class="rank-reward-chip" style="--rc:#E8B34E;">
-            <span>◆</span>
-            <span>${totalCoins}</span>
-            ${isUnlocked
-              ? `<button class="rank-claim-btn" data-rank="${i}" data-type="coins" data-amount="${totalCoins}">استلام</button>`
-              : ''
-            }
-          </div>
-        `;
-      }
-      rewards.content.forEach(({ item }) => {
-        rewardsHtml += `
-          <div class="rank-reward-chip" style="--rc:${item.color || '#E07A3F'};">
-            <span>🎁</span>
-            <span>${item.name}</span>
-            ${isUnlocked
-              ? `<button class="rank-claim-btn" data-rank="${i}" data-type="content" data-custom="${item.id}">استلام</button>`
-              : ''
-            }
-          </div>
-        `;
-      });
-
-      el.innerHTML = `
-        <div class="riv3-icon">${r.icon}</div>
-        <div class="riv3-info">
-          <div class="riv3-name">${r.name}</div>
-          <div class="riv3-req">${r.points.toLocaleString()} نقطة</div>
-          ${rewardsHtml ? `<div class="rank-rewards-list">${rewardsHtml}</div>` : ''}
-        </div>
-        <div class="riv3-status">
-          ${isCurrent
-            ? '<span class="riv3-badge current">أنت هنا</span>'
-            : isUnlocked
-              ? '<span class="riv3-badge done">✓</span>'
-              : `<span class="riv3-badge locked">${(r.points - pts).toLocaleString()} 🔒</span>`
-          }
-        </div>
-      `;
-
-      list.appendChild(el);
-    });
-
-    /* ═══ ربط أزرار الاستلام ═══ */
-    list.querySelectorAll('.rank-claim-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const rankId = parseInt(btn.dataset.rank, 10);
-        const type = btn.dataset.type;
-        
-        if(type === 'coins'){
-          const amount = parseInt(btn.dataset.amount, 10);
-          Save.data.coins += amount;
-          Save.data.stats.totalCoins += amount;
-          Toast.reward('◆', 'مكافأة الرتبة', '+' + amount + ' عملة');
-          
-        } else if(type === 'content'){
-          grantCustomItemToPlayer(btn.dataset.custom);
-        }
-        
-        /* تسجيل الاستلام */
-        Save.data.claimedRankRewards = Save.data.claimedRankRewards || [];
-        const key = `rank_${rankId}_${btn.dataset.custom || 'coins'}`;
-        Save.data.claimedRankRewards.push(key);
-        Save.save();
-        
-        Sfx.reward(); haptic(20);
-        updateCoinsUI();
-        buildSeasonV2Page();
-      });
-    });
-  }
 }
 
 /* ============================================================

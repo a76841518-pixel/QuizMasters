@@ -8246,3 +8246,1645 @@ kbd {
 .inv-empty .ie-desc {
   font-size: 11px;
 }
+
+/* ============================================================
+   ═══════════════ BATTLE PASS v3 — FINAL DESIGN ═════════════
+   ============================================================ */
+
+/* ─── الفلاتر العلوية ─── */
+.bp-filters{
+  display:flex;
+  gap:4px;
+  padding:5px;
+  background:var(--paper-2);
+  border-radius:14px;
+  border:1px solid var(--line);
+  margin-bottom:14px;
+  position:sticky;
+  top:0;
+  z-index:5;
+  backdrop-filter:blur(10px);
+}
+.bp-filter{
+  flex:1;
+  padding:9px 6px;
+  border-radius:10px;
+  border:none;
+  background:transparent;
+  color:var(--ink-soft);
+  font-family:inherit;
+  font-size:10.5px;
+  font-weight:800;
+  cursor:pointer;
+  transition:all .2s;
+  position:relative;
+}
+.bp-filter.active{
+  background:#fff;
+  color:var(--ink);
+  box-shadow:var(--shadow-sm);
+}
+.bp-filter .bp-filter-badge{
+  position:absolute;
+  top:-4px;
+  right:4px;
+  min-width:16px;
+  height:16px;
+  border-radius:8px;
+  background:var(--amber);
+  color:#fff;
+  font-family:'Space Grotesk',sans-serif;
+  font-size:9px;
+  font-weight:700;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 4px;
+  box-shadow:0 2px 6px rgba(224,122,63,.4);
+}
+
+/* ─── بطاقة المستوى الجديدة ─── */
+.bp-tier-v3{
+  display:grid;
+  grid-template-columns:72px 1fr;
+  gap:12px;
+  padding:12px;
+  border-radius:18px;
+  background:#fff;
+  border:1.5px solid var(--line);
+  box-shadow:var(--shadow-sm);
+  margin-bottom:10px;
+  position:relative;
+  transition:all .25s cubic-bezier(.34,1.56,.64,1);
+  animation:bpTierIn .35s cubic-bezier(.34,1.56,.64,1) backwards;
+}
+@keyframes bpTierIn{
+  from{opacity:0;transform:translateY(12px) scale(.96);}
+  to{opacity:1;transform:translateY(0) scale(1);}
+}
+
+.bp-tier-v3.unlocked{
+  background:linear-gradient(135deg,#FFF9EC,#FBF1DC);
+  border-color:rgba(232,179,78,.35);
+}
+.bp-tier-v3.current{
+  border-color:var(--gold);
+  box-shadow:0 8px 28px rgba(232,179,78,.4);
+  transform:scale(1.01);
+}
+.bp-tier-v3.locked{
+  opacity:.85;
+}
+.bp-tier-v3.filtered-out{
+  display:none;
+}
+
+/* ─── شارة المستوى (اليسار) ─── */
+.bp-tier-badge{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:10px 4px;
+  border-radius:14px;
+  background:var(--paper-2);
+  font-family:'Space Grotesk',sans-serif;
+  border:2px solid transparent;
+  position:relative;
+  transition:all .3s;
+}
+.bp-tier-v3.unlocked .bp-tier-badge{
+  background:linear-gradient(135deg,var(--gold),#F2C862);
+  color:#fff;
+  box-shadow:0 4px 14px rgba(232,179,78,.4);
+}
+.bp-tier-v3.current .bp-tier-badge{
+  border-color:#fff;
+  animation:bpTierPulse 2s ease-in-out infinite;
+}
+@keyframes bpTierPulse{
+  0%,100%{box-shadow:0 4px 14px rgba(232,179,78,.4);}
+  50%{box-shadow:0 6px 22px rgba(232,179,78,.7);}
+}
+.bp-tier-num{
+  font-size:24px;
+  font-weight:700;
+  line-height:1;
+}
+.bp-tier-label{
+  font-size:7.5px;
+  font-weight:800;
+  letter-spacing:1.5px;
+  opacity:.7;
+  margin-top:3px;
+}
+.bp-tier-check{
+  position:absolute;
+  top:-6px;
+  right:-6px;
+  width:20px;
+  height:20px;
+  border-radius:50%;
+  background:#6B9B6B;
+  color:#fff;
+  font-size:11px;
+  font-weight:700;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:2px solid #fff;
+  box-shadow:0 2px 8px rgba(107,155,107,.4);
+}
+
+/* ─── منطقة المكافآت (اليمين) ─── */
+.bp-tier-body{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  min-width:0;
+}
+
+.bp-tier-title{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding-bottom:6px;
+  border-bottom:1px dashed var(--line-strong);
+}
+.bp-tier-points{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:11px;
+  font-weight:700;
+  color:var(--ink-mute);
+}
+
+/* ─── شبكة المكافآت (مجاني/مميز) ─── */
+.bp-rewards-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+
+.bp-reward-block{
+  padding:10px;
+  border-radius:12px;
+  border:1.5px solid var(--line);
+  background:var(--paper);
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  transition:all .2s;
+  position:relative;
+  overflow:hidden;
+}
+.bp-reward-block::before{
+  content:'';
+  position:absolute;
+  top:0;left:0;right:0;
+  height:3px;
+  background:var(--paper-3);
+}
+.bp-reward-block.free::before{
+  background:linear-gradient(90deg,#6B9B6B,#8AC88A);
+}
+.bp-reward-block.premium{
+  background:linear-gradient(135deg,#FFF9EC,#FBF1DC);
+  border-color:rgba(232,179,78,.35);
+}
+.bp-reward-block.premium::before{
+  background:linear-gradient(90deg,var(--gold),#F2C862);
+}
+.bp-reward-block.locked{
+  opacity:.55;
+}
+.bp-reward-block.locked::after{
+  content:'🔒';
+  position:absolute;
+  top:6px;
+  left:6px;
+  font-size:14px;
+}
+
+.bp-reward-head{
+  display:flex;
+  align-items:center;
+  gap:5px;
+  font-family:'Space Grotesk',sans-serif;
+  font-size:8.5px;
+  font-weight:800;
+  letter-spacing:1.5px;
+  color:var(--ink-mute);
+}
+.bp-reward-head .ic{
+  font-size:12px;
+}
+.bp-reward-block.premium .bp-reward-head{
+  color:#8A4A10;
+}
+
+.bp-reward-main{
+  display:flex;
+  align-items:baseline;
+  gap:4px;
+}
+.bp-reward-value{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:16px;
+  font-weight:700;
+  color:var(--ink);
+  line-height:1;
+}
+.bp-reward-value .c{
+  color:var(--gold);
+  font-size:12px;
+}
+
+.bp-reward-claim{
+  padding:6px 10px;
+  border-radius:100px;
+  border:none;
+  background:var(--ink);
+  color:#fff;
+  font-family:inherit;
+  font-size:10px;
+  font-weight:800;
+  cursor:pointer;
+  transition:all .15s;
+  margin-top:auto;
+}
+.bp-reward-claim:active{transform:scale(.94);}
+.bp-reward-claim.gold{
+  background:linear-gradient(135deg,var(--gold),#F2C862);
+}
+.bp-reward-claim.done{
+  background:var(--sage);
+  pointer-events:none;
+}
+.bp-reward-claim.locked{
+  background:var(--paper-3);
+  color:var(--ink-mute);
+  pointer-events:none;
+}
+
+/* ─── العناصر المخصصة داخل المكافآت ─── */
+.bp-custom-reward{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 8px;
+  border-radius:9px;
+  background:color-mix(in srgb, var(--bc, #E8B34E) 15%, #fff);
+  border:1px solid color-mix(in srgb, var(--bc, #E8B34E) 35%, transparent);
+  font-size:10px;
+  font-weight:700;
+  color:var(--bc, #8A4A10);
+}
+.bp-custom-reward .ci{
+  font-size:13px;
+}
+.bp-custom-reward .cn{
+  flex:1;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  text-align:right;
+}
+
+/* ─── شارة "أنت هنا" ─── */
+.bp-here-pill{
+  position:absolute;
+  top:-10px;
+  right:14px;
+  padding:3px 12px;
+  border-radius:100px;
+  background:linear-gradient(135deg,var(--gold),#F2C862);
+  color:#1A1512;
+  font-family:'Space Grotesk',sans-serif;
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.5px;
+  box-shadow:0 4px 14px rgba(232,179,78,.5);
+  z-index:2;
+  animation:bpHerePulse 1.6s ease-in-out infinite;
+}
+@keyframes bpHerePulse{
+  0%,100%{transform:scale(1);}
+  50%{transform:scale(1.08);}
+}
+
+/* ─── فاصل المستويات ─── */
+.bp-tier-sep-v3{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:14px 6px;
+  color:var(--ink-mute);
+  font-size:10.5px;
+  font-weight:800;
+  letter-spacing:2px;
+  opacity:.65;
+}
+.bp-tier-sep-v3::before,
+.bp-tier-sep-v3::after{
+  content:'';
+  flex:1;
+  height:1px;
+  background:var(--line-strong);
+}
+
+/* ─── حالة فارغة ─── */
+.bp-empty{
+  padding:50px 20px;
+  text-align:center;
+  color:var(--ink-mute);
+}
+.bp-empty .bpe-icon{
+  font-size:52px;
+  opacity:.3;
+  margin-bottom:10px;
+}
+.bp-empty .bpe-title{
+  font-size:14px;
+  font-weight:800;
+  color:var(--ink);
+  margin-bottom:4px;
+}
+.bp-empty .bpe-desc{
+  font-size:11.5px;
+}
+
+/* ============================================================
+   ═══════════════ SEASON RANKS v3 — FINAL DESIGN ════════════
+   ============================================================ */
+
+/* ─── Hero الرتبة ─── */
+.rank-hero-v3{
+  padding:24px 20px;
+  border-radius:24px;
+  background:linear-gradient(135deg,#1F1A24 0%,#3A2A48 60%,#5A3080 100%);
+  color:#fff;
+  margin-bottom:18px;
+  position:relative;
+  overflow:hidden;
+  box-shadow:0 12px 40px rgba(90,48,128,.4);
+  border:1px solid rgba(255,255,255,.08);
+}
+.rank-hero-v3::before{
+  content:'';
+  position:absolute;
+  top:-80px;right:-80px;
+  width:260px;height:260px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(232,179,78,.4),transparent 70%);
+  pointer-events:none;
+}
+
+.rank-hero-top{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  margin-bottom:18px;
+  position:relative;
+  z-index:1;
+}
+
+.rank-hero-icon{
+  width:90px;
+  height:90px;
+  border-radius:24px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:46px;
+  background:linear-gradient(135deg,var(--gold),#F2C862);
+  box-shadow:
+    0 8px 30px rgba(232,179,78,.55),
+    inset 0 -6px 0 rgba(0,0,0,.15);
+  flex-shrink:0;
+  animation:rankIconFloat 3s ease-in-out infinite;
+  position:relative;
+}
+.rank-hero-icon::after{
+  content:'';
+  position:absolute;
+  inset:-8px;
+  border-radius:28px;
+  background:radial-gradient(circle,rgba(232,179,78,.4),transparent 70%);
+  animation:rankGlow 2.5s ease-in-out infinite;
+  z-index:-1;
+}
+@keyframes rankIconFloat{
+  0%,100%{transform:translateY(0);}
+  50%{transform:translateY(-4px);}
+}
+@keyframes rankGlow{
+  0%,100%{transform:scale(1);opacity:.7;}
+  50%{transform:scale(1.15);opacity:1;}
+}
+
+.rank-hero-info{
+  flex:1;
+  min-width:0;
+}
+.rank-hero-label{
+  font-size:9.5px;
+  font-weight:800;
+  letter-spacing:3px;
+  opacity:.65;
+  text-transform:uppercase;
+}
+.rank-hero-name{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:26px;
+  font-weight:800;
+  letter-spacing:.5px;
+  line-height:1.1;
+  margin-top:4px;
+}
+.rank-hero-points{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:13px;
+  font-weight:700;
+  color:var(--gold);
+  margin-top:6px;
+}
+
+/* ─── شريط التقدم ─── */
+.rank-hero-progress{
+  position:relative;
+  z-index:1;
+  margin-bottom:16px;
+}
+.rank-hero-progress-labels{
+  display:flex;
+  justify-content:space-between;
+  font-size:10.5px;
+  font-weight:700;
+  opacity:.85;
+  margin-bottom:8px;
+}
+.rank-hero-progress-labels .remaining{
+  color:var(--gold);
+}
+.rank-progress-bar{
+  height:10px;
+  border-radius:5px;
+  background:rgba(255,255,255,.12);
+  overflow:hidden;
+  position:relative;
+}
+.rank-progress-fill{
+  height:100%;
+  border-radius:5px;
+  background:linear-gradient(90deg,var(--gold),#F2C862,#FFE0A0);
+  box-shadow:0 0 14px rgba(232,179,78,.7);
+  transition:width .8s cubic-bezier(.34,1.56,.64,1);
+  position:relative;
+}
+.rank-progress-fill::after{
+  content:'';
+  position:absolute;
+  top:0;right:0;
+  width:20px;
+  height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.7));
+  animation:rankShine 2s ease-in-out infinite;
+}
+@keyframes rankShine{
+  0%{opacity:0;transform:translateX(-10px);}
+  50%{opacity:1;}
+  100%{opacity:0;transform:translateX(10px);}
+}
+
+/* ─── إحصائيات سريعة ─── */
+.rank-hero-stats{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+  position:relative;
+  z-index:1;
+}
+.rank-hero-stat{
+  padding:10px 8px;
+  border-radius:12px;
+  background:rgba(255,255,255,.08);
+  backdrop-filter:blur(8px);
+  text-align:center;
+  border:1px solid rgba(255,255,255,.08);
+}
+.rank-hero-stat .k{
+  font-size:8.5px;
+  font-weight:800;
+  letter-spacing:1.5px;
+  opacity:.65;
+  text-transform:uppercase;
+}
+.rank-hero-stat .v{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:16px;
+  font-weight:700;
+  margin-top:4px;
+  color:var(--gold);
+}
+
+/* ─── مسار الرتب (Timeline) ─── */
+.rank-path{
+  padding:16px 12px;
+  border-radius:18px;
+  background:#fff;
+  border:1.5px solid var(--line);
+  box-shadow:var(--shadow-sm);
+  margin-bottom:18px;
+  position:relative;
+  overflow-x:auto;
+  overflow-y:hidden;
+  scrollbar-width:thin;
+}
+.rank-path::-webkit-scrollbar{height:4px;}
+.rank-path::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:2px;}
+
+.rank-path-inner{
+  display:flex;
+  align-items:center;
+  gap:0;
+  min-width:max-content;
+  padding:4px 10px;
+}
+
+.rank-path-item{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:5px;
+  position:relative;
+  flex-shrink:0;
+}
+
+.rank-path-icon{
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:20px;
+  background:var(--paper-2);
+  border:3px solid #fff;
+  box-shadow:0 2px 8px rgba(0,0,0,.08);
+  transition:all .3s;
+  position:relative;
+  z-index:1;
+}
+
+.rank-path-item.unlocked .rank-path-icon{
+  background:linear-gradient(135deg,var(--gold),#F2C862);
+  box-shadow:0 4px 14px rgba(232,179,78,.4);
+}
+.rank-path-item.current .rank-path-icon{
+  transform:scale(1.15);
+  box-shadow:
+    0 6px 20px rgba(232,179,78,.6),
+    0 0 0 4px rgba(232,179,78,.25);
+  animation:rankPathPulse 1.5s ease-in-out infinite;
+}
+@keyframes rankPathPulse{
+  0%,100%{box-shadow:0 6px 20px rgba(232,179,78,.6),0 0 0 4px rgba(232,179,78,.25);}
+  50%{box-shadow:0 8px 26px rgba(232,179,78,.8),0 0 0 8px rgba(232,179,78,.15);}
+}
+
+.rank-path-name{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:8.5px;
+  font-weight:700;
+  color:var(--ink-mute);
+  white-space:nowrap;
+  letter-spacing:.3px;
+}
+.rank-path-item.current .rank-path-name{
+  color:var(--gold);
+  font-weight:800;
+}
+
+.rank-path-line{
+  flex:1;
+  height:3px;
+  min-width:20px;
+  background:var(--paper-3);
+  margin:0 -4px;
+  border-radius:2px;
+  position:relative;
+  top:-15px;
+}
+.rank-path-line.done{
+  background:linear-gradient(90deg,var(--gold),#F2C862);
+  box-shadow:0 0 8px rgba(232,179,78,.5);
+}
+
+/* ─── بطاقة الرتبة الكاملة ─── */
+.rank-card-v3{
+  padding:16px;
+  border-radius:18px;
+  background:#fff;
+  border:1.5px solid var(--line);
+  box-shadow:var(--shadow-sm);
+  margin-bottom:10px;
+  transition:all .25s cubic-bezier(.34,1.56,.64,1);
+  position:relative;
+  overflow:hidden;
+}
+.rank-card-v3.unlocked{
+  background:linear-gradient(135deg,#FFF9EC,#FBF1DC);
+  border-color:rgba(232,179,78,.35);
+}
+.rank-card-v3.current{
+  border-color:var(--gold);
+  box-shadow:0 8px 28px rgba(232,179,78,.35);
+}
+.rank-card-v3.current::before{
+  content:'';
+  position:absolute;
+  top:0;left:0;right:0;
+  height:3px;
+  background:linear-gradient(90deg,var(--gold),#F2C862,var(--gold));
+  background-size:200% 100%;
+  animation:rankCardBar 2s linear infinite;
+}
+@keyframes rankCardBar{
+  from{background-position:0% 0%;}
+  to{background-position:200% 0%;}
+}
+
+.rank-card-header{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding-bottom:12px;
+  border-bottom:1px dashed var(--line-strong);
+  margin-bottom:12px;
+}
+
+.rank-card-icon{
+  width:56px;
+  height:56px;
+  border-radius:16px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:28px;
+  background:var(--paper-2);
+  flex-shrink:0;
+  transition:all .3s;
+}
+.rank-card-v3.unlocked .rank-card-icon{
+  background:linear-gradient(135deg,var(--gold),#F2C862);
+  box-shadow:0 4px 14px rgba(232,179,78,.4);
+}
+.rank-card-v3.current .rank-card-icon{
+  transform:scale(1.08);
+}
+
+.rank-card-info{
+  flex:1;
+  min-width:0;
+}
+.rank-card-name{
+  font-size:15px;
+  font-weight:800;
+  color:var(--ink);
+  line-height:1.1;
+}
+.rank-card-req{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:11px;
+  font-weight:700;
+  color:var(--ink-mute);
+  margin-top:4px;
+}
+
+.rank-card-status{
+  flex-shrink:0;
+}
+.rank-status-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  padding:5px 12px;
+  border-radius:100px;
+  font-family:'Space Grotesk',sans-serif;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.5px;
+  white-space:nowrap;
+}
+.rank-status-pill.here{
+  background:linear-gradient(135deg,var(--gold),#F2C862);
+  color:#1A1512;
+  box-shadow:0 3px 10px rgba(232,179,78,.4);
+}
+.rank-status-pill.done{
+  background:var(--sage);
+  color:#fff;
+}
+.rank-status-pill.locked{
+  background:var(--paper-2);
+  color:var(--ink-mute);
+}
+
+/* ─── قسم المكافآت ─── */
+.rank-card-rewards{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.rank-reward-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  border-radius:12px;
+  background:var(--paper);
+  border:1px solid var(--line);
+  transition:all .2s;
+}
+.rank-reward-row:hover{
+  background:var(--paper-2);
+}
+.rank-reward-row.coins{
+  background:linear-gradient(135deg,#FFF9EC,#FBF1DC);
+  border-color:rgba(232,179,78,.35);
+}
+.rank-reward-row.content{
+  background:color-mix(in srgb, var(--rc, #4A88C8) 10%, #fff);
+  border-color:color-mix(in srgb, var(--rc, #4A88C8) 35%, transparent);
+}
+
+.rank-reward-icon{
+  width:34px;
+  height:34px;
+  border-radius:10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:16px;
+  background:#fff;
+  flex-shrink:0;
+  box-shadow:0 2px 6px rgba(0,0,0,.06);
+}
+.rank-reward-row.coins .rank-reward-icon{
+  background:linear-gradient(135deg,var(--gold),#F2C862);
+  color:#fff;
+}
+
+.rank-reward-info{
+  flex:1;
+  min-width:0;
+  text-align:right;
+}
+.rank-reward-name{
+  font-size:12.5px;
+  font-weight:800;
+  color:var(--ink);
+  line-height:1.1;
+}
+.rank-reward-meta{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:9.5px;
+  font-weight:700;
+  color:var(--ink-mute);
+  letter-spacing:1px;
+  margin-top:2px;
+}
+
+.rank-reward-claim{
+  padding:6px 14px;
+  border-radius:100px;
+  border:none;
+  background:var(--ink);
+  color:#fff;
+  font-family:inherit;
+  font-size:10.5px;
+  font-weight:800;
+  cursor:pointer;
+  transition:all .15s;
+  flex-shrink:0;
+}
+.rank-reward-claim:active{transform:scale(.94);}
+.rank-reward-claim.gold{
+  background:linear-gradient(135deg,var(--gold),#F2C862);
+}
+.rank-reward-claim.done{
+  background:var(--sage);
+  pointer-events:none;
+  padding:6px 10px;
+}
+.rank-reward-claim.locked{
+  background:var(--paper-3);
+  color:var(--ink-mute);
+  pointer-events:none;
+}
+
+/* ─── حالة اكتمال كل الرتب ─── */
+.rank-maxed-banner{
+  padding:16px;
+  border-radius:16px;
+  background:linear-gradient(135deg,#FFF4C0,#FFE8A0);
+  border:1.5px solid rgba(232,179,78,.4);
+  text-align:center;
+  font-size:13px;
+  font-weight:800;
+  color:#8A4A10;
+  margin-bottom:16px;
+  position:relative;
+  overflow:hidden;
+}
+.rank-maxed-banner::before{
+  content:'🌟';
+  position:absolute;
+  top:8px;right:12px;
+  font-size:20px;
+  animation:rankStarTwinkle 2s ease-in-out infinite;
+}
+@keyframes rankStarTwinkle{
+  0%,100%{transform:scale(1) rotate(0deg);opacity:.8;}
+  50%{transform:scale(1.2) rotate(15deg);opacity:1;}
+}
+
+/* ============================================================
+   ═══════════════ RESPONSIVE ═════════════════════════════════
+   ============================================================ */
+@media (max-width:380px){
+  .bp-tier-v3{
+    grid-template-columns:62px 1fr;
+    padding:10px;
+    gap:10px;
+  }
+  .bp-tier-num{font-size:20px;}
+  .bp-rewards-grid{gap:6px;}
+  .bp-reward-value{font-size:14px;}
+
+  .rank-hero-icon{
+    width:76px;
+    height:76px;
+    font-size:38px;
+  }
+  .rank-hero-name{font-size:22px;}
+  .rank-card-icon{width:48px;height:48px;font-size:24px;}
+  .rank-path-icon{width:38px;height:38px;font-size:17px;}
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ═══════════════ FIXES — BATTLE PASS & RANKS v3.1 ══════════
+   ═══════════════════════════════════════════════════════════
+   إصلاحات شاملة لجميع مشاكل العرض:
+   - إخفاء التبويب القديم
+   - إصلاح قصّ النصوص في Hero
+   - ضبط أحجام البطاقات
+   - إصلاح قصّ القيم
+   ============================================================ */
+
+/* ────────────────────────────────────────────────────────────
+   ✅ 1) إخفاء التبويب القديم "مجاني / مميز"
+   ──────────────────────────────────────────────────────────── */
+.bp-track-toggle,
+#bp-track-toggle,
+.bpt-btn {
+  display: none !important;
+}
+
+/* ────────────────────────────────────────────────────────────
+   ✅ 2) إصلاح Hero — ضمان ظهور كل النصوص
+   ──────────────────────────────────────────────────────────── */
+.bp-hero-v2 {
+  overflow: visible !important;
+  padding: 22px 20px 18px !important;
+  min-height: auto !important;
+  height: auto !important;
+}
+
+.bp-hero-v2::before {
+  /* نقل التوهج بعيداً عن العنوان */
+  top: -80px;
+  right: -80px;
+  width: 200px;
+  height: 200px;
+  opacity: .6;
+}
+
+.bph-top {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
+  gap: 12px !important;
+  flex-wrap: nowrap !important;
+}
+
+.bph-top > div:first-child {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+}
+
+/* العنوان العربي "موسم البداية" — التأكد من ظهوره */
+.bph-title {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  font-family: 'Space Grotesk', 'Tajawal', sans-serif !important;
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  color: #fff !important;
+  line-height: 1.25 !important;
+  letter-spacing: .5px !important;
+  margin-top: 6px !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  position: relative !important;
+  z-index: 2 !important;
+  text-shadow: 0 2px 8px rgba(0,0,0,.3) !important;
+}
+
+.bph-season {
+  display: block !important;
+  visibility: visible !important;
+  opacity: .85 !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: 3px !important;
+  color: #fff !important;
+  text-transform: uppercase !important;
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+/* صندوق الـ Tier في الـ hero */
+.bph-tier {
+  flex-shrink: 0 !important;
+  position: relative !important;
+  z-index: 2 !important;
+  background: rgba(255,255,255,.15) !important;
+  backdrop-filter: blur(10px) !important;
+  padding: 10px 16px !important;
+  border-radius: 100px !important;
+  display: flex !important;
+  align-items: baseline !important;
+  gap: 4px !important;
+  border: 1px solid rgba(255,255,255,.15) !important;
+}
+
+.bph-tier .k {
+  font-size: 8px !important;
+  font-weight: 800 !important;
+  letter-spacing: 1.5px !important;
+  opacity: .8 !important;
+  color: #fff !important;
+}
+.bph-tier .v {
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  color: var(--gold) !important;
+  line-height: 1 !important;
+}
+.bph-tier .m {
+  font-size: 12px !important;
+  opacity: .55 !important;
+  color: #fff !important;
+}
+
+/* شريط التقدم داخل الـ Hero */
+.bph-progress {
+  margin-top: 18px !important;
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+.bph-bar {
+  height: 9px !important;
+  border-radius: 5px !important;
+  background: rgba(255,255,255,.12) !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(255,255,255,.06) !important;
+}
+
+.bph-fill {
+  height: 100% !important;
+  border-radius: 5px !important;
+  background: linear-gradient(90deg, var(--amber), var(--gold), #FFE8A0) !important;
+  box-shadow: 0 0 14px rgba(232,179,78,.6) !important;
+  transition: width .6s cubic-bezier(.34,1.56,.64,1) !important;
+  position: relative !important;
+}
+
+.bph-fill::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 24px;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.7));
+  animation: bphShine 2s ease-in-out infinite;
+}
+@keyframes bphShine {
+  0%   { opacity: 0; transform: translateX(-10px); }
+  50%  { opacity: 1; }
+  100% { opacity: 0; transform: translateX(10px); }
+}
+
+.bph-points {
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  text-align: left !important;
+  margin-top: 8px !important;
+  opacity: .85 !important;
+  color: #fff !important;
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+/* ────────────────────────────────────────────────────────────
+   ✅ 3) إصلاح بطاقة Premium Battle Pass (الشريط البنفسجي)
+   ──────────────────────────────────────────────────────────── */
+.bp-premium-card {
+  overflow: visible !important;
+  padding: 22px 20px !important;
+}
+
+.bp-premium-card::before {
+  /* ضبط التوهج */
+  width: 180px !important;
+  height: 180px !important;
+  top: -60px !important;
+  right: -60px !important;
+  opacity: .5 !important;
+}
+
+.bppc-title {
+  font-size: 19px !important;
+  line-height: 1.2 !important;
+  white-space: normal !important;
+  overflow: visible !important;
+}
+
+.bppc-sub {
+  font-size: 11.5px !important;
+  margin-top: 5px !important;
+  line-height: 1.4 !important;
+  white-space: normal !important;
+}
+
+.bppc-head {
+  gap: 14px !important;
+  align-items: center !important;
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+.bppc-icon {
+  font-size: 40px !important;
+  flex-shrink: 0 !important;
+}
+
+/* ────────────────────────────────────────────────────────────
+   ✅ 4) إصلاح بطاقة المستوى (Tier Card) — الأهم!
+   ──────────────────────────────────────────────────────────── */
+.bp-tier-v3 {
+  /* ضبط الشبكة لتفادي القصّ */
+  display: grid !important;
+  grid-template-columns: 80px 1fr !important;
+  gap: 14px !important;
+  padding: 14px 12px !important;
+  overflow: visible !important;
+  align-items: stretch !important;
+  min-height: 140px !important;
+}
+
+/* شارة المستوى (اليسار) */
+.bp-tier-badge {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 12px 6px !important;
+  border-radius: 16px !important;
+  min-height: 110px !important;
+  gap: 2px !important;
+  overflow: visible !important;
+}
+
+.bp-tier-num {
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-size: 30px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.bp-tier-label {
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-size: 9px !important;
+  font-weight: 800 !important;
+  letter-spacing: 2px !important;
+  opacity: .75 !important;
+  margin-top: 4px !important;
+  padding: 0 !important;
+}
+
+.bp-tier-check {
+  top: -6px !important;
+  right: -6px !important;
+  width: 22px !important;
+  height: 22px !important;
+  font-size: 12px !important;
+}
+
+/* جسم البطاقة (اليمين) */
+.bp-tier-body {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+  padding: 2px 0 !important;
+}
+
+.bp-tier-title {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  padding-bottom: 8px !important;
+  border-bottom: 1px dashed var(--line-strong) !important;
+  flex-wrap: nowrap !important;
+}
+
+.bp-tier-title > span:first-child {
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: var(--ink) !important;
+  white-space: nowrap !important;
+}
+
+.bp-tier-points {
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  color: var(--ink-mute) !important;
+  white-space: nowrap !important;
+}
+
+/* ────────────────────────────────────────────────────────────
+   ✅ 5) إصلاح شبكة المكافآت (Free / Premium)
+   ──────────────────────────────────────────────────────────── */
+.bp-rewards-grid {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 10px !important;
+  align-items: stretch !important;
+}
+
+.bp-reward-block {
+  padding: 12px 10px !important;
+  min-height: 120px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  overflow: visible !important;
+  border-radius: 14px !important;
+}
+
+.bp-reward-head {
+  font-size: 9px !important;
+  letter-spacing: 1.5px !important;
+  padding-bottom: 6px !important;
+  border-bottom: 1px solid rgba(0,0,0,.05) !important;
+  gap: 5px !important;
+}
+
+.bp-reward-head .ic {
+  font-size: 13px !important;
+}
+
+/* ✅ أهم إصلاح: قيم المكافآت مقصوصة */
+.bp-reward-main {
+  display: flex !important;
+  align-items: baseline !important;
+  gap: 4px !important;
+  padding: 4px 0 !important;
+  line-height: 1.3 !important;
+  min-height: 26px !important;
+  overflow: visible !important;
+}
+
+.bp-reward-value {
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-size: 20px !important;
+  font-weight: 800 !important;
+  color: var(--ink) !important;
+  line-height: 1.15 !important;
+  display: inline-flex !important;
+  align-items: baseline !important;
+  gap: 3px !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+}
+
+.bp-reward-value .c {
+  color: var(--gold) !important;
+  font-size: 15px !important;
+  line-height: 1 !important;
+  display: inline-block !important;
+}
+
+/* ────────────────────────────────────────────────────────────
+   ✅ 6) إصلاح زر الاستلام
+   ──────────────────────────────────────────────────────────── */
+.bp-reward-claim {
+  padding: 8px 12px !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  line-height: 1.2 !important;
+  margin-top: auto !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  min-height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+}
+
+.bp-reward-claim.gold {
+  background: linear-gradient(135deg, var(--gold), #F2C862) !important;
+  color: #1A1512 !important;
+  box-shadow: 0 3px 10px rgba(232,179,78,.35) !important;
+}
+
+/* ────────────────────────────────────────────────────────────
+   ✅ 7) إصلاح العناصر المخصصة داخل البطاقات
+   ──────────────────────────────────────────────────────────── */
+.bp-custom-reward {
+  padding: 7px 9px !important;
+  font-size: 10.5px !important;
+  gap: 6px !important;
+  min-height: 30px !important;
+  overflow: visible !important;
+}
+
+.bp-custom-reward .cn {
+  font-size: 10.5px !important;
+  line-height: 1.2 !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+}
+
+/* ────────────────────────────────────────────────────────────
+   ✅ 8) إصلاح شارة "أنت هنا"
+   ──────────────────────────────────────────────────────────── */
+.bp-here-pill {
+  top: -10px !important;
+  right: 16px !important;
+  font-size: 9.5px !important;
+  padding: 4px 12px !important;
+  z-index: 3 !important;
+  white-space: nowrap !important;
+}
+
+/* ────────────────────────────────────────────────────────────
+   ✅ 9) إصلاح فلاتر Battle Pass
+   ──────────────────────────────────────────────────────────── */
+.bp-filters {
+  display: flex !important;
+  gap: 5px !important;
+  padding: 6px !important;
+  background: var(--paper-2) !important;
+  border-radius: 14px !important;
+  border: 1px solid var(--line) !important;
+  margin-bottom: 16px !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  overflow-x: auto !important;
+  scrollbar-width: none !important;
+}
+
+.bp-filters::-webkit-scrollbar { display: none; }
+
+.bp-filter {
+  flex: 1 1 0 !important;
+  min-width: 80px !important;
+  padding: 9px 8px !important;
+  border-radius: 10px !important;
+  border: none !important;
+  background: transparent !important;
+  color: var(--ink-soft) !important;
+  font-family: inherit !important;
+  font-size: 10.5px !important;
+  font-weight: 800 !important;
+  cursor: pointer !important;
+  transition: all .2s !important;
+  position: relative !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+}
+
+.bp-filter.active {
+  background: #fff !important;
+  color: var(--ink) !important;
+  box-shadow: 0 2px 8px rgba(26,21,18,.08) !important;
+}
+
+.bp-filter-badge {
+  position: absolute !important;
+  top: -5px !important;
+  right: 4px !important;
+  min-width: 18px !important;
+  height: 18px !important;
+  padding: 0 5px !important;
+  border-radius: 9px !important;
+  background: var(--amber) !important;
+  color: #fff !important;
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-size: 9.5px !important;
+  font-weight: 800 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 2px 6px rgba(224,122,63,.5) !important;
+  z-index: 2 !important;
+}
+
+/* ────────────────────────────────────────────────────────────
+   ✅ 10) إصلاح قسم الرتب (Hero + Cards)
+   ──────────────────────────────────────────────────────────── */
+.rank-hero-v3 {
+  overflow: visible !important;
+  padding: 24px 20px !important;
+  min-height: auto !important;
+}
+
+.rank-hero-icon {
+  flex-shrink: 0 !important;
+  width: 88px !important;
+  height: 88px !important;
+  font-size: 44px !important;
+}
+
+.rank-hero-info {
+  flex: 1 !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+}
+
+.rank-hero-name {
+  font-size: 26px !important;
+  line-height: 1.2 !important;
+  white-space: normal !important;
+  overflow: visible !important;
+}
+
+.rank-hero-points {
+  font-size: 13px !important;
+  margin-top: 8px !important;
+  line-height: 1.3 !important;
+}
+
+.rank-hero-progress-labels {
+  font-size: 10.5px !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+}
+
+.rank-hero-progress-labels span {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 48% !important;
+}
+
+/* بطاقات الرتب */
+.rank-card-v3 {
+  overflow: visible !important;
+  padding: 16px !important;
+  min-height: auto !important;
+}
+
+.rank-card-header {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding-bottom: 14px !important;
+  margin-bottom: 14px !important;
+  flex-wrap: nowrap !important;
+}
+
+.rank-card-icon {
+  flex-shrink: 0 !important;
+  width: 58px !important;
+  height: 58px !important;
+  font-size: 28px !important;
+}
+
+.rank-card-info {
+  flex: 1 !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+}
+
+.rank-card-name {
+  font-size: 15px !important;
+  line-height: 1.2 !important;
+  white-space: normal !important;
+  overflow: visible !important;
+}
+
+.rank-card-req {
+  font-size: 11px !important;
+  margin-top: 4px !important;
+  white-space: nowrap !important;
+}
+
+.rank-card-status {
+  flex-shrink: 0 !important;
+}
+
+.rank-status-pill {
+  font-size: 10.5px !important;
+  padding: 6px 12px !important;
+  white-space: nowrap !important;
+}
+
+/* صفوف المكافآت */
+.rank-reward-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 12px !important;
+  min-height: 56px !important;
+  overflow: visible !important;
+  flex-wrap: nowrap !important;
+}
+
+.rank-reward-icon {
+  flex-shrink: 0 !important;
+  width: 36px !important;
+  height: 36px !important;
+  font-size: 16px !important;
+}
+
+.rank-reward-info {
+  flex: 1 !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+}
+
+.rank-reward-name {
+  font-size: 13px !important;
+  line-height: 1.2 !important;
+  white-space: normal !important;
+  overflow: visible !important;
+}
+
+.rank-reward-meta {
+  font-size: 10px !important;
+  margin-top: 3px !important;
+  white-space: nowrap !important;
+}
+
+.rank-reward-claim {
+  flex-shrink: 0 !important;
+  padding: 7px 14px !important;
+  font-size: 11px !important;
+  min-height: 32px !important;
+  white-space: nowrap !important;
+}
+
+/* ────────────────────────────────────────────────────────────
+   ✅ 11) Responsive
+   ──────────────────────────────────────────────────────────── */
+@media (max-width: 400px) {
+  .bp-tier-v3 {
+    grid-template-columns: 70px 1fr !important;
+    gap: 10px !important;
+    padding: 12px 10px !important;
+  }
+  
+  .bp-tier-num {
+    font-size: 26px !important;
+  }
+  
+  .bp-reward-value {
+    font-size: 17px !important;
+  }
+  
+  .bp-reward-value .c {
+    font-size: 13px !important;
+  }
+  
+  .bp-reward-claim {
+    font-size: 10px !important;
+    padding: 7px 10px !important;
+  }
+  
+  .rank-hero-icon {
+    width: 72px !important;
+    height: 72px !important;
+    font-size: 36px !important;
+  }
+  
+  .rank-hero-name {
+    font-size: 22px !important;
+  }
+  
+  .rank-card-icon {
+    width: 48px !important;
+    height: 48px !important;
+    font-size: 24px !important;
+  }
+  
+  .rank-card-name {
+    font-size: 14px !important;
+  }
+}
+
+/* ============================================================
+   ═══════════ FIX: BACK BUTTON & CLICK INTERCEPTION ═════════
+   ============================================================ */
+
+/* ═══ 1) كل الوهجات لا يجب أن تلتقط النقرات ═══ */
+.bp-hero-v2::before,
+.bp-hero-v2::after,
+.bp-premium-card::before,
+.bp-premium-card::after,
+.rank-hero-v3::before,
+.rank-hero-v2::before,
+.rank-hero-icon::after,
+.achx-hero::before,
+.achx-hero::after,
+.stx-hero::before,
+.stx-hero::after,
+.lvlx-hero::before,
+.lvlx-hero::after,
+.stg-profile::before,
+.stg-profile::after,
+.ach-hero-v3::before,
+.level-hero-v3::before,
+.player-hero-merged::before,
+.player-card-hero::before,
+.season-card::before,
+.profile-card::before,
+.mp-hero::before,
+.mp-code-card::before,
+.clan-card-hero::before,
+.ref-hero::before,
+.challenge-card::before,
+.bp-filters::before,
+.bp-filters::after {
+  pointer-events: none !important;
+}
+
+/* ═══ 2) زر الرجوع فوق كل شيء في الصفحة ═══ */
+.screen .sub-top,
+.screen .admin-topbar {
+  position: relative !important;
+  z-index: 50 !important;
+  isolation: isolate;
+}
+
+.screen .sub-top .back-btn,
+.screen .admin-topbar .back-btn {
+  position: relative !important;
+  z-index: 51 !important;
+  pointer-events: auto !important;
+}
+
+/* ═══ 3) الفلاتر لا تغطي زر الرجوع عند التمرير ═══ */
+.bp-filters {
+  position: relative !important;   /* بدل sticky */
+  top: auto !important;
+  z-index: 5 !important;
+}
+
+/* ═══ 4) ضمان أن الجداول/الصفوف لا تُغطي الأزرار ═══ */
+.admin-tabs {
+  position: relative !important;
+  z-index: 5 !important;
+}
+
+/* ═══ 5) الـ Pseudo-elements لا تحجب التفاعل أبداً ═══ */
+[class*="-hero"]::before,
+[class*="-hero"]::after,
+[class*="-card"]::before,
+[class*="-card"]::after {
+  pointer-events: none !important;
+}
