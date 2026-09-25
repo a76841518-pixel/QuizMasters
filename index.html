@@ -840,14 +840,19 @@
 
   <!-- ───────── RIGHT: Avatar + Level ───────── -->
   <div class="phm-avatar-col">
-    <div class="phm-avatar-wrap">
-      <div class="phm-frame" id="pch-frame"></div>
-      <div class="phm-avatar" id="pch-avatar">
-        <span id="pch-emoji">👤</span>
-        <img id="pch-img" style="display:none;" alt="">
-      </div>
-      <div class="phm-badge" id="pch-badge"></div>
-    </div>
+<div class="phm-avatar-wrap">
+  <div class="phm-frame" id="pch-frame"></div>
+  <div class="phm-avatar" id="pch-avatar">
+    <span id="pch-emoji">👤</span>
+    <img id="pch-img" style="display:none;" alt="">
+  </div>
+  <div class="phm-badge" id="pch-badge"></div>
+  
+  <!-- ✅ زر تعديل الصورة -->
+  <button class="phm-avatar-edit-btn" id="avatar-edit-btn" title="تعديل الصورة">
+    ✎
+  </button>
+</div>
 
     <div class="phm-level" id="pch-level-btn">
       <div class="phm-lvl-ring" style="--p:0">
@@ -941,6 +946,14 @@
       <div class="hs-lbl">المهام</div>
       <div class="hs-badge" id="missions-badge" style="display:none;">!</div>
     </button>
+    <button class="hs-action" data-page="inventory" style="--hs:#E8B34E;">
+  <div class="hs-ic">🎒</div>
+  <div class="hs-lbl">المخزون</div>
+</button>
+<button class="hs-action" data-page="collection" style="--hs:#9A6AC8;">
+  <div class="hs-ic">💎</div>
+  <div class="hs-lbl">المقتنيات</div>
+</button>
     <button class="hs-action" data-page="friends" style="--hs:#4A88C8;">
       <div class="hs-ic">👥</div>
       <div class="hs-lbl">الأصدقاء</div>
@@ -2355,6 +2368,109 @@
     </div>
 
     <div id="craft-list"></div>
+  </div>
+</div>
+
+<!-- ═══════════ INVENTORY PAGE ═══════════ -->
+<div class="screen" id="s-inventory">
+  <div class="sub">
+    <div class="sub-top">
+      <button class="back-btn" data-back>←</button>
+      <div>
+        <div class="sub-title">المخزون</div>
+        <div class="sub-eyebrow">INVENTORY · عناصر بوقت انتهاء</div>
+      </div>
+      <div class="sub-spacer"></div>
+    </div>
+
+    <div class="ach-hero-v2" style="background:linear-gradient(135deg,#3A2010 0%,#6A3820 100%);">
+      <div class="ah2-icon">🎒</div>
+      <div class="ah2-info">
+        <div class="ah2-label">INVENTORY</div>
+        <div class="ah2-val">
+          <span id="inventory-count">0</span>
+          <span class="of">عنصر</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="inventory-content"></div>
+  </div>
+</div>
+
+<!-- ═══════════ COLLECTION PAGE ═══════════ -->
+<div class="screen" id="s-collection">
+  <div class="sub">
+    <div class="sub-top">
+      <button class="back-btn" data-back>←</button>
+      <div>
+        <div class="sub-title">المقتنيات</div>
+        <div class="sub-eyebrow">COLLECTION · دائمة</div>
+      </div>
+      <div class="sub-spacer"></div>
+    </div>
+
+    <div class="ach-hero-v2" style="background:linear-gradient(135deg,#1F1A24 0%,#3A2A48 100%);">
+      <div class="ah2-icon">💎</div>
+      <div class="ah2-info">
+        <div class="ah2-label">COLLECTION</div>
+        <div class="ah2-val">
+          <span id="collection-owned">0</span>
+          <span class="of">/ <span id="collection-total">0</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-row" id="collection-tabs">
+      <button class="tab-chip active" data-colcat="skins">🎨 أزياء</button>
+      <button class="tab-chip" data-colcat="head">👑 رأس</button>
+      <button class="tab-chip" data-colcat="back">🦋 ظهر</button>
+      <button class="tab-chip" data-colcat="eyes">👁️ عيون</button>
+      <button class="tab-chip" data-colcat="trail">➰ خط سير</button>
+      <button class="tab-chip" data-colcat="spark">✨ شرار</button>
+      <button class="tab-chip" data-colcat="jump">⬆️ قفز</button>
+      <button class="tab-chip" data-colcat="spawn">🚀 بداية</button>
+      <button class="tab-chip" data-colcat="revive">💫 إحياء</button>
+      <button class="tab-chip" data-colcat="death">💀 موت</button>
+      <button class="tab-chip" data-colcat="avatar">👤 صورة</button>
+      <button class="tab-chip" data-colcat="avatarFrame">🖼️ إطار</button>
+      <button class="tab-chip" data-colcat="banner">🎨 خلفية</button>
+      <button class="tab-chip" data-colcat="nameTag">🏷️ بطاقة</button>
+      <button class="tab-chip" data-colcat="badge">⭐ شارة</button>
+      <button class="tab-chip" data-colcat="cards">🃏 بطاقات</button>
+    </div>
+
+    <div class="cos-grid" id="collection-grid"></div>
+  </div>
+</div>
+
+<!-- ═══════════ AVATAR EDIT PAGE ═══════════ -->
+<div class="screen" id="s-avatar-edit">
+  <div class="sub">
+    <div class="sub-top">
+      <button class="back-btn" data-back>←</button>
+      <div>
+        <div class="sub-title">تعديل الصورة</div>
+        <div class="sub-eyebrow">AVATAR & FRAME</div>
+      </div>
+      <div class="sub-spacer"></div>
+    </div>
+
+    <!-- معاينة حية -->
+    <div class="avatar-edit-preview">
+      <div class="aep-frame" id="aep-frame"></div>
+      <div class="aep-avatar" id="aep-avatar">
+        <span id="aep-emoji">👤</span>
+        <img id="aep-img" style="display:none;" alt="">
+      </div>
+    </div>
+
+    <div class="tab-row" id="avatar-edit-tabs">
+      <button class="tab-chip active" data-avtab="avatar">👤 الصورة الشخصية</button>
+      <button class="tab-chip" data-avtab="avatarFrame">🖼️ الإطار</button>
+    </div>
+
+    <div class="cos-grid" id="avatar-edit-grid"></div>
   </div>
 </div>
 

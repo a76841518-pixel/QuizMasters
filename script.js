@@ -2119,59 +2119,30 @@ const CARD_RARITIES = {
   mythic:    { label: 'خرافي',    color: '#E85838', shards: 250,  weight: 1 }
 };
 
-/* ═══ البطاقات الافتراضية ═══ */
-const DEFAULT_CARDS = [
-  /* ═══════ COMMON (8) ═══════ */
-  { id:'c_flame',    name:'اللهب',       icon:'🔥', rarity:'common',    desc:'عنصر النار الأساسي' },
-  { id:'c_water',    name:'الموجة',      icon:'💧', rarity:'common',    desc:'عنصر الماء' },
-  { id:'c_leaf',     name:'الورقة',      icon:'🍃', rarity:'common',    desc:'عنصر الطبيعة' },
-  { id:'c_stone',    name:'الصخرة',      icon:'🪨', rarity:'common',    desc:'عنصر الأرض' },
-  { id:'c_bolt',     name:'البرق',       icon:'⚡', rarity:'common',    desc:'عنصر الكهرباء' },
-  { id:'c_wind',     name:'الريح',       icon:'🌪️', rarity:'common',    desc:'عنصر الهواء' },
-  { id:'c_snow',     name:'الثلج',       icon:'❄️', rarity:'common',    desc:'عنصر الجليد' },
-  { id:'c_sun',      name:'الشمس',       icon:'☀️', rarity:'common',    desc:'عنصر النور' },
-
-  /* ═══════ RARE (6) ═══════ */
-  { id:'c_knight',   name:'الفارس',      icon:'⚔️', rarity:'rare',      desc:'محارب شجاع' },
-  { id:'c_mage',     name:'الساحر',      icon:'🧙', rarity:'rare',      desc:'سيّد السحر' },
-  { id:'c_archer',   name:'القنّاص',     icon:'🏹', rarity:'rare',      desc:'رامي السهام' },
-  { id:'c_rogue',    name:'اللص',        icon:'🗡️', rarity:'rare',      desc:'ظل الليل' },
-  { id:'c_healer',   name:'المعالج',     icon:'💊', rarity:'rare',      desc:'حامل الشفاء' },
-  { id:'c_guard',    name:'الحارس',      icon:'🛡️', rarity:'rare',      desc:'درع الحماية' },
-
-  /* ═══════ EPIC (4) ═══════ */
-  { id:'c_dragon',   name:'التنين',      icon:'🐉', rarity:'epic',      desc:'ملك التنينات' },
-  { id:'c_phoenix',  name:'العنقاء',     icon:'🦅', rarity:'epic',      desc:'طائر النار' },
-  { id:'c_kraken',   name:'الكاراكن',    icon:'🦑', rarity:'epic',      desc:'وحش الأعماق' },
-  { id:'c_chimera',  name:'الكيميرا',    icon:'🦁', rarity:'epic',      desc:'الوحش الهجين' },
-
-  /* ═══════ LEGENDARY (3) ═══════ */
-  { id:'c_titan',    name:'العملاق',     icon:'👹', rarity:'legendary', desc:'أسطورة الجبال' },
-  { id:'c_god',      name:'إله الرعد',   icon:'🌩️', rarity:'legendary', desc:'زعيم الآلهة' },
-  { id:'c_goddess',  name:'إلهة الحب',   icon:'👼', rarity:'legendary', desc:'ملكة الجمال' },
-
-  /* ═══════ MYTHIC (2) ═══════ */
-  { id:'c_creator',  name:'الخالق',      icon:'🌟', rarity:'mythic',    desc:'أعظم قوة في اللعبة' },
-  { id:'c_void',     name:'الفراغ',      icon:'◉', rarity:'mythic',    desc:'قوة لا يمكن فهمها' }
-];
+/* ═══════════════════════════════════════════════════════════
+   ═══════════ CARDS — Admin-Only v2 ═══════════
+   ═══════════════════════════════════════════════════════════
+   كل البطاقات تُنشأ من لوحة المشرف فقط
+   ============================================================ */
+const DEFAULT_CARDS = [];   /* فارغة افتراضياً */
 
 /* ═══ قائمة موحدة للبطاقات (افتراضية + مخصصة من المشرف) ═══ */
 function getAllCards(){
-  const custom = (Save.data.admin.customCards || [])
+  const custom = (Save.data.admin && Save.data.admin.customCards) || [];
+  return custom
     .filter(c => c.enabled !== false)
     .map(c => ({
       id: c.id,
-      name: c.name,
+      name: c.name || 'بطاقة',
       icon: c.icon || '🃏',
       rarity: c.rarity || 'common',
-      desc: c.desc || '',
+      desc: c.desc || c.nameEn || '',
       color: c.color,
       imagePath: c.imagePath || null,
       imageData: c.imageData || null,
+      shardsCost: c.shardsCost || 0,   /* تكلفة الصناعة */
       isCustom: true
     }));
-
-  return [...DEFAULT_CARDS, ...custom];
 }
 
 /* ═══ جلب بطاقة حسب ID ═══ */
@@ -2607,29 +2578,71 @@ function showCardDetail(card, count){
    ============================================================ */
 let _currentCraftCat = 'cards';
 
-/* ═══ قائمة الأشياء القابلة للصناعة ═══ */
-const CRAFTABLE_ITEMS = {
-  cards: [
-    /* { cardId, shardsCost } */
-    { cardId: 'c_flame', shardsCost: 20 },
-    { cardId: 'c_knight', shardsCost: 60 },
-    { cardId: 'c_dragon', shardsCost: 150 },
-    { cardId: 'c_titan', shardsCost: 400 },
-    { cardId: 'c_creator', shardsCost: 1000 }
-  ],
-  cosmetics: [
-    /* { cat, itemId, shardsCost } */
-    { cat: 'spark', itemId: 'stars', shardsCost: 100 },
-    { cat: 'trail', itemId: 'rainbow', shardsCost: 200 },
-    { cat: 'head', itemId: 'gold', shardsCost: 300 },
-    { cat: 'back', itemId: 'wings_angel', shardsCost: 600 }
-  ],
-  skins: [
-    /* { skinId, shardsCost } */
-    { skinId: 'default', shardsCost: 0 }
-    /* أضف الأزياء المخصصة من المشرف */
-  ]
-};
+/* ═══════════════════════════════════════════════════════════
+   ═══════════ CRAFTING — Admin-Only v2 ═══════════
+   ═══════════════════════════════════════════════════════════
+   الأصناف القابلة للصناعة تُحدَّد من لوحة المشرف
+   عبر خاصية shardsCost على كل عنصر
+   ============================================================ */
+
+/**
+ * جلب كل العناصر القابلة للصناعة في فئة معينة
+ * @param {string} cat - 'cards' | 'cosmetics' | 'skins'
+ * @returns {Array}
+ */
+function getCraftableItems(cat){
+  const result = [];
+  
+  if(cat === 'cards'){
+    /* البطاقات القابلة للصناعة */
+    const cards = getAllCards();
+    cards.forEach(card => {
+      if(card.shardsCost > 0){
+        result.push({
+          type: 'card',
+          cardId: card.id,
+          shardsCost: card.shardsCost,
+          item: card
+        });
+      }
+    });
+  }
+  else if(cat === 'cosmetics'){
+    /* التأثيرات القابلة للصناعة */
+    const allCats = COSMETIC_CATEGORY_ORDER;
+    allCats.forEach(catKey => {
+      const items = getAllCosmetics(catKey) || [];
+      items.forEach(item => {
+        if(item.id === 'none') return;
+        if(item.shardsCost > 0){
+          result.push({
+            type: 'cosmetic',
+            cat: catKey,
+            itemId: item.id,
+            shardsCost: item.shardsCost,
+            item
+          });
+        }
+      });
+    });
+  }
+  else if(cat === 'skins'){
+    /* الأزياء القابلة للصناعة */
+    const skins = getAllSkins();
+    skins.forEach(skin => {
+      if(skin.shardsCost > 0){
+        result.push({
+          type: 'skin',
+          skinId: skin.id,
+          shardsCost: skin.shardsCost,
+          item: skin
+        });
+      }
+    });
+  }
+  
+  return result;
+}
 
 function buildCraftingPage(){
   updateWalletUI();
@@ -2657,79 +2670,77 @@ function renderCraftList(){
   if(!list) return;
   list.innerHTML = '';
 
-  const items = CRAFTABLE_ITEMS[_currentCraftCat] || [];
-  const shards = Save.data.shards || 0;
+  try {
+    const items = getCraftableItems(_currentCraftCat);
+    const shards = Save.data.shards || 0;
 
-  if(items.length === 0){
-    list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-mute);">لا عناصر للصناعة</div>';
-    return;
+    if(items.length === 0){
+      list.innerHTML = `
+        <div class="inv-empty">
+          <div class="ie-icon">🛠️</div>
+          <div class="ie-title">لا عناصر للصناعة</div>
+          <div class="ie-desc">المشرف لم يُضِف أي عنصر قابل للصناعة بعد</div>
+        </div>
+      `;
+      return;
+    }
+
+    items.forEach(entry => {
+      const item = entry.item;
+      let displayName = '', displayIcon = '', displayColor = '#9A6AC8';
+
+      if(entry.type === 'card'){
+        displayName = item.name;
+        displayIcon = item.icon;
+        displayColor = getCardRarity(item).color;
+      } else if(entry.type === 'cosmetic'){
+        displayName = item.name;
+        displayIcon = '🎁';
+        displayColor = '#E8B34E';
+      } else if(entry.type === 'skin'){
+        displayName = item.ar || item.name;
+        displayIcon = '🎨';
+        displayColor = '#E07A3F';
+      }
+
+      /* هل اللاعب يملكه؟ */
+      let alreadyOwned = false;
+      if(entry.type === 'card'){
+        alreadyOwned = (Save.data.cards && Save.data.cards.unlocked || []).includes(entry.cardId);
+      } else if(entry.type === 'cosmetic'){
+        alreadyOwned = Save.ownsCosmetic(entry.cat, entry.itemId);
+      } else if(entry.type === 'skin'){
+        alreadyOwned = (Save.data.ownedSkins || []).includes(entry.skinId);
+      }
+
+      const canAfford = shards >= entry.shardsCost;
+
+      const el = document.createElement('div');
+      el.className = 'shard-shop-item';
+      el.style.setProperty('--ssi-c', displayColor);
+
+      el.innerHTML = `
+        <div class="ssi-icon">${displayIcon}</div>
+        <div class="ssi-info">
+          <div class="ssi-name">${displayName}</div>
+          <div class="ssi-price">🔷 ${entry.shardsCost.toLocaleString()}</div>
+        </div>
+        <button class="ssi-btn" ${alreadyOwned ? 'disabled' : ''} ${!canAfford && !alreadyOwned ? 'disabled' : ''}>
+          ${alreadyOwned ? '✓ مملوك' : (canAfford ? 'صناعة' : 'ناقص')}
+        </button>
+      `;
+
+      const btn = el.querySelector('.ssi-btn');
+      if(!alreadyOwned && canAfford){
+        btn.addEventListener('click', () => craftItem(_currentCraftCat, entry));
+      }
+
+      list.appendChild(el);
+    });
+  } catch(e){
+    console.error('[CraftList]', e);
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:#C14A4A;">خطأ في العرض</div>';
   }
-
-  items.forEach(entry => {
-    let item = null;
-    let displayName = '';
-    let displayIcon = '';
-    let displayColor = '#9A6AC8';
-
-    if(_currentCraftCat === 'cards'){
-      item = getCardById(entry.cardId);
-      if(!item) return;
-      displayName = item.name;
-      displayIcon = item.icon;
-      displayColor = getCardRarity(item).color;
-    } else if(_currentCraftCat === 'cosmetics'){
-      const all = getAllCosmetics(entry.cat);
-      item = all.find(x => x.id === entry.itemId);
-      if(!item) return;
-      displayName = item.name;
-      displayIcon = '🎁';
-      displayColor = '#E8B34E';
-    } else if(_currentCraftCat === 'skins'){
-      const all = getAllSkins();
-      item = all.find(x => x.id === entry.skinId);
-      if(!item) return;
-      displayName = item.ar;
-      displayIcon = '🎨';
-      displayColor = '#E07A3F';
-    }
-
-    /* هل اللاعب يملكه بالفعل؟ */
-    let alreadyOwned = false;
-    if(_currentCraftCat === 'cards'){
-      alreadyOwned = (Save.data.cards?.unlocked || []).includes(entry.cardId);
-    } else if(_currentCraftCat === 'cosmetics'){
-      alreadyOwned = Save.ownsCosmetic(entry.cat, entry.itemId);
-    } else if(_currentCraftCat === 'skins'){
-      alreadyOwned = Save.data.ownedSkins.includes(entry.skinId);
-    }
-
-    const canAfford = shards >= entry.shardsCost;
-
-    const el = document.createElement('div');
-    el.className = 'shard-shop-item';
-    el.style.setProperty('--ssi-c', displayColor);
-
-    el.innerHTML = `
-      <div class="ssi-icon">${displayIcon}</div>
-      <div class="ssi-info">
-        <div class="ssi-name">${displayName}</div>
-        <div class="ssi-price">🔷 ${entry.shardsCost.toLocaleString()}</div>
-      </div>
-      <button class="ssi-btn" 
-              ${alreadyOwned ? 'disabled' : ''}
-              ${!canAfford ? 'disabled' : ''}
-              data-craft='${JSON.stringify(entry)}'>
-        ${alreadyOwned ? '✓ مملوك' : (canAfford ? 'صناعة' : 'ناقص')}
-      </button>
-    `;
-
-    const btn = el.querySelector('.ssi-btn');
-    if(!alreadyOwned && canAfford){
-      btn.addEventListener('click', () => craftItem(_currentCraftCat, entry));
-    }
-
-    list.appendChild(el);
-  });
 }
 
 function craftItem(cat, entry){
@@ -2739,37 +2750,33 @@ function craftItem(cat, entry){
     return;
   }
 
-  if(!confirm(`صناعة "${entry.cardId || entry.itemId || entry.skinId}" بـ 🔷 ${entry.shardsCost}؟`)) return;
+  if(!confirm(`صناعة "${entry.item.name || entry.item.ar}" بـ 🔷 ${entry.shardsCost}؟`)) return;
 
   if(!spendShards(entry.shardsCost)) return;
 
-  /* ═══ التنفيذ ═══ */
-  if(cat === 'cards'){
-    const card = getCardById(entry.cardId);
-    if(card){
-      /* بطاقة مصنوعة → تُمنح مباشرة */
-      const owned = Save.data.cards.owned || {};
-      owned[card.id] = (owned[card.id] || 0) + 1;
-      Save.data.cards.owned = owned;
-      if(!Save.data.cards.unlocked.includes(card.id)){
-        Save.data.cards.unlocked.push(card.id);
-      }
-      Toast.reward(card.icon, 'بطاقة مصنوعة!', card.name);
+  /* ═══ التنفيذ حسب النوع ═══ */
+  if(entry.type === 'card'){
+    const owned = Save.data.cards.owned || {};
+    owned[entry.cardId] = (owned[entry.cardId] || 0) + 1;
+    Save.data.cards.owned = owned;
+    if(!Save.data.cards.unlocked.includes(entry.cardId)){
+      Save.data.cards.unlocked.push(entry.cardId);
     }
-  } else if(cat === 'cosmetics'){
+    Toast.reward(entry.item.icon, 'بطاقة مصنوعة!', entry.item.name);
+  }
+  else if(entry.type === 'cosmetic'){
     Save.grantCosmetic(entry.cat, entry.itemId);
-    Toast.reward('🎁', 'عنصر مصنوع!', entry.itemId);
-  } else if(cat === 'skins'){
+    Toast.reward('🎁', 'عنصر مصنوع!', entry.item.name);
+  }
+  else if(entry.type === 'skin'){
     if(!Save.data.ownedSkins.includes(entry.skinId)){
       Save.data.ownedSkins.push(entry.skinId);
     }
-    Toast.reward('🎨', 'زي مصنوع!', entry.skinId);
+    Toast.reward('🎨', 'زي مصنوع!', entry.item.ar || entry.item.name);
   }
 
   if(!Save.data.crafting) Save.data.crafting = { crafted: [], blueprints: [] };
-  Save.data.crafting.crafted.push({
-    cat, entry, time: Date.now()
-  });
+  Save.data.crafting.crafted.push({ cat, entry, time: Date.now() });
 
   Save.save();
   Sfx.reward(); haptic(30);
@@ -5193,7 +5200,8 @@ function spawnJumpEffect(x, y, color){
     item,
     size: P.r * (cfg.sizeMul || 5.0),
     scaleOverLife: 1.6,
-    color: '#FFFFFF'
+    color: '#FFFFFF',
+    layer: 'front'           /* ✅ فوق اللاعب (انفجار القفز) */
   });
 
   Sfx.bounce();
@@ -5223,7 +5231,8 @@ function spawnDeathEffect(x, y, color){
       size: rand(P.r * 1.0, P.r * 1.8),
       rotation: rand(0, Math.PI * 2),
       rotationSpeed: rand(-0.05, 0.05),
-      color: '#FFFFFF'
+      color: '#FFFFFF',
+      layer: 'front'           /* ✅ فوق اللاعب (انفجار الموت) */
     });
   }
 }
@@ -5252,7 +5261,7 @@ function spawnSpark(){
     item,
     rot: rand(0, Math.PI * 2),
     rotSpd: rand(-0.04, 0.04),
-    layer: 'behind'    // ✅
+    layer: 'behind'          /* ✅ يُرسم خلف اللاعب */
   });
 }
 
@@ -5277,7 +5286,7 @@ function updateTrailEffect(){
       rotation: rand(0, Math.PI * 2),
       rotationSpeed: rand(-0.03, 0.03),
       color: '#FFFFFF',
-      layer: 'behind'          // ✅ جديد — يُرسم خلف اللاعب
+      layer: 'behind'          /* ✅ يُرسم خلف اللاعب */
     });
   }
 }
@@ -5302,9 +5311,14 @@ function updateSparks(){
   }
 }
 
-function drawSparks(){
+function drawSparks(layer){
   for(const p of sparkParticles){
-    /* ✅ صورة فقط */
+    /* ✅ فلترة الطبقة */
+    if(layer !== undefined){
+      const pLayer = p.layer || 'behind';
+      if(pLayer !== layer) continue;
+    }
+
     if(!p.item) continue;
 
     const img = getItemImageEl(p.item);
@@ -5314,7 +5328,7 @@ function drawSparks(){
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.translate(p.x, p.y);
-    ctx.rotate(p.rot);
+    ctx.rotate(p.rot || 0);
     const sz = p.size * Math.max(0.5, p.life);
     ctx.drawImage(img, -sz/2, -sz/2, sz, sz);
     ctx.restore();
@@ -14086,11 +14100,17 @@ function drawPowerups(){
   }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   ═══════════ DRAW PARTICLES v2 — Layer-aware ════════════
+   ═══════════════════════════════════════════════════════════
+   - إذا مُرّرت layer → يُرسم فقط جسيمات هذه الطبقة
+   - إذا لم تُمرَّر → تُرسم كل الجسيمات (توافق خلفي)
+   ============================================================ */
 function drawParticles(layer){
   for(const p of particles){
     /* ✅ فلترة حسب الطبقة */
     if(layer !== undefined){
-      const pLayer = p.layer || 'front';   // الافتراضي: أمام
+      const pLayer = p.layer || 'front';   /* الافتراضي: أمام */
       if(pLayer !== layer) continue;
     }
 
@@ -14101,22 +14121,37 @@ function drawParticles(layer){
       const img = ASSET.getImage(p.item);
       if(img){
         let sz = p.size;
+        /* تمدد تدريجي (للقفز/الإحياء) */
         if(p.scaleOverLife){
           const progress = 1 - life;
           sz = p.size * (1 + progress * p.scaleOverLife);
         } else {
           sz = p.size * Math.max(0.3, life);
         }
-        ASSET.drawItem(ctx, p.item, {
-          x: p.x, y: p.y,
-          size: sz,
-          anchorX: 0.5, anchorY: 0.5
-        });
+
+        ctx.save();
+        if(p.rotation){
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rotation);
+          ASSET.drawItem(ctx, p.item, {
+            x: 0, y: 0,
+            size: sz,
+            anchorX: 0.5, anchorY: 0.5
+          });
+        } else {
+          ASSET.drawItem(ctx, p.item, {
+            x: p.x, y: p.y,
+            size: sz,
+            anchorX: 0.5, anchorY: 0.5
+          });
+        }
+        ctx.restore();
         continue;
       }
     }
 
-    ctx.fillStyle = p.color;
+    /* جسيمات بسيطة (دوائر) */
+    ctx.fillStyle = p.color || '#FFFFFF';
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.size * Math.max(0.2, life), 0, Math.PI * 2);
     ctx.fill();
@@ -14218,19 +14253,24 @@ function draw(){
 
   drawGround();
 
-if(G.state !== 'MENU'){
-  drawObstacles();
-  drawCoins();
-  drawOrbs();
-  drawPowerups();
-  drawSparks();
+  if(G.state !== 'MENU'){
+    drawObstacles();
+    drawCoins();
+    drawOrbs();
+    drawPowerups();
 
-  drawParticles('behind');   // ✅ خلف اللاعب (خط السير، الشرار)
-  drawPlayer();              // ← اللاعب
-  drawCompanion();
-  drawParticles('front');    // ✅ أمام اللاعب (انفجارات، عملات)
-}
-  drawParticles();
+    /* ✅ الطبقة الخلفية — كل ما يجب أن يظهر خلف اللاعب */
+    drawParticles('behind');
+    drawSparks('behind');
+
+    /* ← اللاعب */
+    drawPlayer();
+    drawCompanion();
+
+    /* ✅ الطبقة الأمامية — كل ما يجب أن يظهر فوق اللاعب */
+    drawParticles('front');
+    drawSparks('front');
+  }
   drawFloats();
 
   ctx.restore();
@@ -19334,6 +19374,7 @@ function openAdminItemForm(){
   reset('af-color',      '#E07A3F');
   reset('af-color2',     '#E8B34E');
   reset('af-image-path', '');
+  reset('af-shards-cost', '0');
 
   /* تصفير المعاينة */
   const preview = $('af-path-preview');
@@ -19669,6 +19710,7 @@ async function handleAdminItemSave(){
     const color     = ($('af-color')      ? $('af-color').value             : '#E07A3F');
     const color2    = ($('af-color2')     ? $('af-color2').value            : '#E8B34E');
     const imagePath = ($('af-image-path') ? $('af-image-path').value.trim() : '');
+    const shardsCost = parseInt(($('af-shards-cost') ? $('af-shards-cost').value : '0'), 10) || 0;
 
     /* ═══ التحقق ═══ */
     if(!name){
@@ -19701,20 +19743,21 @@ if(placements.length === 0){
 
     /* ═══ بناء العنصر ═══ */
     const cat = currentAdminTab;
-    const item = {
-      id:        'c_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
-      category:  cat,
-      name,
-      nameEn,
-      rarity,
-      color,
-      color2,
-      imagePath,
-      enabled,
-      placements,
-      createdBy: (typeof Cloud !== 'undefined' && Cloud.user) ? Cloud.user.uid : 'local',
-      createdAt: Date.now()
-    };
+const item = {
+  id:        'c_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+  category:  cat,
+  name,
+  nameEn,
+  rarity,
+  color,
+  color2,
+  imagePath,
+  enabled,
+  shardsCost,      /* ✅ جديد */
+  placements,
+  createdBy: (typeof Cloud !== 'undefined' && Cloud.user) ? Cloud.user.uid : 'local',
+  createdAt: Date.now()
+};
 
     /* ═══ تحديد المفتاح ═══ */
     const key = ADMIN_KEY_MAP[cat];
@@ -23823,16 +23866,17 @@ function drawPlayerPreview(){
   animate();
 
   /* زر تعديل المظهر */
-  const editBtn = document.getElementById('pps-edit-btn');
-  if(editBtn && !editBtn._bound){
-    editBtn._bound = true;
-    editBtn.addEventListener('click', () => {
-      currentCosTab = 'spark';
-      buildCosmetics();
-      showScreen('s-cosmetics');
-      Sfx.tap(); haptic(6);
-    });
-  }
+const editBtn = document.getElementById('pps-edit-btn');
+if(editBtn && !editBtn._bound){
+  editBtn._bound = true;
+  editBtn.addEventListener('click', () => {
+    /* ✅ فتح المقتنيات بدلاً من التأثيرات */
+    _currentCollectionCat = 'skins';
+    buildCollectionPage();
+    showScreen('s-collection');
+    Sfx.tap(); haptic(6);
+  });
+}
 }
 
 /* ═══ زر اختيار النمط ═══ */
@@ -26430,9 +26474,31 @@ case 'crafting':
   buildCraftingPage();
   showScreen('s-crafting');
   break;
+  case 'inventory':
+  buildInventoryPage();
+  showScreen('s-inventory');
+  break;
+case 'collection':
+  _currentCollectionCat = 'skins';
+  buildCollectionPage();
+  showScreen('s-collection');
+  break;
       }
     });
   });
+
+/* ═══ زر تعديل الصورة ═══ */
+const avatarEditBtn = document.getElementById('avatar-edit-btn');
+if(avatarEditBtn && !avatarEditBtn._bound){
+  avatarEditBtn._bound = true;
+  avatarEditBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    _currentAvatarTab = 'avatar';
+    buildAvatarEditPage();
+    showScreen('s-avatar-edit');
+    Sfx.tap(); haptic(6);
+  });
+}
 
   /* ═══ زر الدعوة ═══ */
   const inviteBtn = document.getElementById('invite-btn');
@@ -29185,6 +29251,24 @@ async function createClan(){
   window.showScreen = function(id){
     const result = origShowScreen.apply(this, arguments);
 
+if(id === 's-inventory'){
+  setTimeout(() => {
+    try { buildInventoryPage(); } catch(e){ console.warn('[Inventory]', e); }
+  }, 80);
+}
+
+if(id === 's-collection'){
+  setTimeout(() => {
+    try { buildCollectionPage(); } catch(e){ console.warn('[Collection]', e); }
+  }, 80);
+}
+
+if(id === 's-avatar-edit'){
+  setTimeout(() => {
+    try { buildAvatarEditPage(); } catch(e){ console.warn('[AvatarEdit]', e); }
+  }, 80);
+}
+
     if(id === 's-referral'){
       setTimeout(() => {
         try { buildReferralPage(); } catch(e){ console.warn('[Referral]', e); }
@@ -29396,6 +29480,513 @@ window.buildReferralPage = buildReferralPage;
 window.buildClanPage = buildClanPage;
 window.buildCreateClanPage = buildCreateClanPage;
 window.applyReferralCode = applyReferralCode;
+
+/* ============================================================
+   ═══════════ INVENTORY PAGE (المخزون) ═══════════
+   ═══════════════════════════════════════════════════════════
+   يعرض العناصر ذات الطابع المؤقت/القابل للاستهلاك
+   ============================================================ */
+function buildInventoryPage(){
+  try {
+    const container = document.getElementById('inventory-content');
+    if(!container) return;
+    container.innerHTML = '';
+
+    /* ═══ تجميع المحتوى ═══ */
+    const categories = [];
+
+    /* 1) القسائم */
+    const vouchers = Save.data.vouchers || {};
+    const voucherItems = [];
+    const voucherDefs = {
+      chest_bronze: { name: 'قسيمة برونزي', icon: '🎫', color: '#A07048' },
+      chest_silver: { name: 'قسيمة فضي', icon: '🎫', color: '#B0B8C0' },
+      chest_gold:   { name: 'قسيمة ذهبي', icon: '🎫', color: '#E8B34E' },
+      wheel_spin:   { name: 'قسيمة عجلة', icon: '🎡', color: '#FF00D8' }
+    };
+    Object.entries(voucherDefs).forEach(([key, def]) => {
+      const count = vouchers[key] || 0;
+      if(count > 0){
+        voucherItems.push({
+          icon: def.icon, name: def.name, count,
+          color: def.color,
+          desc: 'استهلاك'
+        });
+      }
+    });
+    if(voucherItems.length > 0){
+      categories.push({
+        title: '🎫 القسائم',
+        items: voucherItems,
+        sub: 'VOUCHERS'
+      });
+    }
+
+    /* 2) بطاقات طاقة مؤقتة (إن وُجدت مستقبلاً) */
+    if(Save.data.tempBoosts && Object.keys(Save.data.tempBoosts).length > 0){
+      const boostItems = [];
+      Object.entries(Save.data.tempBoosts).forEach(([key, data]) => {
+        if(data.count > 0){
+          boostItems.push({
+            icon: data.icon || '⚡',
+            name: data.name || key,
+            count: data.count,
+            color: data.color || '#4A88C8',
+            desc: 'معزز'
+          });
+        }
+      });
+      if(boostItems.length > 0){
+        categories.push({
+          title: '⚡ معززات مؤقتة',
+          items: boostItems,
+          sub: 'BOOSTERS'
+        });
+      }
+    }
+
+    /* 3) مفاتيح (إن وُجدت) */
+    if(Save.data.keys && Object.keys(Save.data.keys).length > 0){
+      const keyItems = [];
+      Object.entries(Save.data.keys).forEach(([key, count]) => {
+        if(count > 0){
+          keyItems.push({
+            icon: '🗝️', name: 'مفتاح ' + key,
+            count, color: '#E8B34E',
+            desc: 'مفتاح'
+          });
+        }
+      });
+      if(keyItems.length > 0){
+        categories.push({
+          title: '🗝️ المفاتيح',
+          items: keyItems,
+          sub: 'KEYS'
+        });
+      }
+    }
+
+    /* ═══ إحصاء الإجمالي ═══ */
+    let totalItems = 0;
+    categories.forEach(cat => {
+      cat.items.forEach(item => totalItems += (item.count || 1));
+    });
+
+    const countEl = document.getElementById('inventory-count');
+    if(countEl) countEl.textContent = totalItems;
+
+    /* ═══ حالة فارغة ═══ */
+    if(categories.length === 0){
+      container.innerHTML = `
+        <div class="inv-empty">
+          <div class="ie-icon">🎒</div>
+          <div class="ie-title">مخزونك فارغ</div>
+          <div class="ie-desc">افتح الصناديق والعب الأحداث للحصول على قسائم</div>
+        </div>
+      `;
+      return;
+    }
+
+    /* ═══ عرض التصنيفات ═══ */
+    categories.forEach(cat => {
+      const section = document.createElement('div');
+      section.className = 'inv-category';
+
+      const header = document.createElement('div');
+      header.className = 'inv-category-title';
+      header.innerHTML = `
+        <span>${cat.title}</span>
+        <span class="inv-cat-count">${cat.items.length} نوع</span>
+      `;
+      section.appendChild(header);
+
+      const grid = document.createElement('div');
+      grid.className = 'inv-grid';
+
+      cat.items.forEach(item => {
+        const el = document.createElement('div');
+        el.className = 'inv-item temporary';
+        el.style.setProperty('--inv-c', item.color);
+
+        el.innerHTML = `
+          <div class="inv-ic">${item.icon}</div>
+          <div class="inv-count">×${item.count}</div>
+          <div class="inv-name">${item.name}</div>
+          <div class="inv-sub">${item.desc || ''}</div>
+        `;
+        grid.appendChild(el);
+      });
+
+      section.appendChild(grid);
+      container.appendChild(section);
+    });
+
+    console.log('[Inventory] ✓ Built with', totalItems, 'items');
+  } catch(e){
+    console.error('[Inventory] Failed:', e);
+  }
+}
+
+/* ============================================================
+   ═══════════ COLLECTION PAGE (المقتنيات) ═══════════
+   ═══════════════════════════════════════════════════════════
+   يعرض العناصر الدائمة (أزياء، تأثيرات، بطاقات)
+   ============================================================ */
+let _currentCollectionCat = 'skins';
+
+function buildCollectionPage(){
+  try {
+    const container = document.getElementById('collection-grid');
+    if(!container) return;
+
+    /* ═══ إحصاء ═══ */
+    updateCollectionStats();
+
+    /* ═══ ربط التبويبات ═══ */
+    document.querySelectorAll('#collection-tabs .tab-chip').forEach(tab => {
+      if(tab._bound) return;
+      tab._bound = true;
+      tab.addEventListener('click', () => {
+        _currentCollectionCat = tab.dataset.colcat;
+        document.querySelectorAll('#collection-tabs .tab-chip').forEach(t =>
+          t.classList.toggle('active', t === tab));
+        renderCollectionGrid();
+        Sfx.tap();
+      });
+    });
+
+    /* تفعيل التبويب الحالي */
+    document.querySelectorAll('#collection-tabs .tab-chip').forEach(t =>
+      t.classList.toggle('active', t.dataset.colcat === _currentCollectionCat));
+
+    renderCollectionGrid();
+    console.log('[Collection] ✓ Built');
+  } catch(e){
+    console.error('[Collection] Failed:', e);
+  }
+}
+
+function updateCollectionStats(){
+  /* إحصاء كل المقتنيات */
+  let owned = 0, total = 0;
+
+  /* الأزياء */
+  const skins = getAllSkins();
+  total += skins.length;
+  owned += (Save.data.ownedSkins || []).filter(id => skins.find(s => s.id === id)).length;
+
+  /* التأثيرات */
+  COSMETIC_CATEGORY_ORDER.forEach(cat => {
+    const all = getAllCosmetics(cat) || [];
+    const realItems = all.filter(i => i.id !== 'none');
+    total += realItems.length;
+    const ownedList = (Save.data.cosmetics && Save.data.cosmetics.owned[cat]) || [];
+    owned += realItems.filter(i => ownedList.includes(i.id)).length;
+  });
+
+  /* البطاقات */
+  const cards = getAllCards();
+  total += cards.length;
+  owned += (Save.data.cards && Save.data.cards.unlocked || []).length;
+
+  const ownedEl = document.getElementById('collection-owned');
+  const totalEl = document.getElementById('collection-total');
+  if(ownedEl) ownedEl.textContent = owned;
+  if(totalEl) totalEl.textContent = total;
+}
+
+function renderCollectionGrid(){
+  const grid = document.getElementById('collection-grid');
+  if(!grid) return;
+  grid.innerHTML = '';
+
+  const cat = _currentCollectionCat;
+
+  /* ═══ بطاقات ═══ */
+  if(cat === 'cards'){
+    const cards = getAllCards();
+    if(cards.length === 0){
+      grid.innerHTML = '<div style="grid-column:span 3;text-align:center;padding:40px;color:var(--ink-mute);">لا بطاقات — المشرف لم يُضِف أي بطاقة</div>';
+      return;
+    }
+
+    const owned = Save.data.cards?.owned || {};
+    const unlocked = Save.data.cards?.unlocked || [];
+
+    cards.forEach(card => {
+      const count = owned[card.id] || 0;
+      const isUnlocked = unlocked.includes(card.id);
+      const rarity = getCardRarity(card);
+
+      const el = document.createElement('div');
+      el.className = 'tcg-card' + (isUnlocked ? '' : ' locked');
+      el.style.setProperty('--rc', rarity.color);
+      el.style.setProperty('--rc1', rarity.color + '20');
+      el.style.setProperty('--rc2', rarity.color + '60');
+      el.style.setProperty('--rc-border', rarity.color);
+
+      el.innerHTML = `
+        ${count > 1 ? `<div class="tcg-count">×${count}</div>` : ''}
+        <div class="tcg-inner">
+          <div class="tcg-icon">${isUnlocked ? card.icon : '❓'}</div>
+          <div class="tcg-name">${isUnlocked ? card.name : '???'}</div>
+        </div>
+        <div class="tcg-rarity" style="background:${rarity.color};">${rarity.label}</div>
+      `;
+
+      el.addEventListener('click', () => {
+        if(isUnlocked) showCardDetail(card, count);
+        else Toast.info('🔒 مقفلة', 'افتح الصناديق للحصول عليها');
+      });
+
+      grid.appendChild(el);
+    });
+    return;
+  }
+
+  /* ═══ أزياء ═══ */
+  if(cat === 'skins'){
+    const skins = getAllSkins();
+    const ownedList = Save.data.ownedSkins || [];
+    const currentId = Save.data.currentSkin;
+
+    skins.filter(s => ownedList.includes(s.id)).forEach(skin => {
+      const el = buildCollectionItemCard(skin, {
+        name: skin.ar || skin.name,
+        isEquipped: currentId === skin.id,
+        onEquip: () => {
+          Save.data.currentSkin = skin.id;
+          Save.save();
+          renderCollectionGrid();
+          Sfx.tap(); haptic(6);
+        }
+      });
+      grid.appendChild(el);
+    });
+
+    if(grid.children.length === 0){
+      grid.innerHTML = '<div style="grid-column:span 3;text-align:center;padding:40px;color:var(--ink-mute);">لا أزياء مملوكة</div>';
+    }
+    return;
+  }
+
+  /* ═══ تأثيرات ═══ */
+  const all = getAllCosmetics(cat) || [];
+  const ownedList = (Save.data.cosmetics && Save.data.cosmetics.owned[cat]) || [];
+  const currentId = Save.data.cosmetics && Save.data.cosmetics.current[cat];
+
+  all.filter(item => item.id !== 'none' && ownedList.includes(item.id)).forEach(item => {
+    const el = buildCollectionItemCard(item, {
+      name: item.name,
+      isEquipped: currentId === item.id,
+      onEquip: () => {
+        Save.data.cosmetics.current[cat] = item.id;
+        Save.save();
+        renderCollectionGrid();
+        Sfx.tap(); haptic(6);
+      }
+    });
+    grid.appendChild(el);
+  });
+
+  if(grid.children.length === 0){
+    grid.innerHTML = '<div style="grid-column:span 3;text-align:center;padding:40px;color:var(--ink-mute);">لا عناصر في هذه الفئة</div>';
+  }
+}
+
+function buildCollectionItemCard(item, opts){
+  const el = document.createElement('button');
+  el.className = 'cos-card' + (opts.isEquipped ? ' equipped' : '');
+  el.style.cssText = 'cursor:pointer;position:relative;';
+
+  /* ═══ المعاينة ═══ */
+  const preview = document.createElement('div');
+  preview.className = 'cos-preview';
+
+  if(typeof hasItemImage === 'function' && hasItemImage(item)){
+    const wrapper = document.createElement('div');
+    wrapper.className = 'cos-preview-img-wrap';
+    const img = document.createElement('img');
+    img.src = ASSET.resolve(item);
+    img.alt = opts.name;
+    img.style.cssText = 'max-width:92%;max-height:92%;object-fit:contain;';
+    img.loading = 'lazy';
+    wrapper.appendChild(img);
+    preview.appendChild(wrapper);
+  } else {
+    preview.innerHTML = '<span style="font-size:32px;">🎁</span>';
+  }
+
+  el.appendChild(preview);
+
+  /* ═══ الاسم ═══ */
+  const nameEl = document.createElement('div');
+  nameEl.className = 'cos-name';
+  nameEl.textContent = opts.name;
+  el.appendChild(nameEl);
+
+  /* ═══ الحالة ═══ */
+  if(opts.isEquipped){
+    const tag = document.createElement('div');
+    tag.className = 'cos-tag equipped';
+    tag.textContent = '✓ مُجهّز';
+    el.appendChild(tag);
+  } else {
+    const tag = document.createElement('div');
+    tag.className = 'cos-tag owned';
+    tag.textContent = 'اضغط للتجهيز';
+    el.appendChild(tag);
+  }
+
+  el.addEventListener('click', opts.onEquip);
+  return el;
+}
+
+/* ============================================================
+   ═══════════ AVATAR EDIT PAGE ═══════════
+   ============================================================ */
+let _currentAvatarTab = 'avatar';
+
+function buildAvatarEditPage(){
+  try {
+    /* ═══ معاينة حالية ═══ */
+    updateAvatarEditPreview();
+
+    /* ═══ ربط التبويبات ═══ */
+    document.querySelectorAll('#avatar-edit-tabs .tab-chip').forEach(tab => {
+      if(tab._bound) return;
+      tab._bound = true;
+      tab.addEventListener('click', () => {
+        _currentAvatarTab = tab.dataset.avtab;
+        document.querySelectorAll('#avatar-edit-tabs .tab-chip').forEach(t =>
+          t.classList.toggle('active', t === tab));
+        renderAvatarEditGrid();
+        Sfx.tap();
+      });
+    });
+
+    document.querySelectorAll('#avatar-edit-tabs .tab-chip').forEach(t =>
+      t.classList.toggle('active', t.dataset.avtab === _currentAvatarTab));
+
+    renderAvatarEditGrid();
+  } catch(e){
+    console.error('[AvatarEdit] Failed:', e);
+  }
+}
+
+function updateAvatarEditPreview(){
+  /* ═══ الصورة ═══ */
+  const av = currentAvatar();
+  const imgEl = document.getElementById('aep-img');
+  const emojiEl = document.getElementById('aep-emoji');
+
+  if(imgEl && emojiEl){
+    if(av && av.id !== 'none' && hasItemImage(av)){
+      imgEl.src = ASSET.resolve(av);
+      imgEl.style.display = 'block';
+      emojiEl.style.display = 'none';
+    } else {
+      /* Google photo */
+      const photo = (Cloud.user && Cloud.user.photoURL) || null;
+      if(photo){
+        imgEl.src = photo;
+        imgEl.style.display = 'block';
+        emojiEl.style.display = 'none';
+      } else {
+        const name = (Cloud.profile && Cloud.profile.username) || 'L';
+        emojiEl.textContent = name.charAt(0).toUpperCase();
+        emojiEl.style.display = 'inline';
+        imgEl.style.display = 'none';
+      }
+    }
+  }
+
+  /* ═══ الإطار ═══ */
+  const frame = currentAvatarFrame();
+  const frameEl = document.getElementById('aep-frame');
+  if(frameEl){
+    frameEl.innerHTML = '';
+    if(frame && frame.id !== 'none' && hasItemImage(frame)){
+      const img = document.createElement('img');
+      img.src = ASSET.resolve(frame);
+      img.alt = '';
+      frameEl.appendChild(img);
+    }
+  }
+}
+
+function renderAvatarEditGrid(){
+  const grid = document.getElementById('avatar-edit-grid');
+  if(!grid) return;
+  grid.innerHTML = '';
+
+  const cat = _currentAvatarTab;
+  const all = getAllCosmetics(cat) || [];
+  const ownedList = (Save.data.cosmetics && Save.data.cosmetics.owned[cat]) || [];
+  const currentId = Save.data.cosmetics && Save.data.cosmetics.current[cat];
+
+  /* ═══ تأكد من وجود 'none' ═══ */
+  let items = all.filter(i => ownedList.includes(i.id));
+  if(!items.find(i => i.id === 'none')){
+    /* أضف "بدون" يدوياً */
+    items.unshift({ id: 'none', name: 'بدون', icon: cat === 'avatar' ? '👤' : '🚫' });
+  }
+
+  if(items.length === 0){
+    grid.innerHTML = '<div style="grid-column:span 2;text-align:center;padding:40px;color:var(--ink-mute);">لا عناصر</div>';
+    return;
+  }
+
+  items.forEach(item => {
+    const el = document.createElement('button');
+    el.className = 'cos-card' + (currentId === item.id ? ' equipped' : '');
+    el.style.cssText = 'cursor:pointer;position:relative;';
+
+    const preview = document.createElement('div');
+    preview.className = 'cos-preview';
+
+    if(item.id === 'none'){
+      preview.innerHTML = `<span style="font-size:32px;">${item.icon || '🚫'}</span>`;
+    } else if(hasItemImage(item)){
+      const wrapper = document.createElement('div');
+      wrapper.className = 'cos-preview-img-wrap';
+      const img = document.createElement('img');
+      img.src = ASSET.resolve(item);
+      img.alt = item.name;
+      img.style.cssText = 'max-width:92%;max-height:92%;object-fit:contain;';
+      img.loading = 'lazy';
+      wrapper.appendChild(img);
+      preview.appendChild(wrapper);
+    } else {
+      preview.innerHTML = '<span style="font-size:32px;">🖼️</span>';
+    }
+
+    el.appendChild(preview);
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'cos-name';
+    nameEl.textContent = item.name || 'بدون';
+    el.appendChild(nameEl);
+
+    const tag = document.createElement('div');
+    tag.className = 'cos-tag ' + (currentId === item.id ? 'equipped' : 'owned');
+    tag.textContent = currentId === item.id ? '✓ مُجهّز' : 'اضغط للتجهيز';
+    el.appendChild(tag);
+
+    el.addEventListener('click', () => {
+      if(currentId === item.id) return;
+      Save.data.cosmetics.current[cat] = item.id;
+      Save.save();
+      updateAvatarEditPreview();
+      renderAvatarEditGrid();
+      /* حدّث الرئيسية */
+      if(typeof updatePlayerCard === 'function') updatePlayerCard();
+      Sfx.tap(); haptic(6);
+    });
+
+    grid.appendChild(el);
+  });
+}
 
 /* ============================================================
    ==================== BOOT =================================

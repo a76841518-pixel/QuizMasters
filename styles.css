@@ -8054,3 +8054,195 @@ kbd {
   color: var(--ink-mute);
   cursor: not-allowed;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   ═══════════ AVATAR EDIT BUTTON ═══════════
+   ═══════════════════════════════════════════════════════════ */
+.phm-avatar-edit-btn {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: linear-gradient(135deg, #E8B34E, #E07A3F);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  box-shadow: 0 3px 10px rgba(0,0,0,.35);
+  transition: transform .15s;
+  padding: 0;
+}
+.phm-avatar-edit-btn:active {
+  transform: scale(.88);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ═══════════ AVATAR EDIT PAGE ═══════════
+   ═══════════════════════════════════════════════════════════ */
+.avatar-edit-preview {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  margin: 20px auto 24px;
+}
+.aep-frame {
+  position: absolute;
+  inset: -12px;
+  pointer-events: none;
+  z-index: 2;
+}
+.aep-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  animation: frameRotate 30s linear infinite;
+}
+.aep-avatar {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FFE0A0, #E8B34E);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 56px;
+  overflow: hidden;
+  border: 4px solid rgba(255,255,255,.3);
+  box-shadow: 0 8px 28px rgba(0,0,0,.35);
+  z-index: 1;
+}
+.aep-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ═══════════ INVENTORY & COLLECTION ═══════════
+   ═══════════════════════════════════════════════════════════ */
+.inv-category {
+  margin-bottom: 20px;
+}
+.inv-category-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 4px 8px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  border-bottom: 2px solid var(--line);
+  margin-bottom: 12px;
+}
+.inv-category-title .inv-cat-ic {
+  font-size: 20px;
+}
+.inv-category-title .inv-cat-count {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--ink-mute);
+  font-weight: 700;
+}
+
+.inv-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.inv-item {
+  padding: 10px 6px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1.5px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.inv-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 20%;
+  right: 20%;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--inv-c, #E8B34E);
+  opacity: .8;
+}
+.inv-item .inv-ic {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--inv-c, #E8B34E) 15%, #fff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: var(--inv-c, #E8B34E);
+}
+.inv-item .inv-name {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.2;
+}
+.inv-item .inv-count {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--inv-c, #E8B34E);
+  line-height: 1;
+}
+.inv-item .inv-sub {
+  font-size: 9px;
+  color: var(--ink-mute);
+  font-weight: 700;
+}
+
+/* ═══ عناصر المخزون (المؤقتة) ═══ */
+.inv-item.temporary {
+  background: linear-gradient(135deg, #fff, color-mix(in srgb, var(--inv-c) 8%, #fff));
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--inv-c) 50%, transparent);
+}
+
+/* ═══ عناصر المقتنيات ═══ */
+.inv-item.permanent {
+  background: linear-gradient(135deg, #fff, color-mix(in srgb, var(--inv-c) 5%, #fff));
+}
+
+/* ═══ حالة فارغة ═══ */
+.inv-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--ink-mute);
+}
+.inv-empty .ie-icon {
+  font-size: 56px;
+  opacity: .3;
+  margin-bottom: 12px;
+}
+.inv-empty .ie-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.inv-empty .ie-desc {
+  font-size: 11px;
+}
