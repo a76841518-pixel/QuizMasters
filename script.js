@@ -3180,18 +3180,18 @@ Save.runMigrations();
 
 const COSMETIC_CATEGORIES = {
   /* ═══════ التأثيرات الجوهرية (9) ═══════ */
-  head: {
-    label:'الرأس', en:'HEAD', icon:'👑', folder:'head',
-    color:'#E8B34E', order:1, group:'effect',
-    desc:'تاج، قبعة، خوذة — فوق الرأس',
-    render: {
-      anchor:{ x:0.5, y:1.0 },   /* مرتكز على أسفل الصورة */
-      sizeMul: 2.4,               /* مضاعف نصف قطر اللاعب */
-      offsetY:-1.15,              /* إزاحة رأسية بالنسبة لنصف القطر */
-      rotationAmp: 0.02,          /* اهتزاز طفيف */
-      rotationSpeed: 0.04
-    }
-  },
+head: {
+  label:'الرأس', en:'HEAD', icon:'👑', folder:'head',
+  color:'#E8B34E', order:1, group:'effect',
+  desc:'تاج، قبعة، خوذة — فوق الرأس',
+  render: {
+    anchor:{ x:0.5, y:1.0 },   /* مرتكز على أسفل الصورة */
+    sizeMul: 2.4,               /* مضاعف نصف قطر اللاعب */
+    offsetY:-0.82,              /* ✅ إزاحة أقل = العنصر أقرب للرأس */
+    rotationAmp: 0.02,
+    rotationSpeed: 0.04
+  }
+},
   back: {
     label:'الظهر', en:'BACK', icon:'🦋', folder:'back',
     color:'#9A6AC8', order:2, group:'effect',
@@ -11047,20 +11047,34 @@ function renderCharacter(c, r, skin, opts){
   }
 
   /* ═══ طبقة 3: الرأس ═══ */
-  if(!skipExtras){
-    const head = currentHead();
-    if(head && head.id !== 'none' && hasItemImage(head)){
-      const cfg = getCategoryConfig('head').render;
-      ASSET.drawItem(c, head, {
-        x: 0,
-        y: r * (cfg.offsetY || -1.15),
-        size: r * (cfg.sizeMul || 2.4),
-        anchorX: cfg.anchor.x,
-        anchorY: cfg.anchor.y,
-        rotation: Math.sin(t * (cfg.rotationSpeed || 0.04)) * (cfg.rotationAmp || 0.02)
-      });
+/* ابحث في renderCharacter عن طبقة الرأس */
+if(!skipExtras){
+  const head = currentHead();
+  if(head && head.id !== 'none' && hasItemImage(head)){
+    const cfg = getCategoryConfig('head').render;
+    
+    /* ✅ ضبط ديناميكي حسب حجم العنصر */
+    let dynamicOffsetY = cfg.offsetY || -0.82;
+    
+    /* العناصر الأكبر (تاج/خوذة) → أعلى قليلاً */
+    if(head.sizeMul && head.sizeMul > 2.6){
+      dynamicOffsetY = -0.92;
     }
+    /* العناصر الصغيرة (قرون/آذان) → أقرب للرأس */
+    else if(head.sizeMul && head.sizeMul < 2.2){
+      dynamicOffsetY = -0.75;
+    }
+    
+    ASSET.drawItem(c, head, {
+      x: 0,
+      y: r * dynamicOffsetY,
+      size: r * (cfg.sizeMul || 2.4),
+      anchorX: cfg.anchor.x,
+      anchorY: cfg.anchor.y,
+      rotation: Math.sin(t * (cfg.rotationSpeed || 0.04)) * (cfg.rotationAmp || 0.02)
+    });
   }
+}
 
   c.restore();
 }
