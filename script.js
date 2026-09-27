@@ -18942,42 +18942,69 @@ function setupAuthWiring() {
 async function setupAuthListener() {
 
   /* ═══════════════════════════════════════════════════════
-     ✅ 1) معالجة نتيجة الـ redirect مع إعادة محاولة
+     ✅ 1) فحص دقيق: هل نحن فعلاً في redirect؟
      ═══════════════════════════════════════════════════════ */
-  const wasRedirecting = (() => {
-    try { return sessionStorage.getItem('auth_redirect_pending') === '1'; }
-    catch(_) { return false; }
-  })();
+  const urlHasRedirect = (
+    location.href.includes('apiKey=') ||
+    location.href.includes('oobCode=') ||
+    location.href.includes('mode=signIn') ||
+    location.hash.includes('firebase') ||
+    location.search.includes('firebase') ||
+    location.hash.includes('__firebase')
+  );
+
+  let wasRedirecting = false;
+  let redirectFlagAge = Infinity;
+
+  try {
+    const flagValue = sessionStorage.getItem('auth_redirect_pending');
+    const flagTime  = parseInt(sessionStorage.getItem('auth_redirect_started_at') || '0', 10);
+    redirectFlagAge = Date.now() - flagTime;
+
+    /* ═══ نعتبر العلم صالحاً فقط إذا كان حديثاً (< 60 ثانية) ═══ */
+    const isRecent = redirectFlagAge < 60000;
+    wasRedirecting = (flagValue === '1') && (isRecent || urlHasRedirect);
+
+    /* ═══ ✅ تنظيف تلقائي للعلم العالق ═══ */
+    if (flagValue === '1' && !isRecent && !urlHasRedirect) {
+      console.log('[Cloud] 🧹 Clearing stale redirect flag (age: ' + Math.round(redirectFlagAge / 1000) + 's)');
+      sessionStorage.removeItem('auth_redirect_pending');
+      sessionStorage.removeItem('auth_redirect_started_at');
+    }
+  } catch (_) {}
 
   let redirectResult = null;
   let redirectError  = null;
 
-  if (wasRedirecting) {
-    /* إظهار شاشة تحميل */
+  /* ═══════════════════════════════════════════════════════
+     ✅ 2) getRedirectResult — فقط عند الحاجة الفعلية
+     ═══════════════════════════════════════════════════════ */
+  if (wasRedirecting || urlHasRedirect) {
     showLoginLoading(true);
 
-    /* ⏱️ retry حتى 3 مرات — iOS يحتاج وقتاً لتطبيق الـ state */
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        redirectResult = await Cloud.auth.getRedirectResult();
-        if (redirectResult && redirectResult.user) break;
-      } catch (e) {
-        redirectError = e;
-        console.warn(`[Cloud] getRedirectResult attempt ${attempt+1} failed:`, e.code);
-      }
-      if (attempt < 2) await new Promise(r => setTimeout(r, 400));
+    /* ═══ getRedirectResult مع timeout صارم (3 ثوان) ═══ */
+    try {
+      redirectResult = await Promise.race([
+        Cloud.auth.getRedirectResult(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('REDIRECT_TIMEOUT')), 3000)
+        )
+      ]);
+    } catch (e) {
+      redirectError = e;
+      console.warn('[Cloud] Redirect result failed:', e.code || e.message);
     }
 
-    /* نظّف العلامة */
+    /* ═══ تنظيف فوري ═══ */
     try {
       sessionStorage.removeItem('auth_redirect_pending');
       sessionStorage.removeItem('auth_redirect_started_at');
-    } catch(_) {}
+    } catch (_) {}
 
     showLoginLoading(false);
 
-    /* ✅ عالج الأخطاء */
-    if (redirectError) {
+    /* ═══ معالجة الأخطاء (بدون timeout) ═══ */
+    if (redirectError && redirectError.message !== 'REDIRECT_TIMEOUT') {
       const errCode = redirectError.code || '';
       let msg = 'تعذّر إكمال تسجيل الدخول';
 
@@ -18996,77 +19023,84 @@ async function setupAuthListener() {
   }
 
   /* ═══════════════════════════════════════════════════════
-     ✅ 2) مستمع حالة الدخول
+     ✅ 3) تسجيل مستمع حالة الدخول — مع try/catch
      ═══════════════════════════════════════════════════════ */
-  Cloud.auth.onAuthStateChanged(async (user) => {
-    if (user) {
-      const previousUid = Cloud.user ? Cloud.user.uid : null;
-      const isDifferentUser = (previousUid !== user.uid);
-
-      if (isDifferentUser) {
-        Save.data = JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA));
-        Save.runMigrations();
-      }
-
-      Cloud.user = user;
-      Cloud.setState('idle');
-
+  try {
+    Cloud.auth.onAuthStateChanged(async (user) => {
+      /* ═══ حماية: كل المنطق داخل try/catch لمنع unhandled rejection ═══ */
       try {
-        await Cloud.loadProfile(user.uid);
-      } catch (e) {
-        console.warn('[Cloud] loadProfile failed:', e);
-      }
+        if (user) {
+          const previousUid = Cloud.user ? Cloud.user.uid : null;
+          const isDifferentUser = (previousUid !== user.uid);
 
-      if (isAdminUser()) {
-        Save.data.admin.access = true;
-      }
+          if (isDifferentUser) {
+            Save.data = JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA));
+            Save.runMigrations();
+          }
 
-      applyAdminEffects();
-      updateProfileUI();
+          Cloud.user = user;
+          Cloud.setState('idle');
 
-      /* ═══ لا يوجد اسم → افتح شاشة الإعداد ═══ */
-      if (!Cloud.profile || !Cloud.profile.username) {
-        if (user.displayName) {
-          const inp = document.getElementById('setup-username');
-          if (inp && !inp.value) {
-            inp.value = user.displayName
-              .replace(/[^A-Za-z0-9_\u0600-\u06FF]/g, '')
-              .slice(0, 16);
-            inp.dispatchEvent(new Event('input'));
+          try {
+            await Cloud.loadProfile(user.uid);
+          } catch (e) {
+            console.warn('[Cloud] loadProfile failed:', e);
+          }
+
+          if (isAdminUser()) {
+            Save.data.admin.access = true;
+          }
+
+          applyAdminEffects();
+          updateProfileUI();
+
+          if (!Cloud.profile || !Cloud.profile.username) {
+            if (user.displayName) {
+              const inp = document.getElementById('setup-username');
+              if (inp && !inp.value) {
+                inp.value = user.displayName
+                  .replace(/[^A-Za-z0-9_\u0600-\u06FF]/g, '')
+                  .slice(0, 16);
+                inp.dispatchEvent(new Event('input'));
+              }
+            }
+            showScreen('s-profile-setup');
+            setTimeout(() => {
+              const inp = document.getElementById('setup-username');
+              if (inp) inp.focus();
+            }, 300);
+          } else {
+            try {
+              await mergeAndGoHome();
+            } catch (e) {
+              console.error('[mergeAndGoHome] failed:', e);
+              buildHome();
+              showScreen('s-home');
+            }
+          }
+        } else {
+          /* ═══ تم تسجيل الخروج ═══ */
+          Cloud.user = null;
+          Cloud.profile = null;
+          Save.data = JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA));
+          Save.runMigrations();
+
+          Cloud.setState('offline');
+          if (Cloud.enabled) {
+            showScreen('s-login');
+          } else {
+            showScreen('s-home');
+            buildHome();
           }
         }
-        showScreen('s-profile-setup');
-        setTimeout(() => {
-          const inp = document.getElementById('setup-username');
-          if (inp) inp.focus();
-        }, 300);
-      } else {
-        /* ═══ عنده اسم → للقائمة الرئيسية ═══ */
-        try {
-          await mergeAndGoHome();
-        } catch (e) {
-          console.error('[mergeAndGoHome] failed:', e);
-          /* احتياطي: افتح الرئيسية على أي حال */
-          buildHome();
-          showScreen('s-home');
-        }
+      } catch (innerErr) {
+        /* ═══ اعتراض أي خطأ داخل المستمع لمنع unhandled rejection ═══ */
+        console.error('[onAuthStateChanged] Unhandled:', innerErr);
       }
-    } else {
-      /* ═══ تم تسجيل الخروج ═══ */
-      Cloud.user = null;
-      Cloud.profile = null;
-      Save.data = JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA));
-      Save.runMigrations();
-
-      Cloud.setState('offline');
-      if (Cloud.enabled) {
-        showScreen('s-login');
-      } else {
-        showScreen('s-home');
-        buildHome();
-      }
-    }
-  });
+    });
+  } catch (e) {
+    console.warn('[Cloud] onAuthStateChanged setup failed:', e);
+  }
 }
 
 /* ============================================================
@@ -31102,6 +31136,2177 @@ function renderAvatarEditGrid(){
     grid.appendChild(el);
   });
 }
+
+/* ============================================================
+   ═══════════ MULTIPLAYER v3 — 4 PLAYERS + FRIEND INVITE ═══
+   ═══════════════════════════════════════════════════════════
+   - حتى 4 لاعبين في غرفة واحدة
+   - حالة استعداد لكل لاعب
+   - صاحب الدعوة يتحكم في النمط والبدء
+   - دعوة الأصدقاء من الصفحة الرئيسية
+   ============================================================ */
+
+(function upgradeMultiplayerToV3(){
+
+  /* ═══ 1) تحديث الإعدادات ═══ */
+  MP_CONFIG.maxPlayers = 4;
+
+  /* ═══ 2) حالة إضافية ═══ */
+  MP.myReady = false;
+  MP.hostSelectedMode = 'FLIP';
+
+  /* ═══ 3) دوال مساعدة ═══ */
+  MP.getPlayers = function(){
+    return (this.roomData && this.roomData.players) || [];
+  };
+
+  MP.canStart = function(){
+    const players = this.getPlayers();
+    if(players.length < 2) return false;
+    const guests = players.filter(p => p.uid !== this.roomData.hostUid);
+    return guests.length > 0 && guests.every(p => p.ready === true);
+  };
+
+  /* ═══ 4) إنشاء غرفة (4 لاعبين) ═══ */
+  window.mpCreateRoom = async function(mode){
+    if(!Cloud.user){ alert('يجب تسجيل الدخول أولاً'); return; }
+    if(MP.active) await mpLeaveRoom();
+
+    const code = await mpFindUnusedCode();
+    const seed = mpGenerateSeed();
+    const uid = Cloud.user.uid;
+    const name = (Cloud.profile && Cloud.profile.username) || 'لاعب';
+    const skinId = Save.data.currentSkin;
+    const roomMode = mode || Save.data.mode || 'FLIP';
+
+    try {
+      const ref = Cloud.db.collection(MP_CONFIG.collection).doc();
+      const roomId = ref.id;
+
+      const hostPlayer = {
+        uid, name,
+        skin: skinId,
+        ready: true,
+        isHost: true,
+        joinedAt: Date.now()
+      };
+
+      await ref.set({
+        code, seed, hostUid: uid,
+        mode: roomMode,
+        players: [hostPlayer],
+        status: 'waiting',
+        maxPlayers: MP_CONFIG.maxPlayers,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        heartbeatAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      MP.active = true;
+      MP.roomId = roomId;
+      MP.roomCode = code;
+      MP.roomSeed = seed;
+      MP.isHost = true;
+      MP.myReady = true;
+      MP.resultShown = false;
+      MP.countdownActive = false;
+      MP.hostSelectedMode = roomMode;
+
+      mpAttachListeners();
+      showScreen('s-multiplayer-waiting');
+      mpBuildWaitingRoom();
+      mpStartLatencyProbe();
+
+      Sfx.reward(); haptic(20);
+    } catch(e){
+      console.error('[MP3] Create failed:', e);
+      alert('تعذر إنشاء الغرفة: ' + (e.message || 'خطأ'));
+    }
+  };
+
+  /* ═══ 5) الانضمام ═══ */
+  window.mpJoinRoom = async function(code){
+    if(!Cloud.user){ alert('يجب تسجيل الدخول أولاً'); return; }
+    code = String(code || '').trim().toUpperCase();
+    if(code.length !== MP_CONFIG.codeLength){ alert('كود غير صحيح'); return; }
+    if(MP.active) await mpLeaveRoom();
+
+    const myUid = Cloud.user.uid;
+    let roomDoc = null, roomId = null, data = null;
+
+    try {
+      const snap = await Cloud.db.collection(MP_CONFIG.collection)
+        .where('code', '==', code).limit(10).get();
+
+      for(const doc of snap.docs){
+        const d = doc.data();
+        if(d.status !== 'waiting' && d.status !== 'countdown') continue;
+        if(d.hostUid === myUid) continue;
+        const players = d.players || [];
+        if(players.length >= MP_CONFIG.maxPlayers) continue;
+        if(players.find(p => p.uid === myUid)) continue;
+        roomDoc = doc; roomId = doc.id; data = d; break;
+      }
+
+      if(!roomDoc){
+        alert('لا توجد غرفة متاحة بهذا الكود');
+        return;
+      }
+
+      const name = (Cloud.profile && Cloud.profile.username) || 'لاعب';
+      const newPlayer = {
+        uid: myUid, name,
+        skin: Save.data.currentSkin,
+        ready: false,
+        isHost: false,
+        joinedAt: Date.now()
+      };
+
+      const players = data.players || [];
+      players.push(newPlayer);
+
+      await Cloud.db.collection(MP_CONFIG.collection).doc(roomId).update({ players });
+
+      MP.active = true;
+      MP.roomId = roomId;
+      MP.roomCode = code;
+      MP.roomSeed = data.seed || 0;
+      MP.isHost = false;
+      MP.myReady = false;
+      MP.resultShown = false;
+      MP.countdownActive = false;
+      MP.hostSelectedMode = data.mode || 'FLIP';
+
+      mpAttachListeners();
+      showScreen('s-multiplayer-waiting');
+      mpBuildWaitingRoom();
+      mpStartLatencyProbe();
+
+      Sfx.reward(); haptic(20);
+    } catch(e){
+      console.error('[MP3] Join failed:', e);
+      alert('تعذر الانضمام: ' + (e.message || 'خطأ'));
+    }
+  };
+
+  /* ═══ 6) تبديل الاستعداد ═══ */
+  window.mpToggleReady = async function(){
+    if(!MP.active || !Cloud.user || !Cloud.db) return;
+    if(MP.isHost) return;
+
+    const uid = Cloud.user.uid;
+    const newReady = !MP.myReady;
+
+    try {
+      const roomRef = Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId);
+      const snap = await roomRef.get();
+      if(!snap.exists) return;
+
+      const players = snap.data().players || [];
+      const me = players.find(p => p.uid === uid);
+      if(!me) return;
+      me.ready = newReady;
+
+      await roomRef.update({ players });
+      MP.myReady = newReady;
+
+      Sfx.play(newReady ? 660 : 440, 0.15, 'sine', 0.05, newReady ? 990 : 330);
+      haptic(10);
+    } catch(e){
+      console.warn('[MP3] Toggle ready failed:', e);
+    }
+  };
+
+  /* ═══ 7) تغيير النمط ═══ */
+  window.mpChangeMode = async function(newMode){
+    if(!MP.active || !MP.isHost || !Cloud.db) return;
+    try {
+      await Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId).update({ mode: newMode });
+      MP.hostSelectedMode = newMode;
+      Sfx.tap(); haptic(6);
+    } catch(e){
+      console.warn('[MP3] Change mode failed:', e);
+    }
+  };
+
+  /* ═══ 8) بناء غرفة الانتظار ═══ */
+  window.mpBuildWaitingRoom = function(){
+    if(!MP.roomData) return;
+
+    const codeEl = document.getElementById('mp-room-code');
+    if(codeEl) codeEl.textContent = MP.roomCode || '—';
+
+    const players = MP.roomData.players || [];
+    const maxPlayers = MP_CONFIG.maxPlayers;
+    const myUid = Cloud.user ? Cloud.user.uid : null;
+    const isHost = MP.isHost;
+
+    /* ═══ الشرائح ═══ */
+    const slots = document.getElementById('mp-slots');
+    if(slots){
+      slots.style.cssText = `
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-bottom: 16px;
+      `;
+      slots.innerHTML = '';
+      for(let i = 0; i < maxPlayers; i++){
+        slots.appendChild(mpBuildPlayerSlotV3(players[i], myUid));
+      }
+    }
+
+    /* ═══ مُنتقي النمط ═══ */
+    const oldSelector = document.getElementById('mp-mode-selector');
+    if(oldSelector) oldSelector.remove();
+
+    const currentMode = MP.roomData.mode || 'FLIP';
+    const modeData = MODES.find(m => m.id === currentMode) || MODES[0];
+
+    const modeSelector = document.createElement('div');
+    modeSelector.id = 'mp-mode-selector';
+    modeSelector.style.cssText = `
+      margin-bottom: 14px; padding: 14px;
+      border-radius: 16px; background: #fff;
+      border: 1.5px solid var(--line);
+      box-shadow: var(--shadow-sm);
+    `;
+    modeSelector.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:22px;">${modeData.icon}</span>
+          <div>
+            <div style="font-family:'Space Grotesk';font-size:10px;font-weight:700;color:var(--ink-mute);letter-spacing:1.5px;">
+              النمط المختار
+            </div>
+            <div style="font-size:14px;font-weight:800;color:${modeData.color};">
+              ${modeData.ar}
+            </div>
+          </div>
+        </div>
+        ${isHost
+          ? `<button id="mp-mode-change-btn" style="padding:8px 14px;border-radius:100px;border:none;
+                     background:linear-gradient(135deg,var(--amber),#F2A671);color:#fff;
+                     font-family:inherit;font-size:11px;font-weight:800;cursor:pointer;">
+               تغيير النمط
+             </button>`
+          : `<span style="font-size:10px;color:var(--ink-mute);font-weight:700;">👑 المضيف يتحكم</span>`
+        }
+      </div>
+    `;
+
+    const slotsEl = document.getElementById('mp-slots');
+    if(slotsEl && slotsEl.parentNode){
+      slotsEl.parentNode.insertBefore(modeSelector, slotsEl);
+    }
+
+    const changeBtn = document.getElementById('mp-mode-change-btn');
+    if(changeBtn && isHost){
+      changeBtn.addEventListener('click', openMPModePickerV3);
+    }
+
+    /* ═══ شريط النقاط — إخفاء ═══ */
+    const scoreDisplay = document.getElementById('mp-score-display');
+    if(scoreDisplay) scoreDisplay.innerHTML = '';
+
+    /* ═══ حالة الاتصال ═══ */
+    mpUpdateConnectionBadge();
+
+    /* ═══ زر البدء / الاستعداد ═══ */
+    const oldStartBtn = document.getElementById('mp-start-btn');
+    if(!oldStartBtn) return;
+
+    const startBtn = oldStartBtn.cloneNode(true);
+    oldStartBtn.parentNode.replaceChild(startBtn, oldStartBtn);
+
+    if(isHost){
+      const canStart = MP.canStart();
+      startBtn.disabled = !canStart;
+      startBtn.style.opacity = canStart ? '1' : '0.55';
+      startBtn.style.background = canStart
+        ? 'linear-gradient(135deg,#6B9B6B,#4A7B4A)'
+        : 'var(--paper-3)';
+      startBtn.style.color = canStart ? '#fff' : 'var(--ink-mute)';
+
+      if(players.length < 2){
+        startBtn.textContent = `⏳ بانتظار لاعبين (${players.length}/${maxPlayers})`;
+      } else if(!canStart){
+        startBtn.textContent = '⏳ بانتظار جهوزية اللاعبين...';
+      } else {
+        startBtn.textContent = `🏁 ابدأ السباق (${players.length} لاعبين)`;
+      }
+
+      startBtn.addEventListener('click', () => {
+        if(MP.canStart()) window.mpStartRace();
+      });
+    } else {
+      startBtn.disabled = false;
+      startBtn.style.opacity = '1';
+      startBtn.style.color = '#fff';
+      startBtn.style.background = MP.myReady
+        ? 'linear-gradient(135deg,#6B9B6B,#4A7B4A)'
+        : 'linear-gradient(135deg,var(--gold),#F2C862)';
+      startBtn.textContent = MP.myReady
+        ? '✓ أنت جاهز — بانتظار البدء'
+        : '⚔️ أعلن الاستعداد';
+      startBtn.addEventListener('click', window.mpToggleReady);
+    }
+  };
+
+  /* ═══ 9) شريحة اللاعب ═══ */
+  function mpBuildPlayerSlotV3(player, myUid){
+    const slot = document.createElement('div');
+    slot.style.cssText = `
+      padding: 14px 10px; border-radius: 16px;
+      background: #fff; border: 2px solid var(--line);
+      box-shadow: var(--shadow-sm);
+      display: flex; flex-direction: column;
+      align-items: center; gap: 8px;
+      position: relative; transition: all .3s;
+      min-height: 140px; justify-content: center;
+    `;
+
+    if(!player){
+      slot.style.background = 'repeating-linear-gradient(45deg, var(--paper), var(--paper) 8px, var(--paper-2) 8px, var(--paper-2) 16px)';
+      slot.style.borderStyle = 'dashed';
+      slot.innerHTML = `
+        <div style="font-size:26px;opacity:.35;">+</div>
+        <div style="font-size:10.5px;font-weight:700;color:var(--ink-mute);">
+          بانتظار لاعب
+        </div>
+      `;
+      return slot;
+    }
+
+    const isMe = player.uid === myUid;
+    const isHost = player.isHost;
+    const skin = getAllSkins().find(s => s.id === player.skin) || SKINS[0];
+
+    if(player.ready){
+      slot.style.borderColor = '#6B9B6B';
+      slot.style.boxShadow = '0 4px 16px rgba(107,155,107,.25)';
+    }
+    if(isMe){
+      slot.style.background = 'linear-gradient(135deg,#FFF9EC,#FBF1DC)';
+    }
+
+    const avatarGrad = `radial-gradient(circle at 30% 30%, ${mixColor(skin.body, '#FFFFFF', 0.4)}, ${skin.body} 55%, ${skin.bodyDark})`;
+
+    slot.innerHTML = `
+      ${isMe ? `<div style="position:absolute;top:-8px;right:8px;padding:2px 8px;border-radius:100px;background:var(--amber);color:#fff;font-family:'Space Grotesk';font-size:8px;font-weight:700;letter-spacing:1px;">أنت</div>` : ''}
+      ${isHost ? `<div style="position:absolute;top:-8px;left:8px;padding:2px 8px;border-radius:100px;background:linear-gradient(135deg,var(--gold),#F2C862);color:#1A1512;font-family:'Space Grotesk';font-size:8px;font-weight:800;letter-spacing:1px;">👑 HOST</div>` : ''}
+      <div style="width:56px;height:56px;border-radius:50%;background:${avatarGrad};
+                  border:3px solid rgba(255,255,255,.6);
+                  box-shadow:0 4px 14px rgba(0,0,0,.15);
+                  display:flex;align-items:center;justify-content:center;
+                  overflow:hidden;flex-shrink:0;">
+        ${hasItemImage(skin) ? `<img src="${ASSET.resolve(skin)}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'">` : ''}
+      </div>
+      <div style="font-size:12.5px;font-weight:800;color:var(--ink);text-align:center;
+                  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">
+        ${escapeHtmlChat(player.name || 'لاعب')}
+      </div>
+      <div style="padding:4px 12px;border-radius:100px;font-size:10px;font-weight:800;
+                  ${player.ready
+                    ? 'background:#E8F4E8;color:#3A7A3A;'
+                    : 'background:var(--paper-2);color:var(--ink-mute);'}">
+        ${player.ready ? '✓ جاهز' : '⏳ بانتظار'}
+      </div>
+    `;
+    return slot;
+  }
+
+  /* ═══ 10) منتقي النمط ═══ */
+  function openMPModePickerV3(){
+    if(!MP.isHost) return;
+
+    let modal = document.getElementById('mp-mode-picker');
+    if(!modal){
+      modal = document.createElement('div');
+      modal.id = 'mp-mode-picker';
+      document.body.appendChild(modal);
+    }
+
+    modal.style.cssText = `
+      position:fixed;inset:0;z-index:9999;
+      background:rgba(26,21,18,.75);
+      backdrop-filter:blur(12px);
+      display:flex;align-items:center;justify-content:center;
+      padding:20px;
+    `;
+
+    const currentMode = MP.roomData?.mode;
+    modal.innerHTML = `
+      <div style="width:100%;max-width:380px;background:#fff;border-radius:22px;
+                  padding:20px;box-shadow:0 30px 80px rgba(0,0,0,.5);
+                  animation:popIn .3s cubic-bezier(.34,1.56,.64,1);
+                  max-height:85vh;display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div style="font-family:'Space Grotesk';font-size:16px;font-weight:700;">
+            اختر النمط
+          </div>
+          <button id="mp-mode-picker-close"
+                  style="width:32px;height:32px;border-radius:10px;border:none;
+                         background:var(--paper-2);cursor:pointer;font-size:16px;">✕</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;overflow-y:auto;flex:1;">
+          ${MODES.filter(m => m.id !== 'MIXED').map(m => `
+            <button class="mp-mode-option" data-mode="${m.id}"
+                    style="display:flex;align-items:center;gap:12px;
+                           padding:12px;border-radius:14px;
+                           border:2px solid ${m.id === currentMode ? m.color : 'transparent'};
+                           background:${m.id === currentMode
+                             ? `linear-gradient(135deg, ${m.color}18, ${m.color}08)`
+                             : 'var(--paper)'};
+                           cursor:pointer;font-family:inherit;
+                           text-align:right;width:100%;">
+              <div style="width:44px;height:44px;border-radius:12px;
+                          background:${m.color};color:#fff;
+                          display:flex;align-items:center;justify-content:center;
+                          font-size:22px;font-weight:800;flex-shrink:0;">
+                ${m.icon}
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:14px;font-weight:800;color:var(--ink);">${m.ar}</div>
+                <div style="font-size:10.5px;color:var(--ink-mute);margin-top:2px;">${m.desc}</div>
+              </div>
+              ${m.id === currentMode
+                ? `<span style="color:${m.color};font-size:20px;font-weight:800;">✓</span>`
+                : ''}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+
+    modal.querySelector('#mp-mode-picker-close').addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
+
+    modal.querySelectorAll('.mp-mode-option').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await window.mpChangeMode(btn.dataset.mode);
+        modal.style.display = 'none';
+      });
+    });
+  }
+
+  /* ═══ 11) بدء السباق ═══ */
+  window.mpStartRace = async function(){
+    if(!MP.active || !MP.isHost) return;
+    if(!MP.roomData) return;
+    if(!MP.canStart()) return;
+
+    try {
+      const countdownEndsAt = Date.now() + MP_CONFIG.countdownMs;
+      await Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId).update({
+        status: 'countdown',
+        countdownEndsAt,
+        startedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      Sfx.reward(); haptic(20);
+    } catch(e){
+      console.error('[MP3] Start failed:', e);
+    }
+  };
+
+  /* ═══ 12) المستمعون ═══ */
+  window.mpAttachListeners = function(){
+    mpDetachListeners();
+    if(!MP.roomId || !Cloud.db) return;
+
+    const roomRef = Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId);
+
+    MP.roomUnsub = roomRef.onSnapshot(snap => {
+      if(!snap.exists){
+        if(MP.active){
+          alert('انتهت الغرفة');
+          mpLeaveRoom();
+          showScreen('s-home'); buildHome();
+        }
+        return;
+      }
+
+      const data = snap.data();
+      const prevStatus = MP.roomData ? MP.roomData.status : null;
+      MP.roomData = data;
+      MP.roomSeed = data.seed || MP.roomSeed;
+      MP.hostSelectedMode = data.mode || 'FLIP';
+
+      const myUid = Cloud.user ? Cloud.user.uid : null;
+      const myPlayer = (data.players || []).find(p => p.uid === myUid);
+      if(myPlayer) MP.myReady = !!myPlayer.ready;
+
+      /* العد التنازلي */
+      if(data.status === 'countdown' && data.countdownEndsAt){
+        const isNewCountdown = (MP.countdownEndsAt !== data.countdownEndsAt);
+        MP.countdownEndsAt = data.countdownEndsAt;
+        MP.countdownActive = true;
+
+        if(isNewCountdown){
+          MP.countdownShown = -1;
+          if(document.getElementById('s-multiplayer-waiting').classList.contains('active')){
+            mpShowCountdownOverlay();
+          }
+          if(MP.countdownTimer) clearTimeout(MP.countdownTimer);
+          const delayMs = Math.max(0, data.countdownEndsAt - Date.now()) + 150;
+          MP.countdownTimer = setTimeout(() => {
+            MP.countdownTimer = null;
+            if(MP.active && !MP.starting) window.mpStartMyGame();
+          }, delayMs);
+        }
+      }
+
+      /* نهاية الجولة */
+      if((data.status === 'round_end' || data.status === 'finished') && !MP.resultShown){
+        MP.resultShown = true;
+        mpShowResult();
+      }
+
+      /* إعادة المباراة */
+      if(data.status === 'waiting' && prevStatus !== 'waiting' && MP.resultShown){
+        MP.resultShown = false;
+        MP.countdownActive = false;
+        mpResetRoundState();
+        showScreen('s-multiplayer-waiting');
+        mpBuildWaitingRoom();
+      }
+
+      if(document.getElementById('s-multiplayer-waiting').classList.contains('active')){
+        mpBuildWaitingRoom();
+      }
+    }, err => console.warn('[MP3] room listener:', err));
+
+    MP.playersUnsub = roomRef.collection('players').onSnapshot(snap => {
+      const now = Date.now();
+      MP.otherPlayers.clear();
+      const myUid = Cloud.user ? Cloud.user.uid : null;
+
+      snap.forEach(d => {
+        const data = d.data();
+        MP.otherPlayers.set(d.id, data);
+        if(d.id !== myUid){
+          const prev = MP.remoteStates[d.id];
+          MP.remoteStates[d.id] = {
+            prev: prev ? prev.curr : data,
+            curr: data,
+            receivedAt: now,
+            prevReceivedAt: prev ? prev.receivedAt : now - 66
+          };
+          MP.opponentAlive = !!data.alive;
+          MP.opponentMeters = data.meters || 0;
+          MP.opponentCoins = data.coins || 0;
+          if(data.pingEcho && data.pingEcho.clientTime){
+            const rtt = now - data.pingEcho.clientTime;
+            if(rtt > 0 && rtt < 2000){
+              MP.pingSamples.push(rtt);
+              if(MP.pingSamples.length > 6) MP.pingSamples.shift();
+              MP.ping = Math.round(MP.pingSamples.reduce((a,b)=>a+b,0) / MP.pingSamples.length);
+              mpUpdateConnectionBadge();
+            }
+          }
+          if(data.lastEmoji && data.lastEmojiAt > MP.lastEmojiAt){
+            MP.lastEmojiAt = data.lastEmojiAt;
+            mpShowOpponentEmoji(data.lastEmoji);
+          }
+        }
+      });
+    }, err => console.warn('[MP3] players listener:', err));
+  };
+
+  /* ═══ 13) مغادرة الغرفة ═══ */
+  window.mpLeaveRoom = async function(){
+    if(!MP.active) return;
+
+    if(MP.countdownTimer){ clearTimeout(MP.countdownTimer); MP.countdownTimer = null; }
+    MP.countdownLoopActive = false;
+    MP.countdownActive = false;
+
+    const countdownEl = document.getElementById('mp-countdown');
+    if(countdownEl) countdownEl.style.display = 'none';
+
+    const roomId = MP.roomId;
+    const uid = Cloud.user ? Cloud.user.uid : null;
+    const wasHost = MP.isHost;
+
+    mpDetachListeners();
+    mpStopSync();
+    mpStopLatencyProbe();
+
+    MP.active = false;
+    MP.roomId = null;
+    MP.roomCode = null;
+    MP.isHost = false;
+    MP.roomData = null;
+    MP.otherPlayers.clear();
+    MP.remoteStates = {};
+    MP.resultShown = false;
+    MP.starting = false;
+    MP.countdownActive = false;
+    MP.countdownShown = -1;
+    MP.myReady = false;
+
+    if(roomId && uid && Cloud.db){
+      try {
+        const roomRef = Cloud.db.collection(MP_CONFIG.collection).doc(roomId);
+        const roomSnap = await roomRef.get();
+        if(!roomSnap.exists) return;
+        const data = roomSnap.data();
+
+        if(wasHost || data.hostUid === uid){
+          const playersSnap = await roomRef.collection('players').get();
+          const batch = Cloud.db.batch();
+          playersSnap.forEach(d => batch.delete(d.ref));
+          batch.delete(roomRef);
+          await batch.commit().catch(async () => {
+            try { await roomRef.delete(); } catch(_){}
+          });
+        } else {
+          const players = (data.players || []).filter(p => p.uid !== uid);
+          await roomRef.update({ players }).catch(()=>{});
+          await roomRef.collection('players').doc(uid).delete().catch(()=>{});
+        }
+      } catch(e){ console.warn('[MP3] cleanup:', e); }
+    }
+
+    MP.connectionState = 'connected';
+    mpUpdateConnectionBadge();
+  };
+
+  /* ═══ 14) رسم الأشباح (4 لاعبين) ═══ */
+  window.mpDrawGhosts = function(){
+    if(!MP.active || G.state !== 'PLAYING') return;
+    if(!MP.otherPlayers.size) return;
+
+    const myM = getMeters();
+    const myUid = Cloud.user ? Cloud.user.uid : null;
+    const now = Date.now();
+    const colors = ['#4A88C8', '#E85838', '#6B9B6B', '#9A6AC8'];
+    let colorIdx = 0;
+
+    for(const [uid, p] of MP.otherPlayers){
+      if(uid === myUid || !p) continue;
+
+      const rs = MP.remoteStates[uid];
+      let interpData = p;
+      if(rs && rs.curr && rs.prev){
+        const timeSince = now - rs.receivedAt;
+        const dtBetween = Math.max(1, rs.receivedAt - rs.prevReceivedAt);
+        const t = clamp(timeSince / dtBetween, 0, 2.5);
+        const px = lerp(rs.prev.xRatio || 0.26, rs.curr.xRatio || 0.26, t);
+        const py = lerp(rs.prev.yRatio || 0.5, rs.curr.yRatio || 0.5, t);
+        const pr = lerp(rs.prev.rot || 0, rs.curr.rot || 0, t);
+        const pm = lerp(rs.prev.meters || 0, rs.curr.meters || 0, t);
+        interpData = { ...p, xRatio: px, yRatio: py, rot: pr, meters: pm };
+      }
+
+      const distDiff = (interpData.meters || 0) - myM;
+      const maxOffset = W * 0.42;
+      const pxOffset = clamp(distDiff * PIXELS_PER_METER * 0.55, -maxOffset, maxOffset);
+      const ghostX = P.baseX + pxOffset;
+      const ghostY = clamp((interpData.yRatio || 0.5) * H, 40, H - 40);
+
+      const sk = getAllSkins().find(s => s.id === interpData.skin) || SKINS[0];
+      const alpha = interpData.alive ? 0.72 : 0.25;
+      const ghostColor = colors[colorIdx % colors.length];
+      colorIdx++;
+
+      ctx.save();
+      ctx.globalAlpha = interpData.alive ? 1 : 0.5;
+      drawPlayerNameTag(ctx, ghostX, ghostY - P.r * 2.4, interpData.name || 'لاعب', {
+        tagColor: ghostColor,
+        alpha: interpData.alive ? 1 : 0.5,
+        showMeters: true,
+        meters: interpData.meters || 0
+      });
+      ctx.restore();
+
+      if(Math.abs(pxOffset) >= maxOffset - 1){
+        ctx.save();
+        ctx.globalAlpha = 0.75;
+        ctx.fillStyle = ghostColor;
+        ctx.font = 'bold 22px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(distDiff > 0 ? '→' : '←', ghostX + (distDiff > 0 ? 20 : -20), ghostY);
+        ctx.restore();
+      }
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(ghostX, ghostY);
+      try {
+        renderCharacter(ctx, P.r, sk, {
+          mode: interpData.mode || 'FLIP',
+          rot: interpData.rot || 0,
+          alpha: alpha, skipExtras: true
+        });
+      } catch(e){}
+      ctx.restore();
+    }
+  };
+
+  /* ═══ 15) لوحة الصدارة ═══ */
+  window.mpUpdateLeaderboard = function(){
+    const el = document.getElementById('mp-leaderboard');
+    if(!el) return;
+    if(!MP.active || G.state !== 'PLAYING' || MP.otherPlayers.size === 0){
+      el.style.display = 'none';
+      return;
+    }
+    el.style.display = 'flex';
+
+    const myUid = Cloud.user ? Cloud.user.uid : null;
+    const entries = [{
+      uid: myUid || 'me',
+      name: (Cloud.profile && Cloud.profile.username) || 'أنت',
+      meters: getMeters(), coins: G.runCoins,
+      alive: G.state === 'PLAYING', isMe: true
+    }];
+
+    for(const [uid, p] of MP.otherPlayers){
+      if(uid === myUid) continue;
+      entries.push({
+        uid, name: p.name || 'لاعب',
+        meters: p.meters || 0, coins: p.coins || 0,
+        alive: !!p.alive, isMe: false
+      });
+    }
+
+    entries.sort((a, b) => b.meters - a.meters);
+    const top = entries[0].meters || 1;
+
+    el.innerHTML = entries.map((e, i) => {
+      const pct = top > 0 ? (e.meters / top) * 100 : 0;
+      return `
+        <div class="mp-row${e.isMe ? ' mp-me' : ''}${!e.alive ? ' mp-dead' : ''}">
+          <span class="mp-rank">${i + 1}</span>
+          <span class="mp-name">${escapeHtmlChat(e.name)}</span>
+          <span class="mp-meters">${e.meters}m</span>
+          <span class="mp-coins">◆${e.coins}</span>
+        </div>
+        <div class="mp-progress-track">
+          <div class="mp-progress-fill" style="width:${pct}%;background:${e.isMe ? '#E8B34E' : '#4A88C8'};"></div>
+        </div>
+      `;
+    }).join('');
+  };
+
+  /* ═══ 16) بدء لعبتي ═══ */
+  window.mpStartMyGame = function(){
+    if(MP.starting) return;
+    MP.starting = true;
+    MP.countdownActive = false;
+    MP.resultShown = false;
+
+    const roomMode = (MP.roomData && MP.roomData.mode) || 'FLIP';
+    Save.data.mode = roomMode;
+
+    setWorldSeed(MP.roomSeed);
+    startGame();
+    setWorldSeed(MP.roomSeed);
+
+    mpStartSync();
+
+    const emojiBar = document.getElementById('mp-emoji-bar');
+    if(emojiBar) emojiBar.style.display = 'flex';
+
+    setTimeout(() => { MP.starting = false; }, 2000);
+  };
+
+  /* ═══ 17) إعادة المباراة ═══ */
+  window.mpRematch = async function(){
+    if(!MP.isHost){ alert('فقط المضيف يمكنه بدء جولة جديدة'); return; }
+
+    try {
+      const roomRef = Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId);
+      const snap = await roomRef.get();
+      if(!snap.exists) return;
+      const rd = snap.data();
+      const isMatchOver = !!rd.matchWinner;
+      const newRound = isMatchOver ? 1 : (rd.round || 1) + 1;
+
+      const players = (rd.players || []).map(p => ({
+        ...p,
+        ready: p.isHost
+      }));
+
+      await roomRef.update({
+        status: 'waiting',
+        round: newRound,
+        hostWins: isMatchOver ? 0 : (rd.hostWins || 0),
+        guestWins: isMatchOver ? 0 : (rd.guestWins || 0),
+        hostScore: 0, guestScore: 0,
+        roundWinner: null, matchWinner: null,
+        countdownEndsAt: null, startedAt: null, finishedAt: null,
+        players
+      });
+
+      const playersSnap = await roomRef.collection('players').get();
+      const batch = Cloud.db.batch();
+      playersSnap.forEach(d => {
+        batch.update(d.ref, {
+          meters: 0, coins: 0, alive: true,
+          xRatio: 0.26, yRatio: 0.5, rot: 0,
+          vx: 0, vy: 0, lastEmoji: null, lastEmojiAt: 0
+        });
+      });
+      await batch.commit();
+
+      mpResetRoundState();
+      showScreen('s-multiplayer-waiting');
+      mpBuildWaitingRoom();
+    } catch(e){
+      alert('فشل: ' + e.message);
+    }
+  };
+
+  /* ═══ 18) شاشة دعوة الأصدقاء ═══ */
+  window.openFriendInviteScreen = function(){
+    let screen = document.getElementById('s-friend-invite');
+    if(!screen){
+      screen = document.createElement('div');
+      screen.id = 's-friend-invite';
+      screen.className = 'screen';
+      screen.innerHTML = `
+        <div class="sub">
+          <div class="sub-top">
+            <button class="back-btn" data-back>←</button>
+            <div>
+              <div class="sub-title">دعوة أصدقاء</div>
+              <div class="sub-eyebrow">INVITE FRIENDS</div>
+            </div>
+            <div class="sub-spacer"></div>
+          </div>
+
+          <div class="mp-hero" style="background:linear-gradient(135deg,#3A2260 0%,#5A3080 100%);">
+            <div class="mp-hero-ic">🎮</div>
+            <div class="mp-hero-title">العب مع أصدقائك</div>
+            <div class="mp-hero-sub">اختر حتى 3 أصدقاء للعب الجماعي (4 لاعبين)</div>
+          </div>
+
+          <div style="background:#fff;border-radius:16px;padding:12px;margin-bottom:14px;border:1.5px solid var(--line);">
+            <div style="font-family:'Space Grotesk';font-size:11px;font-weight:700;letter-spacing:1.5px;color:var(--ink-mute);margin-bottom:6px;">
+              كود الدعوة السريع
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div id="invite-my-code" style="flex:1;font-family:'Space Grotesk';font-size:20px;font-weight:700;color:var(--amber);letter-spacing:3px;text-align:center;">
+                —
+              </div>
+              <button id="invite-copy-code" style="width:40px;height:40px;border-radius:12px;border:none;background:var(--paper-2);cursor:pointer;font-size:16px;">
+                📋
+              </button>
+            </div>
+          </div>
+
+          <div class="section-head">
+            <div class="section-title">الأصدقاء المتاحون</div>
+            <div class="section-sub">FRIENDS</div>
+          </div>
+
+          <div id="invite-friends-list"></div>
+
+          <button class="action-btn gold" id="invite-start-btn" disabled
+                  style="max-width:100%;margin-top:16px;">
+            🎮 &nbsp; ابدأ غرفة الجماعية
+          </button>
+        </div>
+      `;
+      document.getElementById('overlay').appendChild(screen);
+
+      const backBtn = screen.querySelector('[data-back]');
+      if(backBtn){
+        backBtn.addEventListener('click', () => showScreen('s-home'));
+      }
+    }
+
+    /* كود اللاعب */
+    const uid = (Cloud.user && Cloud.user.uid) || 'LOCAL00';
+    const codeEl = screen.querySelector('#invite-my-code');
+    if(codeEl) codeEl.textContent = uid.slice(0, 6).toUpperCase();
+
+    /* زر النسخ */
+    const copyBtn = screen.querySelector('#invite-copy-code');
+    if(copyBtn && !copyBtn._bound){
+      copyBtn._bound = true;
+      copyBtn.addEventListener('click', () => {
+        const code = screen.querySelector('#invite-my-code').textContent;
+        navigator.clipboard.writeText(code).then(() => {
+          Toast.success('تم نسخ الكود!', code);
+        }).catch(() => {});
+      });
+    }
+
+    /* زر البدء */
+    const startBtn = screen.querySelector('#invite-start-btn');
+    if(startBtn && !startBtn._bound){
+      startBtn._bound = true;
+      startBtn.addEventListener('click', async () => {
+        const selected = getSelectedInviteFriends();
+
+        if(selected.length === 0){
+          if(confirm('لم تختر أصدقاء. ابدأ غرفة عامة وانتظر انضمام لاعبين؟')){
+            await window.mpCreateRoom(Save.data.mode);
+          }
+          return;
+        }
+
+        await window.mpCreateRoom(Save.data.mode);
+        const code = MP.roomCode;
+
+        for(const friendUid of selected){
+          try {
+            await Cloud.db.collection('friend_requests').add({
+              fromUid: Cloud.user.uid,
+              fromName: (Cloud.profile && Cloud.profile.username) || 'لاعب',
+              toUid: friendUid,
+              type: 'multiplayer_invite',
+              roomCode: code,
+              status: 'pending',
+              createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          } catch(e){}
+        }
+
+        Toast.success('تم إرسال الدعوات!', `${selected.length} صديق`);
+        Sfx.reward(); haptic(20);
+      });
+    }
+
+    buildInviteFriendsList();
+    showScreen('s-friend-invite');
+  };
+
+  /* ═══ 19) قائمة الأصدقاء للدعوة ═══ */
+  async function buildInviteFriendsList(){
+    const list = document.getElementById('invite-friends-list');
+    if(!list) return;
+
+    list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-mute);">⏳ جارٍ التحميل...</div>';
+
+    let friends = _friends || [];
+    if(friends.length === 0 && Cloud.user && Cloud.db){
+      try {
+        await loadFriendsData();
+        friends = _friends || [];
+      } catch(e){}
+    }
+
+    if(friends.length === 0){
+      list.innerHTML = `
+        <div style="text-align:center;padding:40px 20px;color:var(--ink-mute);">
+          <div style="font-size:48px;opacity:.3;margin-bottom:10px;">👥</div>
+          <div style="font-size:13px;font-weight:700;">لا أصدقاء بعد</div>
+          <div style="font-size:11px;margin-top:6px;">شارك كودك أو ابحث عن أصدقاء</div>
+          <button class="action-btn soft" id="go-friends-btn"
+                  style="max-width:200px;margin:14px auto 0;">
+            إدارة الأصدقاء
+          </button>
+        </div>
+      `;
+      const goBtn = list.querySelector('#go-friends-btn');
+      if(goBtn) goBtn.addEventListener('click', () => showScreen('s-friends'));
+      return;
+    }
+
+    list.innerHTML = '';
+    list.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
+
+    friends.forEach(friend => {
+      const profile = friend.profile || {};
+      const name = profile.username || friend.username || 'صديق';
+
+      const card = document.createElement('div');
+      card.style.cssText = `
+        display:flex;align-items:center;gap:12px;
+        padding:12px;border-radius:14px;
+        background:#fff;border:2px solid var(--line);
+        cursor:pointer;transition:all .2s;
+      `;
+      card.dataset.friendUid = friend.uid;
+      card.dataset.selected = '0';
+
+      card.innerHTML = `
+        <div style="width:44px;height:44px;border-radius:50%;
+                    background:linear-gradient(135deg,#FFE0A0,#E8B34E);
+                    display:flex;align-items:center;justify-content:center;
+                    font-size:18px;font-weight:700;color:#fff;flex-shrink:0;">
+          ${name.charAt(0).toUpperCase()}
+        </div>
+        <div style="flex:1;min-width:0;text-align:right;">
+          <div style="font-size:13px;font-weight:800;color:var(--ink);">
+            ${escapeHtmlChat(name)}
+          </div>
+          <div style="font-size:10px;color:var(--ink-mute);margin-top:2px;">
+            ${profile.username ? '@' + profile.username : 'لاعب'}
+          </div>
+        </div>
+        <div class="invite-check" style="width:24px;height:24px;border-radius:50%;
+             border:2px solid var(--line-strong);display:flex;
+             align-items:center;justify-content:center;
+             color:transparent;font-size:14px;font-weight:800;flex-shrink:0;">
+          ✓
+        </div>
+      `;
+
+      card.addEventListener('click', () => {
+        const isSelected = card.dataset.selected === '1';
+        const selectedCount = list.querySelectorAll('[data-selected="1"]').length;
+
+        if(!isSelected && selectedCount >= 3){
+          Toast.warning('الحد الأقصى 3 أصدقاء', 'الغرفة تستوعب 4 لاعبين');
+          return;
+        }
+
+        card.dataset.selected = isSelected ? '0' : '1';
+        const check = card.querySelector('.invite-check');
+
+        if(!isSelected){
+          card.style.borderColor = 'var(--amber)';
+          card.style.background = 'linear-gradient(135deg,#FFF9EC,#FBF1DC)';
+          check.style.background = 'var(--amber)';
+          check.style.borderColor = 'var(--amber)';
+          check.style.color = '#fff';
+        } else {
+          card.style.borderColor = 'var(--line)';
+          card.style.background = '#fff';
+          check.style.background = 'transparent';
+          check.style.borderColor = 'var(--line-strong)';
+          check.style.color = 'transparent';
+        }
+
+        const newSelectedCount = list.querySelectorAll('[data-selected="1"]').length;
+        const startBtn = document.getElementById('invite-start-btn');
+        if(startBtn){
+          startBtn.disabled = false;
+          startBtn.textContent = newSelectedCount > 0
+            ? `🎮 ابدأ وادعُ ${newSelectedCount} صديق`
+            : '🎮 ابدأ غرفة الجماعية';
+        }
+        Sfx.tap(); haptic(4);
+      });
+
+      list.appendChild(card);
+    });
+
+    const startBtn = document.getElementById('invite-start-btn');
+    if(startBtn) startBtn.disabled = false;
+  }
+
+  function getSelectedInviteFriends(){
+    const selected = [];
+    document.querySelectorAll('#invite-friends-list [data-selected="1"]').forEach(card => {
+      selected.push(card.dataset.friendUid);
+    });
+    return selected;
+  }
+
+  /* ═══ 20) معالجة دعوات اللعب الجماعي في handleFriendAction ═══ */
+  const originalHandleFriendAction = window.handleFriendAction;
+  if(typeof originalHandleFriendAction === 'function'){
+    window.handleFriendAction = async function(action, data, type){
+      /* إذا كانت دعوة لعب جماعي */
+      if(action === 'accept' && data.type === 'multiplayer_invite' && data.roomCode){
+        try {
+          await Cloud.db.collection('friend_requests').doc(data.id).update({
+            status: 'accepted'
+          });
+        } catch(e){}
+        await window.mpJoinRoom(data.roomCode);
+        return;
+      }
+      return originalHandleFriendAction.apply(this, arguments);
+    };
+  }
+
+  /* ═══ 21) ربط زر الدعوة في الصفحة الرئيسية ═══ */
+  function wireInviteButton(){
+    const inviteBtn = document.getElementById('invite-btn');
+    if(!inviteBtn) return;
+
+    /* استبدل الزر لضمان عدم وجود مستمعين قدامى */
+    const newBtn = inviteBtn.cloneNode(true);
+    inviteBtn.parentNode.replaceChild(newBtn, inviteBtn);
+
+    newBtn.addEventListener('click', () => {
+      Sfx.tap(); haptic(6);
+
+      if(!Cloud.user){
+        Toast.warning('سجّل دخولك أولاً', 'تحتاج حساب لحفظ الأصدقاء');
+        return;
+      }
+
+      window.openFriendInviteScreen();
+    });
+  }
+
+  /* انتظر تحميل الصفحة ثم اربط */
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', () => setTimeout(wireInviteButton, 600));
+  } else {
+    setTimeout(wireInviteButton, 600);
+  }
+
+  /* ربط متكرر عند فتح الرئيسية */
+  const origBuildHomeFn = window.buildHome;
+  if(typeof origBuildHomeFn === 'function'){
+    window.buildHome = function(){
+      const result = origBuildHomeFn.apply(this, arguments);
+      setTimeout(wireInviteButton, 100);
+      return result;
+    };
+  }
+
+  /* ═══ 22) إذا كان اللاعب قد فتح الرابط بـ ?join=CODE ═══ */
+  (function handleJoinFromURL(){
+    try {
+      const params = new URLSearchParams(location.search);
+      const joinCode = params.get('join');
+      if(joinCode && Cloud.user){
+        setTimeout(() => window.mpJoinRoom(joinCode), 2000);
+      }
+    } catch(e){}
+  })();
+
+  console.log('[SHIFT v3] ✅ Multiplayer 4-player + Friend Invite loaded');
+})();
+
+/* ============================================================
+   ═══════════ MULTIPLAYER v3.1 — playerUids PATCH ══════════
+   ═══════════════════════════════════════════════════════════
+   ⚠️ هذا الـ patch ضروري ليعمل مع قواعد Firestore الجديدة
+   ============================================================ */
+
+(function patchPlayerUids(){
+
+  /* ═══ 1) عند إنشاء الغرفة — أضف playerUids ═══ */
+  const origCreate = window.mpCreateRoom;
+  if(typeof origCreate === 'function'){
+    window.mpCreateRoom = async function(mode){
+      /* نُعدّل الطريقة: نلتقط الإشارة قبل التنفيذ الأصلي */
+      const origSet = Cloud.db.collection(MP_CONFIG.collection).doc().set.bind(
+        Cloud.db.collection(MP_CONFIG.collection).doc()
+      );
+      /* لن نستخدم هذا — سنُعدّل بعد التحديث */
+
+      return origCreate.apply(this, arguments);
+    };
+  }
+
+  /* الطريقة الأضمن: نستبدل دوال غرفة الانتظار */
+
+  /* ═══ 2) استبدال دالة التحديث الرئيسية ═══ */
+  MP._updateRoom = async function(fields){
+    if(!MP.active || !Cloud.db || !Cloud.user) return false;
+
+    const roomRef = Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId);
+    const snap = await roomRef.get();
+    if(!snap.exists) return false;
+
+    const data = snap.data();
+    const players = data.players || [];
+    const playerUids = data.playerUids || players.map(p => p.uid);
+
+    await roomRef.update({
+      ...fields,
+      playerUids   /* ✅ نُحدّث دائماً */
+    });
+    return true;
+  };
+
+  /* ═══ 3) عند toggle ready ═══ */
+  const origToggle = window.mpToggleReady;
+  if(typeof origToggle === 'function'){
+    window.mpToggleReady = async function(){
+      if(!MP.active || MP.isHost) return;
+      if(!Cloud.db || !Cloud.user) return;
+
+      const uid = Cloud.user.uid;
+      const newReady = !MP.myReady;
+
+      try {
+        const roomRef = Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId);
+        const snap = await roomRef.get();
+        if(!snap.exists) return;
+
+        const data = snap.data();
+        const players = data.players || [];
+        const me = players.find(p => p.uid === uid);
+        if(!me) return;
+
+        me.ready = newReady;
+        const playerUids = data.playerUids || players.map(p => p.uid);
+
+        await roomRef.update({ players, playerUids });
+        MP.myReady = newReady;
+
+        Sfx.play(newReady ? 660 : 440, 0.15, 'sine', 0.05, newReady ? 990 : 330);
+        haptic(10);
+      } catch(e){
+        console.warn('[MP3.1] Toggle ready failed:', e);
+      }
+    };
+  }
+
+  /* ═══ 4) عند تغيير النمط ═══ */
+  const origChangeMode = window.mpChangeMode;
+  if(typeof origChangeMode === 'function'){
+    window.mpChangeMode = async function(newMode){
+      if(!MP.active || !MP.isHost || !Cloud.db) return;
+      try {
+        await MP._updateRoom({ mode: newMode });
+        MP.hostSelectedMode = newMode;
+        Sfx.tap(); haptic(6);
+      } catch(e){
+        console.warn('[MP3.1] Change mode failed:', e);
+      }
+    };
+  }
+
+  /* ═══ 5) عند بدء السباق ═══ */
+  const origStartRace = window.mpStartRace;
+  if(typeof origStartRace === 'function'){
+    window.mpStartRace = async function(){
+      if(!MP.active || !MP.isHost) return;
+      if(!MP.roomData) return;
+      if(!MP.canStart()) return;
+
+      try {
+        const countdownEndsAt = Date.now() + MP_CONFIG.countdownMs;
+        await MP._updateRoom({
+          status: 'countdown',
+          countdownEndsAt,
+          startedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        Sfx.reward(); haptic(20);
+      } catch(e){
+        console.error('[MP3.1] Start failed:', e);
+      }
+    };
+  }
+
+  /* ═══ 6) عند إعادة المباراة ═══ */
+  const origRematch = window.mpRematch;
+  if(typeof origRematch === 'function'){
+    window.mpRematch = async function(){
+      if(!MP.isHost){ alert('فقط المضيف يمكنه بدء جولة جديدة'); return; }
+
+      try {
+        const roomRef = Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId);
+        const snap = await roomRef.get();
+        if(!snap.exists) return;
+        const rd = snap.data();
+        const isMatchOver = !!rd.matchWinner;
+        const newRound = isMatchOver ? 1 : (rd.round || 1) + 1;
+
+        const players = (rd.players || []).map(p => ({
+          ...p,
+          ready: p.isHost
+        }));
+        const playerUids = players.map(p => p.uid);
+
+        await roomRef.update({
+          status: 'waiting',
+          round: newRound,
+          hostWins: isMatchOver ? 0 : (rd.hostWins || 0),
+          guestWins: isMatchOver ? 0 : (rd.guestWins || 0),
+          hostScore: 0, guestScore: 0,
+          roundWinner: null, matchWinner: null,
+          countdownEndsAt: null, startedAt: null, finishedAt: null,
+          players, playerUids
+        });
+
+        /* إعادة تصفير حالات اللاعبين في sub-collection */
+        const playersSnap = await roomRef.collection('players').get();
+        const batch = Cloud.db.batch();
+        playersSnap.forEach(d => {
+          batch.update(d.ref, {
+            meters: 0, coins: 0, alive: true,
+            xRatio: 0.26, yRatio: 0.5, rot: 0,
+            vx: 0, vy: 0, lastEmoji: null, lastEmojiAt: 0
+          });
+        });
+        await batch.commit();
+
+        mpResetRoundState();
+        showScreen('s-multiplayer-waiting');
+        mpBuildWaitingRoom();
+      } catch(e){
+        alert('فشل: ' + e.message);
+      }
+    };
+  }
+
+  /* ═══ 7) عند مغادرة الغرفة ═══ */
+  const origLeave = window.mpLeaveRoom;
+  if(typeof origLeave === 'function'){
+    window.mpLeaveRoom = async function(){
+      /* إذا كنا المضيف → نحذف الغرفة (كما هو) */
+      if(MP.isHost){
+        return origLeave.apply(this, arguments);
+      }
+
+      /* ضيف → نُزيل أنفسنا من players + playerUids */
+      if(MP.active && MP.roomId && Cloud.user && Cloud.db){
+        const uid = Cloud.user.uid;
+        try {
+          const roomRef = Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId);
+          const snap = await roomRef.get();
+          if(snap.exists){
+            const data = snap.data();
+            const players = (data.players || []).filter(p => p.uid !== uid);
+            const playerUids = (data.playerUids || []).filter(id => id !== uid);
+
+            if(players.length === 0){
+              /* آخر لاعب → احذف الغرفة */
+              await roomRef.delete().catch(()=>{});
+            } else {
+              await roomRef.update({ players, playerUids });
+            }
+          }
+          await roomRef.collection('players').doc(uid).delete().catch(()=>{});
+        } catch(e){
+          console.warn('[MP3.1] Leave cleanup:', e);
+        }
+      }
+
+      /* استدعِ التنظيف الأصلي بدون Firestore */
+      if(MP.countdownTimer){ clearTimeout(MP.countdownTimer); MP.countdownTimer = null; }
+      MP.countdownLoopActive = false;
+      MP.countdownActive = false;
+
+      const countdownEl = document.getElementById('mp-countdown');
+      if(countdownEl) countdownEl.style.display = 'none';
+
+      mpDetachListeners();
+      mpStopSync();
+      mpStopLatencyProbe();
+
+      MP.active = false;
+      MP.roomId = null;
+      MP.roomCode = null;
+      MP.isHost = false;
+      MP.roomData = null;
+      MP.otherPlayers.clear();
+      MP.remoteStates = {};
+      MP.resultShown = false;
+      MP.starting = false;
+      MP.countdownActive = false;
+      MP.countdownShown = -1;
+      MP.myReady = false;
+
+      MP.connectionState = 'connected';
+      mpUpdateConnectionBadge();
+    };
+  }
+
+  /* ═══ 8) عند إنشاء الغرفة — تأكد من playerUids ═══ */
+  const origCreateRoom = window.mpCreateRoom;
+  if(typeof origCreateRoom === 'function'){
+    window.mpCreateRoom = async function(mode){
+      if(!Cloud.user){ alert('يجب تسجيل الدخول أولاً'); return; }
+      if(MP.active) await mpLeaveRoom();
+
+      const code = await mpFindUnusedCode();
+      const seed = mpGenerateSeed();
+      const uid = Cloud.user.uid;
+      const name = (Cloud.profile && Cloud.profile.username) || 'لاعب';
+      const skinId = Save.data.currentSkin;
+      const roomMode = mode || Save.data.mode || 'FLIP';
+
+      try {
+        const ref = Cloud.db.collection(MP_CONFIG.collection).doc();
+        const roomId = ref.id;
+
+        const hostPlayer = {
+          uid, name,
+          skin: skinId,
+          ready: true,
+          isHost: true,
+          joinedAt: Date.now()
+        };
+
+        await ref.set({
+          code, seed,
+          hostUid: uid,
+          mode: roomMode,
+          players: [hostPlayer],
+          playerUids: [uid],                    /* ✅ جديد */
+          status: 'waiting',
+          maxPlayers: MP_CONFIG.maxPlayers,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          heartbeatAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        MP.active = true;
+        MP.roomId = roomId;
+        MP.roomCode = code;
+        MP.roomSeed = seed;
+        MP.isHost = true;
+        MP.myReady = true;
+        MP.resultShown = false;
+        MP.countdownActive = false;
+        MP.hostSelectedMode = roomMode;
+
+        mpAttachListeners();
+        showScreen('s-multiplayer-waiting');
+        mpBuildWaitingRoom();
+        mpStartLatencyProbe();
+
+        Sfx.reward(); haptic(20);
+      } catch(e){
+        console.error('[MP3.1] Create failed:', e);
+        alert('تعذر إنشاء الغرفة: ' + (e.message || 'خطأ'));
+      }
+    };
+  }
+
+  /* ═══ 9) عند الانضمام — تأكد من playerUids ═══ */
+  const origJoinRoom = window.mpJoinRoom;
+  if(typeof origJoinRoom === 'function'){
+    window.mpJoinRoom = async function(code){
+      if(!Cloud.user){ alert('يجب تسجيل الدخول أولاً'); return; }
+      code = String(code || '').trim().toUpperCase();
+      if(code.length !== MP_CONFIG.codeLength){ alert('كود غير صحيح'); return; }
+      if(MP.active) await mpLeaveRoom();
+
+      const myUid = Cloud.user.uid;
+      let roomDoc = null, roomId = null, data = null;
+
+      try {
+        const snap = await Cloud.db.collection(MP_CONFIG.collection)
+          .where('code', '==', code).limit(10).get();
+
+        for(const doc of snap.docs){
+          const d = doc.data();
+          if(d.status !== 'waiting' && d.status !== 'countdown') continue;
+          if(d.hostUid === myUid) continue;
+          const players = d.players || [];
+          if(players.length >= MP_CONFIG.maxPlayers) continue;
+          if(players.find(p => p.uid === myUid)) continue;
+          roomDoc = doc; roomId = doc.id; data = d; break;
+        }
+
+        if(!roomDoc){
+          alert('لا توجد غرفة متاحة بهذا الكود');
+          return;
+        }
+
+        const name = (Cloud.profile && Cloud.profile.username) || 'لاعب';
+        const newPlayer = {
+          uid: myUid, name,
+          skin: Save.data.currentSkin,
+          ready: false,
+          isHost: false,
+          joinedAt: Date.now()
+        };
+
+        const players = data.players || [];
+        players.push(newPlayer);
+        const playerUids = data.playerUids || players.map(p => p.uid);
+        if(!playerUids.includes(myUid)) playerUids.push(myUid);
+
+        await Cloud.db.collection(MP_CONFIG.collection).doc(roomId).update({
+          players,
+          playerUids                              /* ✅ جديد */
+        });
+
+        MP.active = true;
+        MP.roomId = roomId;
+        MP.roomCode = code;
+        MP.roomSeed = data.seed || 0;
+        MP.isHost = false;
+        MP.myReady = false;
+        MP.resultShown = false;
+        MP.countdownActive = false;
+        MP.hostSelectedMode = data.mode || 'FLIP';
+
+        mpAttachListeners();
+        showScreen('s-multiplayer-waiting');
+        mpBuildWaitingRoom();
+        mpStartLatencyProbe();
+
+        Sfx.reward(); haptic(20);
+      } catch(e){
+        console.error('[MP3.1] Join failed:', e);
+        alert('تعذر الانضمام: ' + (e.message || 'خطأ'));
+      }
+    };
+  }
+
+  console.log('[SHIFT v3.1] ✅ playerUids patch applied');
+})();
+
+/* ============================================================
+   ═══════════ FRIEND SEARCH v2 — SHOW RESULTS FIRST ════════
+   ═══════════════════════════════════════════════════════════
+   الميزات:
+   - البحث يعرض النتائج أولاً (لا يرسل تلقائياً)
+   - يدعم البحث الكامل والجزئي بالاسم
+   - يدعم البحث بالكود
+   - يُظهر حالة كل نتيجة (صديق/بانتظار/محظور)
+   - زر إضافة منفصل لكل نتيجة
+   - مؤشر تحميل واضح
+   - معالجة أخطاء شاملة
+   ============================================================ */
+
+(function upgradeFriendSearch(){
+
+  /* ═══ 1) حاوية النتائج — تُنشأ ديناميكياً ═══ */
+  function ensureSearchResultsContainer(){
+    let container = document.getElementById('friend-search-results');
+    if(container) return container;
+
+    const friendsPage = document.querySelector('#s-friends .sub');
+    if(!friendsPage) return null;
+
+    /* ابحث عن موضع مناسب: بعد toolbar البحث */
+    const toolbar = friendsPage.querySelector('.friends-toolbar');
+    const inviteBox = friendsPage.querySelector('.friends-invite-box');
+
+    container = document.createElement('div');
+    container.id = 'friend-search-results';
+    container.style.cssText = `
+      display: none;
+      margin-bottom: 14px;
+      padding: 10px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #FFF9EC, #FBF1DC);
+      border: 1.5px solid rgba(232,179,78,.35);
+      box-shadow: 0 4px 14px rgba(232,179,78,.15);
+      animation: popIn .3s cubic-bezier(.34,1.56,.64,1);
+    `;
+
+    /* أدخل بعد toolbar */
+    if(toolbar && toolbar.parentNode){
+      toolbar.parentNode.insertBefore(container, toolbar.nextSibling);
+    } else if(inviteBox && inviteBox.parentNode){
+      inviteBox.parentNode.insertBefore(container, inviteBox);
+    } else {
+      friendsPage.insertBefore(container, friendsPage.firstChild);
+    }
+
+    return container;
+  }
+
+  /* ═══ 2) الحالة المؤقتة ═══ */
+  const searchState = {
+    query: '',
+    loading: false,
+    results: [],
+    myFriends: new Set(),
+    pendingSent: new Set(),
+    pendingReceived: new Set()
+  };
+
+  /* ═══ 3) تحميل حالة الأصدقاء الحالية ═══ */
+  async function loadFriendStates(){
+    if(!Cloud.user || !Cloud.db) return;
+
+    const uid = Cloud.user.uid;
+
+    try {
+      /* الأصدقاء */
+      const friendsSnap = await Cloud.db.collection('players').doc(uid)
+        .collection('friends').limit(100).get().catch(() => null);
+      if(friendsSnap){
+        searchState.myFriends.clear();
+        friendsSnap.forEach(doc => searchState.myFriends.add(doc.id));
+      }
+
+      /* الطلبات المرسلة (pending) */
+      const sentSnap = await Cloud.db.collection('friend_requests')
+        .where('fromUid', '==', uid)
+        .where('status', '==', 'pending')
+        .limit(50).get().catch(() => null);
+      if(sentSnap){
+        searchState.pendingSent.clear();
+        sentSnap.forEach(doc => searchState.pendingSent.add(doc.data().toUid));
+      }
+
+      /* الطلبات المستقبلة */
+      const recvSnap = await Cloud.db.collection('friend_requests')
+        .where('toUid', '==', uid)
+        .where('status', '==', 'pending')
+        .limit(50).get().catch(() => null);
+      if(recvSnap){
+        searchState.pendingReceived.clear();
+        recvSnap.forEach(doc => searchState.pendingReceived.add(doc.data().fromUid));
+      }
+
+    } catch(e){
+      console.warn('[FriendSearch] State load failed:', e);
+    }
+  }
+
+  /* ═══ 4) دالة البحث (بدون إرسال) ═══ */
+  async function performSearch(rawQuery){
+    if(!Cloud.user || !Cloud.db){
+      Toast.error('يجب تسجيل الدخول');
+      return;
+    }
+
+    const query = String(rawQuery || '').trim();
+    if(query.length < 2){
+      showSearchResults([]);
+      return;
+    }
+
+    const container = ensureSearchResultsContainer();
+    if(!container) return;
+
+    /* عرض حالة التحميل */
+    searchState.query = query;
+    searchState.loading = true;
+    renderSearchLoading();
+
+    /* تحميل حالات الأصدقاء (مرة واحدة) */
+    if(searchState.myFriends.size === 0){
+      await loadFriendStates();
+    }
+
+    const myUid = Cloud.user.uid;
+    const upperQuery = query.toUpperCase();
+    const lowerQuery = query.toLowerCase();
+
+    const found = new Map(); /* uid → player (لمنع التكرار) */
+
+    try {
+      /* ═══ ① البحث بالكود (كامل) ═══ */
+      try {
+        const codeSnap = await Cloud.db.collection('players')
+          .where('friendCode', '==', upperQuery)
+          .limit(5).get();
+        codeSnap.forEach(doc => {
+          if(doc.id !== myUid) found.set(doc.id, { uid: doc.id, ...doc.data() });
+        });
+      } catch(e){ /* صامت */ }
+
+      /* ═══ ② البحث بالـ username (كامل — case sensitive) ═══ */
+      try {
+        const exactSnap = await Cloud.db.collection('players')
+          .where('username', '==', query)
+          .limit(10).get();
+        exactSnap.forEach(doc => {
+          if(doc.id !== myUid) found.set(doc.id, { uid: doc.id, ...doc.data() });
+        });
+      } catch(e){ /* صامت */ }
+
+      /* ═══ ③ البحث بالـ username (prefix — يبدأ بـ) ═══ */
+      try {
+        const prefixSnap = await Cloud.db.collection('players')
+          .where('username', '>=', query)
+          .where('username', '<=', query + '\uf8ff')
+          .limit(15).get();
+        prefixSnap.forEach(doc => {
+          if(doc.id !== myUid) found.set(doc.id, { uid: doc.id, ...doc.data() });
+        });
+      } catch(e){ /* صامت */ }
+
+      /* ═══ ④ البحث بحالة أحرف مختلفة (case-insensitive fallback) ═══ */
+      if(found.size === 0){
+        try {
+          const altQuery = lowerQuery === query ? query.toUpperCase() : lowerQuery;
+          const altSnap = await Cloud.db.collection('players')
+            .where('username', '==', altQuery)
+            .limit(10).get();
+          altSnap.forEach(doc => {
+            if(doc.id !== myUid) found.set(doc.id, { uid: doc.id, ...doc.data() });
+          });
+        } catch(e){ /* صامت */ }
+      }
+
+      /* ═══ ⑤ البحث في UID (كامل أو جزئي) ═══ */
+      if(found.size === 0 && query.length >= 4){
+        try {
+          const uidSnap = await Cloud.db.collection('players').doc(query).get();
+          if(uidSnap.exists){
+            found.set(uidSnap.id, { uid: uidSnap.id, ...uidSnap.data() });
+          }
+        } catch(e){ /* صامت */ }
+      }
+
+      /* ═══ ترتيب النتائج ═══ */
+      const results = Array.from(found.values())
+        .sort((a, b) => {
+          /* أولوية: الأصدقاء الحاليون آخراً */
+          const aFriend = searchState.myFriends.has(a.uid) ? 1 : 0;
+          const bFriend = searchState.myFriends.has(b.uid) ? 1 : 0;
+          if(aFriend !== bFriend) return aFriend - bFriend;
+
+          /* ثم: المتصلون أولاً */
+          const aOnline = isPlayerOnline(a) ? 0 : 1;
+          const bOnline = isPlayerOnline(b) ? 0 : 1;
+          if(aOnline !== bOnline) return aOnline - bOnline;
+
+          /* ثم: أبجدي */
+          return (a.username || '').localeCompare(b.username || '');
+        })
+        .slice(0, 20);
+
+      searchState.results = results;
+      searchState.loading = false;
+      showSearchResults(results);
+
+    } catch(e){
+      console.error('[FriendSearch] Search failed:', e);
+      searchState.loading = false;
+      showSearchResults([]);
+      Toast.error('فشل البحث', e.message);
+    }
+  }
+
+  /* ═══ 5) هل اللاعب متصل الآن؟ ═══ */
+  function isPlayerOnline(player){
+    if(!player.lastSeen) return false;
+    const lastSeenMs = player.lastSeen.toMillis
+      ? player.lastSeen.toMillis()
+      : (typeof player.lastSeen === 'number' ? player.lastSeen : 0);
+    return (Date.now() - lastSeenMs) < 5 * 60 * 1000; /* 5 دقائق */
+  }
+
+  /* ═══ 6) عرض حالة التحميل ═══ */
+  function renderSearchLoading(){
+    const container = ensureSearchResultsContainer();
+    if(!container) return;
+
+    container.style.display = 'block';
+    container.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;padding:14px;">
+        <div style="width:20px;height:20px;border-radius:50%;
+                    border:2.5px solid rgba(232,179,78,.3);
+                    border-top-color:var(--amber);
+                    animation:spin .8s linear infinite;"></div>
+        <div style="font-size:12px;font-weight:700;color:var(--ink-soft);">
+          جارٍ البحث...
+        </div>
+      </div>
+    `;
+  }
+
+  /* ═══ 7) عرض النتائج ═══ */
+  function showSearchResults(results){
+    const container = ensureSearchResultsContainer();
+    if(!container) return;
+
+    if(!results || results.length === 0){
+      container.style.display = 'block';
+      container.innerHTML = `
+        <div style="text-align:center;padding:20px 14px;">
+          <div style="font-size:32px;opacity:.4;margin-bottom:8px;">🔍</div>
+          <div style="font-size:12px;font-weight:700;color:var(--ink);">
+            لا نتائج مطابقة
+          </div>
+          <div style="font-size:10.5px;color:var(--ink-mute);margin-top:4px;">
+            جرّب الاسم الكامل أو الكود
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    container.style.display = 'block';
+
+    /* رأس النتائج */
+    let html = `
+      <div style="display:flex;align-items:center;justify-content:space-between;
+                  padding:4px 8px 10px;border-bottom:1px dashed rgba(232,179,78,.35);
+                  margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:16px;">👥</span>
+          <span style="font-family:'Space Grotesk';font-size:12px;
+                       font-weight:700;color:#8A4A10;letter-spacing:.5px;">
+            نتائج البحث
+          </span>
+        </div>
+        <span style="font-family:'Space Grotesk';font-size:11px;
+                     font-weight:700;color:#8A4A10;opacity:.7;">
+          ${results.length} نتيجة
+        </span>
+      </div>
+    `;
+
+    /* كل نتيجة */
+    results.forEach(player => {
+      html += buildSearchResultHTML(player);
+    });
+
+    container.innerHTML = html;
+
+    /* ربط أزرار الإضافة */
+    container.querySelectorAll('[data-action="send-request"]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const targetUid = btn.dataset.uid;
+        const targetName = btn.dataset.name;
+
+        btn.disabled = true;
+        btn.textContent = '⏳';
+        btn.style.opacity = '0.6';
+
+        const ok = await sendFriendRequestV2(targetUid, targetName);
+
+        if(ok){
+          searchState.pendingSent.add(targetUid);
+          btn.textContent = '✓ بانتظار';
+          btn.style.background = 'linear-gradient(135deg,#6B9B6B,#4A7B4A)';
+          btn.style.color = '#fff';
+          btn.style.opacity = '1';
+        } else {
+          btn.disabled = false;
+          btn.textContent = 'إضافة';
+          btn.style.opacity = '1';
+        }
+      });
+    });
+
+    /* ربط أزرار القبول */
+    container.querySelectorAll('[data-action="accept-request"]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const targetUid = btn.dataset.uid;
+        const reqId = btn.dataset.reqId;
+
+        btn.disabled = true;
+        btn.textContent = '⏳';
+
+        const ok = await acceptFriendRequestFromSearch(reqId, targetUid);
+        if(ok){
+          searchState.myFriends.add(targetUid);
+          searchState.pendingReceived.delete(targetUid);
+          /* أعد رسم النتائج */
+          showSearchResults(searchState.results);
+        } else {
+          btn.disabled = false;
+          btn.textContent = 'قبول';
+        }
+      });
+    });
+  }
+
+  /* ═══ 8) بناء HTML لنتيجة بحث واحدة ═══ */
+  function buildSearchResultHTML(player){
+    const uid = player.uid;
+    const name = player.username || 'لاعب';
+    const isFriend = searchState.myFriends.has(uid);
+    const isPendingSent = searchState.pendingSent.has(uid);
+    const isPendingReceived = searchState.pendingReceived.has(uid);
+    const isOnline = isPlayerOnline(player);
+
+    /* الـ avatar */
+    const photo = player.photoURL || null;
+    const avatarContent = photo
+      ? `<img src="${photo}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"
+             onerror="this.style.display='none';this.parentElement.textContent='${name.charAt(0).toUpperCase()}'">`
+      : name.charAt(0).toUpperCase();
+
+    /* المستوى */
+    const totalMeters = (player.saveData && player.saveData.stats && player.saveData.stats.totalMeters) || 0;
+    const level = Math.floor(totalMeters / 300) + 1;
+
+    /* حالة الاتصال */
+    const statusDot = isOnline
+      ? '<span style="width:10px;height:10px;border-radius:50%;background:#6B9B6B;box-shadow:0 0 6px #6B9B6B;display:inline-block;"></span>'
+      : '<span style="width:10px;height:10px;border-radius:50%;background:#8B8278;display:inline-block;"></span>';
+
+    const statusLabel = isOnline ? 'متصل الآن' : 'غير متصل';
+
+    /* زر الإضافة حسب الحالة */
+    let actionBtn = '';
+    if(isFriend){
+      actionBtn = `
+        <div style="padding:8px 14px;border-radius:100px;
+                    background:#E8F4E8;color:#3A7A3A;
+                    font-family:inherit;font-size:11px;font-weight:800;
+                    white-space:nowrap;">
+          ✓ صديق
+        </div>
+      `;
+    } else if(isPendingSent){
+      actionBtn = `
+        <div style="padding:8px 14px;border-radius:100px;
+                    background:linear-gradient(135deg,#FFF9EC,#FBF1DC);
+                    color:#8A4A10;border:1px solid rgba(232,179,78,.4);
+                    font-family:inherit;font-size:11px;font-weight:800;
+                    white-space:nowrap;">
+          ⏳ بانتظار
+        </div>
+      `;
+    } else if(isPendingReceived){
+      /* يحتاج جلب reqId — نبحث عنه */
+      actionBtn = `
+        <button data-action="accept-request"
+                data-uid="${uid}"
+                data-req-id="${player._reqId || ''}"
+                style="padding:8px 14px;border-radius:100px;border:none;
+                       background:linear-gradient(135deg,#6B9B6B,#4A7B4A);
+                       color:#fff;font-family:inherit;font-size:11px;
+                       font-weight:800;cursor:pointer;white-space:nowrap;">
+          ✓ قبول
+        </button>
+      `;
+    } else {
+      actionBtn = `
+        <button data-action="send-request"
+                data-uid="${uid}"
+                data-name="${name.replace(/"/g, '&quot;')}"
+                style="padding:8px 16px;border-radius:100px;border:none;
+                       background:linear-gradient(135deg,var(--amber),#F2A671);
+                       color:#fff;font-family:inherit;font-size:11px;
+                       font-weight:800;cursor:pointer;white-space:nowrap;
+                       box-shadow:0 3px 10px rgba(224,122,63,.35);
+                       transition:transform .15s;">
+          ＋ إضافة
+        </button>
+      `;
+    }
+
+    /* الكود القصير */
+    const shortUid = uid.slice(0, 6).toUpperCase();
+
+    return `
+      <div style="display:flex;align-items:center;gap:12px;
+                  padding:12px;border-radius:14px;
+                  background:#fff;border:1.5px solid var(--line);
+                  margin-bottom:8px;transition:all .2s;">
+
+        <!-- الأفاتار -->
+        <div style="position:relative;width:48px;height:48px;flex-shrink:0;">
+          <div style="width:48px;height:48px;border-radius:50%;
+                      background:linear-gradient(135deg,#FFE0A0,#E8B34E);
+                      display:flex;align-items:center;justify-content:center;
+                      font-size:20px;font-weight:800;color:#fff;
+                      border:2px solid rgba(255,255,255,.5);
+                      box-shadow:0 4px 12px rgba(0,0,0,.08);
+                      overflow:hidden;">
+            ${avatarContent}
+          </div>
+          <div style="position:absolute;bottom:0;right:0;
+                      width:14px;height:14px;border-radius:50%;
+                      background:${isOnline ? '#6B9B6B' : '#8B8278'};
+                      border:2.5px solid #fff;
+                      box-shadow:${isOnline ? '0 0 8px #6B9B6B' : 'none'};"></div>
+        </div>
+
+        <!-- المعلومات -->
+        <div style="flex:1;min-width:0;text-align:right;">
+          <div style="font-size:13.5px;font-weight:800;color:var(--ink);
+                      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            ${escapeHtmlChat(name)}
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;
+                      font-size:10px;color:var(--ink-mute);margin-top:3px;
+                      flex-wrap:wrap;">
+            <span style="padding:2px 7px;border-radius:100px;
+                         background:linear-gradient(135deg,#1F1A24,#3A2A48);
+                         color:#fff;font-family:'Space Grotesk';
+                         font-size:9px;font-weight:700;letter-spacing:.5px;">
+              LVL ${level}
+            </span>
+            <span style="width:3px;height:3px;border-radius:50%;
+                         background:var(--ink-mute);opacity:.5;"></span>
+            <span>${statusLabel}</span>
+            <span style="width:3px;height:3px;border-radius:50%;
+                         background:var(--ink-mute);opacity:.5;"></span>
+            <span style="font-family:'Space Grotesk';font-size:9.5px;
+                         letter-spacing:.8px;color:var(--ink-mute);">
+              #${shortUid}
+            </span>
+          </div>
+        </div>
+
+        <!-- الزر -->
+        <div style="flex-shrink:0;">
+          ${actionBtn}
+        </div>
+      </div>
+    `;
+  }
+
+  /* ═══ 9) إرسال طلب (نسخة محسّنة — تُعيد boolean) ═══ */
+  async function sendFriendRequestV2(targetUid, targetName){
+    if(!Cloud.user || !Cloud.db) return false;
+
+    const uid = Cloud.user.uid;
+    const name = (Cloud.profile && Cloud.profile.username) || 'لاعب';
+    const photo = Cloud.user.photoURL || null;
+
+    try {
+      /* تحقق من عدم وجود طلب سابق */
+      const existing = await Cloud.db.collection('friend_requests')
+        .where('fromUid', '==', uid)
+        .where('toUid', '==', targetUid)
+        .where('status', '==', 'pending')
+        .limit(1).get().catch(() => null);
+
+      if(existing && !existing.empty){
+        Toast.info('الطلب مرسل مسبقاً');
+        return true;
+      }
+
+      /* أرسل الطلب */
+      await Cloud.db.collection('friend_requests').add({
+        fromUid: uid,
+        fromName: name,
+        fromPhoto: photo,
+        toUid: targetUid,
+        status: 'pending',
+        type: 'friend',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      Toast.success('تم إرسال الطلب!', 'بانتظار قبول ' + (targetName || 'الصديق'));
+      Sfx.reward(); haptic(15);
+      return true;
+
+    } catch(e){
+      console.warn('[FriendSearch] Send failed:', e);
+      Toast.error('فشل الإرسال', e.message);
+      return false;
+    }
+  }
+
+  /* ═══ 10) قبول طلب من نتائج البحث ═══ */
+  async function acceptFriendRequestFromSearch(reqId, fromUid){
+    if(!Cloud.user || !Cloud.db) return false;
+
+    const uid = Cloud.user.uid;
+
+    try {
+      /* إن لم يوجد reqId — ابحث عنه */
+      if(!reqId){
+        const snap = await Cloud.db.collection('friend_requests')
+          .where('fromUid', '==', fromUid)
+          .where('toUid', '==', uid)
+          .where('status', '==', 'pending')
+          .limit(1).get();
+        if(!snap.empty){
+          reqId = snap.docs[0].id;
+        }
+      }
+
+      if(!reqId) return false;
+
+      /* أنشئ الصداقة من الطرفين */
+      await Cloud.db.collection('players').doc(uid)
+        .collection('friends').doc(fromUid).set({
+          uid: fromUid,
+          since: Date.now()
+        });
+
+      await Cloud.db.collection('players').doc(fromUid)
+        .collection('friends').doc(uid).set({
+          uid: uid,
+          since: Date.now()
+        });
+
+      /* حدّث الطلب */
+      await Cloud.db.collection('friend_requests').doc(reqId).update({
+        status: 'accepted',
+        acceptedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      Toast.success('تم قبول الصداقة!', '');
+      Sfx.reward(); haptic(20);
+
+      /* حدّث القائمة الرئيسية */
+      if(typeof loadFriendsData === 'function'){
+        loadFriendsData().then(() => {
+          if(typeof renderFriendsContent === 'function') renderFriendsContent();
+        });
+      }
+
+      return true;
+
+    } catch(e){
+      console.warn('[FriendSearch] Accept failed:', e);
+      Toast.error('فشل القبول', e.message);
+      return false;
+    }
+  }
+
+  /* ═══ 11) ربط البحث الجديد ═══ */
+  function wireSearchInput(){
+    const searchInput = document.getElementById('friend-search');
+    const addBtn = document.getElementById('friend-add-btn');
+    if(!searchInput) return;
+
+    /* Debounce */
+    let debounceTimer = null;
+
+    /* إزالة المستمعين القدامى — نستبدل العنصر */
+    const newInput = searchInput.cloneNode(true);
+    searchInput.parentNode.replaceChild(newInput, searchInput);
+
+    newInput.addEventListener('input', () => {
+      clearTimeout(debounceTimer);
+      const q = newInput.value.trim();
+
+      if(q.length < 2){
+        const container = ensureSearchResultsContainer();
+        if(container) container.style.display = 'none';
+        return;
+      }
+
+      debounceTimer = setTimeout(() => {
+        performSearch(q);
+      }, 450);
+    });
+
+    /* زر البحث (المتوفر بجانب الحقل) */
+    if(addBtn){
+      const newBtn = addBtn.cloneNode(true);
+      addBtn.parentNode.replaceChild(newBtn, addBtn);
+
+      newBtn.addEventListener('click', () => {
+        const q = newInput.value.trim();
+        if(q.length < 2){
+          Toast.warning('اكتب حرفين على الأقل', '');
+          return;
+        }
+        performSearch(q);
+        Sfx.tap(); haptic(6);
+      });
+    }
+
+    /* Enter */
+    newInput.addEventListener('keydown', e => {
+      if(e.code === 'Enter'){
+        e.preventDefault();
+        const q = newInput.value.trim();
+        if(q.length >= 2) performSearch(q);
+      }
+    });
+
+    /* حفظ المرجع */
+    window._friendSearchInput = newInput;
+  }
+
+  /* ═══ 12) عند فتح صفحة الأصدقاء ═══ */
+  const origShowScreen = window.showScreen;
+  if(typeof origShowScreen === 'function'){
+    window.showScreen = function(id){
+      const result = origShowScreen.apply(this, arguments);
+      if(id === 's-friends'){
+        setTimeout(() => {
+          wireSearchInput();
+          /* امسح النتائج القديمة */
+          const container = document.getElementById('friend-search-results');
+          if(container) container.style.display = 'none';
+          searchState.results = [];
+          searchState.query = '';
+          /* أعد تحميل الحالات */
+          loadFriendStates();
+        }, 150);
+      }
+      return result;
+    };
+  }
+
+  /* ═══ 13) استبدال دالة البحث القديمة ═══ */
+  window.searchAndAddFriend = performSearch;
+
+  console.log('[SHIFT v3.2] ✅ Friend Search v2 loaded (show results first)');
+})();
 
 /* ============================================================
    ==================== BOOT =================================
