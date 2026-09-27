@@ -34467,6 +34467,2506 @@ function renderAvatarEditGrid(){
 })();
 
 /* ============================================================
+   ═══════════ ARENA v4 — Complete Multiplayer Overhaul ═════
+   ═══════════════════════════════════════════════════════════
+   ✅ إصلاحات:
+   1) حركة سريعة ودقيقة للاعبين (Predictive Interpolation)
+   2) شاشة نتائج شاملة ومتكاملة
+   3) إعادة تسمية "غرفة" إلى "ساحة" + إصلاحات العرض
+   4) ساحة انتظار محسّنة ومتطورة
+   5) ميزات متقدمة لصاحب الساحة
+   ============================================================ */
+
+(function arenaV4(){
+
+  /* ═══════════════════════════════════════════════════════════
+     ✅ 1) إصلاح الحركة — Predictive Interpolation
+     ═══════════════════════════════════════════════════════════ */
+
+  /* تتبع سرعة كل لاعب لاستقراء موقعه القادم */
+  const _playerVelocity = new Map(); /* uid → { vMeters, vY, lastUpdate } */
+
+  /* ✅ زيادة معدل المزامنة إلى 25ms (40Hz) */
+  const ARENA_SYNC_RATE = 25;
+
+  /* ✅ اعتراض دالة المزامنة لتحسين الأداء */
+  const _origStartSync = window.mpStartSync;
+  window.mpStartSync = function(){
+    if(MP.syncTimer){ clearInterval(MP.syncTimer); MP.syncTimer = null; }
+    MP.lastPushAt = 0;
+    MP.lastPushedState = null;
+    MP.pendingPush = false;
+
+    MP.syncTimer = setInterval(() => {
+      mpPushMyState().catch(()=>{});
+    }, ARENA_SYNC_RATE);
+  };
+
+  /* ✅ اعتراض دالة إرسال الحالة — إضافة سرعة + تحسين */
+  const _origPushMyState = window.mpPushMyState;
+  window.mpPushMyState = async function(){
+    if(!MP.active || !MP.roomId || !Cloud.user || !Cloud.db) return;
+    if(G.state !== 'PLAYING' && G.state !== 'OVER') return;
+    if(MP.pendingPush) return;
+
+    const uid = Cloud.user.uid;
+    const now = Date.now();
+
+    const myMeters = getMeters();
+    const myCoins = G.runCoins;
+    const myAlive = G.state === 'PLAYING';
+    const xRatio = clamp(P.x / Math.max(1, W), 0, 1);
+    const yRatio = clamp(P.y / Math.max(1, H), 0, 1);
+    const rot = P.rot || 0;
+    const mode = G.mode;
+
+    /* ✅ حساب سرعة اللاعب (للاستقراء عند الطرف الآخر) */
+    const prev = MP.lastPushedState;
+    let vMeters = 0, vY = 0;
+    if(prev){
+      const dt = (now - prev.ts) / 1000;
+      if(dt > 0){
+        vMeters = (myMeters - prev.meters) / dt;
+        vY = (yRatio - prev.yRatio) / dt;
+      }
+    }
+
+    /* تجاهل التحديثات غير المتغيرة */
+    if(prev &&
+       prev.meters === myMeters &&
+       prev.coins === myCoins &&
+       prev.alive === myAlive &&
+       Math.abs(prev.xRatio - xRatio) < 0.001 &&
+       Math.abs(prev.yRatio - yRatio) < 0.001 &&
+       Math.abs(prev.rot - rot) < 0.015 &&
+       prev.mode === mode){
+      return;
+    }
+
+    MP.pendingPush = true;
+    MP.lastPushedState = { meters: myMeters, coins: myCoins, alive: myAlive,
+                           xRatio, yRatio, rot, mode, ts: now };
+
+    try {
+      await Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId)
+        .collection('players').doc(uid).set({
+          meters: myMeters,
+          coins: myCoins,
+          alive: myAlive,
+          xRatio,
+          yRatio,
+          rot,
+          mode,
+          vMeters: Math.round(vMeters * 100) / 100,
+          vY: Math.round(vY * 1000) / 1000,
+          clientTime: now,
+          lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+    } catch(e){
+      /* صامت */
+    } finally {
+      MP.pendingPush = false;
+    }
+  };
+
+  /* ✅ دالة استقراء محسّنة — تُعطي حركة سريعة ودقيقة */
+  function predictiveInterpolate(uid, p, now){
+    const rs = MP.remoteStates[uid];
+    if(!rs || !rs.curr) return p;
+
+    const curr = rs.curr;
+    const prev = rs.prev || curr;
+    const recvAt = rs.receivedAt;
+    const prevRecvAt = rs.prevReceivedAt;
+
+    /* وقت منذ آخر استقبال */
+    const timeSince = (now - recvAt) / 1000; /* ثواني */
+
+    /* سرعة معروفة من الخادم (أفضل) أو محسوبة */
+    let vMeters = curr.vMeters;
+    let vY = curr.vY;
+
+    /* إذا لم تُرسل السرعة، احسبها */
+    if(typeof vMeters !== 'number'){
+      const dtReal = Math.max(0.001, (recvAt - prevRecvAt) / 1000);
+      vMeters = ((curr.meters || 0) - (prev.meters || 0)) / dtReal;
+      vY = ((curr.yRatio || 0.5) - (prev.yRatio || 0.5)) / dtReal;
+    }
+
+    /* ✅ استقراء مع سقف معقول (لا يقفز أكثر من 1.2 ثانية أمام) */
+    const extrapTime = Math.min(timeSince, 1.2);
+
+    const predictedMeters = (curr.meters || 0) + vMeters * extrapTime;
+    const predictedY = clamp(
+      (curr.yRatio || 0.5) + vY * extrapTime,
+      0.05, 0.95
+    );
+
+    /* الموقع الحقيقي + التوقع (نتجنب القفزات بمزج) */
+    const blend = Math.min(1, timeSince / 0.05); /* امزج في أول 50ms */
+
+    return {
+      ...curr,
+      meters: (curr.meters || 0) * (1 - blend) + predictedMeters * blend,
+      yRatio: (curr.yRatio || 0.5) * (1 - blend) + predictedY * blend,
+      rot: curr.rot || 0,
+      vMeters: vMeters,
+      vY: vY
+    };
+  }
+
+  /* ✅ استبدال دالة رسم الأشباح */
+  window.mpDrawGhosts = function(){
+    if(!MP.active || G.state !== 'PLAYING') return;
+    if(!MP.otherPlayers.size) return;
+
+    const myM = getMeters();
+    const myUid = Cloud.user ? Cloud.user.uid : null;
+    const now = Date.now();
+
+    /* ألوان مميزة لكل لاعب */
+    const ghostColors = ['#4A88C8', '#E85838', '#6B9B6B', '#9A6AC8'];
+    const ghostAccents = ['#80C0FF', '#FF8060', '#A0FF80', '#D0A0FF'];
+    let colorIdx = 0;
+
+    for(const [uid, p] of MP.otherPlayers){
+      if(uid === myUid || !p) continue;
+
+      /* ✅ استقراء سريع ودقيق */
+      const interpData = predictiveInterpolate(uid, p, now);
+
+      const distDiff = (interpData.meters || 0) - myM;
+      const maxOffset = W * 0.42;
+      const pxOffset = clamp(distDiff * PIXELS_PER_METER * 0.55, -maxOffset, maxOffset);
+      const ghostX = P.baseX + pxOffset;
+      const ghostY = clamp((interpData.yRatio || 0.5) * H, 40, H - 40);
+
+      const sk = getAllSkins().find(s => s.id === interpData.skin) || SKINS[0];
+      const alpha = interpData.alive ? 0.78 : 0.28;
+      const ghostColor = ghostColors[colorIdx % ghostColors.length];
+      const ghostAccent = ghostAccents[colorIdx % ghostAccents.length];
+      colorIdx++;
+
+      /* ═══ هالة أرضية تحت اللاعب ═══ */
+      ctx.save();
+      ctx.globalAlpha = 0.3;
+      const glowGrad = ctx.createRadialGradient(ghostX, ghostY + 25, 5, ghostX, ghostY + 25, 40);
+      glowGrad.addColorStop(0, ghostColor);
+      glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = glowGrad;
+      ctx.beginPath();
+      ctx.ellipse(ghostX, ghostY + 25, 40, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      /* ═══ خط الرصاصة — يوضح سرعة اللاعب ═══ */
+      if(Math.abs(interpData.vMeters || 0) > 3){
+        ctx.save();
+        ctx.globalAlpha = 0.35;
+        ctx.strokeStyle = ghostAccent;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 8]);
+        const speedLen = Math.min(60, Math.abs(interpData.vMeters) * 3);
+        ctx.beginPath();
+        ctx.moveTo(ghostX - 20, ghostY);
+        ctx.lineTo(ghostX - 20 - speedLen, ghostY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+
+      /* ═══ بطاقة الاسم ═══ */
+      ctx.save();
+      ctx.globalAlpha = interpData.alive ? 1 : 0.5;
+      drawPlayerNameTag(ctx, ghostX, ghostY - P.r * 2.4, interpData.name || 'لاعب', {
+        tagColor: ghostColor,
+        alpha: interpData.alive ? 1 : 0.5,
+        showMeters: true,
+        meters: Math.round(interpData.meters || 0)
+      });
+      ctx.restore();
+
+      /* ═══ السهم الاتجاهي إذا كان خارج الشاشة ═══ */
+      if(Math.abs(pxOffset) >= maxOffset - 1){
+        ctx.save();
+        ctx.globalAlpha = 0.85;
+        ctx.fillStyle = ghostColor;
+        ctx.shadowColor = ghostColor;
+        ctx.shadowBlur = 12;
+        ctx.font = 'bold 26px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const arrowX = ghostX + (distDiff > 0 ? 25 : -25);
+        ctx.fillText(distDiff > 0 ? '→' : '←', arrowX, ghostY);
+        ctx.shadowBlur = 0;
+        ctx.restore();
+      }
+
+      /* ═══ رسم الشخصية ═══ */
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(ghostX, ghostY);
+
+      /* توهج مميز لكل لاعب */
+      ctx.shadowColor = ghostColor;
+      ctx.shadowBlur = 8;
+
+      try {
+        renderCharacter(ctx, P.r, sk, {
+          mode: interpData.mode || 'FLIP',
+          rot: interpData.rot || 0,
+          alpha: alpha,
+          skipExtras: true
+        });
+      } catch(e){}
+      ctx.restore();
+
+      /* ═══ مؤشر "ميت" للاعبين الموتى ═══ */
+      if(!interpData.alive){
+        ctx.save();
+        ctx.globalAlpha = 0.9;
+        ctx.font = 'bold 24px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('💀', ghostX + 20, ghostY - 15);
+        ctx.restore();
+      }
+    }
+  };
+
+
+  /* ═══════════════════════════════════════════════════════════
+     ✅ 3) إعادة التسمية: غرفة → ساحة
+     ═══════════════════════════════════════════════════════════ */
+
+  /* خريطة النصوص */
+  const ARENA_TEXT_REPLACEMENTS = [
+    ['غرفة الانتظار', 'ساحة الانتظار'],
+    ['كود الغرفة', 'كود الساحة'],
+    ['مغادرة الغرفة', 'مغادرة الساحة'],
+    ['إنشاء غرفة جديدة', 'إنشاء ساحة جديدة'],
+    ['بانتظار انضمام اللاعب الثاني', 'بانتظار انضمام لاعبين'],
+    ['اكتب كود غرفة', 'اكتب كود الساحة'],
+    ['أو', 'أو'],
+    ['الغرفة', 'الساحة'],
+    ['غرفة', 'ساحة'],
+    ['room', 'arena']
+  ];
+
+  function applyArenaText(root){
+    if(!root) return;
+    try {
+      const walker = document.createTreeWalker(
+        root,
+        NodeFilter.SHOW_TEXT,
+        {
+          acceptNode: (node) => {
+            const parent = node.parentElement;
+            if(!parent) return NodeFilter.FILTER_REJECT;
+            const tag = parent.tagName;
+            if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SCRIPT') {
+              return NodeFilter.FILTER_REJECT;
+            }
+            return NodeFilter.FILTER_ACCEPT;
+          }
+        }
+      );
+      const nodes = [];
+      while(walker.nextNode()) nodes.push(walker.currentNode);
+
+      nodes.forEach(node => {
+        let val = node.nodeValue;
+        if(!val) return;
+        let changed = false;
+        for(const [from, to] of ARENA_TEXT_REPLACEMENTS){
+          if(val.includes(from)){
+            val = val.split(from).join(to);
+            changed = true;
+          }
+        }
+        if(changed) node.nodeValue = val;
+      });
+    } catch(e){}
+  }
+
+  /* طبّق على الصفحة كاملةً + راقب التغييرات */
+  function patchArenaText(){
+    applyArenaText(document.body);
+
+    const observer = new MutationObserver(mutations => {
+      mutations.forEach(m => {
+        m.addedNodes.forEach(node => {
+          if(node.nodeType === 1) applyArenaText(node);
+          else if(node.nodeType === 3 && node.nodeValue){
+            let val = node.nodeValue;
+            let changed = false;
+            for(const [from, to] of ARENA_TEXT_REPLACEMENTS){
+              if(val.includes(from)){
+                val = val.split(from).join(to);
+                changed = true;
+              }
+            }
+            if(changed) node.nodeValue = val;
+          }
+        });
+      });
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  setTimeout(patchArenaText, 800);
+
+
+  /* ═══════════════════════════════════════════════════════════
+     ✅ 3ب) إصلاح العرض في الشاشات الصغيرة
+     ═══════════════════════════════════════════════════════════ */
+
+  /* حقن CSS إضافي للاستجابة */
+  (function injectArenaCSS(){
+    if(document.getElementById('arena-v4-css')) return;
+    const style = document.createElement('style');
+    style.id = 'arena-v4-css';
+    style.textContent = `
+      /* ═══ شاشات اللعب الجماعي — استجابة كاملة ═══ */
+      #s-multiplayer .sub,
+      #s-multiplayer-waiting .sub,
+      #s-multiplayer-result .center-screen {
+        padding: 14px 12px 80px !important;
+        overflow-y: auto !important;
+      }
+
+      /* ═══ الشرائح — 2x2 على الشاشات الصغيرة، صف على الكبيرة ═══ */
+      .mp-slots, #mp-slots {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
+        gap: 10px !important;
+        margin-bottom: 16px !important;
+      }
+
+      /* ═══ شريحة اللاعب الفردية ═══ */
+      .mp-slot {
+        padding: 14px 10px !important;
+        min-height: 150px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 8px !important;
+      }
+
+      .mp-slot-avatar {
+        width: 56px !important;
+        height: 56px !important;
+        font-size: 22px !important;
+      }
+
+      .mp-slot-name {
+        font-size: 12px !important;
+        text-align: center !important;
+        max-width: 100% !important;
+      }
+
+      /* ═══ شاشة النتيجة — تكيّف ═══ */
+      #s-multiplayer-result .center-screen {
+        justify-content: flex-start !important;
+        padding-top: 30px !important;
+      }
+
+      /* ═══ لوحة الترتيب المباشرة — حجم أصغر على الجوال ═══ */
+      @media (max-height: 640px){
+        .mp-leaderboard {
+          top: 80px !important;
+          min-width: 150px !important;
+          font-size: 10px !important;
+        }
+      }
+
+      /* ═══ لوحة الإيموجي — مرنة ═══ */
+      @media (max-width: 400px){
+        .mp-emoji-bar {
+          top: 60px !important;
+          right: 10px !important;
+        }
+        .mp-emoji-btn {
+          width: 32px !important;
+          height: 32px !important;
+          font-size: 16px !important;
+        }
+      }
+
+      /* ═══ قائمة الأصدقاء في المودال ═══ */
+      @media (max-width: 400px){
+        #mp-friends-picker > div {
+          border-radius: 20px 20px 0 0 !important;
+          max-height: 92vh !important;
+          margin: 0 !important;
+          width: 100% !important;
+        }
+      }
+
+      /* ═══ شاشة النتيجة النهائية الشاملة ═══ */
+      .arena-result-screen {
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        width: 100%;
+        max-width: 460px;
+        margin: 0 auto;
+      }
+
+      /* ═══ لوحة الفائز ═══ */
+      .ar-winner-panel {
+        position: relative;
+        padding: 24px 20px;
+        border-radius: 24px;
+        background: linear-gradient(135deg, #FFD966 0%, #E8B34E 50%, #C98A2E 100%);
+        color: #1A1512;
+        text-align: center;
+        overflow: hidden;
+        box-shadow: 0 16px 44px rgba(232,179,78,.5);
+        animation: arWinnerIn .6s cubic-bezier(.34,1.56,.64,1);
+      }
+
+      @keyframes arWinnerIn {
+        from { transform: scale(.85); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+      }
+
+      .ar-winner-panel::before {
+        content: '';
+        position: absolute;
+        top: -60%;
+        left: -60%;
+        width: 220%;
+        height: 220%;
+        background: radial-gradient(circle, rgba(255,255,255,.55), transparent 40%);
+        animation: arWinnerShine 3s ease-in-out infinite;
+        pointer-events: none;
+      }
+
+      @keyframes arWinnerShine {
+        0%, 100% { transform: translate(-30%, -30%); }
+        50% { transform: translate(30%, 30%); }
+      }
+
+      .ar-winner-icon {
+        font-size: 72px;
+        line-height: 1;
+        margin-bottom: 6px;
+        filter: drop-shadow(0 8px 20px rgba(0,0,0,.25));
+        animation: arWinnerFloat 2s ease-in-out infinite;
+        position: relative;
+        z-index: 1;
+      }
+
+      @keyframes arWinnerFloat {
+        0%, 100% { transform: translateY(0) rotate(-3deg); }
+        50% { transform: translateY(-8px) rotate(3deg); }
+      }
+
+      .ar-winner-name {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 26px;
+        font-weight: 800;
+        letter-spacing: 1px;
+        margin-bottom: 4px;
+        position: relative;
+        z-index: 1;
+        text-shadow: 0 2px 8px rgba(0,0,0,.15);
+      }
+
+      .ar-winner-label {
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 4px;
+        opacity: .75;
+        position: relative;
+        z-index: 1;
+      }
+
+      .ar-winner-score {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 38px;
+        font-weight: 800;
+        line-height: 1;
+        margin-top: 12px;
+        color: #8A4A10;
+        position: relative;
+        z-index: 1;
+      }
+
+      .ar-winner-score small {
+        font-size: 16px;
+        font-weight: 700;
+        opacity: .7;
+      }
+
+      /* ═══ لوحة الخاسر/التعادل ═══ */
+      .ar-loser-panel {
+        background: linear-gradient(135deg, #4A4048 0%, #2A2028 100%);
+        color: #fff;
+        box-shadow: 0 16px 44px rgba(74,64,72,.4);
+      }
+
+      .ar-loser-panel .ar-winner-score {
+        color: #D0C8C0;
+      }
+
+      .ar-draw-panel {
+        background: linear-gradient(135deg, #6B9B6B 0%, #4A7B4A 100%);
+        color: #fff;
+        box-shadow: 0 16px 44px rgba(107,155,107,.4);
+      }
+
+      .ar-draw-panel .ar-winner-score {
+        color: #E8F4E8;
+      }
+
+      /* ═══ لوحة الترتيب النهائية ═══ */
+      .ar-scoreboard {
+        padding: 16px;
+        border-radius: 20px;
+        background: #fff;
+        border: 1.5px solid var(--line);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .ar-scoreboard-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px dashed var(--line-strong);
+      }
+
+      .ar-scoreboard-title .t {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        color: var(--ink);
+      }
+
+      .ar-scoreboard-title .s {
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 2px;
+        color: var(--ink-mute);
+      }
+
+      .ar-score-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 10px;
+        border-radius: 14px;
+        margin-bottom: 6px;
+        background: var(--paper);
+        border: 1.5px solid transparent;
+        transition: all .25s;
+        position: relative;
+      }
+
+      .ar-score-row.is-me {
+        background: linear-gradient(135deg, #FFF9EC, #FBF1DC);
+        border-color: var(--gold);
+        box-shadow: 0 4px 14px rgba(232,179,78,.25);
+      }
+
+      .ar-score-row.is-winner {
+        background: linear-gradient(135deg, #FFF4C0, #FFE8A0);
+        border-color: var(--gold);
+        box-shadow: 0 6px 20px rgba(232,179,78,.4);
+      }
+
+      .ar-score-row.is-dead {
+        opacity: .65;
+        filter: grayscale(.3);
+      }
+
+      .ar-rank-badge {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 15px;
+        font-weight: 700;
+        flex-shrink: 0;
+        background: var(--paper-2);
+        color: var(--ink-soft);
+        border: 2px solid #fff;
+        box-shadow: 0 2px 8px rgba(0,0,0,.08);
+      }
+
+      .ar-rank-badge.rank-1 { background: linear-gradient(135deg, #FFD700, #E8B34E); color: #fff; }
+      .ar-rank-badge.rank-2 { background: linear-gradient(135deg, #D0D8E8, #A0A8B8); color: #fff; }
+      .ar-rank-badge.rank-3 { background: linear-gradient(135deg, #C08040, #A06030); color: #fff; }
+
+      .ar-score-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #FFE0A0, #E8B34E);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        font-weight: 800;
+        color: #fff;
+        overflow: hidden;
+        flex-shrink: 0;
+        border: 2px solid rgba(255,255,255,.7);
+        box-shadow: 0 3px 10px rgba(0,0,0,.1);
+      }
+
+      .ar-score-info {
+        flex: 1;
+        min-width: 0;
+        text-align: right;
+      }
+
+      .ar-score-name {
+        font-size: 13px;
+        font-weight: 800;
+        color: var(--ink);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .ar-score-name small {
+        font-size: 10px;
+        color: var(--ink-mute);
+        font-weight: 700;
+        margin-right: 4px;
+      }
+
+      .ar-score-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 10px;
+        color: var(--ink-mute);
+        margin-top: 3px;
+      }
+
+      .ar-score-meta .badge {
+        padding: 2px 7px;
+        border-radius: 100px;
+        background: var(--paper-2);
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 9px;
+        font-weight: 700;
+      }
+
+      .ar-score-meters {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--amber);
+        flex-shrink: 0;
+        text-align: left;
+      }
+
+      .ar-score-meters small {
+        font-size: 11px;
+        color: var(--ink-mute);
+        margin-right: 2px;
+      }
+
+      /* ═══ لوحة الجولات ═══ */
+      .ar-rounds-panel {
+        padding: 14px;
+        border-radius: 18px;
+        background: #fff;
+        border: 1.5px solid var(--line);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .ar-round-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: var(--paper);
+        margin-bottom: 6px;
+      }
+
+      .ar-round-row:last-child { margin-bottom: 0; }
+
+      .ar-round-num {
+        width: 28px;
+        height: 28px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #1F1A24, #3A2A48);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 12px;
+        font-weight: 700;
+        flex-shrink: 0;
+      }
+
+      .ar-round-info {
+        flex: 1;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--ink);
+        text-align: right;
+      }
+
+      .ar-round-scores {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--ink-soft);
+      }
+
+      /* ═══ لوحة الإحصائيات ═══ */
+      .ar-stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .ar-stat-box {
+        padding: 12px;
+        border-radius: 14px;
+        background: #fff;
+        border: 1.5px solid var(--line);
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .ar-stat-box .icon {
+        font-size: 20px;
+        line-height: 1;
+      }
+
+      .ar-stat-box .val {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--ink);
+        line-height: 1;
+      }
+
+      .ar-stat-box .lbl {
+        font-size: 9.5px;
+        font-weight: 800;
+        letter-spacing: 1px;
+        color: var(--ink-mute);
+        text-transform: uppercase;
+      }
+
+      /* ═══ لوحة المكافآت ═══ */
+      .ar-rewards-panel {
+        padding: 16px;
+        border-radius: 20px;
+        background: linear-gradient(135deg, #FFF9EC, #FBF1DC);
+        border: 1.5px solid rgba(232,179,78,.4);
+        box-shadow: 0 6px 22px rgba(232,179,78,.2);
+      }
+
+      .ar-rewards-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 12px;
+        font-weight: 700;
+        color: #8A4A10;
+        letter-spacing: 2px;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .ar-rewards-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .ar-reward-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 6px 12px;
+        border-radius: 100px;
+        background: #fff;
+        border: 1.5px solid rgba(232,179,78,.35);
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 12px;
+        font-weight: 700;
+        color: #8A4A10;
+        box-shadow: 0 2px 8px rgba(232,179,78,.15);
+      }
+
+      .ar-reward-chip .c {
+        color: var(--gold);
+        font-size: 11px;
+      }
+
+      /* ═══ أزرار الإجراءات ═══ */
+      .ar-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding-top: 6px;
+      }
+
+      .ar-actions-row {
+        display: flex;
+        gap: 8px;
+      }
+
+      .ar-btn {
+        flex: 1;
+        padding: 14px;
+        border-radius: 16px;
+        border: none;
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: .5px;
+        cursor: pointer;
+        transition: all .2s cubic-bezier(.34,1.56,.64,1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .ar-btn:active { transform: scale(.96); }
+      .ar-btn:disabled {
+        opacity: .55;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .ar-btn.primary {
+        background: linear-gradient(135deg, #6B9B6B, #4A7B4A);
+        color: #fff;
+        box-shadow: 0 6px 20px rgba(107,155,107,.4);
+      }
+
+      .ar-btn.gold {
+        background: linear-gradient(135deg, var(--gold), #F2C862);
+        color: #1A1512;
+        box-shadow: 0 6px 20px rgba(232,179,78,.4);
+      }
+
+      .ar-btn.soft {
+        background: #fff;
+        color: var(--ink);
+        border: 1.5px solid var(--line);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .ar-btn.dark {
+        background: linear-gradient(135deg, #1F1A24, #3A2A48);
+        color: #fff;
+        box-shadow: 0 6px 20px rgba(26,21,18,.35);
+      }
+
+      .ar-btn.ghost {
+        background: transparent;
+        color: var(--ink-soft);
+        border: 1.5px solid var(--line);
+      }
+
+      /* ═══ ساحة الانتظار v2 ═══ */
+      .ar-lobby-hero {
+        padding: 20px;
+        border-radius: 22px;
+        background: linear-gradient(135deg, #1F0A20 0%, #5A1A50 60%, #7A2A70 100%);
+        color: #fff;
+        text-align: center;
+        margin-bottom: 14px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 12px 40px rgba(122,42,112,.4);
+      }
+
+      .ar-lobby-hero::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle at 30% 30%, rgba(232,179,78,.3), transparent 50%);
+        animation: arLobbyGlow 4s ease-in-out infinite;
+        pointer-events: none;
+      }
+
+      @keyframes arLobbyGlow {
+        0%, 100% { opacity: .6; }
+        50% { opacity: 1; }
+      }
+
+      .ar-lobby-code {
+        font-family: 'Space Grotesk', monospace;
+        font-size: 38px;
+        font-weight: 800;
+        letter-spacing: 8px;
+        color: #FFE8A0;
+        text-shadow: 0 4px 20px rgba(232,179,78,.6);
+        line-height: 1;
+        margin: 8px 0;
+        position: relative;
+        z-index: 1;
+      }
+
+      .ar-lobby-label {
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 3px;
+        opacity: .75;
+        position: relative;
+        z-index: 1;
+      }
+
+      .ar-lobby-copy {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        border-radius: 100px;
+        background: rgba(255,255,255,.15);
+        color: #fff;
+        border: none;
+        font-family: inherit;
+        font-size: 11.5px;
+        font-weight: 800;
+        cursor: pointer;
+        margin-top: 10px;
+        transition: transform .15s;
+        position: relative;
+        z-index: 1;
+      }
+
+      .ar-lobby-copy:active { transform: scale(.94); }
+
+      /* ═══ بطاقة اللاعب في الساحة ═══ */
+      .ar-player-card {
+        position: relative;
+        padding: 16px 12px;
+        border-radius: 18px;
+        background: #fff;
+        border: 2px solid var(--line);
+        box-shadow: var(--shadow-sm);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        transition: all .3s cubic-bezier(.34,1.56,.64,1);
+        min-height: 160px;
+        justify-content: center;
+      }
+
+      .ar-player-card.is-ready {
+        border-color: #6B9B6B;
+        background: linear-gradient(135deg, #E8F4E8, #D8EED8);
+        box-shadow: 0 6px 22px rgba(107,155,107,.25);
+      }
+
+      .ar-player-card.is-me {
+        background: linear-gradient(135deg, #FFF9EC, #FBF1DC);
+      }
+
+      .ar-player-card.is-host {
+        border-color: var(--gold);
+      }
+
+      .ar-player-card.is-empty {
+        background: repeating-linear-gradient(45deg,
+          var(--paper), var(--paper) 8px,
+          var(--paper-2) 8px, var(--paper-2) 16px);
+        border-style: dashed;
+        opacity: .7;
+      }
+
+      /* ═══ شارة المضيف ═══ */
+      .ar-host-badge {
+        position: absolute;
+        top: -10px;
+        left: 8px;
+        padding: 3px 10px;
+        border-radius: 100px;
+        background: linear-gradient(135deg, var(--gold), #F2C862);
+        color: #1A1512;
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 1px;
+        box-shadow: 0 3px 10px rgba(232,179,78,.5);
+        z-index: 2;
+      }
+
+      /* ═══ شارة "أنت" ═══ */
+      .ar-you-badge {
+        position: absolute;
+        top: -10px;
+        right: 8px;
+        padding: 3px 10px;
+        border-radius: 100px;
+        background: linear-gradient(135deg, var(--amber), #F2A671);
+        color: #fff;
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 1px;
+        box-shadow: 0 3px 10px rgba(224,122,63,.4);
+        z-index: 2;
+      }
+
+      /* ═══ زر الطرد (للمضيف) ═══ */
+      .ar-kick-btn {
+        position: absolute;
+        bottom: 6px;
+        left: 6px;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(193,74,74,.15);
+        color: #C14A4A;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        transition: all .15s;
+        opacity: 0;
+        z-index: 3;
+      }
+
+      .ar-player-card:hover .ar-kick-btn { opacity: 1; }
+      .ar-kick-btn:active { transform: scale(.85); }
+      .ar-kick-btn:hover { background: #C14A4A; color: #fff; }
+
+      /* ═══ شريط الحالة ═══ */
+      .ar-status-pill {
+        padding: 4px 12px;
+        border-radius: 100px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .5px;
+      }
+
+      .ar-status-pill.ready {
+        background: #E8F4E8;
+        color: #3A7A3A;
+      }
+
+      .ar-status-pill.waiting {
+        background: var(--paper-2);
+        color: var(--ink-mute);
+      }
+
+      /* ═══ أدوات المضيف ═══ */
+      .ar-host-panel {
+        padding: 16px;
+        border-radius: 20px;
+        background: linear-gradient(135deg, #FFF9EC, #FBF1DC);
+        border: 1.5px solid rgba(232,179,78,.4);
+        margin-bottom: 14px;
+      }
+
+      .ar-host-panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+
+      .ar-host-panel-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 12px;
+        font-weight: 700;
+        color: #8A4A10;
+        letter-spacing: 2px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .ar-host-tools {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .ar-host-tool {
+        padding: 12px 10px;
+        border-radius: 14px;
+        background: #fff;
+        border: 1.5px solid rgba(232,179,78,.3);
+        cursor: pointer;
+        font-family: inherit;
+        text-align: right;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: all .18s;
+      }
+
+      .ar-host-tool:active { transform: scale(.96); }
+      .ar-host-tool:hover {
+        border-color: var(--amber);
+        box-shadow: 0 4px 14px rgba(232,179,78,.25);
+      }
+
+      .ar-host-tool .ic {
+        font-size: 20px;
+        flex-shrink: 0;
+      }
+
+      .ar-host-tool .lbl {
+        font-size: 11.5px;
+        font-weight: 800;
+        color: var(--ink);
+        line-height: 1.15;
+      }
+
+      .ar-host-tool .sub {
+        font-size: 9.5px;
+        color: var(--ink-mute);
+        margin-top: 2px;
+      }
+
+      /* ═══ خلفية ضبابية معلقة ═══ */
+      .ar-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 99998;
+        background: rgba(26,21,18,.75);
+        backdrop-filter: blur(14px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        animation: fadeIn .25s ease-out;
+      }
+
+      .ar-modal-backdrop.active { display: flex; }
+
+      .ar-modal-panel {
+        width: 100%;
+        max-width: 400px;
+        background: #fff;
+        border-radius: 22px;
+        box-shadow: 0 30px 80px rgba(0,0,0,.5);
+        padding: 22px;
+        animation: popIn .32s cubic-bezier(.34,1.56,.64,1);
+        max-height: 85vh;
+        overflow-y: auto;
+      }
+
+      .ar-modal-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--ink);
+        margin-bottom: 14px;
+        text-align: center;
+      }
+
+      .ar-modal-input {
+        width: 100%;
+        padding: 12px 14px;
+        border-radius: 12px;
+        border: 1.5px solid var(--line);
+        background: var(--paper);
+        font-family: inherit;
+        font-size: 13px;
+        color: var(--ink);
+        margin-bottom: 12px;
+      }
+
+      .ar-modal-input:focus {
+        outline: none;
+        border-color: var(--amber);
+        background: #fff;
+      }
+
+      .ar-modal-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .ar-modal-actions button {
+        flex: 1;
+        padding: 12px;
+        border-radius: 14px;
+        border: none;
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: transform .15s;
+      }
+
+      .ar-modal-actions button:active { transform: scale(.96); }
+
+      .ar-modal-actions .ok {
+        background: linear-gradient(135deg, #6B9B6B, #4A7B4A);
+        color: #fff;
+      }
+
+      .ar-modal-actions .cancel {
+        background: #fff;
+        color: var(--ink);
+        border: 1.5px solid var(--line);
+      }
+    `;
+    document.head.appendChild(style);
+  })();
+
+
+  /* ═══════════════════════════════════════════════════════════
+     ✅ 4) ساحة الانتظار المحسّنة
+     ═══════════════════════════════════════════════════════════ */
+
+  window.mpBuildWaitingRoom = function(){
+    if(!MP.roomData) return;
+
+    const screen = document.getElementById('s-multiplayer-waiting');
+    if(!screen) return;
+
+    const sub = screen.querySelector('.sub');
+    if(!sub) return;
+
+    /* ✅ احذف المحتوى القديم بالكامل، أعد البناء */
+    sub.innerHTML = '';
+
+    const players = MP.roomData.players || [];
+    const maxPlayers = MP_CONFIG.maxPlayers || 4;
+    const myUid = Cloud.user ? Cloud.user.uid : null;
+    const isHost = MP.isHost;
+
+    /* ═══ TOP BAR ═══ */
+    const top = document.createElement('div');
+    top.className = 'sub-top';
+    top.innerHTML = `
+      <button class="back-btn" data-mp-leave>←</button>
+      <div>
+        <div class="sub-title">ساحة الانتظار</div>
+        <div class="sub-eyebrow">ARENA LOBBY</div>
+      </div>
+      <div class="sub-spacer"></div>
+    `;
+    sub.appendChild(top);
+
+    /* ربط زر الرجوع */
+    top.querySelector('[data-mp-leave]').addEventListener('click', async () => {
+      if(!confirm('مغادرة الساحة؟')) return;
+      await mpLeaveRoom();
+      if(G.state === 'PLAYING' || G.state === 'PAUSED') quitToMenu();
+      else { showScreen('s-home'); buildHome(); }
+      Sfx.tap(); haptic(6);
+    });
+
+    /* ═══ بطاقة الكود ═══ */
+    const codeCard = document.createElement('div');
+    codeCard.className = 'ar-lobby-hero';
+    codeCard.innerHTML = `
+      <div class="ar-lobby-label">كود الساحة</div>
+      <div class="ar-lobby-code" id="ar-lobby-code">${MP.roomCode || '—'}</div>
+      <div class="ar-lobby-label" style="opacity:.6;font-size:9px;letter-spacing:2px;">
+        شارك الكود مع أصدقائك للانضمام
+      </div>
+      <button class="ar-lobby-copy" id="ar-lobby-copy">
+        <span>📋</span>
+        <span>نسخ الكود</span>
+      </button>
+    `;
+    sub.appendChild(codeCard);
+
+    codeCard.querySelector('#ar-lobby-copy').addEventListener('click', async () => {
+      const code = MP.roomCode || '';
+      try {
+        await navigator.clipboard.writeText(code);
+        const btn = codeCard.querySelector('#ar-lobby-copy');
+        btn.innerHTML = '<span>✓</span><span>تم النسخ</span>';
+        setTimeout(() => {
+          btn.innerHTML = '<span>📋</span><span>نسخ الكود</span>';
+        }, 1500);
+        Toast.success('تم نسخ كود الساحة!', code);
+        Sfx.tap();
+      } catch(e){
+        Toast.error('فشل النسخ', code);
+      }
+    });
+
+    /* ═══ شبكة اللاعبين ═══ */
+    const playersGrid = document.createElement('div');
+    playersGrid.id = 'mp-slots';
+    playersGrid.className = 'mp-slots';
+    playersGrid.style.cssText = `
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    `;
+    sub.appendChild(playersGrid);
+
+    for(let i = 0; i < maxPlayers; i++){
+      playersGrid.appendChild(buildPlayerCard(players[i], myUid, isHost));
+    }
+
+    /* ═══ لوحة المضيف ═══ */
+    if(isHost){
+      sub.appendChild(buildHostPanel(players));
+    }
+
+    /* ═══ اختيار النمط (للمضيف فقط) ═══ */
+    const modeSelector = document.createElement('div');
+    const currentMode = MP.roomData.mode || 'FLIP';
+    const modeData = MODES.find(m => m.id === currentMode) || MODES[0];
+
+    modeSelector.style.cssText = `
+      padding: 14px;
+      border-radius: 16px;
+      background: #fff;
+      border: 1.5px solid var(--line);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    `;
+    modeSelector.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
+        <div style="width:44px;height:44px;border-radius:12px;
+                    background:${modeData.color};color:#fff;
+                    display:flex;align-items:center;justify-content:center;
+                    font-size:22px;flex-shrink:0;">
+          ${modeData.icon}
+        </div>
+        <div style="min-width:0;flex:1;">
+          <div style="font-family:'Space Grotesk';font-size:9.5px;font-weight:700;
+                      color:var(--ink-mute);letter-spacing:1.5px;">
+            النمط الحالي
+          </div>
+          <div style="font-size:14px;font-weight:800;color:${modeData.color};
+                      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            ${modeData.ar}
+          </div>
+        </div>
+      </div>
+      ${isHost
+        ? `<button id="ar-mode-change" style="padding:10px 16px;border-radius:12px;
+                   border:none;background:linear-gradient(135deg,var(--amber),#F2A671);
+                   color:#fff;font-family:inherit;font-size:11.5px;font-weight:800;
+                   cursor:pointer;flex-shrink:0;">
+             تغيير
+           </button>`
+        : `<span style="font-size:10px;color:var(--ink-mute);font-weight:700;
+                       white-space:nowrap;">👑 المضيف يتحكم</span>`
+      }
+    `;
+    sub.appendChild(modeSelector);
+
+    const changeBtn = modeSelector.querySelector('#ar-mode-change');
+    if(changeBtn && isHost){
+      changeBtn.addEventListener('click', openHostModePicker);
+    }
+
+    /* ═══ حالة الاتصال ═══ */
+    const connBadge = document.createElement('div');
+    connBadge.id = 'mp-conn-badge';
+    connBadge.className = 'mp-conn-badge';
+    connBadge.style.cssText = `
+      position:static;
+      margin:0 auto 14px;
+      justify-content:center;
+    `;
+    sub.appendChild(connBadge);
+    mpUpdateConnectionBadge();
+
+    /* ═══ زر البدء / الاستعداد ═══ */
+    const startBtn = document.createElement('button');
+    startBtn.id = 'mp-start-btn';
+    startBtn.className = 'action-btn gold';
+    startBtn.style.cssText = `
+      width: 100%;
+      max-width: 100%;
+      margin-top: 8px;
+      height: 56px;
+      font-size: 14px;
+      font-weight: 800;
+      border-radius: 18px;
+      transition: all .25s;
+    `;
+
+    if(isHost){
+      const canStart = MP.canStart();
+      startBtn.disabled = !canStart;
+      startBtn.style.opacity = canStart ? '1' : '0.55';
+      startBtn.style.background = canStart
+        ? 'linear-gradient(135deg,#6B9B6B,#4A7B4A)'
+        : 'var(--paper-3)';
+      startBtn.style.color = canStart ? '#fff' : 'var(--ink-mute)';
+      startBtn.style.cursor = canStart ? 'pointer' : 'not-allowed';
+      startBtn.style.boxShadow = canStart ? '0 8px 24px rgba(107,155,107,.4)' : 'none';
+
+      if(players.length < 2){
+        startBtn.textContent = `⏳ بانتظار لاعبين (${players.length}/${maxPlayers})`;
+      } else if(!canStart){
+        startBtn.textContent = `⏳ بانتظار جهوزية اللاعبين...`;
+      } else {
+        startBtn.textContent = `🏁 ابدأ السباق (${players.length} لاعبين)`;
+      }
+
+      startBtn.addEventListener('click', () => {
+        if(MP.canStart()) window.mpStartRace();
+      });
+    } else {
+      startBtn.disabled = false;
+      startBtn.style.opacity = '1';
+      startBtn.style.color = '#fff';
+      startBtn.style.background = MP.myReady
+        ? 'linear-gradient(135deg,#6B9B6B,#4A7B4A)'
+        : 'linear-gradient(135deg,var(--gold),#F2C862)';
+      startBtn.style.cursor = 'pointer';
+      startBtn.style.boxShadow = MP.myReady
+        ? '0 8px 24px rgba(107,155,107,.4)'
+        : '0 8px 24px rgba(232,179,78,.4)';
+      startBtn.textContent = MP.myReady
+        ? '✓ أنت جاهز — بانتظار البدء'
+        : '⚔️ أعلن الاستعداد';
+
+      startBtn.addEventListener('click', async () => {
+        await window.mpToggleReady();
+        window.mpBuildWaitingRoom();
+      });
+    }
+
+    sub.appendChild(startBtn);
+
+    /* ═══ زر مغادرة ═══ */
+    const leaveBtn = document.createElement('button');
+    leaveBtn.className = 'action-btn soft';
+    leaveBtn.style.cssText = `
+      width: 100%;
+      max-width: 100%;
+      margin-top: 10px;
+      color: #C14A4A;
+    `;
+    leaveBtn.textContent = '🚪 مغادرة الساحة';
+    leaveBtn.addEventListener('click', async () => {
+      if(!confirm('مغادرة الساحة؟')) return;
+      await mpLeaveRoom();
+      if(G.state === 'PLAYING' || G.state === 'PAUSED') quitToMenu();
+      else { showScreen('s-home'); buildHome(); }
+      Sfx.tap(); haptic(6);
+    });
+    sub.appendChild(leaveBtn);
+  };
+
+  /* ═══ بناء بطاقة لاعب ═══ */
+  function buildPlayerCard(player, myUid, isHost){
+    const card = document.createElement('div');
+    card.className = 'ar-player-card';
+
+    if(!player){
+      card.classList.add('is-empty');
+      card.innerHTML = `
+        <div style="font-size:32px;opacity:.3;">👤</div>
+        <div style="font-size:11px;font-weight:700;color:var(--ink-mute);text-align:center;">
+          بانتظار لاعب
+        </div>
+        <div style="font-size:9px;color:var(--ink-mute);opacity:.7;">
+          شارك الكود
+        </div>
+      `;
+      return card;
+    }
+
+    const isMe = player.uid === myUid;
+    const playerIsHost = player.isHost;
+    const skin = getAllSkins().find(s => s.id === player.skin) || SKINS[0];
+
+    if(player.ready) card.classList.add('is-ready');
+    if(isMe) card.classList.add('is-me');
+    if(playerIsHost) card.classList.add('is-host');
+
+    /* شارة المضيف */
+    if(playerIsHost){
+      const badge = document.createElement('div');
+      badge.className = 'ar-host-badge';
+      badge.textContent = '👑 HOST';
+      card.appendChild(badge);
+    }
+
+    /* شارة "أنت" */
+    if(isMe && !playerIsHost){
+      const youBadge = document.createElement('div');
+      youBadge.className = 'ar-you-badge';
+      youBadge.textContent = 'أنت';
+      card.appendChild(youBadge);
+    }
+
+    /* Avatar */
+    const avatar = document.createElement('div');
+    avatar.style.cssText = `
+      width: 56px;height: 56px;border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%,
+        ${mixColor(skin.body, '#FFFFFF', 0.4)},
+        ${skin.body} 55%, ${skin.bodyDark});
+      border: 3px solid rgba(255,255,255,.7);
+      box-shadow: 0 6px 20px rgba(0,0,0,.15);
+      display: flex;align-items: center; justify-content: center;
+      overflow: hidden;flex-shrink: 0;
+    `;
+    if(hasItemImage(skin)){
+      avatar.innerHTML = `<img src="${ASSET.resolve(skin)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.style.display='none'">`;
+    }
+    card.appendChild(avatar);
+
+    /* Name */
+    const nameEl = document.createElement('div');
+    nameEl.style.cssText = `
+      font-size: 13px;font-weight: 800;color: var(--ink);
+      text-align: center;white-space: nowrap;
+      overflow: hidden;text-overflow: ellipsis;
+      max-width: 100%;padding: 0 4px;
+    `;
+    nameEl.textContent = player.name || 'لاعب';
+    card.appendChild(nameEl);
+
+    /* Status pill */
+    const status = document.createElement('div');
+    status.className = 'ar-status-pill ' + (player.ready ? 'ready' : 'waiting');
+    status.textContent = player.ready ? '✓ جاهز' : '⏳ بانتظار';
+    card.appendChild(status);
+
+    /* زر الطرد (للمضيف فقط، وليس لنفسه) */
+    if(isHost && !isMe){
+      const kickBtn = document.createElement('button');
+      kickBtn.className = 'ar-kick-btn';
+      kickBtn.title = 'طرد اللاعب';
+      kickBtn.innerHTML = '✕';
+      kickBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if(!confirm(`طرد ${player.name}؟`)) return;
+        await kickPlayer(player.uid, player.name);
+      });
+      card.appendChild(kickBtn);
+    }
+
+    return card;
+  }
+
+  /* ═══ لوحة المضيف ═══ */
+  function buildHostPanel(players){
+    const panel = document.createElement('div');
+    panel.className = 'ar-host-panel';
+
+    panel.innerHTML = `
+      <div class="ar-host-panel-head">
+        <div class="ar-host-panel-title">
+          <span>👑</span>
+          <span>أدوات المضيف</span>
+        </div>
+        <div style="font-family:'Space Grotesk';font-size:10px;
+                    font-weight:700;color:#8A4A10;letter-spacing:1px;">
+          HOST
+        </div>
+      </div>
+      <div class="ar-host-tools">
+        <button class="ar-host-tool" data-tool="rounds">
+          <span class="ic">🏆</span>
+          <div style="text-align:right;">
+            <div class="lbl">عدد الجولات</div>
+            <div class="sub">${MP.roomData.bestOf || 3} جولات</div>
+          </div>
+        </button>
+        <button class="ar-host-tool" data-tool="broadcast">
+          <span class="ic">📢</span>
+          <div style="text-align:right;">
+            <div class="lbl">إشعار جماعي</div>
+            <div class="sub">أرسل رسالة</div>
+          </div>
+        </button>
+        <button class="ar-host-tool" data-tool="lock">
+          <span class="ic">${MP.roomData.locked ? '🔒' : '🔓'}</span>
+          <div style="text-align:right;">
+            <div class="lbl">${MP.roomData.locked ? 'الساحة مقفلة' : 'قفل الساحة'}</div>
+            <div class="sub">${MP.roomData.locked ? 'لا يمكن انضمام' : 'منع الانضمام'}</div>
+          </div>
+        </button>
+        <button class="ar-host-tool" data-tool="kick-all">
+          <span class="ic">🚪</span>
+          <div style="text-align:right;">
+            <div class="lbl">طرد الجميع</div>
+            <div class="sub">إعادة تعيين</div>
+          </div>
+        </button>
+      </div>
+    `;
+
+    /* ربط الأدوات */
+    panel.querySelectorAll('.ar-host-tool').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tool = btn.dataset.tool;
+        handleHostTool(tool, players);
+      });
+    });
+
+    return panel;
+  }
+
+  /* ═══ معالجة أدوات المضيف ═══ */
+  async function handleHostTool(tool, players){
+    if(!MP.active || !MP.isHost || !Cloud.db) return;
+
+    if(tool === 'rounds'){
+      openBestOfModal();
+      return;
+    }
+
+    if(tool === 'broadcast'){
+      openBroadcastModal();
+      return;
+    }
+
+    if(tool === 'lock'){
+      try {
+        const newLocked = !MP.roomData.locked;
+        await Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId).update({
+          locked: newLocked
+        });
+        Toast.success(newLocked ? 'الساحة مقفلة' : 'الساحة مفتوحة');
+        Sfx.tap();
+      } catch(e){
+        Toast.error('فشل', e.message);
+      }
+      return;
+    }
+
+    if(tool === 'kick-all'){
+      if(!confirm('طرد كل اللاعبين غير المضيف؟')) return;
+      try {
+        const playersToKick = (MP.roomData.players || [])
+          .filter(p => !p.isHost)
+          .map(p => p.uid);
+
+        for(const uid of playersToKick){
+          await kickPlayer(uid, '', true);
+        }
+        Toast.success(`تم طرد ${playersToKick.length} لاعب`);
+      } catch(e){
+        Toast.error('فشل', e.message);
+      }
+    }
+  }
+
+  /* ═══ طرد لاعب ═══ */
+  async function kickPlayer(uid, name, silent){
+    if(!MP.active || !MP.isHost || !Cloud.db) return;
+    try {
+      const roomRef = Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId);
+      const snap = await roomRef.get();
+      if(!snap.exists) return;
+
+      const data = snap.data();
+      const players = (data.players || []).filter(p => p.uid !== uid);
+      const playerUids = (data.playerUids || []).filter(id => id !== uid);
+
+      await roomRef.update({ players, playerUids });
+
+      /* إرسال إشعار للمطرود */
+      if(!silent){
+        await Cloud.db.collection('friend_requests').add({
+          fromUid: Cloud.user.uid,
+          toUid: uid,
+          type: 'arena_kicked',
+          status: 'pending',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).catch(() => {});
+      }
+
+      Toast.success(`تم طرد ${name || 'اللاعب'}`);
+      Sfx.tap();
+    } catch(e){
+      console.warn('[Arena] Kick failed:', e);
+      if(!silent) Toast.error('فشل الطرد', e.message);
+    }
+  }
+
+  /* ═══ مودال عدد الجولات ═══ */
+  function openBestOfModal(){
+    let modal = document.getElementById('ar-modal-bestof');
+    if(!modal){
+      modal = document.createElement('div');
+      modal.id = 'ar-modal-bestof';
+      modal.className = 'ar-modal-backdrop';
+      document.body.appendChild(modal);
+    }
+
+    const current = MP.roomData.bestOf || 3;
+
+    modal.innerHTML = `
+      <div class="ar-modal-panel">
+        <div class="ar-modal-title">🏆 عدد الجولات</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">
+          <button data-bestof="1" style="padding:14px;border-radius:14px;
+                     border:2px solid ${current===1 ? 'var(--amber)' : 'var(--line)'};
+                     background:${current===1 ? 'linear-gradient(135deg,#FFF9EC,#FBF1DC)' : '#fff'};
+                     font-family:inherit;font-weight:800;font-size:12.5px;cursor:pointer;">
+            جولة
+          </button>
+          <button data-bestof="3" style="padding:14px;border-radius:14px;
+                     border:2px solid ${current===3 ? 'var(--amber)' : 'var(--line)'};
+                     background:${current===3 ? 'linear-gradient(135deg,#FFF9EC,#FBF1DC)' : '#fff'};
+                     font-family:inherit;font-weight:800;font-size:12.5px;cursor:pointer;">
+            أفضل من 3
+          </button>
+          <button data-bestof="5" style="padding:14px;border-radius:14px;
+                     border:2px solid ${current===5 ? 'var(--amber)' : 'var(--line)'};
+                     background:${current===5 ? 'linear-gradient(135deg,#FFF9EC,#FBF1DC)' : '#fff'};
+                     font-family:inherit;font-weight:800;font-size:12.5px;cursor:pointer;">
+            أفضل من 5
+          </button>
+        </div>
+        <div class="ar-modal-actions">
+          <button class="cancel" id="ar-bestof-cancel">إغلاق</button>
+        </div>
+      </div>
+    `;
+
+    modal.classList.add('active');
+
+    modal.querySelector('#ar-bestof-cancel').addEventListener('click', () => {
+      modal.classList.remove('active');
+    });
+
+    modal.querySelectorAll('[data-bestof]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const v = parseInt(btn.dataset.bestof, 10);
+        try {
+          await Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId).update({
+            bestOf: v
+          });
+          Toast.success('تم التحديث', `${v} جولات`);
+          Sfx.tap();
+          modal.classList.remove('active');
+        } catch(e){
+          Toast.error('فشل', e.message);
+        }
+      });
+    });
+  }
+
+  /* ═══ مودال البث الجماعي ═══ */
+  function openBroadcastModal(){
+    let modal = document.getElementById('ar-modal-broadcast');
+    if(!modal){
+      modal = document.createElement('div');
+      modal.id = 'ar-modal-broadcast';
+      modal.className = 'ar-modal-backdrop';
+      document.body.appendChild(modal);
+    }
+
+    modal.innerHTML = `
+      <div class="ar-modal-panel">
+        <div class="ar-modal-title">📢 إشعار جماعي</div>
+        <input type="text" class="ar-modal-input" id="ar-broadcast-input"
+               placeholder="اكتب رسالتك..." maxlength="100" autocomplete="off">
+        <div class="ar-modal-actions">
+          <button class="cancel" id="ar-broadcast-cancel">إلغاء</button>
+          <button class="ok" id="ar-broadcast-send">📢 إرسال</button>
+        </div>
+      </div>
+    `;
+
+    modal.classList.add('active');
+    setTimeout(() => {
+      const inp = modal.querySelector('#ar-broadcast-input');
+      if(inp) inp.focus();
+    }, 150);
+
+    modal.querySelector('#ar-broadcast-cancel').addEventListener('click', () => {
+      modal.classList.remove('active');
+    });
+
+    modal.querySelector('#ar-broadcast-send').addEventListener('click', async () => {
+      const inp = modal.querySelector('#ar-broadcast-input');
+      const text = inp.value.trim();
+      if(!text){
+        Toast.warning('اكتب رسالة');
+        return;
+      }
+
+      try {
+        /* حفظ الرسالة في الغرفة ليستقبلها الجميع */
+        await Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId).update({
+          broadcast: {
+            from: Cloud.user.uid,
+            fromName: (Cloud.profile && Cloud.profile.username) || 'المضيف',
+            text: text.slice(0, 100),
+            ts: Date.now()
+          }
+        });
+        Toast.success('تم إرسال الإشعار');
+        modal.classList.remove('active');
+      } catch(e){
+        Toast.error('فشل', e.message);
+      }
+    });
+  }
+
+  /* ═══ منتقي النمط للمضيف ═══ */
+  function openHostModePicker(){
+    if(!MP.isHost) return;
+    let modal = document.getElementById('ar-modal-mode');
+    if(!modal){
+      modal = document.createElement('div');
+      modal.id = 'ar-modal-mode';
+      modal.className = 'ar-modal-backdrop';
+      document.body.appendChild(modal);
+    }
+
+    const currentMode = MP.roomData?.mode;
+
+    modal.innerHTML = `
+      <div class="ar-modal-panel">
+        <div class="ar-modal-title">🎮 اختر النمط</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;max-height:50vh;overflow-y:auto;">
+          ${MODES.filter(m => m.id !== 'MIXED').map(m => `
+            <button data-mode="${m.id}" style="display:flex;align-items:center;gap:12px;
+                       padding:12px;border-radius:14px;
+                       border:2px solid ${m.id === currentMode ? m.color : 'transparent'};
+                       background:${m.id === currentMode
+                         ? `linear-gradient(135deg, ${m.color}18, ${m.color}08)`
+                         : 'var(--paper)'};
+                       cursor:pointer;font-family:inherit;text-align:right;width:100%;
+                       transition:all .18s;">
+              <div style="width:42px;height:42px;border-radius:12px;
+                          background:${m.color};color:#fff;
+                          display:flex;align-items:center;justify-content:center;
+                          font-size:20px;font-weight:800;flex-shrink:0;">
+                ${m.icon}
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:13.5px;font-weight:800;color:var(--ink);">${m.ar}</div>
+                <div style="font-size:10.5px;color:var(--ink-mute);margin-top:2px;">${m.desc}</div>
+              </div>
+              ${m.id === currentMode
+                ? `<span style="color:${m.color};font-size:20px;font-weight:800;">✓</span>`
+                : ''}
+            </button>
+          `).join('')}
+        </div>
+        <div class="ar-modal-actions">
+          <button class="cancel" id="ar-mode-cancel">إغلاق</button>
+        </div>
+      </div>
+    `;
+
+    modal.classList.add('active');
+
+    modal.querySelector('#ar-mode-cancel').addEventListener('click', () => {
+      modal.classList.remove('active');
+    });
+
+    modal.querySelectorAll('[data-mode]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await window.mpChangeMode(btn.dataset.mode);
+        modal.classList.remove('active');
+        window.mpBuildWaitingRoom();
+      });
+    });
+  }
+
+
+  /* ═══════════════════════════════════════════════════════════
+     ✅ 2) شاشة النتائج الشاملة
+     ═══════════════════════════════════════════════════════════ */
+
+  window.mpShowResult = function(){
+    const myUid = Cloud.user ? Cloud.user.uid : null;
+    const rd = MP.roomData || {};
+    const winnerUid = rd.roundWinner;
+    const matchWinner = rd.matchWinner;
+    const players = rd.players || [];
+
+    const isMatchOver = !!matchWinner;
+    const isDraw = !winnerUid;
+    const isMatchWinner = matchWinner === myUid;
+    const isRoundWinner = winnerUid === myUid;
+
+    /* ═══ بناء البيانات المعروضة ═══ */
+    const displayPlayers = players.map(p => {
+      const meters = (p.uid === rd.hostUid) ? (rd.hostScore || 0) : (rd.guestScore || 0);
+      return {
+        uid: p.uid,
+        name: p.name || 'لاعب',
+        skin: p.skin,
+        isHost: p.isHost,
+        isMe: p.uid === myUid,
+        meters: meters,
+        alive: true,
+        isWinner: p.uid === winnerUid,
+        isMatchWinner: p.uid === matchWinner
+      };
+    });
+
+    /* احسب إحصائيات إضافية */
+    const myData = displayPlayers.find(p => p.isMe);
+    const myRoundWins = myUid === rd.hostUid ? (rd.hostWins || 0) : (rd.guestWins || 0);
+    const oppRoundWins = myUid === rd.hostUid ? (rd.guestWins || 0) : (rd.hostWins || 0);
+
+    /* ترتيب حسب الأمتار */
+    displayPlayers.sort((a, b) => b.meters - a.meters);
+    displayPlayers.forEach((p, i) => p.rank = i + 1);
+
+    /* رتبة اللاعب الحالي */
+    const myRank = myData ? myData.rank : 1;
+
+    /* ═══ ابدأ بناء الشاشة ═══ */
+    const screen = document.getElementById('s-multiplayer-result');
+    if(!screen) return;
+
+    screen.classList.add('active');
+
+    /* حاوية رئيسية */
+    let container = screen.querySelector('.arena-result-screen');
+    if(!container){
+      screen.innerHTML = '';
+      container = document.createElement('div');
+      container.className = 'arena-result-screen';
+      screen.appendChild(container);
+    }
+
+    container.innerHTML = '';
+
+    /* ═══ 1) لوحة الفائز ═══ */
+    const winnerPanel = document.createElement('div');
+    winnerPanel.className = 'ar-winner-panel';
+
+    let winnerIcon, winnerLabel, winnerName, winnerScore;
+
+    if(isDraw){
+      winnerPanel.classList.add('ar-draw-panel');
+      winnerIcon = '🤝';
+      winnerLabel = 'تعادل';
+      winnerName = 'النتيجة متعادلة';
+      winnerScore = `${rd.hostScore || 0} : ${rd.guestScore || 0}`;
+    } else if(isMatchOver){
+      winnerPanel.classList.add(isMatchWinner ? '' : 'ar-loser-panel');
+      winnerIcon = isMatchWinner ? '🏆' : '💀';
+      winnerLabel = isMatchWinner ? 'أنت الفائز!' : 'خسارة';
+      winnerName = isMatchWinner
+        ? (Cloud.profile && Cloud.profile.username) || 'أنت'
+        : (players.find(p => p.uid === matchWinner)?.name || 'لاعب');
+      winnerScore = `${myRoundWins} - ${oppRoundWins}`;
+    } else {
+      winnerPanel.classList.add(isRoundWinner ? '' : 'ar-loser-panel');
+      winnerIcon = isRoundWinner ? '🏆' : '💀';
+      winnerLabel = isRoundWinner ? 'فزت بالجولة!' : 'خسرت الجولة';
+      winnerName = isRoundWinner
+        ? (Cloud.profile && Cloud.profile.username) || 'أنت'
+        : (players.find(p => p.uid === winnerUid)?.name || 'لاعب');
+      winnerScore = `${myRoundWins} - ${oppRoundWins}`;
+    }
+
+    winnerPanel.innerHTML = `
+      <div class="ar-winner-icon">${winnerIcon}</div>
+      <div class="ar-winner-name">${escapeHtmlChat(winnerName)}</div>
+      <div class="ar-winner-label">${winnerLabel}</div>
+      <div class="ar-winner-score">
+        ${winnerScore} <small>جولات</small>
+      </div>
+    `;
+    container.appendChild(winnerPanel);
+
+    /* ═══ 2) لوحة الترتيب النهائي ═══ */
+    const scoreboard = document.createElement('div');
+    scoreboard.className = 'ar-scoreboard';
+
+    scoreboard.innerHTML = `
+      <div class="ar-scoreboard-title">
+        <span class="t">🏁 الترتيب النهائي</span>
+        <span class="s">FINAL RANK</span>
+      </div>
+    `;
+
+    displayPlayers.forEach(p => {
+      const row = document.createElement('div');
+      row.className = 'ar-score-row';
+      if(p.isMe) row.classList.add('is-me');
+      if(p.isWinner) row.classList.add('is-winner');
+      if(!p.alive) row.classList.add('is-dead');
+
+      const rankClass = p.rank <= 3 ? ` rank-${p.rank}` : '';
+      const rankIcon = p.rank === 1 ? '🥇' : p.rank === 2 ? '🥈' : p.rank === 3 ? '🥉' : p.rank;
+
+      const avatarContent = hasItemImage(getAllSkins().find(s => s.id === p.skin))
+        ? `<img src="${ASSET.resolve(getAllSkins().find(s => s.id === p.skin))}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.parentElement.textContent='${p.name.charAt(0).toUpperCase()}'">`
+        : p.name.charAt(0).toUpperCase();
+
+      row.innerHTML = `
+        <div class="ar-rank-badge${rankClass}">${rankIcon}</div>
+        <div class="ar-score-avatar">${avatarContent}</div>
+        <div class="ar-score-info">
+          <div class="ar-score-name">
+            ${escapeHtmlChat(p.name)}
+            ${p.isMe ? '<small>(أنت)</small>' : ''}
+            ${p.isHost ? '<small>👑</small>' : ''}
+          </div>
+          <div class="ar-score-meta">
+            <span class="badge">LVL ${Math.max(1, Math.floor(p.meters / 300))}</span>
+            ${p.isMatchWinner ? '<span class="badge" style="background:#FFF4C0;color:#8A4A10;">🏆 الفائز</span>' : ''}
+          </div>
+        </div>
+        <div class="ar-score-meters">${Math.round(p.meters)}<small>م</small></div>
+      `;
+
+      scoreboard.appendChild(row);
+    });
+
+    container.appendChild(scoreboard);
+
+    /* ═══ 3) لوحة الجولات (إن كانت أفضل من X) ═══ */
+    if((rd.bestOf || 1) > 1 && rd.round >= 1){
+      const roundsPanel = document.createElement('div');
+      roundsPanel.className = 'ar-rounds-panel';
+
+      let roundsHtml = `
+        <div class="ar-scoreboard-title" style="padding-bottom:8px;margin-bottom:10px;">
+          <span class="t">📊 الجولات</span>
+          <span class="s">ROUNDS</span>
+        </div>
+      `;
+
+      /* اعرض الجولات المنجزة */
+      for(let i = 1; i <= (rd.round || 1); i++){
+        const isCurrent = i === rd.round;
+        roundsHtml += `
+          <div class="ar-round-row" ${isCurrent ? 'style="background:linear-gradient(135deg,#FFF9EC,#FBF1DC);"' : ''}>
+            <div class="ar-round-num">${i}</div>
+            <div class="ar-round-info">
+              ${isCurrent ? '▶ الجولة الحالية' : `الجولة ${i}`}
+            </div>
+            <div class="ar-round-scores">
+              ${i === rd.round ? `${rd.hostScore || 0} - ${rd.guestScore || 0}` : '—'}
+            </div>
+          </div>
+        `;
+      }
+
+      /* ملخص النتيجة */
+      roundsHtml += `
+        <div style="display:flex;align-items:center;justify-content:center;
+                    gap:16px;margin-top:14px;padding-top:14px;
+                    border-top:1px dashed var(--line-strong);">
+          <div style="text-align:center;">
+            <div style="font-size:9px;font-weight:800;letter-spacing:1.5px;
+                        color:var(--ink-mute);">HOST</div>
+            <div style="font-family:'Space Grotesk';font-size:22px;font-weight:700;
+                        color:var(--amber);">${rd.hostWins || 0}</div>
+          </div>
+          <div style="font-size:16px;font-weight:700;color:var(--ink-mute);">—</div>
+          <div style="text-align:center;">
+            <div style="font-size:9px;font-weight:800;letter-spacing:1.5px;
+                        color:var(--ink-mute);">GUEST</div>
+            <div style="font-family:'Space Grotesk';font-size:22px;font-weight:700;
+                        color:var(--amber);">${rd.guestWins || 0}</div>
+          </div>
+        </div>
+      `;
+
+      roundsPanel.innerHTML = roundsHtml;
+      container.appendChild(roundsPanel);
+    }
+
+    /* ═══ 4) لوحة الإحصائيات ═══ */
+    const statsGrid = document.createElement('div');
+    statsGrid.className = 'ar-stats-grid';
+
+    const myMeters = myData ? myData.meters : 0;
+    const myCoins = (rd.hostUid === myUid ? (rd.hostScore || 0) : (rd.guestScore || 0));
+    const bestCombo = G.comboMax || 0;
+    const orbs = G.orbCount || 0;
+
+    statsGrid.innerHTML = `
+      <div class="ar-stat-box">
+        <div class="icon">📏</div>
+        <div class="val">${Math.round(myMeters)}</div>
+        <div class="lbl">متر</div>
+      </div>
+      <div class="ar-stat-box">
+        <div class="icon">🏆</div>
+        <div class="val">${myRoundWins}</div>
+        <div class="lbl">جولات فائزة</div>
+      </div>
+      <div class="ar-stat-box">
+        <div class="icon">🔥</div>
+        <div class="val">x${bestCombo}</div>
+        <div class="lbl">أفضل سلسلة</div>
+      </div>
+      <div class="ar-stat-box">
+        <div class="icon">🔮</div>
+        <div class="val">${orbs}</div>
+        <div class="lbl">كرات الطاقة</div>
+      </div>
+    `;
+
+    container.appendChild(statsGrid);
+
+    /* ═══ 5) لوحة المكافآت ═══ */
+    const rewardsPanel = document.createElement('div');
+    rewardsPanel.className = 'ar-rewards-panel';
+
+    let rewardsHtml = `
+      <div class="ar-rewards-title">
+        <span>🎁 المكافآت المكتسبة</span>
+        <span style="font-size:9px;opacity:.7;">EARNED</span>
+      </div>
+      <div class="ar-rewards-row">
+    `;
+
+    /* العملات المكتسبة */
+    const earnedCoins = Math.round(myMeters * 0.5 + myRoundWins * 100 + bestCombo * 5);
+    rewardsHtml += `
+      <div class="ar-reward-chip">
+        <span class="c">◆</span>
+        <span>+${earnedCoins.toLocaleString()} عملة</span>
+      </div>
+    `;
+
+    /* شارة خاصة للفائز */
+    if(isMatchWinner || isRoundWinner){
+      rewardsHtml += `
+        <div class="ar-reward-chip" style="background:linear-gradient(135deg,#FFF4C0,#FFE8A0);border-color:var(--gold);">
+          <span>🏆</span>
+          <span>شارة الفائز</span>
+        </div>
+      `;
+    }
+
+    /* مكافأة الجولات */
+    if(myRoundWins > 0){
+      rewardsHtml += `
+        <div class="ar-reward-chip">
+          <span>⚡</span>
+          <span>+${myRoundWins * 50} XP</span>
+        </div>
+      `;
+    }
+
+    rewardsHtml += `
+      </div>
+    `;
+
+    rewardsPanel.innerHTML = rewardsHtml;
+    container.appendChild(rewardsPanel);
+
+    /* احفظ المكافآت */
+    if(earnedCoins > 0){
+      addCoins(earnedCoins, 'مكافأة ساحة');
+    }
+
+    /* ═══ 6) أزرار الإجراءات ═══ */
+    const actions = document.createElement('div');
+    actions.className = 'ar-actions';
+
+    /* زر إعادة المباراة */
+    if(MP.isHost){
+      const rematchBtn = document.createElement('button');
+      rematchBtn.className = 'ar-btn primary';
+      rematchBtn.innerHTML = isMatchOver
+        ? '<span>🔁</span><span>مباراة جديدة</span>'
+        : '<span>▶</span><span>الجولة التالية</span>';
+      rematchBtn.addEventListener('click', mpRematch);
+      actions.appendChild(rematchBtn);
+    } else {
+      const waitBtn = document.createElement('button');
+      waitBtn.className = 'ar-btn soft';
+      waitBtn.disabled = true;
+      waitBtn.innerHTML = '<span>⏳</span><span>بانتظار المضيف...</span>';
+      actions.appendChild(waitBtn);
+    }
+
+    /* صف الأزرار الثانوية */
+    const secondaryRow = document.createElement('div');
+    secondaryRow.className = 'ar-actions-row';
+
+    /* زر الساحة */
+    const arenaBtn = document.createElement('button');
+    arenaBtn.className = 'ar-btn gold';
+    arenaBtn.innerHTML = '<span>🏛️</span><span>الساحة</span>';
+    arenaBtn.addEventListener('click', () => {
+      mpResetRoundState();
+      MP.resultShown = false;
+      showScreen('s-multiplayer-waiting');
+      window.mpBuildWaitingRoom();
+    });
+    secondaryRow.appendChild(arenaBtn);
+
+    /* زر القائمة الرئيسية */
+    const homeBtn = document.createElement('button');
+    homeBtn.className = 'ar-btn soft';
+    homeBtn.innerHTML = '<span>🏠</span><span>الرئيسية</span>';
+    homeBtn.addEventListener('click', async () => {
+      await mpLeaveRoom();
+      quitToMenu();
+    });
+    secondaryRow.appendChild(homeBtn);
+
+    actions.appendChild(secondaryRow);
+
+    /* ═══ 7) زر مشاركة النتيجة ═══ */
+    const shareBtn = document.createElement('button');
+    shareBtn.className = 'ar-btn ghost';
+    shareBtn.innerHTML = '<span>📤</span><span>مشاركة النتيجة</span>';
+    shareBtn.addEventListener('click', shareResult);
+    actions.appendChild(shareBtn);
+
+    container.appendChild(actions);
+
+    /* ═══ 8) إيقاف المزامنة ═══ */
+    mpStopSync();
+
+    /* ═══ 9) حفظ الإحصائيات للسجل ═══ */
+    if(!Save.data.arenaHistory) Save.data.arenaHistory = [];
+    Save.data.arenaHistory.unshift({
+      date: Date.now(),
+      rank: myRank,
+      meters: Math.round(myMeters),
+      coins: earnedCoins,
+      isWinner: isMatchWinner || isRoundWinner,
+      players: displayPlayers.map(p => ({ name: p.name, meters: Math.round(p.meters) }))
+    });
+    if(Save.data.arenaHistory.length > 20){
+      Save.data.arenaHistory = Save.data.arenaHistory.slice(0, 20);
+    }
+    Save.save();
+
+    Sfx.reward(); haptic(25);
+  };
+
+  /* ═══ مشاركة النتيجة ═══ */
+  function shareResult(){
+    const rd = MP.roomData || {};
+    const myUid = Cloud.user ? Cloud.user.uid : null;
+    const myMeters = (rd.hostUid === myUid ? rd.hostScore : rd.guestScore) || 0;
+    const matchWinner = rd.matchWinner;
+
+    const text = matchWinner === myUid
+      ? `🏆 فزت في ساحة SHIFT! ${Math.round(myMeters)}م`
+      : `⚔️ خسرت في ساحة SHIFT · ${Math.round(myMeters)}م`;
+
+    if(navigator.share){
+      navigator.share({
+        title: 'SHIFT · نتيجة المبارزة',
+        text: text,
+        url: location.href
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(text).then(() => {
+        Toast.success('تم النسخ!', text);
+      });
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     ✅ 5) مراقبة البث الجماعي من المضيف
+     ═══════════════════════════════════════════════════════════ */
+
+  const _origAttach = window.mpAttachListeners;
+  window.mpAttachListeners = function(){
+    mpDetachListeners();
+    if(!MP.roomId || !Cloud.db) return;
+
+    const roomRef = Cloud.db.collection(MP_CONFIG.collection).doc(MP.roomId);
+
+    let lastBroadcastTs = 0;
+
+    MP.roomUnsub = roomRef.onSnapshot(snap => {
+      if(!snap.exists){
+        if(MP.active){
+          Toast.warning('انتهت الساحة');
+          mpLeaveRoom();
+          showScreen('s-home'); buildHome();
+        }
+        return;
+      }
+
+      const data = snap.data();
+      const prevStatus = MP.roomData ? MP.roomData.status : null;
+      MP.roomData = data;
+      MP.roomSeed = data.seed || MP.roomSeed;
+      MP.hostSelectedMode = data.mode || 'FLIP';
+
+      const myUid = Cloud.user ? Cloud.user.uid : null;
+
+      /* ✅ الإشعار الجماعي */
+      if(data.broadcast && data.broadcast.ts > lastBroadcastTs){
+        lastBroadcastTs = data.broadcast.ts;
+        if(data.broadcast.from !== myUid){
+          Toast.info('📢 ' + data.broadcast.fromName, data.broadcast.text, {
+            duration: 5000
+          });
+          Sfx.play(880, 0.2, 'sine', 0.05, 1320);
+          haptic(20);
+        }
+      }
+
+      /* ✅ التحقق من طردي */
+      const myPlayer = (data.players || []).find(p => p.uid === myUid);
+      if(MP.active && myUid && !myPlayer && !MP.isHost){
+        Toast.error('تم طردك من الساحة', 'المضيف أخرجك');
+        mpLeaveRoom();
+        showScreen('s-home'); buildHome();
+        return;
+      }
+
+      if(myPlayer) MP.myReady = !!myPlayer.ready;
+
+      /* العد التنازلي */
+      if(data.status === 'countdown' && data.countdownEndsAt){
+        const isNewCountdown = (MP.countdownEndsAt !== data.countdownEndsAt);
+        MP.countdownEndsAt = data.countdownEndsAt;
+        MP.countdownActive = true;
+
+        if(isNewCountdown){
+          MP.countdownShown = -1;
+          if(document.getElementById('s-multiplayer-waiting').classList.contains('active')){
+            mpShowCountdownOverlay();
+          }
+          if(MP.countdownTimer) clearTimeout(MP.countdownTimer);
+          const delayMs = Math.max(0, data.countdownEndsAt - Date.now()) + 150;
+          MP.countdownTimer = setTimeout(() => {
+            MP.countdownTimer = null;
+            if(MP.active && !MP.starting) window.mpStartMyGame();
+          }, delayMs);
+        }
+      }
+
+      /* نهاية الجولة */
+      if((data.status === 'round_end' || data.status === 'finished') && !MP.resultShown){
+        MP.resultShown = true;
+        window.mpShowResult();
+      }
+
+      /* إعادة المباراة */
+      if(data.status === 'waiting' && prevStatus !== 'waiting' && MP.resultShown){
+        MP.resultShown = false;
+        MP.countdownActive = false;
+        mpResetRoundState();
+        showScreen('s-multiplayer-waiting');
+        window.mpBuildWaitingRoom();
+      }
+
+      if(document.getElementById('s-multiplayer-waiting').classList.contains('active')){
+        window.mpBuildWaitingRoom();
+      }
+    }, err => console.warn('[Arena] room listener:', err));
+
+    MP.playersUnsub = roomRef.collection('players').onSnapshot(snap => {
+      const now = Date.now();
+      MP.otherPlayers.clear();
+      const myUid = Cloud.user ? Cloud.user.uid : null;
+
+      snap.forEach(d => {
+        const data = d.data();
+        MP.otherPlayers.set(d.id, data);
+        if(d.id !== myUid){
+          const prev = MP.remoteStates[d.id];
+          MP.remoteStates[d.id] = {
+            prev: prev ? prev.curr : data,
+            curr: data,
+            receivedAt: now,
+            prevReceivedAt: prev ? prev.receivedAt : now - ARENA_SYNC_RATE
+          };
+          MP.opponentAlive = !!data.alive;
+          MP.opponentMeters = data.meters || 0;
+          MP.opponentCoins = data.coins || 0;
+          if(data.lastEmoji && data.lastEmojiAt > MP.lastEmojiAt){
+            MP.lastEmojiAt = data.lastEmojiAt;
+            mpShowOpponentEmoji(data.lastEmoji);
+          }
+        }
+      });
+    }, err => console.warn('[Arena] players listener:', err));
+  };
+
+  /* ═══════════════════════════════════════════════════════════
+     ✅ إعادة كتابة نص زر الساحة الرئيسي
+     ═══════════════════════════════════════════════════════════ */
+
+  function rewriteLobbyTexts(){
+    /* استبدل نصوص الشاشة الرئيسية */
+    const mpHero = document.querySelector('#s-multiplayer .mp-hero-title');
+    if(mpHero) mpHero.textContent = 'سباق ضد أصدقائك';
+
+    const mpSub = document.querySelector('#s-multiplayer .mp-hero-sub');
+    if(mpSub) mpSub.textContent = 'أنشئ ساحة · ادعُ أصدقاءك · تسابقوا معاً';
+
+    /* زر الإنشاء */
+    const createBtn = document.getElementById('mp-create-btn');
+    if(createBtn) createBtn.innerHTML = '➕ &nbsp; إنشاء ساحة جديدة';
+
+    /* حقول الكود */
+    const label = document.querySelector('#s-multiplayer .mp-join-box label');
+    if(label) label.textContent = 'انضم بكود الساحة';
+
+    /* زر الانضمام */
+    const joinBtn = document.getElementById('mp-join-btn');
+    if(joinBtn) joinBtn.innerHTML = '🚪 &nbsp; انضم للساحة';
+
+    /* نص الزر الجانبي */
+    const inviteBtn = document.getElementById('invite-btn');
+    if(inviteBtn) inviteBtn.title = 'ادعُ أصدقاءك';
+
+    /* الشاشات */
+    const waitingTitle = document.querySelector('#s-multiplayer-waiting .sub-title');
+    if(waitingTitle) waitingTitle.textContent = 'ساحة الانتظار';
+
+    const resultTitle = document.querySelector('#s-multiplayer-result .sub-title');
+    if(resultTitle) resultTitle.textContent = 'نتيجة المبارزة';
+  }
+
+  setTimeout(rewriteLobbyTexts, 1000);
+
+  /* أيضًا عند كل فتح لشاشة */
+  const origShowScreen = window.showScreen;
+  window.showScreen = function(id){
+    const result = origShowScreen.apply(this, arguments);
+    if(id === 's-multiplayer' ||
+       id === 's-multiplayer-waiting' ||
+       id === 's-multiplayer-result'){
+      setTimeout(rewriteLobbyTexts, 100);
+    }
+    return result;
+  };
+
+  console.log('[SHIFT Arena v4] ✅ Enhanced multiplayer loaded');
+  console.log('  • Predictive interpolation (40Hz sync)');
+  console.log('  • Comprehensive result screen');
+  console.log('  • "Room" → "Arena" naming');
+  console.log('  • Enhanced waiting lobby');
+  console.log('  • Host features (kick, lock, broadcast, best-of)');
+
+})();
+
+/* ============================================================
    ==================== BOOT =================================
    ============================================================ */
 function boot() {
