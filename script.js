@@ -33309,6 +33309,1164 @@ function renderAvatarEditGrid(){
 })();
 
 /* ============================================================
+   ═══════════ MULTIPLAYER INVITE NOTIFIER v1 ════════════════
+   ═══════════════════════════════════════════════════════════
+   الميزات:
+   - مراقبة لحظية (onSnapshot) — بدون polling
+   - إشعار في أعلى الشاشة لمدة 20 ثانية
+   - شريط تقدم بصري
+   - زرا "قبول" و "رفض"
+   - يمنع تكرار نفس الدعوة
+   - يعمل في أي شاشة
+   - يمكن قبول/رفض عدة دعوات (المكدس)
+   ============================================================ */
+
+(function multiplayerInviteNotifier(){
+
+  /* ═══ 1) الحالة ═══ */
+  const inviteState = {
+    unsub: null,           /* مستمع Firestore */
+    seenIds: new Set(),    /* الطلبات التي عُرضت */
+    activeToasts: new Map(),/* معرف الطلب → عنصر DOM */
+    initDone: false,
+    currentUid: null
+  };
+
+  const INVITE_DURATION = 20000; /* 20 ثانية */
+
+  /* ═══ 2) حاوية الإشعارات — في الأعلى ═══ */
+  function ensureNotifierContainer(){
+    let container = document.getElementById('invite-notifier-container');
+    if(container) return container;
+
+    container = document.createElement('div');
+    container.id = 'invite-notifier-container';
+    container.style.cssText = `
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100001;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: calc(100% - 32px);
+      max-width: 420px;
+      pointer-events: none;
+    `;
+    document.body.appendChild(container);
+    return container;
+  }
+
+  /* ═══ 3) بناء إشعار دعوة ═══ */
+  function buildInviteToast(request){
+    const container = ensureNotifierContainer();
+
+    const toast = document.createElement('div');
+    toast.className = 'mp-invite-toast';
+    toast.dataset.reqId = request.id;
+
+    const inviterName = request.fromName || 'صديق';
+    const inviterPhoto = request.fromPhoto || null;
+    const roomCode = request.roomCode || '—';
+
+    const avatarContent = inviterPhoto
+      ? `<img src="${inviterPhoto}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"
+             onerror="this.style.display='none';this.parentElement.textContent='${inviterName.charAt(0).toUpperCase()}'">`
+      : inviterName.charAt(0).toUpperCase();
+
+    toast.innerHTML = `
+      <!-- ═══ شريط التقدم ═══ -->
+      <div class="mp-invite-progress">
+        <div class="mp-invite-progress-fill"></div>
+      </div>
+
+      <!-- ═══ الرأس ═══ -->
+      <div class="mp-invite-header">
+        <div class="mp-invite-icon">🎮</div>
+        <div class="mp-invite-title">دعوة للعب الجماعي</div>
+        <button class="mp-invite-close" aria-label="إغلاق">✕</button>
+      </div>
+
+      <!-- ═══ الجسم ═══ -->
+      <div class="mp-invite-body">
+        <div class="mp-invite-avatar">${avatarContent}</div>
+        <div class="mp-invite-info">
+          <div class="mp-invite-name">${escapeHtmlChat(inviterName)}</div>
+          <div class="mp-invite-message">
+            يدعوك للانضمام إلى غرفته
+          </div>
+          <div class="mp-invite-room">
+            <span class="mp-invite-room-label">كود الغرفة</span>
+            <span class="mp-invite-room-code" dir="ltr">${escapeHtmlChat(roomCode)}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ الأزرار ═══ -->
+      <div class="mp-invite-actions">
+        <button class="mp-invite-btn reject" data-action="reject">
+          <span>✕</span>
+          <span>رفض</span>
+        </button>
+        <button class="mp-invite-btn accept" data-action="accept">
+          <span>✓</span>
+          <span>انضمام</span>
+        </button>
+      </div>
+
+      <!-- ═══ المؤقت ═══ -->
+      <div class="mp-invite-timer">
+        <span class="mp-invite-timer-text">ينتهي بعد <strong>20</strong> ثانية</span>
+      </div>
+    `;
+
+    container.appendChild(toast);
+
+    /* ═══ ربط الأحداث ═══ */
+    const closeBtn = toast.querySelector('.mp-invite-close');
+    const acceptBtn = toast.querySelector('[data-action="accept"]');
+    const rejectBtn = toast.querySelector('[data-action="reject"]');
+    const progressFill = toast.querySelector('.mp-invite-progress-fill');
+    const timerText = toast.querySelector('.mp-invite-timer-text strong');
+
+    /* إغلاق (يعتبر رفضاً) */
+    closeBtn.addEventListener('click', () => {
+      handleReject(request, toast);
+    });
+
+    /* رفض */
+    rejectBtn.addEventListener('click', () => {
+      handleReject(request, toast);
+    });
+
+    /* قبول */
+    acceptBtn.addEventListener('click', () => {
+      handleAccept(request, toast);
+    });
+
+    /* ═══ المؤقت التنازلي ═══ */
+    const startTime = Date.now();
+    let remaining = INVITE_DURATION;
+    let animFrameId = null;
+    let expired = false;
+
+    function tick(){
+      const elapsed = Date.now() - startTime;
+      remaining = Math.max(0, INVITE_DURATION - elapsed);
+
+      /* شريط التقدم */
+      const pct = (remaining / INVITE_DURATION) * 100;
+      if(progressFill) progressFill.style.width = pct + '%';
+
+      /* النص */
+      const secsLeft = Math.ceil(remaining / 1000);
+      if(timerText) timerText.textContent = secsLeft;
+
+      /* تغيير اللون عند 5 ثوان */
+      if(remaining <= 5000){
+        toast.classList.add('expiring');
+      }
+
+      if(remaining <= 0){
+        if(!expired){
+          expired = true;
+          autoDismiss(request, toast);
+        }
+        return;
+      }
+
+      animFrameId = requestAnimationFrame(tick);
+    }
+
+    /* تخزين معرف الإطار للتنظيف */
+    toast._animFrameId = () => animFrameId;
+    toast._cleanupFrame = () => {
+      if(animFrameId) cancelAnimationFrame(animFrameId);
+    };
+
+    /* إيقاف عند hover */
+    let paused = false;
+    toast.addEventListener('mouseenter', () => { paused = true; });
+    toast.addEventListener('mouseleave', () => { paused = false; });
+
+    tick();
+
+    /* حفظ في المكدس */
+    inviteState.activeToasts.set(request.id, toast);
+
+    return toast;
+  }
+
+  /* ═══ 4) قبول الدعوة ═══ */
+  async function handleAccept(request, toast){
+    /* عطّل الأزرار فوراً */
+    const acceptBtn = toast.querySelector('[data-action="accept"]');
+    const rejectBtn = toast.querySelector('[data-action="reject"]');
+
+    acceptBtn.disabled = true;
+    rejectBtn.disabled = true;
+    acceptBtn.innerHTML = '<span>⏳</span><span>جارٍ الانضمام...</span>';
+
+    try {
+      /* ═══ ① حدّث حالة الطلب ═══ */
+      if(Cloud.db && Cloud.user){
+        try {
+          await Cloud.db.collection('friend_requests').doc(request.id).update({
+            status: 'accepted',
+            acceptedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        } catch(e){
+          console.warn('[Invite] Could not update status:', e);
+        }
+      }
+
+      /* ═══ ② أغلق الإشعار ═══ */
+      dismissToast(request.id);
+
+      /* ═══ ③ انضم للغرفة ═══ */
+      if(request.roomCode && typeof window.mpJoinRoom === 'function'){
+        Toast.info('🔗 جارٍ الاتصال بالغرفة...', request.roomCode, { duration: 2000 });
+        setTimeout(async () => {
+          try {
+            await window.mpJoinRoom(request.roomCode);
+          } catch(e){
+            console.error('[Invite] Join failed:', e);
+            Toast.error('فشل الانضمام', e.message || 'قد تكون الغرفة ممتلئة');
+          }
+        }, 400);
+      } else {
+        Toast.error('بيانات الغرفة مفقودة');
+      }
+
+    } catch(e){
+      console.error('[Invite] Accept failed:', e);
+      Toast.error('فشل القبول', e.message);
+      acceptBtn.disabled = false;
+      rejectBtn.disabled = false;
+      acceptBtn.innerHTML = '<span>✓</span><span>انضمام</span>';
+    }
+  }
+
+  /* ═══ 5) رفض الدعوة ═══ */
+  async function handleReject(request, toast){
+    const acceptBtn = toast.querySelector('[data-action="accept"]');
+    const rejectBtn = toast.querySelector('[data-action="reject"]');
+
+    acceptBtn.disabled = true;
+    rejectBtn.disabled = true;
+    rejectBtn.innerHTML = '<span>⏳</span><span>...</span>';
+
+    try {
+      /* حدّث حالة الطلب */
+      if(Cloud.db && Cloud.user){
+        try {
+          await Cloud.db.collection('friend_requests').doc(request.id).update({
+            status: 'rejected',
+            rejectedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        } catch(e){
+          console.warn('[Invite] Could not reject:', e);
+        }
+      }
+
+      /* أغلق الإشعار */
+      dismissToast(request.id);
+
+      Toast.info('تم رفض الدعوة');
+
+    } catch(e){
+      console.error('[Invite] Reject failed:', e);
+      dismissToast(request.id);
+    }
+  }
+
+  /* ═══ 6) انتهت المدة — أغلق فقط (يبقى الطلب معلّقاً) ═══ */
+  function autoDismiss(request, toast){
+    console.log('[Invite] Auto-dismissed (expired):', request.id);
+    dismissToast(request.id, true);
+  }
+
+  /* ═══ 7) إزالة الإشعار ═══ */
+  function dismissToast(requestId, expired){
+    const toast = inviteState.activeToasts.get(requestId);
+    if(!toast) return;
+
+    /* أوقف الإطار */
+    if(toast._cleanupFrame) toast._cleanupFrame();
+
+    /* تأثير الخروج */
+    toast.classList.add('removing');
+    if(expired) toast.classList.add('expired');
+
+    setTimeout(() => {
+      if(toast.parentNode) toast.parentNode.removeChild(toast);
+    }, 350);
+
+    inviteState.activeToasts.delete(requestId);
+  }
+
+  /* ═══ 8) بدء المراقبة اللحظية ═══ */
+  function startListening(){
+    if(!Cloud.user || !Cloud.db) return;
+    if(inviteState.unsub) return;
+    if(inviteState.currentUid === Cloud.user.uid) return;
+
+    inviteState.currentUid = Cloud.user.uid;
+    const uid = Cloud.user.uid;
+
+    console.log('[Invite] Starting real-time listener for:', uid.slice(0, 8));
+
+    try {
+      inviteState.unsub = Cloud.db.collection('friend_requests')
+        .where('toUid', '==', uid)
+        .where('status', '==', 'pending')
+        .onSnapshot(snap => {
+          snap.docChanges().forEach(change => {
+            const reqId = change.doc.id;
+            const data = change.doc.data();
+
+            /* ═══ فقط دعوات اللعب الجماعي ═══ */
+            if(data.type !== 'multiplayer_invite') return;
+            if(!data.roomCode) return;
+
+            if(change.type === 'added'){
+              /* تجاهل ما رآه من قبل */
+              if(inviteState.seenIds.has(reqId)) return;
+              if(inviteState.activeToasts.has(reqId)) return;
+
+              inviteState.seenIds.add(reqId);
+
+              /* عرض الإشعار */
+              const request = { id: reqId, ...data };
+              buildInviteToast(request);
+
+              /* صوت + اهتزاز */
+              try {
+                Sfx.play(880, 0.15, 'sine', 0.06, 1320);
+                setTimeout(() => {
+                  Sfx.play(880, 0.15, 'sine', 0.06, 1320);
+                }, 180);
+                haptic(30);
+              } catch(e){}
+
+              console.log('[Invite] New invite shown:', reqId);
+            }
+
+            if(change.type === 'modified'){
+              /* إذا أصبح مقبولاً أو مرفوضاً من طرف آخر → أغلق */
+              if(data.status !== 'pending'){
+                dismissToast(reqId);
+              }
+            }
+
+            if(change.type === 'removed'){
+              dismissToast(reqId);
+            }
+          });
+        }, err => {
+          console.warn('[Invite] Listener error:', err);
+        });
+
+    } catch(e){
+      console.warn('[Invite] Setup failed:', e);
+    }
+  }
+
+  /* ═══ 9) إيقاف المراقبة ═══ */
+  function stopListening(){
+    if(inviteState.unsub){
+      try { inviteState.unsub(); } catch(e){}
+      inviteState.unsub = null;
+    }
+    inviteState.currentUid = null;
+    inviteState.activeToasts.forEach((toast, id) => dismissToast(id, true));
+    inviteState.activeToasts.clear();
+  }
+
+  /* ═══ 10) ربط دورة حياة المستخدم ═══ */
+  function watchAuthChanges(){
+    if(!Cloud.auth) return;
+
+    /* مراقبة idToken للتأكد من الحالة */
+    setInterval(() => {
+      if(Cloud.user && !inviteState.unsub){
+        startListening();
+      }
+      if(!Cloud.user && inviteState.unsub){
+        stopListening();
+      }
+    }, 3000);
+  }
+
+  /* ═══ 11) إيقاف عند إغلاق الصفحة ═══ */
+  window.addEventListener('beforeunload', () => {
+    stopListening();
+  });
+
+  /* ═══ 12) بدء التشغيل ═══ */
+  function init(){
+    if(inviteState.initDone) return;
+    inviteState.initDone = true;
+
+    console.log('[SHIFT v3.4] ✅ Multiplayer Invite Notifier loaded');
+
+    /* انتظر حتى يجلس Cloud */
+    let attempts = 0;
+    const tryStart = setInterval(() => {
+      attempts++;
+      if(Cloud.user && Cloud.db && Cloud.auth){
+        startListening();
+        watchAuthChanges();
+        clearInterval(tryStart);
+      }
+      if(attempts > 100){ /* 50 ثانية */
+        clearInterval(tryStart);
+        console.warn('[Invite] Could not start — Cloud not ready');
+      }
+    }, 500);
+  }
+
+  /* شغّل */
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  /* ✅ تصدير للاستخدام الخارجي */
+  window.multiplayerInviteNotifier = {
+    start: startListening,
+    stop: stopListening,
+    show: (req) => buildInviteToast(req),
+    version: '1.0'
+  };
+
+})();
+
+/* ============================================================
+   ═══════════ WAITING ROOM v2 — INVITE FRIENDS ══════════════
+   ═══════════════════════════════════════════════════════════
+   التعديلات:
+   - إخفاء بطاقة كود الغرفة
+   - زر "دعوة صديق" بارز
+   - نافذة منبثقة لقائمة الأصدقاء
+   - اختيار متعدد مع إظهار حالة كل صديق
+   - إرسال دعوات فورية
+   - يُظهر عدد الأصدقاء المنضمين/المدعوين
+   ============================================================ */
+
+(function waitingRoomInviteV2(){
+
+  /* ═══ 1) الحالة ═══ */
+  const inviteState = {
+    selected: new Set(),      /* uids المختارين */
+    friends: [],
+    invited: new Set(),       /* uids الذين دُعوا */
+    loading: false,
+    modalOpen: false
+  };
+
+  /* ═══ 2) إخفاء كود الغرفة + إضافة زر الدعوة ═══ */
+  function enhanceWaitingRoom(){
+    /* اخفِ بطاقة كود الغرفة */
+    const codeCard = document.querySelector('#s-multiplayer-waiting .mp-code-card');
+    if(codeCard){
+      codeCard.style.display = 'none';
+    }
+
+    /* ابحث عن حاوية الأزرار */
+    const startBtn = document.getElementById('mp-start-btn');
+    if(!startBtn) return;
+
+    /* احذف القسم القديم إن وُجد */
+    const oldSection = document.getElementById('mp-invite-section');
+    if(oldSection) oldSection.remove();
+
+    /* أنشئ قسم الدعوة */
+    const inviteSection = document.createElement('div');
+    inviteSection.id = 'mp-invite-section';
+    inviteSection.style.cssText = `
+      margin: 0 0 14px;
+      padding: 16px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #1F0A20 0%, #4A2860 100%);
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 8px 26px rgba(74,40,96,.35);
+      border: 1px solid rgba(255,255,255,.08);
+    `;
+
+    inviteSection.innerHTML = `
+      <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;
+                  border-radius:50%;
+                  background:radial-gradient(circle,rgba(232,179,78,.35),transparent 70%);
+                  pointer-events:none;"></div>
+
+      <div style="display:flex;align-items:center;gap:12px;position:relative;z-index:1;">
+        <div style="width:48px;height:48px;border-radius:14px;
+                    background:linear-gradient(135deg,var(--gold),#F2C862);
+                    display:flex;align-items:center;justify-content:center;
+                    font-size:24px;
+                    box-shadow:0 6px 18px rgba(232,179,78,.4);
+                    flex-shrink:0;">
+          👥
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:'Space Grotesk';font-size:14px;
+                      font-weight:700;letter-spacing:.5px;">
+            ادعُ أصدقاءك
+          </div>
+          <div style="font-size:11px;opacity:.75;margin-top:3px;line-height:1.4;">
+            اختر حتى 3 أصدقاء للانضمام للغرفة
+          </div>
+        </div>
+      </div>
+
+      <button id="mp-open-friends-btn"
+              style="width:100%;margin-top:14px;padding:12px;
+                     border-radius:14px;border:none;
+                     background:linear-gradient(135deg,var(--amber),#F2A671);
+                     color:#fff;font-family:inherit;font-size:13px;
+                     font-weight:800;letter-spacing:.3px;
+                     cursor:pointer;position:relative;z-index:1;
+                     display:flex;align-items:center;justify-content:center;gap:8px;
+                     box-shadow:0 6px 18px rgba(224,122,63,.4);
+                     transition:transform .15s;">
+        <span style="font-size:16px;">＋</span>
+        <span>فتح قائمة الأصدقاء</span>
+      </button>
+
+      <!-- حالة الاتصال بعدد اللاعبين -->
+      <div id="mp-invite-status"
+           style="text-align:center;font-size:10.5px;opacity:.75;
+                  margin-top:10px;position:relative;z-index:1;
+                  font-family:'Space Grotesk';letter-spacing:.5px;">
+      </div>
+    `;
+
+    /* أدخل القسم قبل زر البدء */
+    startBtn.parentNode.insertBefore(inviteSection, startBtn);
+
+    /* ربط الزر */
+    const openBtn = inviteSection.querySelector('#mp-open-friends-btn');
+    openBtn.addEventListener('click', () => {
+      openFriendsPicker();
+      Sfx.tap(); haptic(6);
+    });
+    openBtn.addEventListener('mousedown', () => {
+      openBtn.style.transform = 'scale(.97)';
+    });
+    openBtn.addEventListener('mouseup', () => {
+      openBtn.style.transform = 'scale(1)';
+    });
+
+    /* حدّث الحالة */
+    updateInviteStatus();
+  }
+
+  /* ═══ 3) تحديث نص الحالة ═══ */
+  function updateInviteStatus(){
+    const statusEl = document.getElementById('mp-invite-status');
+    if(!statusEl) return;
+
+    const players = (MP.roomData && MP.roomData.players) || [];
+    const maxPlayers = MP_CONFIG.maxPlayers || 4;
+    const totalInvited = inviteState.invited.size;
+
+    if(totalInvited > 0){
+      statusEl.innerHTML = `
+        <span style="color:#FFE8A0;">✓ ${totalInvited} دعوة مرسلة</span>
+        <span style="opacity:.5;"> · </span>
+        <span>${players.length}/${maxPlayers} في الغرفة</span>
+      `;
+    } else {
+      statusEl.innerHTML = `
+        <span>${players.length}/${maxPlayers} لاعبين في الغرفة</span>
+      `;
+    }
+  }
+
+  /* ═══ 4) فتح نافذة قائمة الأصدقاء ═══ */
+  async function openFriendsPicker(){
+    if(inviteState.modalOpen) return;
+    inviteState.modalOpen = true;
+
+    /* أنشئ المودال */
+    let modal = document.getElementById('mp-friends-picker');
+    if(modal) modal.remove();
+
+    modal = document.createElement('div');
+    modal.id = 'mp-friends-picker';
+    modal.style.cssText = `
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: rgba(15,12,10,.85);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      animation: fadeIn .25s ease-out;
+    `;
+
+    modal.innerHTML = `
+      <div style="width:100%;max-width:420px;background:#fff;
+                  border-radius:24px;box-shadow:0 30px 80px rgba(0,0,0,.55);
+                  display:flex;flex-direction:column;
+                  max-height:88vh;overflow:hidden;
+                  animation:popIn .32s cubic-bezier(.34,1.56,.64,1);">
+
+        <!-- الرأس -->
+        <div style="padding:18px 20px 14px;
+                    background:linear-gradient(135deg,#1F1A24 0%,#3A2A48 100%);
+                    color:#fff;position:relative;overflow:hidden;">
+          <div style="position:absolute;top:-40px;right:-40px;
+                      width:150px;height:150px;border-radius:50%;
+                      background:radial-gradient(circle,rgba(232,179,78,.3),transparent 70%);
+                      pointer-events:none;"></div>
+
+          <div style="display:flex;align-items:center;
+                      justify-content:space-between;
+                      position:relative;z-index:1;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:22px;">👥</span>
+              <div>
+                <div style="font-family:'Space Grotesk';font-size:15px;
+                            font-weight:700;letter-spacing:.5px;">
+                  دعوة أصدقاء
+                </div>
+                <div style="font-size:10.5px;opacity:.7;margin-top:2px;">
+                  اختر أصدقاءك للانضمام
+                </div>
+              </div>
+            </div>
+            <button id="mp-picker-close"
+                    style="width:34px;height:34px;border-radius:12px;
+                           border:none;background:rgba(255,255,255,.12);
+                           color:#fff;font-size:16px;cursor:pointer;
+                           display:flex;align-items:center;justify-content:center;">
+              ✕
+            </button>
+          </div>
+
+          <!-- عدّاد الاختيار -->
+          <div id="mp-picker-counter"
+               style="margin-top:12px;padding:8px 14px;
+                      border-radius:100px;
+                      background:rgba(255,255,255,.1);
+                      display:inline-flex;align-items:center;gap:8px;
+                      font-family:'Space Grotesk';font-size:11px;
+                      font-weight:700;letter-spacing:.5px;
+                      position:relative;z-index:1;">
+            <span style="color:#FFE8A0;">0</span>
+            <span style="opacity:.7;">/ 3 مختارون</span>
+          </div>
+        </div>
+
+        <!-- البحث -->
+        <div style="padding:14px 18px 0;">
+          <div style="position:relative;">
+            <span style="position:absolute;top:50%;right:12px;
+                         transform:translateY(-50%);
+                         font-size:14px;opacity:.4;pointer-events:none;">
+              🔍
+            </span>
+            <input type="text" id="mp-picker-search"
+                   placeholder="ابحث بالاسم..."
+                   autocomplete="off"
+                   style="width:100%;padding:11px 36px 11px 14px;
+                          border-radius:12px;border:1.5px solid var(--line);
+                          background:var(--paper);font-family:inherit;
+                          font-size:13px;color:var(--ink);
+                          outline:none;transition:border-color .2s;">
+          </div>
+        </div>
+
+        <!-- قائمة الأصدقاء -->
+        <div id="mp-picker-list"
+             style="flex:1;overflow-y:auto;padding:14px 18px;
+                    scrollbar-width:thin;">
+        </div>
+
+        <!-- الأزرار السفلية -->
+        <div style="padding:14px 18px 18px;
+                    border-top:1px solid var(--line);
+                    background:#fff;
+                    display:grid;grid-template-columns:1fr 1.5fr;
+                    gap:8px;">
+          <button id="mp-picker-cancel"
+                  style="padding:12px;border-radius:14px;
+                         border:1.5px solid var(--line);
+                         background:#fff;color:var(--ink);
+                         font-family:inherit;font-size:12.5px;
+                         font-weight:800;cursor:pointer;">
+            إلغاء
+          </button>
+          <button id="mp-picker-send"
+                  style="padding:12px;border-radius:14px;
+                         border:none;
+                         background:linear-gradient(135deg,#6B9B6B,#4A7B4A);
+                         color:#fff;font-family:inherit;font-size:12.5px;
+                         font-weight:800;cursor:pointer;
+                         box-shadow:0 6px 18px rgba(107,155,107,.35);
+                         display:flex;align-items:center;justify-content:center;gap:6px;">
+            <span>📨</span>
+            <span>إرسال الدعوات</span>
+          </button>
+        </div>
+
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    /* ربط الأحداث */
+    wireFriendsPicker(modal);
+
+    /* حمّل الأصدقاء */
+    await loadFriendsForPicker();
+  }
+
+  /* ═══ 5) ربط أحداث النافذة ═══ */
+  function wireFriendsPicker(modal){
+    const closeBtn = modal.querySelector('#mp-picker-close');
+    const cancelBtn = modal.querySelector('#mp-picker-cancel');
+    const sendBtn = modal.querySelector('#mp-picker-send');
+    const searchInput = modal.querySelector('#mp-picker-search');
+
+    /* إغلاق */
+    closeBtn.addEventListener('click', closeFriendsPicker);
+    cancelBtn.addEventListener('click', closeFriendsPicker);
+
+    /* انقر خارج المودال */
+    modal.addEventListener('click', e => {
+      if(e.target === modal) closeFriendsPicker();
+    });
+
+    /* بحث */
+    let searchTimer = null;
+    searchInput.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        renderFriendsPickerList(searchInput.value.trim());
+      }, 200);
+    });
+    searchInput.addEventListener('focus', () => {
+      searchInput.style.borderColor = 'var(--amber)';
+    });
+    searchInput.addEventListener('blur', () => {
+      searchInput.style.borderColor = 'var(--line)';
+    });
+
+    /* إرسال */
+    sendBtn.addEventListener('click', sendInvitesToSelected);
+  }
+
+  /* ═══ 6) إغلاق النافذة ═══ */
+  function closeFriendsPicker(){
+    const modal = document.getElementById('mp-friends-picker');
+    if(modal){
+      modal.style.animation = 'fadeIn .2s ease-in reverse';
+      setTimeout(() => {
+        modal.remove();
+        inviteState.modalOpen = false;
+        inviteState.selected.clear();
+      }, 180);
+    } else {
+      inviteState.modalOpen = false;
+    }
+  }
+
+  /* ═══ 7) تحميل الأصدقاء ═══ */
+  async function loadFriendsForPicker(){
+    const list = document.getElementById('mp-picker-list');
+    if(!list) return;
+
+    inviteState.loading = true;
+    list.innerHTML = `
+      <div style="text-align:center;padding:40px 20px;">
+        <div style="width:26px;height:26px;border-radius:50%;
+                    border:2.5px solid rgba(232,179,78,.3);
+                    border-top-color:var(--amber);
+                    animation:spin .8s linear infinite;
+                    margin:0 auto 12px;"></div>
+        <div style="font-size:12px;font-weight:700;color:var(--ink-mute);">
+          جارٍ تحميل الأصدقاء...
+        </div>
+      </div>
+    `;
+
+    /* حمّل الأصدقاء من Cloud */
+    try {
+      if(typeof loadFriendsData === 'function'){
+        await loadFriendsData();
+      }
+      inviteState.friends = (window._friends || []).slice();
+    } catch(e){
+      console.warn('[Invite] Load friends failed:', e);
+      inviteState.friends = [];
+    }
+
+    inviteState.loading = false;
+
+    /* استبعد اللاعبين الموجودين بالفعل في الغرفة */
+    const currentPlayers = (MP.roomData && MP.roomData.players) || [];
+    const currentUids = new Set(currentPlayers.map(p => p.uid));
+    const myUid = Cloud.user ? Cloud.user.uid : null;
+
+    inviteState.friends = inviteState.friends.filter(f => {
+      if(!f || !f.uid) return false;
+      if(f.uid === myUid) return false;
+      if(currentUids.has(f.uid)) return false;
+      return true;
+    });
+
+    renderFriendsPickerList('');
+  }
+
+  /* ═══ 8) عرض قائمة الأصدقاء ═══ */
+  function renderFriendsPickerList(query){
+    const list = document.getElementById('mp-picker-list');
+    if(!list) return;
+
+    let filtered = inviteState.friends;
+
+    /* فلترة البحث */
+    if(query){
+      const q = query.toLowerCase();
+      filtered = filtered.filter(f => {
+        const profile = f.profile || {};
+        const name = (profile.username || f.username || '').toLowerCase();
+        return name.includes(q);
+      });
+    }
+
+    /* حالة فارغة */
+    if(filtered.length === 0){
+      list.innerHTML = `
+        <div style="text-align:center;padding:50px 20px;">
+          <div style="font-size:52px;opacity:.25;margin-bottom:12px;">
+            ${query ? '🔍' : '👥'}
+          </div>
+          <div style="font-size:13.5px;font-weight:800;color:var(--ink);margin-bottom:6px;">
+            ${query ? 'لا نتائج مطابقة' : 'لا يوجد أصدقاء'}
+          </div>
+          <div style="font-size:11.5px;color:var(--ink-mute);line-height:1.5;max-width:240px;margin:0 auto;">
+            ${query
+              ? 'جرّب البحث باسم آخر'
+              : 'أضف أصدقاء أولاً من صفحة الأصدقاء'}
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    /* بناء العناصر */
+    list.innerHTML = '';
+
+    filtered.forEach(friend => {
+      const profile = friend.profile || {};
+      const name = profile.username || friend.username || 'صديق';
+      const uid = friend.uid;
+      const isSelected = inviteState.selected.has(uid);
+      const isInvited = inviteState.invited.has(uid);
+
+      const photo = profile.photoURL || null;
+      const lastSeen = profile.lastSeen && profile.lastSeen.toMillis
+        ? profile.lastSeen.toMillis() : 0;
+      const isOnline = (Date.now() - lastSeen) < 5 * 60 * 1000;
+
+      const el = document.createElement('div');
+      el.className = 'mp-picker-friend';
+      el.dataset.uid = uid;
+      el.dataset.selected = isSelected ? '1' : '0';
+      el.dataset.invited = isInvited ? '1' : '0';
+      el.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        border-radius: 14px;
+        background: ${isInvited ? 'linear-gradient(135deg,#E8F4E8,#D8EED8)' : (isSelected ? 'linear-gradient(135deg,#FFF9EC,#FBF1DC)' : '#fff')};
+        border: 2px solid ${isInvited ? '#6B9B6B' : (isSelected ? 'var(--amber)' : 'var(--line)')};
+        margin-bottom: 8px;
+        cursor: ${isInvited ? 'default' : 'pointer'};
+        transition: all .18s cubic-bezier(.34,1.56,.64,1);
+        opacity: ${isInvited ? '0.75' : '1'};
+      `;
+
+      const avatarContent = photo
+        ? `<img src="${photo}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"
+               onerror="this.style.display='none';this.parentElement.textContent='${name.charAt(0).toUpperCase()}'">`
+        : name.charAt(0).toUpperCase();
+
+      const checkMark = isInvited
+        ? '<span style="font-size:14px;color:#6B9B6B;font-weight:800;">✓</span>'
+        : (isSelected ? '<span style="font-size:14px;color:#fff;font-weight:800;">✓</span>' : '');
+
+      const checkBg = isInvited
+        ? 'linear-gradient(135deg,#6B9B6B,#4A7B4A)'
+        : (isSelected ? 'var(--amber)' : 'transparent');
+
+      const checkBorder = isInvited
+        ? '#6B9B6B'
+        : (isSelected ? 'var(--amber)' : 'var(--line-strong)');
+
+      el.innerHTML = `
+        <div style="position:relative;width:44px;height:44px;flex-shrink:0;">
+          <div style="width:44px;height:44px;border-radius:50%;
+                      background:linear-gradient(135deg,#FFE0A0,#E8B34E);
+                      display:flex;align-items:center;justify-content:center;
+                      font-size:18px;font-weight:800;color:#fff;
+                      border:2px solid rgba(255,255,255,.6);
+                      overflow:hidden;">
+            ${avatarContent}
+          </div>
+          <div style="position:absolute;bottom:-1px;right:-1px;
+                      width:12px;height:12px;border-radius:50%;
+                      background:${isOnline ? '#6B9B6B' : '#8B8278'};
+                      border:2px solid #fff;
+                      box-shadow:${isOnline ? '0 0 6px #6B9B6B' : 'none'};"></div>
+        </div>
+
+        <div style="flex:1;min-width:0;text-align:right;">
+          <div style="font-size:13px;font-weight:800;color:var(--ink);
+                      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            ${escapeHtmlChat(name)}
+          </div>
+          <div style="font-size:10px;color:var(--ink-mute);margin-top:3px;
+                      display:flex;align-items:center;gap:6px;">
+            <span>${isOnline ? '🟢 متصل' : '⚫ غير متصل'}</span>
+            ${isInvited ? '<span style="color:#6B9B6B;font-weight:700;">· دُعي ✓</span>' : ''}
+          </div>
+        </div>
+
+        <div style="width:26px;height:26px;border-radius:50%;
+                    background:${checkBg};
+                    border:2px solid ${checkBorder};
+                    display:flex;align-items:center;justify-content:center;
+                    flex-shrink:0;transition:all .15s;">
+          ${checkMark}
+        </div>
+      `;
+
+      /* انقر للاختيار (فقط إن لم يكن مدعواً) */
+      if(!isInvited){
+        el.addEventListener('click', () => {
+          toggleFriendSelection(uid);
+        });
+        el.addEventListener('mouseenter', () => {
+          if(!inviteState.selected.has(uid)){
+            el.style.transform = 'translateX(-3px)';
+          }
+        });
+        el.addEventListener('mouseleave', () => {
+          el.style.transform = 'translateX(0)';
+        });
+      }
+
+      list.appendChild(el);
+    });
+  }
+
+  /* ═══ 9) تبديل اختيار صديق ═══ */
+  function toggleFriendSelection(uid){
+    const isSelected = inviteState.selected.has(uid);
+
+    if(!isSelected && inviteState.selected.size >= 3){
+      Toast.warning('الحد الأقصى 3 أصدقاء', 'الغرفة تستوعب 4 لاعبين فقط');
+      return;
+    }
+
+    if(isSelected){
+      inviteState.selected.delete(uid);
+    } else {
+      inviteState.selected.add(uid);
+      Sfx.tap(); haptic(6);
+    }
+
+    /* إعادة رسم القائمة (فقط للعنصر) */
+    const el = document.querySelector(`.mp-picker-friend[data-uid="${uid}"]`);
+    if(el){
+      const wasSelected = el.dataset.selected === '1';
+      const nowSelected = !wasSelected;
+
+      el.dataset.selected = nowSelected ? '1' : '0';
+
+      el.style.borderColor = nowSelected ? 'var(--amber)' : 'var(--line)';
+      el.style.background = nowSelected
+        ? 'linear-gradient(135deg,#FFF9EC,#FBF1DC)'
+        : '#fff';
+
+      const checkEl = el.querySelector('div:last-child');
+      if(checkEl){
+        checkEl.style.background = nowSelected ? 'var(--amber)' : 'transparent';
+        checkEl.style.borderColor = nowSelected ? 'var(--amber)' : 'var(--line-strong)';
+        checkEl.innerHTML = nowSelected
+          ? '<span style="font-size:14px;color:#fff;font-weight:800;">✓</span>'
+          : '';
+      }
+    }
+
+    updatePickerCounter();
+  }
+
+  /* ═══ 10) تحديث العدّاد ═══ */
+  function updatePickerCounter(){
+    const counter = document.querySelector('#mp-picker-counter span:first-child');
+    if(counter){
+      counter.textContent = inviteState.selected.size;
+    }
+
+    const sendBtn = document.getElementById('mp-picker-send');
+    if(sendBtn){
+      if(inviteState.selected.size === 0){
+        sendBtn.disabled = true;
+        sendBtn.style.opacity = '0.5';
+        sendBtn.style.cursor = 'not-allowed';
+      } else {
+        sendBtn.disabled = false;
+        sendBtn.style.opacity = '1';
+        sendBtn.style.cursor = 'pointer';
+      }
+    }
+  }
+
+  /* ═══ 11) إرسال الدعوات ═══ */
+  async function sendInvitesToSelected(){
+    const selected = Array.from(inviteState.selected);
+
+    if(selected.length === 0){
+      Toast.warning('لم تختر أي صديق');
+      return;
+    }
+
+    if(!MP.active || !MP.roomCode){
+      Toast.error('لا توجد غرفة نشطة');
+      return;
+    }
+
+    if(!Cloud.user || !Cloud.db){
+      Toast.error('يجب تسجيل الدخول');
+      return;
+    }
+
+    const sendBtn = document.getElementById('mp-picker-send');
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = '<span>⏳</span><span>جارٍ الإرسال...</span>';
+
+    const uid = Cloud.user.uid;
+    const myName = (Cloud.profile && Cloud.profile.username) || 'لاعب';
+    const myPhoto = Cloud.user.photoURL || null;
+    const roomCode = MP.roomCode;
+
+    let success = 0;
+    let failed = 0;
+
+    for(const friendUid of selected){
+      try {
+        await Cloud.db.collection('friend_requests').add({
+          fromUid: uid,
+          fromName: myName,
+          fromPhoto: myPhoto,
+          toUid: friendUid,
+          type: 'multiplayer_invite',
+          roomCode,
+          status: 'pending',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        inviteState.invited.add(friendUid);
+        inviteState.selected.delete(friendUid);
+        success++;
+      } catch(e){
+        console.warn('[Invite] Failed for', friendUid, e);
+        failed++;
+      }
+    }
+
+    /* إغلاق المودال */
+    closeFriendsPicker();
+
+    /* إشعار النتيجة */
+    if(success > 0){
+      Toast.reward('📨', `تم إرسال ${success} دعوة`, 
+        success === 1 ? 'سيظهر الإشعار لصديقك الآن' : `سيظهر الإشعار لأصدقائك الآن`,
+        { duration: 4000 });
+      Sfx.reward(); haptic(20);
+    }
+
+    if(failed > 0){
+      Toast.warning(`فشل إرسال ${failed} دعوة`);
+    }
+
+    /* حدّث الحالة */
+    updateInviteStatus();
+
+    /* أعد فتح الغرفة بعد 500ms لعرض التحديث */
+    setTimeout(() => {
+      if(document.getElementById('s-multiplayer-waiting').classList.contains('active')){
+        if(typeof mpBuildWaitingRoom === 'function'){
+          mpBuildWaitingRoom();
+        }
+      }
+    }, 500);
+  }
+
+  /* ═══ 12) دمج التعديل مع mpBuildWaitingRoom ═══ */
+  const originalBuildWaitingRoom = window.mpBuildWaitingRoom;
+  if(typeof originalBuildWaitingRoom === 'function'){
+    window.mpBuildWaitingRoom = function(){
+      /* نستدعي الأصلي */
+      const result = originalBuildWaitingRoom.apply(this, arguments);
+
+      /* ثم نضيف تعديلاتنا */
+      setTimeout(() => {
+        try {
+          enhanceWaitingRoom();
+        } catch(e){
+          console.warn('[Invite] Enhance failed:', e);
+        }
+      }, 30);
+
+      return result;
+    };
+  }
+
+  /* ═══ 13) إعادة التحسين عند تغيير الغرفة ═══ */
+  setInterval(() => {
+    /* فقط إذا كنا في شاشة الغرفة */
+    if(!MP.active) return;
+    const screen = document.getElementById('s-multiplayer-waiting');
+    if(!screen || !screen.classList.contains('active')) return;
+
+    /* تحقق من وجود القسم */
+    if(!document.getElementById('mp-invite-section')){
+      enhanceWaitingRoom();
+    } else {
+      /* حدّث نص الحالة فقط */
+      updateInviteStatus();
+    }
+  }, 2000);
+
+  /* ═══ 14) تهيئة أولية ═══ */
+  console.log('[SHIFT v3.5] ✅ Waiting Room Invite v2 loaded');
+
+  /* تصدير */
+  window.waitingRoomInvite = {
+    open: openFriendsPicker,
+    close: closeFriendsPicker,
+    enhance: enhanceWaitingRoom,
+    version: '2.0'
+  };
+
+})();
+
+/* ============================================================
    ==================== BOOT =================================
    ============================================================ */
 function boot() {

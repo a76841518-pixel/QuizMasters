@@ -9944,3 +9944,399 @@ kbd {
 #friend-search-results [data-action="send-request"]:active {
   transform: scale(.94);
 }
+
+/* ============================================================
+   ═══════════ MULTIPLAYER INVITE TOAST ═════════════════════
+   ============================================================ */
+
+.mp-invite-toast {
+  position: relative;
+  pointer-events: auto;
+  padding: 14px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #1F0A20 0%, #5A1A50 60%, #7A2A70 100%);
+  color: #fff;
+  box-shadow:
+    0 12px 40px rgba(122, 42, 112, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  animation: mpInviteIn 0.45s cubic-bezier(.34, 1.56, .64, 1);
+  transition: all 0.3s ease;
+}
+
+.mp-invite-toast.expiring {
+  background: linear-gradient(135deg, #3A1010 0%, #6A2020 60%, #8A2828 100%);
+  box-shadow:
+    0 12px 40px rgba(180, 60, 60, 0.5),
+    0 0 0 1px rgba(255, 80, 80, 0.2);
+}
+
+.mp-invite-toast.removing {
+  animation: mpInviteOut 0.35s ease forwards;
+}
+
+@keyframes mpInviteIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.9);
+  }
+  60% {
+    transform: translateY(4px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes mpInviteOut {
+  to {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.9);
+  }
+}
+
+/* ═══ شريط التقدم ═══ */
+.mp-invite-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20px 20px 0 0;
+  overflow: hidden;
+}
+
+.mp-invite-progress-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #E8B34E, #F2C862, #FFE8A0);
+  border-radius: 20px;
+  transition: width 0.1s linear;
+  box-shadow: 0 0 10px rgba(232, 179, 78, 0.6);
+}
+
+.mp-invite-toast.expiring .mp-invite-progress-fill {
+  background: linear-gradient(90deg, #E85838, #FF8060, #FFB090);
+  box-shadow: 0 0 10px rgba(232, 88, 56, 0.6);
+}
+
+/* ═══ الرأس ═══ */
+.mp-invite-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-top: 4px;
+}
+
+.mp-invite-icon {
+  font-size: 22px;
+  filter: drop-shadow(0 2px 6px rgba(232, 179, 78, 0.6));
+  animation: mpInviteIconPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes mpInviteIconPulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.15) rotate(-5deg); }
+}
+
+.mp-invite-title {
+  flex: 1;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: #FFE8A0;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.mp-invite-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.mp-invite-close:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.mp-invite-close:active {
+  transform: scale(0.9);
+}
+
+/* ═══ الجسم ═══ */
+.mp-invite-body {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.mp-invite-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FFE0A0, #E8B34E);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 800;
+  color: #fff;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.mp-invite-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mp-invite-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.mp-invite-message {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.75);
+  margin-top: 3px;
+  line-height: 1.3;
+}
+
+.mp-invite-room {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 7px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  background: rgba(232, 179, 78, 0.2);
+  border: 1px solid rgba(232, 179, 78, 0.35);
+}
+
+.mp-invite-room-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.mp-invite-room-code {
+  font-family: 'Space Grotesk', monospace;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #FFE8A0;
+  text-shadow: 0 0 8px rgba(232, 179, 78, 0.5);
+}
+
+/* ═══ الأزرار ═══ */
+.mp-invite-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.mp-invite-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 11px 12px;
+  border-radius: 14px;
+  border: none;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(.34, 1.56, .64, 1);
+  white-space: nowrap;
+}
+
+.mp-invite-btn:active {
+  transform: scale(0.95);
+}
+
+.mp-invite-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.mp-invite-btn.reject {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.mp-invite-btn.reject:hover:not(:disabled) {
+  background: rgba(255, 80, 80, 0.25);
+  border-color: rgba(255, 80, 80, 0.4);
+}
+
+.mp-invite-btn.accept {
+  background: linear-gradient(135deg, #6B9B6B, #4A7B4A);
+  color: #fff;
+  box-shadow:
+    0 4px 14px rgba(107, 155, 107, 0.5),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.15);
+}
+
+.mp-invite-btn.accept:hover:not(:disabled) {
+  background: linear-gradient(135deg, #7BAB7B, #5A8B5A);
+  box-shadow:
+    0 6px 20px rgba(107, 155, 107, 0.65),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.15);
+}
+
+/* ═══ المؤقت ═══ */
+.mp-invite-timer {
+  text-align: center;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mp-invite-timer-text {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.mp-invite-timer-text strong {
+  color: #FFE8A0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  margin: 0 3px;
+}
+
+.mp-invite-toast.expiring .mp-invite-timer-text strong {
+  color: #FF8060;
+  animation: mpInviteTimerPulse 0.6s ease-in-out infinite;
+}
+
+@keyframes mpInviteTimerPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.6; transform: scale(1.15); }
+}
+
+/* ═══ Responsive ═══ */
+@media (max-width: 380px) {
+  .mp-invite-toast { padding: 12px; border-radius: 18px; }
+  .mp-invite-avatar { width: 44px; height: 44px; font-size: 18px; }
+  .mp-invite-name { font-size: 13.5px; }
+  .mp-invite-actions { grid-template-columns: 1fr 1.3fr; }
+  .mp-invite-btn { padding: 10px; font-size: 11.5px; }
+}
+
+/* ═══ احترام prefers-reduced-motion ═══ */
+@media (prefers-reduced-motion: reduce) {
+  .mp-invite-toast,
+  .mp-invite-icon,
+  .mp-invite-timer-text strong {
+    animation: none !important;
+  }
+}
+
+/* ============================================================
+   ═══════════ MP FRIENDS PICKER ═════════════════════════════
+   ============================================================ */
+
+#mp-friends-picker {
+  font-family: 'Tajawal', system-ui, sans-serif;
+}
+
+#mp-friends-picker #mp-picker-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+#mp-friends-picker #mp-picker-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#mp-friends-picker #mp-picker-list::-webkit-scrollbar-thumb {
+  background: rgba(232,179,78,.4);
+  border-radius: 3px;
+}
+
+#mp-friends-picker #mp-picker-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(232,179,78,.6);
+}
+
+#mp-friends-picker .mp-picker-friend {
+  animation: mpPickerItemIn .3s cubic-bezier(.34,1.56,.64,1) backwards;
+}
+
+#mp-friends-picker .mp-picker-friend:nth-child(1) { animation-delay: 0ms; }
+#mp-friends-picker .mp-picker-friend:nth-child(2) { animation-delay: 40ms; }
+#mp-friends-picker .mp-picker-friend:nth-child(3) { animation-delay: 80ms; }
+#mp-friends-picker .mp-picker-friend:nth-child(4) { animation-delay: 120ms; }
+#mp-friends-picker .mp-picker-friend:nth-child(5) { animation-delay: 160ms; }
+#mp-friends-picker .mp-picker-friend:nth-child(6) { animation-delay: 200ms; }
+#mp-friends-picker .mp-picker-friend:nth-child(7) { animation-delay: 240ms; }
+#mp-friends-picker .mp-picker-friend:nth-child(8) { animation-delay: 280ms; }
+
+@keyframes mpPickerItemIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* أزرار المودال */
+#mp-picker-send:active:not(:disabled),
+#mp-picker-cancel:active,
+#mp-picker-close:active {
+  transform: scale(.96);
+}
+
+#mp-picker-send {
+  transition: transform .15s, opacity .2s, box-shadow .2s;
+}
+
+#mp-picker-send:not(:disabled):hover {
+  box-shadow: 0 8px 24px rgba(107,155,107,.5);
+}
+
+#mp-picker-close:hover {
+  background: rgba(255,255,255,.22) !important;
+}
+
+/* حجم الشاشات الصغيرة */
+@media (max-width: 380px) {
+  #mp-friends-picker > div {
+    border-radius: 20px !important;
+  }
+  #mp-friends-picker .mp-picker-friend {
+    padding: 10px !important;
+  }
+}
