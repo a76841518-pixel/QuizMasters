@@ -6756,52 +6756,36 @@ function _pulseHorizontalClear(xHere, w){
 }
 
 /* ═══ اختيار نوع العائق بذكاء ═══ */
+/* ═══ اختيار نوع العائق — كل العقبات قصيرة الآن ═══ */
 function _choosePulseObstacleType(){
   const roll = Math.random();
   const xHere = W + 40;
   const distFromTall = xHere - _pulseState.lastTallX;
-  const canSwitchSide = distFromTall >= 520;   /* ✅ زدناها من 420 إلى 520 */
-
+  const canSwitchSide = distFromTall >= 320;
   const lastType = _pulseState.lastTallType;
 
   /* ═══ لا يوجد تاريخ ═══ */
   if(!lastType){
-    if(roll < 0.28) return 'floorTall';
-    if(roll < 0.56) return 'ceilingTall';
-    if(roll < 0.82) return 'mixed';
-    return roll < 0.91 ? 'floorShort' : 'ceilingShort';
+    return roll < 0.5 ? 'floorShort' : 'ceilingShort';
   }
 
-  /* ═══ آخر عائق كان أرضياً طويلاً ═══ */
+  /* ═══ آخر عائق كان أرضياً ═══ */
   if(lastType === 'floor'){
     if(canSwitchSide){
-      if(roll < 0.32) return 'ceilingTall';
-      if(roll < 0.52) return 'floorTall';
-      if(roll < 0.78) return 'mixed';
-      return roll < 0.90 ? 'ceilingShort' : 'floorShort';
-    } else {
-      /* مسافة غير كافية — لا نسمح بالمعاكس */
-      if(roll < 0.40) return 'floorTall';
-      if(roll < 0.78) return 'mixed';
-      return 'floorShort';
+      return roll < 0.55 ? 'ceilingShort' : 'floorShort';
     }
+    return 'floorShort';
   }
 
-  /* ═══ آخر عائق كان سقفياً طويلاً ═══ */
+  /* ═══ آخر عائق كان سقفياً ═══ */
   if(lastType === 'ceiling'){
     if(canSwitchSide){
-      if(roll < 0.32) return 'floorTall';
-      if(roll < 0.52) return 'ceilingTall';
-      if(roll < 0.78) return 'mixed';
-      return roll < 0.90 ? 'floorShort' : 'ceilingShort';
-    } else {
-      if(roll < 0.40) return 'ceilingTall';
-      if(roll < 0.78) return 'mixed';
-      return 'ceilingShort';
+      return roll < 0.55 ? 'floorShort' : 'ceilingShort';
     }
+    return 'ceilingShort';
   }
 
-  return 'floorShort';
+  return roll < 0.5 ? 'floorShort' : 'ceilingShort';
 }
 
 /* ═══ تسجيل عائق طويل جديد ═══ */
@@ -7045,48 +7029,54 @@ function spawnPulseObstacle(){
   /* ═══════════════════════════════════════════════════════
      ═══ 4) عمود أرضي قصير ═══
      ═══════════════════════════════════════════════════════ */
-  if(type === 'floorShort'){
-    const w = WR(40, 55);
-    const h = Math.floor(MAX_SHORT_H * WR(0.7, 1.0));
+if(type === 'floorShort'){
+  const w = WR(40, 55);
+  const h = Math.floor(MAX_SHORT_H * WR(0.7, 1.0));
 
-    obstacles.push({
-      x: xHere, w, h,
-      type: 'block',
-      t: 0, passed: false, dead: false,
-      isWalk: true,
-      isPulseObstacle: true,
-      isPulseFloor: true,
-      color: s.wall, colorDark: s.wallDark, accent: s.accent
-    });
+  obstacles.push({
+    x: xHere, w, h,
+    type: 'block',
+    t: 0, passed: false, dead: false,
+    isWalk: true,
+    isPulseObstacle: true,
+    isPulseFloor: true,
+    color: s.wall, colorDark: s.wallDark, accent: s.accent
+  });
 
-    maybeReward(xHere + w/2, GROUND_Y - h - WR(60, 100), s);
-    return;
-  }
+  /* ✅ جديد: سجّل النوع لتنويع النوع التالي */
+  _recordPulseTall(xHere, 'floor');
+
+  maybeReward(xHere + w/2, GROUND_Y - h - WR(60, 100), s);
+  return;
+}
 
   /* ═══════════════════════════════════════════════════════
      ═══ 5) عمود سقفي قصير ═══
      ═══════════════════════════════════════════════════════ */
-  if(type === 'ceilingShort'){
-    const w = WR(40, 55);
-    const h = Math.floor(MAX_SHORT_H * WR(0.7, 1.0));
+if(type === 'ceilingShort'){
+  const w = WR(40, 55);
+  const h = Math.floor(MAX_SHORT_H * WR(0.7, 1.0));
 
-    obstacles.push({
-      x: xHere, w, h,
-      y: CEILING_H,
-      type: 'block',
-      t: 0, passed: false, dead: false,
-      isWalk: true,
-      isPulseObstacle: true,
-      isPulseCeiling: true,
-      color: s.wall, colorDark: s.wallDark, accent: s.accent
-    });
+  obstacles.push({
+    x: xHere, w, h,
+    y: CEILING_H,
+    type: 'block',
+    t: 0, passed: false, dead: false,
+    isWalk: true,
+    isPulseObstacle: true,
+    isPulseCeiling: true,
+    color: s.wall, colorDark: s.wallDark, accent: s.accent
+  });
 
-    const oy = CEILING_H + h + WR(60, 100);
-    if(oy < GROUND_Y - 40){
-      maybeReward(xHere + w/2, oy, s);
-    }
-    return;
+  /* ✅ جديد: سجّل النوع لتنويع النوع التالي */
+  _recordPulseTall(xHere, 'ceiling');
+
+  const oy = CEILING_H + h + WR(60, 100);
+  if(oy < GROUND_Y - 40){
+    maybeReward(xHere + w/2, oy, s);
   }
+  return;
+}
 }
 
 function spawnWalkObstacle(){
@@ -9606,43 +9596,45 @@ else if(G.mode !== 'ASCEND' && G.camY > 0.5){   // ✅ استثناء ASCEND
     P.rot = clamp(P.vy*0.08,-0.5,0.85);
     P.x = P.baseX;
 
-  } else if(G.mode==='SOAR'){
+} else if(G.mode==='SOAR'){
     /* ═══════════════════════════════════════════════════════
-       ═══ SOAR — طيران بالضغط المطوّل ═══
+       ═══ SOAR — طيران بالضغط المطوّل (تحكم أبطأ وأدق) ═══
        ═══════════════════════════════════════════════════════
-       - الضغط المستمر → دفع للأعلى (طيران)
-       - الإفلات → جاذبية عادية تسحب للأسفل
     */
     const held = P.jumpHeld;
 
-    if(held){
-      /* دفع للأعلى */
-      P.vy -= 1.15;
-      P.vy = Math.max(P.vy, -7.5);
+if(held){
+  /* ✅ تخفيف فوري عند الإفلات من ضغط سابق */
+  if(P.vy > 0) P.vy *= 0.85;
+  
+  P.vy -= 0.68;
+  P.vy = Math.max(P.vy, -5.2);
 
       /* جسيمات الدفع */
-      if(G.t % 2 === 0){
+      if(G.t % 3 === 0){
         particles.push({
           x: P.x + rand(-8, 8),
           y: P.y + P.r + rand(-2, 6),
-          vx: rand(-1.5, 1.5),
-          vy: rand(3, 6),
+          vx: rand(-1.2, 1.2),
+          vy: rand(2, 4.5),
           life: 0.6, decay: 0.04,
           color: ['#80D0FF', '#C0E8FF', '#FFFFFF'][Math.floor(Math.random()*3)],
           size: rand(2, 4)
         });
       }
     } else {
-      /* جاذبية ناعمة */
-      P.vy += 0.38;
-      P.vy = Math.min(P.vy, 7);
+      /* ✅ جاذبية أخف — كان 0.38 */
+      P.vy += 0.26;
+      /* ✅ سقف نزول أقل — كان 7 */
+      P.vy = Math.min(P.vy, 4.8);
     }
 
     P.y += P.vy;
-    P.rot = clamp(P.vy * 0.055, -0.5, 0.55);
+    /* ✅ دوران أهدأ — كان 0.055 */
+    P.rot = clamp(P.vy * 0.038, -0.35, 0.38);
     P.x = P.baseX;
-    P.legPhase += 0.08;
-    P.enginePhase += 0.15;
+    P.legPhase += 0.06;
+    P.enginePhase += 0.12;
 
     /* حدود */
     if(P.y - P.r < CEILING_H){ P.y = CEILING_H + P.r; P.vy = 0; }
@@ -10899,8 +10891,8 @@ function drawCharacterFeet(c, r, mode, legPhase, walkAnim, onGround, rot){
   const footLight  = 'rgba(255,255,255,0.22)';
   const footShadow = 'rgba(0,0,0,0.35)';
 
-  /* ✅ موضع الأقدام: أسفل مركز الجسم قليلاً */
-  const footY = r * 1.02;
+  /* ✅ قبل: r * 1.02 — الآن: r * 1.14 (أخفض قليلاً) */
+  const footY = r * 1.20;
   const footW = r * 0.44;
   const footH = r * 0.24;
 
@@ -31549,31 +31541,31 @@ function renderAvatarEditGrid(){
                          background:var(--paper-2);cursor:pointer;font-size:16px;">✕</button>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;overflow-y:auto;flex:1;">
-          ${MODES.filter(m => m.id !== 'MIXED').map(m => `
-            <button class="mp-mode-option" data-mode="${m.id}"
-                    style="display:flex;align-items:center;gap:12px;
-                           padding:12px;border-radius:14px;
-                           border:2px solid ${m.id === currentMode ? m.color : 'transparent'};
-                           background:${m.id === currentMode
-                             ? `linear-gradient(135deg, ${m.color}18, ${m.color}08)`
-                             : 'var(--paper)'};
-                           cursor:pointer;font-family:inherit;
-                           text-align:right;width:100%;">
-              <div style="width:44px;height:44px;border-radius:12px;
-                          background:${m.color};color:#fff;
-                          display:flex;align-items:center;justify-content:center;
-                          font-size:22px;font-weight:800;flex-shrink:0;">
-                ${m.icon}
-              </div>
-              <div style="flex:1;min-width:0;">
-                <div style="font-size:14px;font-weight:800;color:var(--ink);">${m.ar}</div>
-                <div style="font-size:10.5px;color:var(--ink-mute);margin-top:2px;">${m.desc}</div>
-              </div>
-              ${m.id === currentMode
-                ? `<span style="color:${m.color};font-size:20px;font-weight:800;">✓</span>`
-                : ''}
-            </button>
-          `).join('')}
+${MODES.map(m => `
+  <button class="mp-mode-option" data-mode="${m.id}"
+          style="display:flex;align-items:center;gap:12px;
+                 padding:12px;border-radius:14px;
+                 border:2px solid ${m.id === currentMode ? m.color : 'transparent'};
+                 background:${m.id === currentMode
+                   ? `linear-gradient(135deg, ${m.color}18, ${m.color}08)`
+                   : 'var(--paper)'};
+                 cursor:pointer;font-family:inherit;
+                 text-align:right;width:100%;">
+    <div style="width:44px;height:44px;border-radius:12px;
+                background:${m.color};color:#fff;
+                display:flex;align-items:center;justify-content:center;
+                font-size:22px;font-weight:800;flex-shrink:0;">
+      ${m.icon}
+    </div>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:14px;font-weight:800;color:var(--ink);">${m.ar}</div>
+      <div style="font-size:10.5px;color:var(--ink-mute);margin-top:2px;">${m.desc}</div>
+    </div>
+    ${m.id === currentMode
+      ? `<span style="color:${m.color};font-size:20px;font-weight:800;">✓</span>`
+      : ''}
+  </button>
+`).join('')}
         </div>
       </div>
     `;
@@ -36347,30 +36339,30 @@ function renderAvatarEditGrid(){
       <div class="ar-modal-panel">
         <div class="ar-modal-title">🎮 اختر النمط</div>
         <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;max-height:50vh;overflow-y:auto;">
-          ${MODES.filter(m => m.id !== 'MIXED').map(m => `
-            <button data-mode="${m.id}" style="display:flex;align-items:center;gap:12px;
-                       padding:12px;border-radius:14px;
-                       border:2px solid ${m.id === currentMode ? m.color : 'transparent'};
-                       background:${m.id === currentMode
-                         ? `linear-gradient(135deg, ${m.color}18, ${m.color}08)`
-                         : 'var(--paper)'};
-                       cursor:pointer;font-family:inherit;text-align:right;width:100%;
-                       transition:all .18s;">
-              <div style="width:42px;height:42px;border-radius:12px;
-                          background:${m.color};color:#fff;
-                          display:flex;align-items:center;justify-content:center;
-                          font-size:20px;font-weight:800;flex-shrink:0;">
-                ${m.icon}
-              </div>
-              <div style="flex:1;min-width:0;">
-                <div style="font-size:13.5px;font-weight:800;color:var(--ink);">${m.ar}</div>
-                <div style="font-size:10.5px;color:var(--ink-mute);margin-top:2px;">${m.desc}</div>
-              </div>
-              ${m.id === currentMode
-                ? `<span style="color:${m.color};font-size:20px;font-weight:800;">✓</span>`
-                : ''}
-            </button>
-          `).join('')}
+${MODES.map(m => `
+  <button data-mode="${m.id}" style="display:flex;align-items:center;gap:12px;
+             padding:12px;border-radius:14px;
+             border:2px solid ${m.id === currentMode ? m.color : 'transparent'};
+             background:${m.id === currentMode
+               ? `linear-gradient(135deg, ${m.color}18, ${m.color}08)`
+               : 'var(--paper)'};
+             cursor:pointer;font-family:inherit;text-align:right;width:100%;
+             transition:all .18s;">
+    <div style="width:42px;height:42px;border-radius:12px;
+                background:${m.color};color:#fff;
+                display:flex;align-items:center;justify-content:center;
+                font-size:20px;font-weight:800;flex-shrink:0;">
+      ${m.icon}
+    </div>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:13.5px;font-weight:800;color:var(--ink);">${m.ar}</div>
+      <div style="font-size:10.5px;color:var(--ink-mute);margin-top:2px;">${m.desc}</div>
+    </div>
+    ${m.id === currentMode
+      ? `<span style="color:${m.color};font-size:20px;font-weight:800;">✓</span>`
+      : ''}
+  </button>
+`).join('')}
         </div>
         <div class="ar-modal-actions">
           <button class="cancel" id="ar-mode-cancel">إغلاق</button>
