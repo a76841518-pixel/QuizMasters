@@ -10440,3 +10440,2187 @@ kbd {
 .af-reset-btn:active {
   transform: scale(.9) rotate(-90deg);
 }
+
+/* ============================================================
+   ═══════════ UNIFIED HORIZONTAL TABS SYSTEM v2 ═════════════
+   ════════════════════════════════════════════════════════════
+   ✅ إصلاحات:
+   - منع انهيار الأزرار (min-width + min-height + display)
+   - ضمان الرؤية في جميع السياقات
+   - دعم كامل لكل صفحات اللعبة
+   ============================================================ */
+
+/* ═══════════════════════════════════════════════════════════
+   ═══ 1) الحاويات — صف واحد + تمرير أفقي ═══
+   ═══════════════════════════════════════════════════════════ */
+.tab-row,
+.admin-content-tabs,
+.clan-tabs,
+#powerup-tabs{
+  display:flex !important;
+  flex-direction:row !important;
+  flex-wrap:nowrap !important;
+  align-items:center !important;
+  justify-content:flex-start !important;
+  gap:6px !important;
+
+  padding:6px !important;
+  margin-bottom:14px !important;
+
+  background:var(--paper-2) !important;
+  border-radius:14px !important;
+  border:1px solid var(--line) !important;
+
+  /* ✅ التمرير الأفقي */
+  overflow-x:auto !important;
+  overflow-y:hidden !important;
+  -webkit-overflow-scrolling:touch !important;
+  scroll-behavior:smooth !important;
+  scroll-snap-type:x proximity !important;
+
+  /* ✅ ضمان ارتفاع كافٍ دائماً */
+  min-height:56px !important;
+  height:auto !important;
+
+  /* ✅ شريط التمرير مرئي */
+  scrollbar-width:thin !important;
+  scrollbar-color: var(--amber) rgba(26,21,18,0.08) !important;
+
+  white-space:nowrap !important;
+  position:relative !important;
+  isolation:isolate !important;
+  box-sizing:border-box !important;
+}
+
+/* ═══ شريط التمرير — WebKit ═══ */
+.tab-row::-webkit-scrollbar,
+.admin-content-tabs::-webkit-scrollbar,
+.clan-tabs::-webkit-scrollbar,
+#powerup-tabs::-webkit-scrollbar{
+  height:7px !important;
+  display:block !important;
+}
+.tab-row::-webkit-scrollbar-track,
+.admin-content-tabs::-webkit-scrollbar-track,
+.clan-tabs::-webkit-scrollbar-track,
+#powerup-tabs::-webkit-scrollbar-track{
+  background:rgba(26,21,18,0.08) !important;
+  border-radius:100px !important;
+  margin:0 8px !important;
+}
+.tab-row::-webkit-scrollbar-thumb,
+.admin-content-tabs::-webkit-scrollbar-thumb,
+.clan-tabs::-webkit-scrollbar-thumb,
+#powerup-tabs::-webkit-scrollbar-thumb{
+  background:linear-gradient(90deg, var(--amber), var(--gold)) !important;
+  border-radius:100px !important;
+  border:1.5px solid var(--paper-2) !important;
+}
+.tab-row::-webkit-scrollbar-thumb:hover,
+.admin-content-tabs::-webkit-scrollbar-thumb:hover,
+.clan-tabs::-webkit-scrollbar-thumb:hover,
+#powerup-tabs::-webkit-scrollbar-thumb:hover{
+  background:linear-gradient(90deg, #C06030, var(--amber)) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ═══ 2) الأزرار — منع الانهيار نهائياً ═══
+   ═══════════════════════════════════════════════════════════ */
+.tab-chip,
+.act-chip,
+.clan-tab{
+  /* ✅ العرض والارتفاع مضمونان */
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  box-sizing:border-box !important;
+
+  /* ✅ منع الانهيار */
+  flex:0 0 auto !important;
+  flex-grow:0 !important;
+  flex-shrink:0 !important;
+
+  /* ✅ الحد الأدنى للحجم — الأهم! */
+  min-width:56px !important;
+  min-height:38px !important;
+  width:auto !important;
+  height:auto !important;
+
+  /* ✅ مسافة داخلية */
+  padding:10px 16px !important;
+
+  /* ✅ منع الالتفاف */
+  white-space:nowrap !important;
+  overflow:visible !important;
+  text-overflow:clip !important;
+
+  /* ✅ شكل */
+  border-radius:10px !important;
+  border:none !important;
+  background:transparent !important;
+  color:var(--ink-soft) !important;
+
+  /* ✅ خط واضح */
+  font-family:inherit !important;
+  font-size:11.5px !important;
+  font-weight:800 !important;
+  line-height:1.2 !important;
+  letter-spacing:.2px !important;
+
+  /* ✅ تفاعل */
+  cursor:pointer !important;
+  transition:all .2s !important;
+  -webkit-tap-highlight-color:transparent !important;
+  scroll-snap-align:start !important;
+
+  /* ✅ منع أي اختفاء */
+  visibility:visible !important;
+  opacity:1 !important;
+  position:relative !important;
+}
+
+/* ═══ Hover ═══ */
+.tab-chip:hover,
+.act-chip:hover,
+.clan-tab:hover{
+  background:rgba(255,255,255,0.55) !important;
+}
+
+/* ═══ Active (مضغوط) ═══ */
+.tab-chip:active,
+.act-chip:active,
+.clan-tab:active{
+  transform:scale(.95) !important;
+}
+
+/* ═══ Selected (مختار) ═══ */
+.tab-chip.active,
+.act-chip.active,
+.clan-tab.active{
+  background:#fff !important;
+  color:var(--ink) !important;
+  box-shadow:0 2px 8px rgba(26,21,18,0.1) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ═══ 3) إلغاء أي قواعد قديمة متعارضة ═══
+   ═══════════════════════════════════════════════════════════ */
+.tab-row .tab-chip{
+  flex:0 0 auto !important;
+  flex-basis:auto !important;
+  min-width:56px !important;
+  min-height:38px !important;
+  padding:10px 16px !important;
+  font-size:11.5px !important;
+}
+
+.admin-content-tabs .act-chip{
+  flex:0 0 auto !important;
+  flex-basis:auto !important;
+  min-width:56px !important;
+  min-height:38px !important;
+}
+
+.clan-tabs .clan-tab{
+  flex:0 0 auto !important;
+  flex-basis:auto !important;
+  min-width:70px !important;
+  min-height:40px !important;
+}
+
+#powerup-tabs .tab-chip{
+  flex:0 0 auto !important;
+  min-width:70px !important;
+  min-height:38px !important;
+  padding:9px 14px !important;
+  font-size:11px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ═══ 4) إصلاح admin-tabs (يحتوي بالفعل على scroll) ═══
+   ═══════════════════════════════════════════════════════════ */
+.admin-tabs{
+  min-height:56px !important;
+}
+.admin-tabs .admin-tab{
+  min-width:90px !important;
+  min-height:40px !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  flex:0 0 auto !important;
+  visibility:visible !important;
+  opacity:1 !important;
+}
+.admin-tabs::-webkit-scrollbar{
+  height:7px !important;
+  display:block !important;
+}
+.admin-tabs::-webkit-scrollbar-thumb{
+  background:linear-gradient(90deg, var(--amber), var(--gold)) !important;
+  border-radius:100px !important;
+  border:1.5px solid var(--paper-2) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ═══ 5) Responsive — الشاشات الصغيرة ═══
+   ═══════════════════════════════════════════════════════════ */
+@media (max-width:380px){
+  .tab-chip,
+  .act-chip,
+  .clan-tab{
+    min-width:50px !important;
+    min-height:36px !important;
+    padding:9px 13px !important;
+    font-size:11px !important;
+  }
+  .tab-row,
+  .admin-content-tabs,
+  .clan-tabs{
+    padding:5px !important;
+    gap:5px !important;
+    min-height:52px !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ═══ 6) حل احتياطي: إذا كانت الصفحة تستخدم tab-row داخل حاوية مقيدة ═══
+   ═══════════════════════════════════════════════════════════ */
+.tab-row + .tab-row{
+  margin-top:6px !important;
+}
+
+/* ضمان ظهور المحتوى داخل الصفحات الناقصة */
+#s-battlepass-v2 .sub,
+#s-season-v2 .sub,
+#s-shop-v2 .sub,
+#s-missions-v2 .sub,
+#s-collection .sub,
+#s-cards .sub,
+#s-crafting .sub,
+#s-leaderboard .sub,
+#s-profile-v2 .sub,
+#s-achieve-v2 .sub,
+#s-avatar-edit .sub,
+#s-stats-v2 .sub{
+  display:flex !important;
+  flex-direction:column !important;
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  min-height:100% !important;
+  visibility:visible !important;
+  opacity:1 !important;
+}
+
+/* ضمان ظهور قوائم التبويبات في هذه الصفحات */
+#s-battlepass-v2 .bp-filters,
+#s-season-v2 .tab-row,
+#s-shop-v2 .tab-row,
+#s-missions-v2 .tab-row,
+#s-collection .tab-row,
+#s-cards .tab-row,
+#s-crafting .tab-row,
+#s-leaderboard .tab-row,
+#s-profile-v2 .tab-row,
+#s-achieve-v2 .tab-row,
+#s-avatar-edit .tab-row{
+  display:flex !important;
+  flex-wrap:nowrap !important;
+  overflow-x:auto !important;
+  visibility:visible !important;
+  opacity:1 !important;
+  flex-shrink:0 !important;
+}
+
+/* ============================================================
+   ═══════════ FLEX-SHRINK FIX — إصلاح انضغاط المحتوى ════════
+   ════════════════════════════════════════════════════════════
+   المشكلة: .sub = flex column، والأبناء flex-shrink: 1 افتراضياً
+            → عند وجود محتوى كثير في الأسفل، تضغط العناصر العلوية
+   الحل: flex-shrink: 0 لكل الأبناء المباشرين في .sub
+   ============================================================ */
+
+/* ═══════════════════════════════════════════════════════════
+   ═══ 1) منع انضغاط أي عنصر داخل .sub ═══
+   ═══════════════════════════════════════════════════════════ */
+.sub > *{
+  flex-shrink: 0 !important;
+}
+
+/* ═══ استثناءات: العناصر التي يجب أن تنمو فعلاً ═══ */
+.sub > .chips-row,
+.sub > #powerups-row,
+.sub > #synergy-row{
+  flex-shrink: 1 !important;
+  min-height: 0 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ═══ 2) ضمان عدم انضغاط العناصر الرئيسية (احتياطي) ═══
+   ═══════════════════════════════════════════════════════════ */
+
+/* شارات الأزياء والحاويات الرأسية */
+.season-card,
+.bp-hero-v2,
+.bp-premium-card,
+.bp-filters,
+.bp-tier-v3,
+.ach-hero-v2,
+.ach-hero-v3,
+.stats-hero-v2,
+.level-hero-v2,
+.level-hero-v3,
+.rank-hero-v2,
+.rank-hero-v3,
+.rank-path,
+.rank-card-v3,
+.profile-hero-v2,
+.mp-hero,
+.mp-code-card,
+.currency-card,
+.player-hero-merged,
+.player-card-hero,
+.challenge-card,
+.referral-hero,
+.ref-hero,
+.ref-code-card,
+.ref-ms-card,
+.friends-invite-box,
+.friend-card-v2,
+.clan-card-hero,
+.clan-member,
+.clan-list-item,
+.admin-hero-v3,
+.admin-hero,
+.admin-stats-grid,
+.admin-quick-grid,
+.admin-activity-feed,
+.admin-toggles,
+.admin-coins-panel-v3,
+.admin-coins-panel,
+.admin-tools-grid,
+.admin-add-btn,
+.admin-players-toolbar,
+.admin-players-list,
+.admin-system-panel,
+.admin-audit-toolbar,
+.admin-audit-list,
+.admin-preview-stage,
+.admin-preview-controls,
+.admin-events-grid,
+.admin-content-stats,
+.admin-section-head,
+.admin-content-list,
+.admin-content-item,
+.admin-modal,
+.shard-shop-item,
+.tcg-card,
+.inv-category,
+.inv-item,
+.chest-card,
+.chest-info,
+.wheel-stage,
+.wheel-info,
+.wheel-wrapper,
+.avatar-edit-preview,
+.cos-card,
+.skin-card,
+.mission-v2-card,
+.mission-card,
+.list-item,
+.bp-tier-row-v2,
+.bp-tier-row,
+.bp-reward-block,
+.rank-hero-stat,
+.rank-reward-row,
+.lvl-reward-card,
+.pstat,
+.stat-box,
+.over-stat,
+.sc-stat,
+.currency-card,
+.ev-mission,
+.daily-day-v2,
+.login-day,
+.tab-row,
+.admin-content-tabs,
+.clan-tabs,
+#powerup-tabs,
+#admin-tabs{
+  flex-shrink: 0 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ═══ 3) إصلاح .sub نفسه — لا يمنع النمو ═══
+   ═══════════════════════════════════════════════════════════ */
+.screen .sub{
+  height: auto !important;
+  min-height: 100% !important;
+  overflow: visible !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+}
+
+/* ✅ .screen نفسه هو المسؤول عن التمرير */
+.screen{
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+.screen.active{
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ═══ 4) إصلاح مشكلة "COLLECTION 154/33" المتداخلة ═══
+   ═══════════════════════════════════════════════════════════ */
+.ah2-val{
+  display: flex !important;
+  align-items: baseline !important;
+  gap: 6px !important;
+  flex-wrap: nowrap !important;
+  line-height: 1.1 !important;
+  min-height: 40px !important;
+  overflow: visible !important;
+}
+
+.ah2-val > span:first-child{
+  display: inline-block !important;
+  flex-shrink: 0 !important;
+}
+
+.ah2-val .of{
+  display: inline-flex !important;
+  align-items: baseline !important;
+  gap: 4px !important;
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ═══ 5) إصلاح hero الصفحات — ضمان ظهور النصوص ═══
+   ═══════════════════════════════════════════════════════════ */
+.season-card{
+  min-height: auto !important;
+  overflow: visible !important;
+  padding: 20px !important;
+}
+
+.season-card .sc-eyebrow,
+.season-card .sc-title,
+.season-card .sc-sub,
+.season-card .sc-row,
+.season-card .sc-stat{
+  flex-shrink: 0 !important;
+}
+
+.season-card .sc-title{
+  line-height: 1.3 !important;
+  padding: 2px 0 !important;
+}
+
+/* ═══ إصلاح .ach-hero-v2 — القيم الكبيرة ═══ */
+.ach-hero-v2{
+  min-height: 100px !important;
+  overflow: visible !important;
+  padding: 18px !important;
+}
+
+.ah2-info{
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  min-width: 0 !important;
+  flex: 1 !important;
+}
+
+.ah2-label{
+  flex-shrink: 0 !important;
+}
+
+.ah2-val{
+  font-size: 32px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ═══ 6) إصلاح admin-tabs — إزالة height الثابت ═══
+   ═══════════════════════════════════════════════════════════ */
+.admin-tabs{
+  height: auto !important;
+  min-height: 56px !important;
+  max-height: none !important;
+  flex-shrink: 0 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ═══ 7) إصلاح "UPGRADE SYSTEM" — season-card داخل powerups ═══
+   ═══════════════════════════════════════════════════════════ */
+#s-powerups .season-card{
+  min-height: 120px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  gap: 6px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ═══ 8) إصلاح shard-shop-item — منع الانضغاط ═══
+   ═══════════════════════════════════════════════════════════ */
+.shard-shop-item{
+  min-height: 80px !important;
+  flex-shrink: 0 !important;
+}
+
+.shard-shop-item .ssi-info{
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ═══ 9) إصلاحات إضافية للشاشات المعنية ═══
+   ═══════════════════════════════════════════════════════════ */
+
+/* شاشة Collections */
+#s-collection .sub,
+#s-cards .sub,
+#s-crafting .sub{
+  overflow-y: visible !important;
+}
+
+/* الحاويات الداخلية للشبكات */
+.cos-grid,
+.skin-grid,
+.shop-grid-v2,
+.cards-grid,
+.ach-v2-grid,
+.ach-grid,
+.inv-grid,
+.chest-grid,
+.badges-grid{
+  flex-shrink: 0 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ═══ 10) قائمة "الأصدقاء" والمحتوى الطويل ═══
+   ═══════════════════════════════════════════════════════════ */
+.friends-list,
+.lb-list,
+.ref-list,
+.clan-members-list,
+.admin-content-list,
+.mission-list{
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  flex-shrink: 0 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ═══ 11) إزالة أي height مقيد على العناصر التفاعلية ═══
+   ═══════════════════════════════════════════════════════════ */
+input, select, textarea, button{
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   ═══════════ LEVELS v3 — النظام الكامل ═════════════════════
+   ============================================================ */
+
+.lvl-hero-v3 {
+  position: relative;
+  padding: 26px 20px 22px;
+  border-radius: 26px;
+  background: linear-gradient(135deg, #1F0A20 0%, #4A2860 55%, #6A3890 100%);
+  color: #fff;
+  overflow: hidden;
+  box-shadow: 0 16px 46px rgba(74,40,96,.45);
+  border: 1px solid rgba(255,255,255,.08);
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.lvl-hero-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 25% 20%, rgba(232,179,78,.35), transparent 50%),
+    radial-gradient(circle at 80% 85%, rgba(160,100,255,.3), transparent 55%);
+  pointer-events: none;
+}
+
+/* حلقة المستوى */
+.lvl-ring-v3 {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  z-index: 1;
+}
+
+.lvl-ring-v3 svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 8px 28px rgba(232,179,78,.45));
+}
+
+.lvl-ring-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.lvl-ring-badge {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  opacity: .7;
+}
+
+.lvl-ring-num {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 68px;
+  font-weight: 800;
+  line-height: .9;
+  color: #fff;
+  text-shadow: 0 4px 24px rgba(232,179,78,.7);
+  letter-spacing: -2px;
+}
+
+.lvl-ring-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  opacity: .65;
+  margin-top: 4px;
+}
+
+/* اسم المستوى */
+.lvl-title-v3 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 8px 22px;
+  border-radius: 100px;
+  background: rgba(255,255,255,.14);
+  backdrop-filter: blur(12px);
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 2px 8px rgba(0,0,0,.3);
+}
+
+/* شريط التقدم */
+.lvl-progress-v3 {
+  width: 100%;
+  max-width: 320px;
+  position: relative;
+  z-index: 1;
+}
+
+.lvl-progress-info {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  opacity: .8;
+  margin-bottom: 8px;
+}
+
+.lvl-progress-bar-v3 {
+  height: 12px;
+  border-radius: 6px;
+  background: rgba(255,255,255,.12);
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,.25);
+}
+
+.lvl-progress-fill-v3 {
+  height: 100%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #E07A3F, #E8B34E, #FFE0A0);
+  box-shadow: 0 0 16px rgba(232,179,78,.7);
+  transition: width .8s cubic-bezier(.34,1.56,.64,1);
+  position: relative;
+}
+
+.lvl-progress-fill-v3::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 26px;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.85));
+  animation: lvlShine 2s ease-in-out infinite;
+}
+
+@keyframes lvlShine {
+  0% { opacity: 0; transform: translateX(-12px); }
+  50% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(12px); }
+}
+
+.lvl-progress-remaining {
+  text-align: center;
+  font-size: 11px;
+  opacity: .8;
+  margin-top: 8px;
+}
+
+.lvl-progress-remaining strong {
+  color: #FFE0A0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0 3px;
+}
+
+/* إحصائيات سريعة */
+.lvl-quick-stats-v3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  width: 100%;
+  max-width: 320px;
+  position: relative;
+  z-index: 1;
+}
+
+.lqs-item {
+  padding: 10px 6px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.1);
+  backdrop-filter: blur(8px);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lqs-ic { font-size: 16px; }
+.lqs-v {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #FFE0A0;
+  line-height: 1;
+}
+.lqs-k {
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  opacity: .7;
+  text-transform: uppercase;
+}
+
+/* بطاقة مكافأة المستوى */
+.lvl-reward-card-v3 {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 18px;
+  background: #fff;
+  border: 1.5px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 10px;
+  transition: all .25s cubic-bezier(.34,1.56,.64,1);
+  position: relative;
+  overflow: hidden;
+}
+
+.lvl-reward-card-v3.is-current {
+  border-color: var(--gold);
+  background: linear-gradient(135deg, #FFF9EC, #FBF1DC);
+  box-shadow: 0 8px 26px rgba(232,179,78,.3);
+  transform: scale(1.015);
+}
+
+.lvl-reward-card-v3.is-current::before {
+  content: '▶';
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  color: var(--gold);
+  font-size: 14px;
+  font-weight: 700;
+  animation: lvlArrowPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes lvlArrowPulse {
+  0%, 100% { opacity: 1; transform: translateX(0); }
+  50% { opacity: .5; transform: translateX(-3px); }
+}
+
+.lvl-reward-card-v3.is-unlocked {
+  border-color: rgba(107,155,107,.4);
+  background: linear-gradient(135deg, #F0F8F0, #E0F0E0);
+}
+
+.lvl-reward-card-v3.is-claimed {
+  opacity: .6;
+}
+
+.lrcv3-num {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: var(--paper-2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Space Grotesk', sans-serif;
+  flex-shrink: 0;
+  border: 2px solid transparent;
+  transition: all .25s;
+}
+
+.lvl-reward-card-v3.is-unlocked .lrcv3-num {
+  background: linear-gradient(135deg, #6B9B6B, #4A7B4A);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(107,155,107,.4);
+}
+
+.lvl-reward-card-v3.is-current .lrcv3-num {
+  background: linear-gradient(135deg, var(--gold), #F2C862);
+  color: #1A1512;
+  box-shadow: 0 6px 20px rgba(232,179,78,.5);
+  border-color: #fff;
+}
+
+.lrcv3-num .n {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+.lrcv3-num .k {
+  font-size: 7.5px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  opacity: .7;
+  margin-top: 2px;
+}
+
+.lrcv3-info {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+}
+
+.lrcv3-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.15;
+}
+
+.lrcv3-sub {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  color: var(--ink-mute);
+  margin-top: 3px;
+}
+
+.lrcv3-rewards {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.lrcv3-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 100px;
+  background: linear-gradient(135deg, #FFF9EC, #FBF1DC);
+  border: 1px solid rgba(232,179,78,.3);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #8A4A10;
+}
+
+.lrcv3-chip .c { color: var(--gold); }
+
+.lrcv3-action {
+  flex-shrink: 0;
+}
+
+.lrcv3-claim {
+  padding: 8px 16px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #6B9B6B, #4A7B4A);
+  color: #fff;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(107,155,107,.35);
+  transition: transform .15s;
+}
+
+.lrcv3-claim:active { transform: scale(.94); }
+
+.lrcv3-claimed {
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: var(--sage);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* بطاقة النمط */
+.lvl-mode-card {
+  padding: 16px;
+  border-radius: 18px;
+  background: #fff;
+  border: 1.5px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.lvl-mode-card::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 4px; height: 100%;
+  background: var(--mc, #888);
+}
+
+.lvl-mode-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.lvl-mode-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--mc);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 800;
+  box-shadow: inset 0 -4px 0 rgba(0,0,0,.15);
+  flex-shrink: 0;
+}
+
+.lvl-mode-info { flex: 1; }
+.lvl-mode-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.lvl-mode-en {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--mc);
+  margin-top: 2px;
+}
+
+.lvl-mode-level {
+  padding: 6px 14px;
+  border-radius: 100px;
+  background: var(--mc);
+  color: #fff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+}
+
+.lvl-mode-progress {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--paper-3);
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.lvl-mode-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--mc), var(--mc2, var(--mc)));
+  transition: width .6s;
+}
+
+.lvl-mode-meta {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10.5px;
+  color: var(--ink-mute);
+  font-weight: 700;
+}
+
+/* سجل المستويات */
+.lvl-history-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid var(--line);
+  margin-bottom: 8px;
+}
+
+.lvl-history-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--gold), #F2C862);
+  color: #1A1512;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(232,179,78,.35);
+}
+
+.lvl-history-info { flex: 1; text-align: right; }
+.lvl-history-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.lvl-history-time {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10px;
+  color: var(--ink-mute);
+  margin-top: 3px;
+}
+
+/* ============================================================
+   ═══════════ STATS v3 — النظام الكامل ══════════════════════
+   ============================================================ */
+
+.stx-hero {
+  position: relative;
+  padding: 22px 18px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #1F1A24 0%, #3A2A48 55%, #5A3080 100%);
+  color: #fff;
+  overflow: hidden;
+  box-shadow: 0 14px 40px rgba(26,21,18,.35);
+  margin-bottom: 18px;
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+.stx-hero-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 85% 15%, rgba(232,179,78,.4), transparent 55%),
+    radial-gradient(circle at 15% 85%, rgba(160,100,255,.25), transparent 55%);
+  pointer-events: none;
+}
+
+.stx-hero-top {
+  text-align: center;
+  position: relative;
+  z-index: 1;
+  margin-bottom: 16px;
+}
+
+.stx-hero-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  opacity: .65;
+  text-transform: uppercase;
+}
+
+.stx-hero-big {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 62px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -3px;
+  margin: 6px 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+}
+
+.stx-hero-big .unit {
+  font-size: 22px;
+  color: var(--gold);
+  letter-spacing: 0;
+}
+
+.stx-hero-sub {
+  font-size: 11.5px;
+  opacity: .75;
+}
+
+.stx-hero-sub strong {
+  color: #FFE0A0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  margin: 0 3px;
+}
+
+#stx-sparkline {
+  width: 100%;
+  height: 60px;
+  display: block;
+  margin: 8px 0 14px;
+  position: relative;
+  z-index: 1;
+}
+
+.stx-quick-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+.stx-q-item {
+  padding: 10px 6px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.1);
+  backdrop-filter: blur(8px);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.stx-q-item .k {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  opacity: .65;
+}
+
+.stx-q-item .v {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+/* بطاقات الإحصائيات */
+.stx-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.stx-card {
+  padding: 14px;
+  border-radius: 16px;
+  background: #fff;
+  border: 1.5px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.stx-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 3px;
+  background: var(--stx-c, var(--amber));
+  opacity: .9;
+}
+
+.stx-card-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--stx-c, var(--amber)) 15%, #fff);
+  color: var(--stx-c, var(--amber));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.stx-card-value {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.stx-card-value small {
+  font-size: 12px;
+  color: var(--ink-mute);
+  margin-right: 3px;
+}
+
+.stx-card-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--ink-mute);
+  text-transform: uppercase;
+}
+
+.stx-card-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 100px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  width: fit-content;
+}
+
+.stx-card-delta.up {
+  background: rgba(107,155,107,.15);
+  color: #4A7B4A;
+}
+
+.stx-card-delta.down {
+  background: rgba(193,74,74,.15);
+  color: #C14A4A;
+}
+
+/* canvas الرسم البياني */
+.stx-chart-wrap {
+  padding: 16px;
+  border-radius: 18px;
+  background: #fff;
+  border: 1.5px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 14px;
+}
+
+.stx-chart-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.stx-chart-title .t {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: .5px;
+}
+
+.stx-chart-title .s {
+  font-size: 9.5px;
+  font-weight: 800;
+  color: var(--ink-mute);
+  letter-spacing: 1.5px;
+}
+
+.stx-chart-wrap canvas {
+  display: block;
+  width: 100% !important;
+  height: 160px !important;
+  border-radius: 10px;
+}
+
+/* جدول الجولات */
+.stx-session-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid var(--line);
+  margin-bottom: 6px;
+  transition: transform .15s;
+}
+
+.stx-session-row:active { transform: scale(.98); }
+
+.stx-session-mode {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: #fff;
+  font-weight: 800;
+}
+
+.stx-session-info { text-align: right; min-width: 0; }
+.stx-session-title {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.stx-session-meta {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10px;
+  color: var(--ink-mute);
+  margin-top: 3px;
+}
+.stx-session-meters {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--amber);
+}
+.stx-session-coins {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+/* ============================================================
+   ═══════════ ACHIEVEMENTS v3 — النظام الكامل ═══════════════
+   ============================================================ */
+
+.achx-hero {
+  position: relative;
+  padding: 22px 18px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #3A1A10 0%, #7A3820 55%, #A05030 100%);
+  color: #fff;
+  overflow: hidden;
+  box-shadow: 0 14px 40px rgba(160,80,48,.45);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+.achx-hero-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 90% 20%, rgba(232,179,78,.45), transparent 55%),
+    radial-gradient(circle at 10% 80%, rgba(232,88,56,.25), transparent 55%);
+  pointer-events: none;
+}
+
+.achx-hero-ring {
+  position: relative;
+  width: 130px;
+  height: 130px;
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.achx-hero-ring svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 4px 20px rgba(232,179,78,.55));
+}
+
+.achx-hero-percent {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 2px 12px rgba(232,179,78,.7);
+  letter-spacing: -1px;
+}
+
+.achx-hero-info {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.achx-hero-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 3.5px;
+  opacity: .7;
+}
+
+.achx-hero-val {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1;
+  margin: 6px 0;
+  color: #FFE0A0;
+  text-shadow: 0 2px 8px rgba(0,0,0,.3);
+}
+
+.achx-hero-score {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 100px;
+  background: rgba(255,255,255,.12);
+  backdrop-filter: blur(8px);
+  width: fit-content;
+}
+
+.achx-hero-score .k {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: .75;
+}
+
+.achx-hero-score .v {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #FFE0A0;
+}
+
+/* شريط الملخص */
+.ach-summary-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.ach-sum-item {
+  padding: 10px 8px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1.5px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.ach-sum-item .k {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: .5px;
+  color: var(--ink-mute);
+}
+
+.ach-sum-item .v {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* الشبكة */
+.ach-v3-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+/* بطاقة الإنجاز */
+.ach-v3-card {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  background: #fff;
+  border: 1.5px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  transition: all .25s cubic-bezier(.34,1.56,.64,1);
+  position: relative;
+  overflow: hidden;
+}
+
+.ach-v3-card.is-unlocked {
+  background: linear-gradient(135deg, #FFF9EC, #FBF1DC);
+  border-color: rgba(232,179,78,.4);
+  box-shadow: 0 6px 22px rgba(232,179,78,.22);
+}
+
+.ach-v3-card.is-close {
+  border-color: rgba(74,136,200,.4);
+  background: linear-gradient(135deg, #F0F8FF, #E0F0FF);
+}
+
+.ach-v3-card.is-rare {
+  border-color: rgba(232,88,56,.5);
+  box-shadow: 0 6px 22px rgba(232,88,56,.2);
+}
+
+.ach-v3-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: var(--paper-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  flex-shrink: 0;
+  position: relative;
+  transition: all .3s;
+}
+
+.ach-v3-card.is-unlocked .ach-v3-icon {
+  background: linear-gradient(135deg, var(--gold), #F2C862);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(232,179,78,.45);
+  transform: scale(1.05);
+}
+
+.ach-v3-card.is-rare .ach-v3-icon {
+  background: linear-gradient(135deg, #E85838, #FF8060);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(232,88,56,.5);
+}
+
+.ach-v3-check {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #6B9B6B;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(107,155,107,.4);
+}
+
+.ach-v3-body { flex: 1; min-width: 0; text-align: right; }
+
+.ach-v3-name {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.15;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ach-v3-rarity-badge {
+  padding: 2px 8px;
+  border-radius: 100px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.ach-v3-desc {
+  font-size: 11.5px;
+  color: var(--ink-mute);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.ach-v3-progress-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--paper-3);
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.ach-v3-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--amber), var(--gold));
+  transition: width .4s;
+}
+
+.ach-v3-progress-fill.is-unlocked {
+  background: linear-gradient(90deg, #6B9B6B, #8AC88A);
+}
+
+.ach-v3-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ach-v3-progress-text {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--ink-mute);
+}
+
+.ach-v3-reward {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 100px;
+  background: linear-gradient(135deg, #FFF9EC, #FBF1DC);
+  border: 1px solid rgba(232,179,78,.35);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #8A4A10;
+}
+
+.ach-v3-reward .c { color: var(--gold); }
+
+/* ============================================================
+   ═══════════ SETTINGS v3 — النظام الكامل ═══════════════════
+   ============================================================ */
+
+.settings-section-v3 {
+  margin-bottom: 20px;
+}
+
+.settings-section-head-v3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 4px 12px;
+  border-bottom: 2px solid var(--line);
+  margin-bottom: 12px;
+}
+
+.settings-section-head-v3 .icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--amber), #F2A671);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 4px 14px rgba(224,122,63,.35);
+  flex-shrink: 0;
+}
+
+.settings-section-head-v3 .info { flex: 1; }
+.settings-section-head-v3 .title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: .3px;
+}
+.settings-section-head-v3 .sub {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 1.8px;
+  color: var(--ink-mute);
+  margin-top: 2px;
+  text-transform: uppercase;
+}
+
+/* صفوف الإعدادات */
+.setting-row-v3 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1.5px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 8px;
+  transition: all .2s;
+}
+
+.setting-row-v3.clickable {
+  cursor: pointer;
+}
+
+.setting-row-v3.clickable:active {
+  transform: scale(.98);
+  background: var(--paper);
+}
+
+.setting-row-v3.danger {
+  border-color: rgba(193,74,74,.35);
+  background: #FCF0F0;
+}
+
+.setting-row-v3.danger:active {
+  background: #F8E0E0;
+}
+
+.setting-row-v3 .srv3-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--paper-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.setting-row-v3 .srv3-info {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+}
+
+.setting-row-v3 .srv3-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.15;
+}
+
+.setting-row-v3 .srv3-desc {
+  font-size: 10.5px;
+  color: var(--ink-mute);
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+.setting-row-v3 .srv3-arrow {
+  color: var(--ink-mute);
+  font-size: 18px;
+  opacity: .5;
+  font-weight: 400;
+}
+
+/* Toggle Switch */
+.setting-toggle {
+  width: 50px;
+  height: 30px;
+  border-radius: 15px;
+  background: var(--paper-3);
+  position: relative;
+  cursor: pointer;
+  transition: background .25s;
+  flex-shrink: 0;
+}
+
+.setting-toggle.on {
+  background: linear-gradient(135deg, var(--amber), #F2A671);
+  box-shadow: 0 2px 10px rgba(224,122,63,.4);
+}
+
+.setting-toggle::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,.2);
+  transition: right .25s cubic-bezier(.34,1.56,.64,1);
+}
+
+.setting-toggle.on::after {
+  right: 23px;
+}
+
+/* Slider */
+.setting-slider-wrap {
+  padding: 14px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1.5px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 8px;
+}
+
+.setting-slider-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.setting-slider-head .label {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.setting-slider-head .value {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--amber);
+  padding: 3px 10px;
+  border-radius: 8px;
+  background: #FFF9EC;
+  border: 1px solid rgba(232,179,78,.3);
+  min-width: 52px;
+  text-align: center;
+}
+
+.setting-slider {
+  width: 100%;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--paper-3);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.setting-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--amber), #F2A671);
+  cursor: grab;
+  border: 3px solid #fff;
+  box-shadow: 0 3px 10px rgba(224,122,63,.4);
+  transition: transform .15s;
+}
+
+.setting-slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.15);
+}
+
+/* Pills للاختيار */
+.setting-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.setting-pill {
+  padding: 8px 14px;
+  border-radius: 100px;
+  border: 1.5px solid var(--line);
+  background: #fff;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all .2s;
+}
+
+.setting-pill:active { transform: scale(.95); }
+
+.setting-pill.active {
+  background: linear-gradient(135deg, var(--amber), #F2A671);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(224,122,63,.35);
+}
+
+/* بطاقة معلومات الحساب */
+.account-card-v3 {
+  padding: 20px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #1F1A24 0%, #3A2A48 60%, #5A3080 100%);
+  color: #fff;
+  margin-bottom: 14px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.08);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.account-card-v3::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(232,179,78,.35), transparent 70%);
+  pointer-events: none;
+}
+
+.acv3-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FFE0A0, #E8B34E);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  overflow: hidden;
+  border: 3px solid rgba(255,255,255,.3);
+  box-shadow: 0 8px 28px rgba(0,0,0,.35);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.acv3-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+.acv3-info { flex: 1; min-width: 0; position: relative; z-index: 1; text-align: right; }
+
+.acv3-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: .3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.acv3-provider {
+  font-size: 10px;
+  letter-spacing: 2px;
+  font-weight: 700;
+  opacity: .7;
+  margin-top: 4px;
+  text-transform: uppercase;
+}
+
+.acv3-uid {
+  font-family: 'Space Grotesk', monospace;
+  font-size: 10px;
+  opacity: .55;
+  margin-top: 6px;
+  letter-spacing: 1px;
+}
+
+/* بطاقة الخطر */
+.danger-zone {
+  padding: 16px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #3A1010, #6A2020);
+  color: #fff;
+  margin-top: 20px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255,80,80,.2);
+}
+
+.danger-zone::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,80,80,.25), transparent 70%);
+  pointer-events: none;
+}
+
+.danger-zone-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  margin-bottom: 6px;
+  position: relative;
+  z-index: 1;
+}
+
+.danger-zone-desc {
+  font-size: 11px;
+  opacity: .75;
+  line-height: 1.5;
+  margin-bottom: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.danger-zone-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+.danger-btn {
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,80,80,.35);
+  background: rgba(255,80,80,.15);
+  color: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all .2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.danger-btn:active {
+  transform: scale(.97);
+  background: rgba(255,80,80,.25);
+}
+
+.danger-btn.solid {
+  background: #C14A4A;
+  border-color: #C14A4A;
+  box-shadow: 0 4px 14px rgba(193,74,74,.4);
+}
+
+/* بطاقة عن */
+.about-card-v3 {
+  padding: 20px;
+  border-radius: 20px;
+  background: #fff;
+  border: 1.5px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+.about-brand {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.about-brand .accent { color: var(--amber); }
+
+.about-sub {
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--ink-mute);
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.about-version {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 100px;
+  background: linear-gradient(135deg, #FFF9EC, #FBF1DC);
+  border: 1px solid rgba(232,179,78,.35);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: #8A4A10;
+}
+
+.about-links {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.about-link {
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--paper);
+  border: 1.5px solid var(--line);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all .2s;
+}
+
+.about-link:active {
+  transform: scale(.96);
+  background: var(--paper-2);
+}
+
+/* إشعار حفظ الإعدادات */
+.settings-saved-toast {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  padding: 10px 20px;
+  border-radius: 100px;
+  background: rgba(107,155,107,.95);
+  color: #fff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgba(107,155,107,.4);
+  z-index: 99999;
+  opacity: 0;
+  transition: all .3s cubic-bezier(.34,1.56,.64,1);
+  pointer-events: none;
+}
+
+.settings-saved-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Responsive */
+@media (max-width: 380px) {
+  .lvl-ring-v3 { width: 170px; height: 170px; }
+  .lvl-ring-num { font-size: 56px; }
+  .stx-hero-big { font-size: 48px; }
+  .achx-hero { flex-direction: column; padding: 20px 16px; }
+  .achx-hero-ring { width: 110px; height: 110px; }
+  .achx-hero-val { font-size: 24px; }
+  .stx-quick-row { grid-template-columns: repeat(2, 1fr); }
+  .stx-grid { grid-template-columns: 1fr; }
+}

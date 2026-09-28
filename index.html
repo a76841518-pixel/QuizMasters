@@ -278,6 +278,7 @@
   <button class="act-chip active" data-act="skin">🎨 أزياء</button>
   <button class="act-chip" data-act="head">👑 رأس</button>
   <button class="act-chip" data-act="back">🦋 ظهر</button>
+  <button class="act-chip" data-act="shoes">👟 أحذية</button>
   <button class="act-chip" data-act="eyes">👁️ عيون</button>
   <button class="act-chip" data-act="trail">➰ خط سير</button>
   <button class="act-chip" data-act="spark">✨ شرار</button>
@@ -1139,99 +1140,251 @@
   </div>
 </div>
 
-<!-- ============ LEVEL PAGE ============ -->
+<!-- ============ LEVELS — النظام الكامل ============ -->
 <div class="screen" id="s-level">
   <div class="sub">
+
+    <!-- ═══ Hero ═══ -->
     <div class="sub-top">
       <button class="back-btn" data-back>←</button>
       <div>
-        <div class="sub-title">المستوى العام</div>
-        <div class="sub-eyebrow">GLOBAL LEVEL</div>
+        <div class="sub-title">نظام المستويات</div>
+        <div class="sub-eyebrow">LEVEL SYSTEM</div>
       </div>
       <div class="sub-spacer"></div>
+      <button class="admin-mini-btn" id="lvl-share-btn" title="مشاركة">📤</button>
     </div>
 
-    <div class="level-hero-v2">
-      <div class="lhv-ring">
-        <svg viewBox="0 0 120 120">
-          <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="8"/>
-          <circle cx="60" cy="60" r="52" fill="none" stroke="url(#lvlGrad)" stroke-width="8"
-                  stroke-dasharray="327" stroke-dashoffset="327" id="level-ring-progress"
-                  stroke-linecap="round" transform="rotate(-90 60 60)"/>
+    <!-- ─── البطاقة الرئيسية ─── -->
+    <div class="lvl-hero-v3">
+      <div class="lvl-hero-bg"></div>
+
+      <!-- حلقة المستوى الكبرى -->
+      <div class="lvl-ring-v3">
+        <svg viewBox="0 0 200 200">
+          <circle cx="100" cy="100" r="84" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="12"/>
+          <circle cx="100" cy="100" r="84" fill="none" stroke="url(#lvlGradV3)" stroke-width="12"
+                  stroke-dasharray="527" stroke-dashoffset="527" id="lvl-ring-fill"
+                  stroke-linecap="round" transform="rotate(-90 100 100)"/>
           <defs>
-            <linearGradient id="lvlGrad" x1="0" y1="0" x2="1" y2="1">
+            <linearGradient id="lvlGradV3" x1="0" y1="0" x2="1" y2="1">
               <stop offset="0%" stop-color="#E07A3F"/>
-              <stop offset="100%" stop-color="#E8B34E"/>
+              <stop offset="50%" stop-color="#E8B34E"/>
+              <stop offset="100%" stop-color="#FFD060"/>
             </linearGradient>
           </defs>
         </svg>
-        <div class="lhv-ring-inner">
-          <div class="lhv-num" id="level-page-num">1</div>
-          <div class="lhv-label">LEVEL</div>
+        <div class="lvl-ring-inner">
+          <div class="lvl-ring-badge">LVL</div>
+          <div class="lvl-ring-num" id="lvl-v3-num">1</div>
+          <div class="lvl-ring-label">المستوى العام</div>
         </div>
       </div>
 
-      <div class="lhv-stats">
-        <div class="lhv-stat">
-          <div class="k">المسافة الحالية</div>
-          <div class="v"><span id="level-current-m">0</span>م</div>
+      <!-- اسم المستوى المميز -->
+      <div class="lvl-title-v3" id="lvl-title-v3">🌱 مبتدئ</div>
+
+      <!-- شريط التقدم -->
+      <div class="lvl-progress-v3">
+        <div class="lvl-progress-info">
+          <span id="lvl-v3-current">0</span>
+          <span id="lvl-v3-next">50</span>
         </div>
-        <div class="lhv-stat">
-          <div class="k">المسافة للمستوى القادم</div>
-          <div class="v"><span id="level-next-m">0</span>م</div>
+        <div class="lvl-progress-bar-v3">
+          <div class="lvl-progress-fill-v3" id="lvl-v3-fill" style="width:0%"></div>
+        </div>
+        <div class="lvl-progress-remaining">
+          يتبقى <strong id="lvl-v3-remaining">50</strong> متر للمستوى القادم
+        </div>
+      </div>
+
+      <!-- إحصائيات سريعة -->
+      <div class="lvl-quick-stats-v3">
+        <div class="lqs-item">
+          <span class="lqs-ic">📏</span>
+          <span class="lqs-v" id="lvl-total-m">0</span>
+          <span class="lqs-k">متر</span>
+        </div>
+        <div class="lqs-item">
+          <span class="lqs-ic">🎮</span>
+          <span class="lqs-v" id="lvl-total-plays">0</span>
+          <span class="lqs-k">جولة</span>
+        </div>
+        <div class="lqs-item">
+          <span class="lqs-ic">⚡</span>
+          <span class="lqs-v" id="lvl-prestige">0</span>
+          <span class="lqs-k">هيبة</span>
         </div>
       </div>
     </div>
 
-    <div class="section-head">
-      <div class="section-title">المكافآت</div>
-      <div class="section-sub">REWARDS</div>
+    <!-- ─── تبويبات ─── -->
+    <div class="tab-row" id="lvl-tabs">
+      <button class="tab-chip active" data-lvltab="rewards">🎁 المكافآت</button>
+      <button class="tab-chip" data-lvltab="modes">🎮 الأنماط</button>
+      <button class="tab-chip" data-lvltab="history">📜 السجل</button>
+      <button class="tab-chip" data-lvltab="prestige">👑 الهيبة</button>
+      <button class="tab-chip" data-lvltab="milestones">🏁 المعالم</button>
     </div>
-    <div class="level-rewards-list" id="level-rewards-list"></div>
 
-    <div class="section-head" style="margin-top:18px;">
-      <div class="section-title">جميع المستويات</div>
-      <div class="section-sub">ALL LEVELS</div>
-    </div>
-    <div class="level-all-list" id="level-all-list"></div>
+    <!-- ─── محتوى التبويب ─── -->
+    <div id="lvl-content-v3"></div>
+
   </div>
 </div>
 
-<!-- ============ ADVANCED STATS ============ -->
+<!-- ============ STATS — النظام الكامل ============ -->
 <div class="screen" id="s-stats-v2">
   <div class="sub">
+
     <div class="sub-top">
       <button class="back-btn" data-back>←</button>
       <div>
-        <div class="sub-title">الإحصاءات</div>
-        <div class="sub-eyebrow">DEEP STATS</div>
+        <div class="sub-title">مركز الإحصائيات</div>
+        <div class="sub-eyebrow">STATS CENTER</div>
       </div>
       <div class="sub-spacer"></div>
+      <button class="admin-mini-btn" id="stats-export-btn" title="تصدير">📥</button>
     </div>
 
-    <div class="stats-hero-v2">
-      <div class="shv2-title">TOTAL DISTANCE</div>
-      <div class="shv2-big">
-        <span id="stats-total-m">0</span><span class="unit">م</span>
+    <!-- ─── Hero ─── -->
+    <div class="stx-hero">
+      <div class="stx-hero-bg"></div>
+      <div class="stx-hero-top">
+        <div class="stx-hero-label">TOTAL DISTANCE</div>
+        <div class="stx-hero-big">
+          <span id="stx-total-m">0</span>
+          <span class="unit">م</span>
+        </div>
+        <div class="stx-hero-sub">
+          عبر <strong id="stx-total-plays">0</strong> جولة · آخر تحديث <span id="stx-update-time">الآن</span>
+        </div>
       </div>
-      <div class="shv2-sub">عبر <span id="stats-total-plays">0</span> جولة</div>
-      <canvas id="stats-chart" width="320" height="100"></canvas>
+
+      <!-- Sparkline المصغّر -->
+      <canvas id="stx-sparkline" width="340" height="60"></canvas>
+
+      <!-- إحصائيات مضغوطة -->
+      <div class="stx-quick-row">
+        <div class="stx-q-item">
+          <span class="k">اليوم</span>
+          <span class="v" id="stx-today">0</span>
+        </div>
+        <div class="stx-q-item">
+          <span class="k">هذا الأسبوع</span>
+          <span class="v" id="stx-week">0</span>
+        </div>
+        <div class="stx-q-item">
+          <span class="k">هذا الشهر</span>
+          <span class="v" id="stx-month">0</span>
+        </div>
+        <div class="stx-q-item">
+          <span class="k">الأفضل</span>
+          <span class="v" id="stx-best">0</span>
+        </div>
+      </div>
     </div>
 
-    <div class="tab-row" id="stats-tabs">
-      <button class="tab-chip active" data-statstab="overview">نظرة عامة</button>
-      <button class="tab-chip" data-statstab="modes">الأنماط</button>
-      <button class="tab-chip" data-statstab="records">الأرقام</button>
-      <button class="tab-chip" data-statstab="progress">التقدم</button>
+    <!-- ─── تبويبات ─── -->
+    <div class="tab-row" id="stats-v3-tabs">
+      <button class="tab-chip active" data-statv3="overview">📊 عام</button>
+      <button class="tab-chip" data-statv3="modes">🎮 الأنماط</button>
+      <button class="tab-chip" data-statv3="sessions">📜 الجولات</button>
+      <button class="tab-chip" data-statv3="charts">📈 الرسوم</button>
+      <button class="tab-chip" data-statv3="records">🏆 الأرقام</button>
+      <button class="tab-chip" data-statv3="comparison">⚖️ المقارنة</button>
     </div>
 
-    <div id="stats-content"></div>
+    <div id="stx-content-v3"></div>
+
   </div>
 </div>
 
-<!-- ============ ADVANCED SETTINGS ============ -->
+<!-- ============ ACHIEVEMENTS — النظام الكامل ============ -->
+<div class="screen" id="s-achieve-v2">
+  <div class="sub">
+
+    <div class="sub-top">
+      <button class="back-btn" data-back>←</button>
+      <div>
+        <div class="sub-title">الإنجازات</div>
+        <div class="sub-eyebrow">ACHIEVEMENTS</div>
+      </div>
+      <div class="sub-spacer"></div>
+      <button class="admin-mini-btn" id="ach-share-btn" title="مشاركة">📤</button>
+    </div>
+
+    <!-- ─── Hero ─── -->
+    <div class="achx-hero">
+      <div class="achx-hero-bg"></div>
+
+      <div class="achx-hero-ring">
+        <svg viewBox="0 0 140 140">
+          <circle cx="70" cy="70" r="58" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="10"/>
+          <circle cx="70" cy="70" r="58" fill="none" stroke="url(#achxGrad)" stroke-width="10"
+                  stroke-dasharray="364" stroke-dashoffset="364" id="achx-ring-fill"
+                  stroke-linecap="round" transform="rotate(-90 70 70)"/>
+          <defs>
+            <linearGradient id="achxGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#E8B34E"/>
+              <stop offset="100%" stop-color="#E85838"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <div class="achx-hero-percent" id="achx-percent">0%</div>
+      </div>
+
+      <div class="achx-hero-info">
+        <div class="achx-hero-label">COMPLETION</div>
+        <div class="achx-hero-val">
+          <span id="achx-unlocked">0</span> / <span id="achx-total">0</span>
+        </div>
+        <div class="achx-hero-score">
+          <span class="k">نقاط الإنجاز</span>
+          <span class="v" id="achx-points">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── شريط التصنيفات ─── -->
+    <div class="tab-row" id="ach-v3-tabs">
+      <button class="tab-chip active" data-achv3="all">الكل</button>
+      <button class="tab-chip" data-achv3="recent">🆕 حديثة</button>
+      <button class="tab-chip" data-achv3="close">⚡ قريبة</button>
+      <button class="tab-chip" data-achv3="locked">🔒 مقفلة</button>
+      <button class="tab-chip" data-achv3="progression">📈 التقدم</button>
+      <button class="tab-chip" data-achv3="skill">🎯 المهارة</button>
+      <button class="tab-chip" data-achv3="mode">🎮 الأنماط</button>
+      <button class="tab-chip" data-achv3="shift">◆ التحولات</button>
+      <button class="tab-chip" data-achv3="collection">💎 المجموعة</button>
+      <button class="tab-chip" data-achv3="secret">❓ سرية</button>
+    </div>
+
+    <!-- ─── شريط الملخص ─── -->
+    <div class="ach-summary-row">
+      <div class="ach-sum-item">
+        <span class="k">🆕 حديثة</span>
+        <span class="v" id="achx-recent-count">0</span>
+      </div>
+      <div class="ach-sum-item">
+        <span class="k">⚡ قريبة</span>
+        <span class="v" id="achx-close-count">0</span>
+      </div>
+      <div class="ach-sum-item">
+        <span class="k">⭐ نادرة</span>
+        <span class="v" id="achx-rare-count">0</span>
+      </div>
+    </div>
+
+    <div class="ach-v3-grid" id="achx-grid"></div>
+
+  </div>
+</div>
+
+<!-- ============ SETTINGS — النظام الكامل ============ -->
 <div class="screen" id="s-settings-v2">
   <div class="sub">
+
     <div class="sub-top">
       <button class="back-btn" data-back>←</button>
       <div>
@@ -1239,8 +1392,23 @@
         <div class="sub-eyebrow">SETTINGS</div>
       </div>
       <div class="sub-spacer"></div>
+      <button class="admin-mini-btn" id="settings-search-btn" title="بحث">🔍</button>
     </div>
-    <div id="settings-content"></div>
+
+    <!-- ─── تبويبات الأقسام ─── -->
+    <div class="tab-row" id="settings-v3-tabs">
+      <button class="tab-chip active" data-settab="account">👤 الحساب</button>
+      <button class="tab-chip" data-settab="audio">🔊 الصوت</button>
+      <button class="tab-chip" data-settab="graphics">🎨 الرسوميات</button>
+      <button class="tab-chip" data-settab="gameplay">🎮 اللعب</button>
+      <button class="tab-chip" data-settab="notifications">🔔 الإشعارات</button>
+      <button class="tab-chip" data-settab="privacy">🔒 الخصوصية</button>
+      <button class="tab-chip" data-settab="data">💾 البيانات</button>
+      <button class="tab-chip" data-settab="about">ℹ️ حول</button>
+    </div>
+
+    <div id="settings-v3-content"></div>
+
   </div>
 </div>
 
@@ -1338,6 +1506,7 @@
   <button class="tab-chip active" data-shopcat="skins">🎨 الأزياء</button>
   <button class="tab-chip" data-shopcat="head">👑 الرأس</button>
   <button class="tab-chip" data-shopcat="back">🦋 الظهر</button>
+  <button class="tab-chip" data-shopcat="shoes">👟 الأحذية</button>
   <button class="tab-chip" data-shopcat="eyes">👁️ العيون</button>
   <button class="tab-chip" data-shopcat="trail">➰ خط السير</button>
   <button class="tab-chip" data-shopcat="spark">✨ الشرار</button>
@@ -1499,43 +1668,6 @@
     </div>
 
     <div id="lb-list" class="lb-list"></div>
-  </div>
-</div>
-
-<!-- ============ ACHIEVEMENTS v2 ============ -->
-<div class="screen" id="s-achieve-v2">
-  <div class="sub">
-    <div class="sub-top">
-      <button class="back-btn" data-back>←</button>
-      <div>
-        <div class="sub-title">الإنجازات</div>
-        <div class="sub-eyebrow">ACHIEVEMENTS</div>
-      </div>
-      <div class="sub-spacer"></div>
-    </div>
-
-    <div class="ach-hero-v2">
-      <div class="ah2-icon">🏆</div>
-      <div class="ah2-info">
-        <div class="ah2-label">مفتوحة</div>
-        <div class="ah2-val">
-          <span id="ach-v2-unlocked">0</span>
-          <span class="of">/ <span id="ach-v2-total">0</span></span>
-        </div>
-      </div>
-    </div>
-
-    <div class="tab-row" id="ach-v2-tabs">
-      <button class="tab-chip active" data-achcat="all">الكل</button>
-      <button class="tab-chip" data-achcat="progression">📈 التقدم</button>
-      <button class="tab-chip" data-achcat="skill">🎯 المهارة</button>
-      <button class="tab-chip" data-achcat="mode">🎮 الأنماط</button>
-      <button class="tab-chip" data-achcat="shift">◆ التحولات</button>
-      <button class="tab-chip" data-achcat="collection">💎 المجموعة</button>
-      <button class="tab-chip" data-achcat="secret">❓ سرية</button>
-    </div>
-
-    <div class="ach-v2-grid" id="ach-v2-grid"></div>
   </div>
 </div>
 
@@ -1974,6 +2106,7 @@
 <div class="tab-row" id="cos-tabs">
   <button class="tab-chip active" data-cat="head">👑 الرأس</button>
   <button class="tab-chip" data-cat="back">🦋 الظهر</button>
+  <button class="tab-chip" data-cat="shoes">👟 الأحذية</button>
   <button class="tab-chip" data-cat="eyes">👁️ العيون</button>
   <button class="tab-chip" data-cat="trail">➰ خط السير</button>
   <button class="tab-chip" data-cat="spark">✨ الشرار</button>
@@ -2479,6 +2612,7 @@
       <button class="tab-chip active" data-colcat="skins">🎨 أزياء</button>
       <button class="tab-chip" data-colcat="head">👑 رأس</button>
       <button class="tab-chip" data-colcat="back">🦋 ظهر</button>
+      <button class="tab-chip" data-colcat="shoes">👟 أحذية</button>
       <button class="tab-chip" data-colcat="eyes">👁️ عيون</button>
       <button class="tab-chip" data-colcat="trail">➰ خط سير</button>
       <button class="tab-chip" data-colcat="spark">✨ شرار</button>

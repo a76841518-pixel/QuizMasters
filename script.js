@@ -874,6 +874,9 @@ const COSMETICS = {
   { id:'cat',       name:'قطة',       price:700,  desc:'عيون قطة' },
   { id:'void',      name:'فراغ',      price:1200, desc:'لا شيء' }
 ],
+shoes: [
+  { id:'none', name:'بدون', price:0, desc:'لا حذاء' }
+],
 companion: [
   { id:'none',        name:'بدون',        price:0,    desc:'لا رفيق' },
   { id:'star',        name:'نجمة',        price:500,  desc:'نجمة تلمع' },
@@ -1890,6 +1893,7 @@ function _getCurrentCosmetic(category){
 /* ═══ التأثيرات (9) ═══ */
 const currentHead   = () => _getCurrentCosmetic('head');
 const currentBack   = () => _getCurrentCosmetic('back');
+const currentShoes  = () => _getCurrentCosmetic('shoes');   /* ← جديد */
 const currentEyes   = () => _getCurrentCosmetic('eyes');
 const currentTrail  = () => _getCurrentCosmetic('trail');
 const currentSpark  = () => _getCurrentCosmetic('spark');
@@ -2741,6 +2745,7 @@ cosmetics: {
     /* ═══ التأثيرات (9) ═══ */
     head:   ['none'],
     back:   ['none'],
+    shoes:  ['none'],   /* ← جديد */
     eyes:   ['none'],
     trail:  ['none'],
     spark:  ['none'],
@@ -2759,6 +2764,7 @@ cosmetics: {
     /* ═══ التأثيرات (9) ═══ */
     head:   'none',
     back:   'none',
+    shoes:  'none',     /* ← جديد */
     eyes:   'none',
     trail:  'none',
     spark:  'none',
@@ -2905,7 +2911,7 @@ if(!this.data.cosmetics.current) this.data.cosmetics.current = {};
 /* ═══ قائمة ثابتة محلية — لا تعتمد على ترتيب التعريف ═══ */
 const V3_CATEGORIES_LOCAL = [
   /* التأثيرات (9) */
-  'head','back','eyes','trail','spark','jump','spawn','revive','death',
+  'head','back','shoes','eyes','trail','spark','jump','spawn','revive','death',
   /* الجماليات (5) */
   'avatar','avatarFrame','banner','nameTag','badge'
 ];
@@ -3216,6 +3222,19 @@ head: {
       onFace: true                 /* يُرسم فوق الوجه (فقط إن لم يكن الجسم صورة) */
     }
   },
+  shoes: {
+  label:'الأحذية', en:'SHOES', icon:'👟', folder:'shoes',
+  color:'#8B4513', order:2.5, group:'effect',
+  desc:'حذاء أو أقدام — تُرسم أسفل الشخصية',
+  render: {
+    anchor:{ x:0.5, y:0.5 },   /* مرتكز في المنتصف */
+    sizeMul: 1.8,               /* مضاعف نصف قطر اللاعب */
+    offsetY: 1.15,              /* إزاحة للأسفل */
+    offsetX: 0,
+    rotationAmp: 0,
+    rotationSpeed: 0
+  }
+},
   trail: {
     label:'خط السير', en:'TRAIL', icon:'➰', folder:'trail',
     color:'#6B9B6B', order:4, group:'effect',
@@ -11051,6 +11070,28 @@ if(!skipExtras){
     }
     c.restore();
   }
+
+  /* ═══ طبقة 1.7: الأحذية (فوق الأقدام) ═══ */
+if(!skipExtras){
+  const shoes = currentShoes();
+  if(shoes && shoes.id !== 'none' && hasItemImage(shoes)){
+    const cfg = getCategoryConfig('shoes').render;
+    const custom = shoes.render || {};
+
+    /* نفس موضع الأقدام الافتراضية في drawCharacterFeet */
+    const footY = r * 1.20;
+
+    ASSET.drawItem(c, shoes, {
+      x: (custom.offsetX ?? 0) * r,
+      y: footY + r * (custom.offsetY ?? cfg.offsetY ?? 1.15),
+      size: r * (custom.sizeMul ?? cfg.sizeMul ?? 1.8),
+      anchorX: custom.anchorX ?? cfg.anchor.x,
+      anchorY: custom.anchorY ?? cfg.anchor.y,
+      rotation: Math.sin(t * (custom.rotationSpeed ?? 0))
+              * (custom.rotationAmp ?? 0)
+    });
+  }
+}
 
 /* ═══ طبقة 2: العيون ═══ */
 const skinIsImage = hasItemImage(skin);
@@ -19574,6 +19615,7 @@ const ALL_CUSTOM_KEYS = [
   /* ═══ التأثيرات (9) ═══ */
   'customHead',
   'customBack',
+  'customShoes',   /* ← جديد */
   'customEyes',
   'customTrail',
   'customSpark',
@@ -24657,6 +24699,7 @@ async preloadPlayerAssets(){
   add(currentSkin());
   add(currentHead());
   add(currentBack());
+  add(currentShoes());   /* ← جديد */
   add(currentEyes());
   add(currentTrail());
   add(currentSpark());
@@ -37226,6 +37269,5367 @@ ${MODES.map(m => `
   console.log('  • "Room" → "Arena" naming');
   console.log('  • Enhanced waiting lobby');
   console.log('  • Host features (kick, lock, broadcast, best-of)');
+
+})();
+
+/* ============================================================
+   ═══════════════════════════════════════════════════════════
+   ═══════════ SHIFT v3.0 — SYSTEMS OVERHAUL ═══════════════
+   ═══════════════════════════════════════════════════════════
+   تطوير شامل للأنظمة الأربعة:
+   - المستويات (Levels)
+   - الإحصائيات (Stats)
+   - الإنجازات (Achievements)
+   - الإعدادات (Settings)
+   ============================================================ */
+
+(function systemsOverhaulV3(){
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══════════ 1) نظام المستويات المتطور ═════════════════
+     ═══════════════════════════════════════════════════════════ */
+
+  /* ═══ جداول المستويات الموسّعة ═══ */
+  const LEVEL_TITLES = [
+    { min: 1,  max: 4,   icon: '🌱', name: 'مبتدئ',        color: '#8B8278' },
+    { min: 5,  max: 9,   icon: '🧭', name: 'مستكشف',       color: '#4A88C8' },
+    { min: 10, max: 14,  icon: '⚔️', name: 'محارب',        color: '#9A6AC8' },
+    { min: 15, max: 19,  icon: '🎖️', name: 'خبير',         color: '#E8B34E' },
+    { min: 20, max: 24,  icon: '👑', name: 'أسطورة',       color: '#E85838' },
+    { min: 25, max: 29,  icon: '🌟', name: 'أيقونة',       color: '#FFD060' },
+    { min: 30, max: 999, icon: '⚡', name: 'أسطورة خالدة', color: '#FFE0A0' }
+  ];
+
+  const LEVEL_MILESTONES = [
+    { level: 5,   icon: '🎁', title: 'أول إنجاز',         desc: 'وصلت للمستوى 5' },
+    { level: 10,  icon: '⚔️', title: 'المحارب',           desc: 'وصلت للمستوى 10' },
+    { level: 15,  icon: '🎖️', title: 'الخبير',            desc: 'وصلت للمستوى 15' },
+    { level: 20,  icon: '👑', title: 'الأسطورة',          desc: 'وصلت للمستوى 20' },
+    { level: 25,  icon: '🌟', title: 'الأيقونة',          desc: 'وصلت للمستوى 25' },
+    { level: 30,  icon: '⚡', title: 'أسطورة خالدة',      desc: 'وصلت للمستوى 30' },
+    { level: 50,  icon: '💎', title: 'الألماس',           desc: 'وصلت للمستوى 50' },
+    { level: 75,  icon: '🏆', title: 'نصف المئوية',       desc: 'وصلت للمستوى 75' },
+    { level: 100, icon: '🌌', title: 'المئة الذهبية',     desc: 'وصلت للمستوى 100' }
+  ];
+
+  /* ═══ حالة المستويات v3 ═══ */
+  const LevelsV3 = {
+    tab: 'rewards',
+    history: [],
+
+    /* احسب المستوى الحالي */
+    getCurrentLevel(){
+      return (typeof getGlobalLevel === 'function') ? getGlobalLevel() + 1 : 1;
+    },
+
+    /* احسب الاسم المميز للمستوى */
+    getLevelTitle(level){
+      for(const t of LEVEL_TITLES){
+        if(level >= t.min && level <= t.max) return t;
+      }
+      return LEVEL_TITLES[LEVEL_TITLES.length - 1];
+    },
+
+    /* احسب التقدم الكامل */
+    getProgress(){
+      const totalM = (typeof getGlobalMeters === 'function') ? getGlobalMeters() : 0;
+      const lvl = this.getCurrentLevel();
+      const thresholds = (typeof GLOBAL_LEVEL_THRESHOLDS !== 'undefined')
+        ? GLOBAL_LEVEL_THRESHOLDS
+        : [0, 50, 150, 350, 700, 1200, 1900, 2900, 4200, 5900];
+
+      const current = thresholds[lvl - 1] || 0;
+      const next = thresholds[lvl] || (current + 5000);
+      const progress = Math.min(1, (totalM - current) / (next - current));
+
+      return {
+        level: lvl,
+        totalM,
+        current,
+        next,
+        remaining: Math.max(0, next - totalM),
+        progress,
+        percent: Math.round(progress * 100)
+      };
+    },
+
+    /* احسب الهيبة */
+    getPrestige(){
+      /* الهيبة = عدد المرات التي وصل فيها اللاعب لمستوى 30 */
+      return Save.data.prestige || 0;
+    },
+
+    /* جلب سجل ترقيات المستويات */
+    getHistory(){
+      return Save.data.levelHistory || [];
+    },
+
+    /* سجّل ترقية */
+    recordLevelUp(level){
+      if(!Save.data.levelHistory) Save.data.levelHistory = [];
+      Save.data.levelHistory.unshift({
+        level,
+        time: Date.now(),
+        totalM: (typeof getGlobalMeters === 'function') ? getGlobalMeters() : 0
+      });
+      if(Save.data.levelHistory.length > 50){
+        Save.data.levelHistory = Save.data.levelHistory.slice(0, 50);
+      }
+      Save.save();
+    }
+  };
+
+  /* ═══ الصفحة الرئيسية للمستويات ═══ */
+  window.buildLevelPage = function(){
+    const screen = document.getElementById('s-level');
+    if(!screen) return;
+
+    const prog = LevelsV3.getProgress();
+    const title = LevelsV3.getLevelTitle(prog.level);
+    const stats = Save.data.stats || {};
+    const prestige = LevelsV3.getPrestige();
+
+    /* Hero */
+    const numEl = document.getElementById('lvl-v3-num');
+    if(numEl) numEl.textContent = prog.level;
+
+    const titleEl = document.getElementById('lvl-title-v3');
+    if(titleEl){
+      titleEl.textContent = title.icon + ' ' + title.name;
+      titleEl.style.color = title.color;
+    }
+
+    /* الحلقة */
+    const ringFill = document.getElementById('lvl-ring-fill');
+    if(ringFill){
+      const circumference = 2 * Math.PI * 84;
+      ringFill.style.strokeDasharray = circumference;
+      ringFill.style.strokeDashoffset = circumference * (1 - prog.progress);
+      ringFill.style.transition = 'stroke-dashoffset 1s cubic-bezier(.34,1.56,.64,1)';
+    }
+
+    /* شريط التقدم */
+    const currentEl = document.getElementById('lvl-v3-current');
+    const nextEl = document.getElementById('lvl-v3-next');
+    const fillEl = document.getElementById('lvl-v3-fill');
+    const remainEl = document.getElementById('lvl-v3-remaining');
+
+    if(currentEl) currentEl.textContent = Math.round(prog.current).toLocaleString();
+    if(nextEl) nextEl.textContent = Math.round(prog.next).toLocaleString();
+    if(fillEl) fillEl.style.width = (prog.percent) + '%';
+    if(remainEl) remainEl.textContent = Math.round(prog.remaining).toLocaleString();
+
+    /* الإحصائيات السريعة */
+    const totalMEl = document.getElementById('lvl-total-m');
+    const totalPlaysEl = document.getElementById('lvl-total-plays');
+    const prestigeEl = document.getElementById('lvl-prestige');
+
+    if(totalMEl) totalMEl.textContent = Math.round(prog.totalM).toLocaleString();
+    if(totalPlaysEl) totalPlaysEl.textContent = (stats.totalPlays || 0).toLocaleString();
+    if(prestigeEl) prestigeEl.textContent = prestige;
+
+    /* تبويبات */
+    document.querySelectorAll('#lvl-tabs .tab-chip').forEach(tab => {
+      if(tab._bound) return;
+      tab._bound = true;
+      tab.addEventListener('click', () => {
+        LevelsV3.tab = tab.dataset.lvltab;
+        document.querySelectorAll('#lvl-tabs .tab-chip').forEach(t =>
+          t.classList.toggle('active', t === tab));
+        renderLvlContent();
+        Sfx.tap(); haptic(4);
+      });
+    });
+
+    renderLvlContent();
+
+    /* ربط زر المشاركة */
+    const shareBtn = document.getElementById('lvl-share-btn');
+    if(shareBtn && !shareBtn._bound){
+      shareBtn._bound = true;
+      shareBtn.addEventListener('click', () => {
+        const text = `⚡ وصلت للمستوى ${prog.level} في SHIFT! ${title.icon} ${title.name}`;
+        if(navigator.share){
+          navigator.share({ title: 'SHIFT', text }).catch(()=>{});
+        } else {
+          navigator.clipboard.writeText(text).then(() => {
+            Toast.success('تم النسخ!', text);
+          });
+        }
+      });
+    }
+  };
+
+  /* ═══ محتوى التبويب ═══ */
+  function renderLvlContent(){
+    const c = document.getElementById('lvl-content-v3');
+    if(!c) return;
+    c.innerHTML = '';
+
+    switch(LevelsV3.tab){
+      case 'rewards':    renderLvlRewards(c); break;
+      case 'modes':      renderLvlModes(c);   break;
+      case 'history':    renderLvlHistory(c); break;
+      case 'prestige':   renderLvlPrestige(c);break;
+      case 'milestones': renderLvlMilestones(c); break;
+    }
+  }
+
+  /* ─── المكافآت ─── */
+  function renderLvlRewards(container){
+    const prog = LevelsV3.getProgress();
+    const thresholds = (typeof GLOBAL_LEVEL_THRESHOLDS !== 'undefined')
+      ? GLOBAL_LEVEL_THRESHOLDS : [];
+
+    /* اعرض 12 مستوى حول المستوى الحالي */
+    const start = Math.max(1, prog.level - 3);
+    const end = Math.min(thresholds.length, prog.level + 9);
+
+    for(let i = start; i <= end; i++){
+      const lvl = i;
+      const threshold = thresholds[i - 1] || (i * 500);
+      const reward = (typeof levelRewardFor === 'function')
+        ? levelRewardFor(i - 1) : { coins: 20 + (i - 1) * 15 };
+
+      const isCurrent = i === prog.level;
+      const isUnlocked = prog.totalM >= threshold;
+      const isClaimed = (Save.data.claimedGlobalLevels || []).includes(i - 1);
+
+      const card = document.createElement('div');
+      card.className = 'lvl-reward-card-v3';
+      if(isCurrent) card.classList.add('is-current');
+      else if(isClaimed) card.classList.add('is-claimed');
+      else if(isUnlocked) card.classList.add('is-unlocked');
+
+      card.innerHTML = `
+        <div class="lrcv3-num">
+          <span class="n">${i}</span>
+          <span class="k">LVL</span>
+        </div>
+        <div class="lrcv3-info">
+          <div class="lrcv3-title">
+            المستوى ${i}
+            ${isCurrent ? ' · الحالي' : ''}
+          </div>
+          <div class="lrcv3-sub">${threshold.toLocaleString()} متر</div>
+          <div class="lrcv3-rewards">
+            <span class="lrcv3-chip"><span class="c">​🪙</span> +${reward.coins}</span>
+            ${i % 5 === 0 ? '<span class="lrcv3-chip">🎁 عنصر</span>' : ''}
+            ${i % 10 === 0 ? '<span class="lrcv3-chip">💎 جواهر</span>' : ''}
+          </div>
+        </div>
+        <div class="lrcv3-action">
+          ${isClaimed
+            ? '<div class="lrcv3-claimed">✓ مُستلم</div>'
+            : isUnlocked
+              ? `<button class="lrcv3-claim" data-lvlv3="${i - 1}">استلام</button>`
+              : `<span style="font-size:20px;opacity:.4;">🔒</span>`
+          }
+        </div>
+      `;
+
+      const btn = card.querySelector('[data-lvlv3]');
+      if(btn){
+        btn.addEventListener('click', () => claimLvlReward(i - 1, reward.coins));
+      }
+
+      container.appendChild(card);
+    }
+  }
+
+  function claimLvlReward(levelIdx, coins){
+    if((Save.data.claimedGlobalLevels || []).includes(levelIdx)) return;
+    if(!Save.data.claimedGlobalLevels) Save.data.claimedGlobalLevels = [];
+    Save.data.claimedGlobalLevels.push(levelIdx);
+
+    addCoins(coins, `مكافأة مستوى ${levelIdx + 1}`);
+
+    Save.save();
+    Sfx.reward(); haptic(20);
+    Toast.reward('🎁', `مستوى ${levelIdx + 1}`, `​🪙 +${coins}`);
+    updateCoinsUI();
+    renderLvlContent();
+  }
+
+  /* ─── الأنماط ─── */
+  function renderLvlModes(container){
+    const MODE_THRESHOLDS = (typeof MODE_LEVEL_THRESHOLDS !== 'undefined')
+      ? MODE_LEVEL_THRESHOLDS : [0, 40, 120, 250, 450, 750];
+    const modes = (typeof MODES !== 'undefined') ? MODES : [];
+
+    modes.forEach(m => {
+      if(m.id === 'MIXED') return;
+
+      const bestM = (Save.data.bestMeters && Save.data.bestMeters[m.id]) || 0;
+      const lvl = (typeof levelFromMeters === 'function')
+        ? levelFromMeters(bestM, MODE_THRESHOLDS) + 1 : 1;
+
+      const currentThreshold = MODE_THRESHOLDS[lvl - 1] || 0;
+      const nextThreshold = MODE_THRESHOLDS[lvl] || (currentThreshold + 500);
+      const progress = Math.min(1, (bestM - currentThreshold) / (nextThreshold - currentThreshold));
+
+      const card = document.createElement('div');
+      card.className = 'lvl-mode-card';
+      card.style.setProperty('--mc', m.color);
+      card.style.setProperty('--mc2', m.color);
+
+      card.innerHTML = `
+        <div class="lvl-mode-head">
+          <div class="lvl-mode-icon">${m.icon}</div>
+          <div class="lvl-mode-info">
+            <div class="lvl-mode-name">${m.ar}</div>
+            <div class="lvl-mode-en">${m.en}</div>
+          </div>
+          <div class="lvl-mode-level">LVL ${lvl}</div>
+        </div>
+        <div class="lvl-mode-progress">
+          <div class="lvl-mode-fill" style="width:${progress * 100}%"></div>
+        </div>
+        <div class="lvl-mode-meta">
+          <span>${Math.round(bestM).toLocaleString()}م</span>
+          <span>التالي: ${nextThreshold.toLocaleString()}م</span>
+        </div>
+      `;
+
+      container.appendChild(card);
+    });
+  }
+
+  /* ─── السجل ─── */
+  function renderLvlHistory(container){
+    const history = LevelsV3.getHistory();
+
+    if(history.length === 0){
+      container.innerHTML = `
+        <div style="text-align:center;padding:60px 20px;color:var(--ink-mute);">
+          <div style="font-size:60px;opacity:.25;margin-bottom:12px;">📜</div>
+          <div style="font-size:14px;font-weight:800;">لا يوجد سجل بعد</div>
+          <div style="font-size:11.5px;margin-top:6px;">ابدأ اللعب لترقية مستواك</div>
+        </div>
+      `;
+      return;
+    }
+
+    history.slice(0, 30).forEach(h => {
+      const item = document.createElement('div');
+      item.className = 'lvl-history-item';
+
+      const time = new Date(h.time);
+      const timeStr = time.toLocaleDateString('ar-EG', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      }) + ' · ' + time.toLocaleTimeString('ar-EG', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      item.innerHTML = `
+        <div class="lvl-history-icon">${h.level}</div>
+        <div class="lvl-history-info">
+          <div class="lvl-history-title">وصلت للمستوى ${h.level}</div>
+          <div class="lvl-history-time">${timeStr} · ${Math.round(h.totalM).toLocaleString()}م</div>
+        </div>
+      `;
+
+      container.appendChild(item);
+    });
+  }
+
+  /* ─── الهيبة ─── */
+  function renderLvlPrestige(container){
+    const prestige = LevelsV3.getPrestige();
+    const maxLvl = (typeof GLOBAL_LEVEL_THRESHOLDS !== 'undefined')
+      ? GLOBAL_LEVEL_THRESHOLDS.length : 20;
+    const prog = LevelsV3.getProgress();
+    const canPrestige = prog.level >= maxLvl;
+
+    container.innerHTML = `
+      <div style="padding:22px;border-radius:20px;
+                  background:linear-gradient(135deg,#2A1830 0%,#5A2880 100%);
+                  color:#fff;margin-bottom:14px;
+                  box-shadow:0 12px 36px rgba(90,40,128,.35);
+                  position:relative;overflow:hidden;">
+
+        <div style="position:absolute;top:-60px;right:-60px;
+                    width:200px;height:200px;border-radius:50%;
+                    background:radial-gradient(circle,rgba(232,179,78,.4),transparent 70%);
+                    pointer-events:none;"></div>
+
+        <div style="text-align:center;position:relative;z-index:1;">
+          <div style="font-size:64px;line-height:1;margin-bottom:8px;
+                      filter:drop-shadow(0 8px 24px rgba(232,179,78,.6));">
+            ${prestige > 0 ? '👑'.repeat(Math.min(3, prestige)) : '👑'}
+          </div>
+          <div style="font-family:'Space Grotesk';font-size:10px;
+                      font-weight:800;letter-spacing:4px;opacity:.7;">
+            PRESTIGE LEVEL
+          </div>
+          <div style="font-family:'Space Grotesk';font-size:52px;
+                      font-weight:800;line-height:1;margin:8px 0;
+                      color:var(--gold);
+                      text-shadow:0 4px 20px rgba(232,179,78,.7);">
+            ${prestige}
+          </div>
+          <div style="font-size:12px;opacity:.8;line-height:1.5;">
+            ${prestige === 0
+              ? 'وصل للمستوى الأقصى لتبدأ الهيبة'
+              : `أعدت الولادة ${prestige} ${prestige === 1 ? 'مرة' : 'مرات'}`}
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:16px;border-radius:16px;background:#fff;
+                  border:1.5px solid var(--line);margin-bottom:12px;">
+        <div style="font-family:'Space Grotesk';font-size:12px;
+                    font-weight:700;color:var(--ink);margin-bottom:8px;">
+          📋 شروط الهيبة
+        </div>
+        <div style="font-size:12px;color:var(--ink-soft);line-height:1.7;">
+          • الوصول للمستوى ${maxLvl}<br>
+          • إعادة تعيين المستوى إلى 1<br>
+          • الحصول على شارة هيبة دائمة<br>
+          • +10% مضاعف دائم للعملات
+        </div>
+      </div>
+
+      ${canPrestige ? `
+        <button id="lvl-prestige-btn" style="width:100%;padding:16px;
+                border-radius:14px;border:none;
+                background:linear-gradient(135deg,var(--gold),#F2C862);
+                color:#1A1512;font-family:inherit;font-size:14px;
+                font-weight:800;letter-spacing:1px;cursor:pointer;
+                box-shadow:0 8px 26px rgba(232,179,78,.5);">
+          ⚡ ابدأ الهيبة الآن
+        </button>
+      ` : `
+        <div style="padding:16px;border-radius:14px;
+                    background:var(--paper-2);
+                    border:1px dashed var(--line-strong);
+                    text-align:center;font-size:12px;
+                    color:var(--ink-mute);font-weight:700;">
+          🔒 تبقى ${maxLvl - prog.level} مستوى للوصول للهيبة
+        </div>
+      `}
+    `;
+
+    const btn = container.querySelector('#lvl-prestige-btn');
+    if(btn){
+      btn.addEventListener('click', doPrestige);
+    }
+  }
+
+  async function doPrestige(){
+    if(!confirm('⚠️ سيتم إعادة تعيين مستواك إلى 1\n\nستحصل على:\n• شارة هيبة دائمة\n• +10% مضاعف دائم\n\nمتابعة؟')) return;
+
+    Save.data.prestige = (Save.data.prestige || 0) + 1;
+    Save.data.prestigeMultiplier = 1 + (Save.data.prestige * 0.1);
+    Save.data.claimedGlobalLevels = [];
+    Save.save();
+
+    Sfx.reward(); haptic(50);
+    Toast.reward('👑', 'هيبة!', `المستوى ${Save.data.prestige}`);
+
+    for(let i = 0; i < 60; i++){
+      const a = (i / 60) * Math.PI * 2;
+      particles.push({
+        x: P.x, y: P.y,
+        vx: Math.cos(a) * rand(6, 14),
+        vy: Math.sin(a) * rand(6, 14),
+        life: 2, decay: 0.012,
+        color: i % 2 ? '#E8B34E' : '#FFE0A0',
+        size: rand(3, 7)
+      });
+    }
+
+    renderLvlContent();
+  }
+
+  /* ─── المعالم ─── */
+  function renderLvlMilestones(container){
+    const prog = LevelsV3.getProgress();
+
+    LEVEL_MILESTONES.forEach(ms => {
+      const reached = prog.level >= ms.level;
+      const isNext = !reached && prog.level < ms.level;
+
+      const card = document.createElement('div');
+      card.className = 'lvl-reward-card-v3';
+      if(reached) card.classList.add('is-unlocked');
+      if(isNext && !LEVEL_MILESTONES.find(m => m.level > prog.level && m.level < ms.level)) {
+        card.classList.add('is-current');
+      }
+
+      card.innerHTML = `
+        <div class="lrcv3-num" ${reached ? 'style="background:linear-gradient(135deg,#E8B34E,#F2C862);color:#1A1512;"' : ''}>
+          <span class="n">${reached ? ms.icon : '🔒'}</span>
+          <span class="k">LVL ${ms.level}</span>
+        </div>
+        <div class="lrcv3-info">
+          <div class="lrcv3-title">${ms.title}</div>
+          <div class="lrcv3-sub">${ms.desc}</div>
+        </div>
+        <div class="lrcv3-action">
+          ${reached
+            ? '<span style="color:#4A7B4A;font-size:18px;">✓</span>'
+            : `<span style="font-family:'Space Grotesk';font-size:11px;color:var(--ink-mute);font-weight:700;">${prog.level}/${ms.level}</span>`
+          }
+        </div>
+      `;
+
+      container.appendChild(card);
+    });
+  }
+
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══════════ 2) نظام الإحصائيات المتطور ═══════════════
+     ═══════════════════════════════════════════════════════════ */
+
+  const StatsV3 = {
+    tab: 'overview',
+    sessions: [],
+
+    /* جلب جولات اللاعب */
+    getSessions(){
+      return Save.data.sessionHistory || [];
+    },
+
+    /* إضافة جولة للسجل */
+    recordSession(data){
+      if(!Save.data.sessionHistory) Save.data.sessionHistory = [];
+      Save.data.sessionHistory.unshift({
+        mode: data.mode || G.mode || 'FLIP',
+        meters: Math.round(data.meters || 0),
+        coins: data.coins || 0,
+        combo: data.combo || 0,
+        time: Date.now(),
+        duration: data.duration || 0
+      });
+      if(Save.data.sessionHistory.length > 100){
+        Save.data.sessionHistory = Save.data.sessionHistory.slice(0, 100);
+      }
+      Save.save();
+    },
+
+    /* حساب إحصائيات اليوم/الأسبوع/الشهر */
+    getTimeStats(){
+      const now = Date.now();
+      const sessions = this.getSessions();
+
+      const dayAgo = now - (24 * 60 * 60 * 1000);
+      const weekAgo = now - (7 * 24 * 60 * 60 * 1000);
+      const monthAgo = now - (30 * 24 * 60 * 60 * 1000);
+
+      const sum = (arr) => arr.reduce((s, x) => s + (x.meters || 0), 0);
+
+      return {
+        today: sum(sessions.filter(s => s.time > dayAgo)),
+        week: sum(sessions.filter(s => s.time > weekAgo)),
+        month: sum(sessions.filter(s => s.time > monthAgo)),
+        total: sum(sessions)
+      };
+    },
+
+    /* أفضل جولة */
+    getBestSession(){
+      const sessions = this.getSessions();
+      if(sessions.length === 0) return null;
+      return sessions.reduce((best, s) => (s.meters > (best?.meters || 0)) ? s : best, null);
+    },
+
+    /* توزيع الأنماط */
+    getModeDistribution(){
+      const sessions = this.getSessions();
+      const dist = {};
+      sessions.forEach(s => {
+        dist[s.mode] = (dist[s.mode] || 0) + 1;
+      });
+      return dist;
+    },
+
+    /* بيانات الرسم البياني (آخر 30 يوم) */
+    getChartData(days){
+      days = days || 30;
+      const sessions = this.getSessions();
+      const data = new Array(days).fill(0);
+      const now = Date.now();
+
+      sessions.forEach(s => {
+        const daysAgo = Math.floor((now - s.time) / (24 * 60 * 60 * 1000));
+        if(daysAgo >= 0 && daysAgo < days){
+          data[days - 1 - daysAgo] += s.meters;
+        }
+      });
+
+      return data;
+    }
+  };
+
+  window.buildStatsV2 = function(){
+    const screen = document.getElementById('s-stats-v2');
+    if(!screen) return;
+
+    const stats = Save.data.stats || {};
+    const totalM = (typeof getGlobalMeters === 'function') ? getGlobalMeters() : 0;
+    const timeStats = StatsV3.getTimeStats();
+
+    /* Hero */
+    const totalEl = document.getElementById('stx-total-m');
+    const playsEl = document.getElementById('stx-total-plays');
+    if(totalEl) totalEl.textContent = Math.round(totalM).toLocaleString();
+    if(playsEl) playsEl.textContent = (stats.totalPlays || 0).toLocaleString();
+
+    const todayEl = document.getElementById('stx-today');
+    const weekEl = document.getElementById('stx-week');
+    const monthEl = document.getElementById('stx-month');
+    const bestEl = document.getElementById('stx-best');
+
+    if(todayEl) todayEl.textContent = Math.round(timeStats.today).toLocaleString();
+    if(weekEl) weekEl.textContent = Math.round(timeStats.week).toLocaleString();
+    if(monthEl) monthEl.textContent = Math.round(timeStats.month).toLocaleString();
+    if(bestEl) bestEl.textContent = Math.round(stats.bestMeters || 0).toLocaleString();
+
+    /* Sparkline */
+    drawStatsSparkline();
+
+    /* تبويبات */
+    document.querySelectorAll('#stats-v3-tabs .tab-chip').forEach(tab => {
+      if(tab._bound) return;
+      tab._bound = true;
+      tab.addEventListener('click', () => {
+        StatsV3.tab = tab.dataset.statv3;
+        document.querySelectorAll('#stats-v3-tabs .tab-chip').forEach(t =>
+          t.classList.toggle('active', t === tab));
+        renderStxContent();
+        Sfx.tap(); haptic(4);
+      });
+    });
+
+    renderStxContent();
+
+    /* زر التصدير */
+    const exportBtn = document.getElementById('stats-export-btn');
+    if(exportBtn && !exportBtn._bound){
+      exportBtn._bound = true;
+      exportBtn.addEventListener('click', () => {
+        exportStatsData();
+      });
+    }
+  };
+
+  function drawStatsSparkline(){
+    const canvas = document.getElementById('stx-sparkline');
+    if(!canvas) return;
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = 340, h = 60;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = '100%';
+    canvas.style.height = h + 'px';
+
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    const data = StatsV3.getChartData(14); /* آخر 14 يوم */
+    const max = Math.max(1, ...data);
+
+    /* Gradient */
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, 'rgba(232,179,78,.5)');
+    grad.addColorStop(1, 'rgba(232,179,78,0)');
+
+    /* المسار */
+    const stepX = w / (data.length - 1);
+    const points = data.map((v, i) => ({
+      x: i * stepX,
+      y: h - (v / max) * (h - 10) - 5
+    }));
+
+    /* Fill */
+    ctx.beginPath();
+    ctx.moveTo(0, h);
+    points.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.lineTo(w, h);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    /* Line */
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    points.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.strokeStyle = '#E8B34E';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.shadowColor = '#E8B34E';
+    ctx.shadowBlur = 8;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    /* Dots */
+    points.forEach((p, i) => {
+      if(i === points.length - 1){
+        ctx.fillStyle = '#FFE0A0';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowColor = '#FFE0A0';
+        ctx.shadowBlur = 12;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+    });
+  }
+
+  function renderStxContent(){
+    const c = document.getElementById('stx-content-v3');
+    if(!c) return;
+    c.innerHTML = '';
+
+    switch(StatsV3.tab){
+      case 'overview':    renderStxOverview(c);    break;
+      case 'modes':       renderStxModes(c);       break;
+      case 'sessions':    renderStxSessions(c);    break;
+      case 'charts':      renderStxCharts(c);      break;
+      case 'records':     renderStxRecords(c);     break;
+      case 'comparison':  renderStxComparison(c);  break;
+    }
+  }
+
+  /* ─── نظرة عامة ─── */
+  function renderStxOverview(container){
+    const stats = Save.data.stats || {};
+
+    const cards = [
+      { icon: '🎮', color: '#4A88C8', value: stats.totalPlays || 0, label: 'إجمالي الجولات' },
+      { icon: '📏', color: '#6B9B6B', value: Math.round((typeof getGlobalMeters === 'function' ? getGlobalMeters() : 0)).toLocaleString(), label: 'مجموع الأمتار', unit: 'م' },
+      { icon: '🏆', color: '#E8B34E', value: Math.round(stats.bestMeters || 0).toLocaleString(), label: 'أفضل مسافة', unit: 'م' },
+      { icon: '🔥', color: '#E85838', value: 'x' + (stats.bestCombo || 0), label: 'أفضل سلسلة' },
+      { icon: '🪙', color: '#E8B34E', value: (stats.totalCoins || 0).toLocaleString(), label: 'عملات مكتسبة' },
+      { icon: '⚡', color: '#9A6AC8', value: (stats.shiftRuns || 0).toLocaleString(), label: 'SHIFT Runs' },
+      { icon: '🔮', color: '#6B9B6B', value: (stats.orbCount || 0).toLocaleString(), label: 'كرات طاقة' },
+      { icon: '⭐', color: '#FFD060', value: (Save.data.season && Save.data.season.points || 0).toLocaleString(), label: 'نقاط الموسم' }
+    ];
+
+    const grid = document.createElement('div');
+    grid.className = 'stx-grid';
+
+    cards.forEach(card => {
+      const el = document.createElement('div');
+      el.className = 'stx-card';
+      el.style.setProperty('--stx-c', card.color);
+      el.innerHTML = `
+        <div class="stx-card-icon">${card.icon}</div>
+        <div class="stx-card-value">${card.value}${card.unit ? `<small>${card.unit}</small>` : ''}</div>
+        <div class="stx-card-label">${card.label}</div>
+      `;
+      grid.appendChild(el);
+    });
+
+    container.appendChild(grid);
+  }
+
+  /* ─── الأنماط ─── */
+  function renderStxModes(container){
+    const modes = (typeof MODES !== 'undefined') ? MODES : [];
+
+    modes.forEach(m => {
+      const bestM = (Save.data.bestMeters && Save.data.bestMeters[m.id]) || 0;
+      if(bestM === 0 && m.id === 'MIXED') return;
+
+      const card = document.createElement('div');
+      card.className = 'stx-card';
+      card.style.setProperty('--stx-c', m.color);
+      card.style.marginBottom = '10px';
+      card.innerHTML = `
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="stx-card-icon" style="background:${m.color};color:#fff;">${m.icon}</div>
+          <div style="flex:1;text-align:right;">
+            <div style="font-size:13.5px;font-weight:800;color:var(--ink);">${m.ar}</div>
+            <div style="font-size:10px;color:var(--ink-mute);margin-top:2px;">
+              ${Math.round(bestM).toLocaleString()}م · أفضل مسافة
+            </div>
+          </div>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  }
+
+  /* ─── الجولات ─── */
+  function renderStxSessions(container){
+    const sessions = StatsV3.getSessions();
+
+    if(sessions.length === 0){
+      container.innerHTML = `
+        <div style="text-align:center;padding:60px 20px;color:var(--ink-mute);">
+          <div style="font-size:60px;opacity:.25;margin-bottom:12px;">📜</div>
+          <div style="font-size:14px;font-weight:800;">لا يوجد سجل جولات</div>
+          <div style="font-size:11.5px;margin-top:6px;">ابدأ اللعب لتظهر جولاتك هنا</div>
+        </div>
+      `;
+      return;
+    }
+
+    sessions.slice(0, 30).forEach(s => {
+      const mode = MODES.find(m => m.id === s.mode);
+      const row = document.createElement('div');
+      row.className = 'stx-session-row';
+
+      const date = new Date(s.time);
+      const timeStr = date.toLocaleDateString('ar-EG', { day: '2-digit', month: '2-digit' })
+        + ' · ' + date.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+
+      row.innerHTML = `
+        <div class="stx-session-mode" style="background:${mode ? mode.color : '#888'};">
+          ${mode ? mode.icon : '◆'}
+        </div>
+        <div class="stx-session-info">
+          <div class="stx-session-title">${mode ? mode.ar : s.mode}</div>
+          <div class="stx-session-meta">${timeStr}</div>
+        </div>
+        <div style="text-align:left;">
+          <div class="stx-session-meters">${s.meters}<span style="font-size:11px;color:var(--ink-mute);">م</span></div>
+          <div class="stx-session-coins">​🪙 ${s.coins}</div>
+        </div>
+      `;
+
+      container.appendChild(row);
+    });
+  }
+
+  /* ─── الرسوم البيانية ─── */
+  function renderStxCharts(container){
+    /* رسم بياني 1: آخر 30 يوم */
+    const chart1 = createChartCard('📈 الأمتار في آخر 30 يوم', '30 DAYS');
+    container.appendChild(chart1.card);
+    drawBarChart(chart1.canvas, StatsV3.getChartData(30), '#E8B34E');
+
+    /* رسم بياني 2: آخر 7 أيام */
+    const chart2 = createChartCard('📊 الأمتار في آخر 7 أيام', '7 DAYS');
+    container.appendChild(chart2.card);
+    drawBarChart(chart2.canvas, StatsV3.getChartData(7), '#6B9B6B');
+
+    /* رسم بياني 3: توزيع الأنماط */
+    const chart3 = createChartCard('🎮 توزيع الأنماط', 'MODES');
+    container.appendChild(chart3.card);
+    drawPieChart(chart3.canvas, StatsV3.getModeDistribution());
+  }
+
+  function createChartCard(title, sub){
+    const card = document.createElement('div');
+    card.className = 'stx-chart-wrap';
+    card.innerHTML = `
+      <div class="stx-chart-title">
+        <span class="t">${title}</span>
+        <span class="s">${sub}</span>
+      </div>
+      <canvas width="340" height="160"></canvas>
+    `;
+    return { card, canvas: card.querySelector('canvas') };
+  }
+
+  function drawBarChart(canvas, data, color){
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const rect = canvas.getBoundingClientRect();
+    const w = rect.width || 340, h = 160;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.height = h + 'px';
+
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    const max = Math.max(1, ...data);
+    const padding = { top: 20, right: 10, bottom: 24, left: 10 };
+    const chartW = w - padding.left - padding.right;
+    const chartH = h - padding.top - padding.bottom;
+
+    const barW = Math.max(2, chartW / data.length - 3);
+
+    data.forEach((v, i) => {
+      const x = padding.left + i * (chartW / data.length) + 1.5;
+      const barH = (v / max) * chartH;
+      const y = padding.top + chartH - barH;
+
+      const grad = ctx.createLinearGradient(0, y, 0, y + barH);
+      grad.addColorStop(0, color);
+      grad.addColorStop(1, color + '66');
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.roundRect(x, y, barW, barH, 3);
+      ctx.fill();
+    });
+
+    /* المحور السفلي */
+    ctx.fillStyle = 'rgba(26,21,18,.2)';
+    ctx.fillRect(padding.left, padding.top + chartH, chartW, 1);
+  }
+
+  function drawPieChart(canvas, dist){
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const rect = canvas.getBoundingClientRect();
+    const w = rect.width || 340, h = 160;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.height = h + 'px';
+
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    const entries = Object.entries(dist);
+    const total = entries.reduce((s, [_, v]) => s + v, 0);
+    if(total === 0) return;
+
+    const cx = w / 2;
+    const cy = h / 2;
+    const r = Math.min(w, h) / 2 - 20;
+
+    let startAngle = -Math.PI / 2;
+    const colors = ['#E8B34E', '#4A88C8', '#6B9B6B', '#E85838', '#9A6AC8', '#C98A2E'];
+
+    entries.forEach(([mode, count], i) => {
+      const angle = (count / total) * Math.PI * 2;
+      const m = (typeof MODES !== 'undefined') ? MODES.find(x => x.id === mode) : null;
+
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, startAngle, startAngle + angle);
+      ctx.closePath();
+      ctx.fillStyle = m ? m.color : colors[i % colors.length];
+      ctx.fill();
+
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      startAngle += angle;
+    });
+
+    /* الثقب الوسطي */
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* الرقم الوسطي */
+    ctx.fillStyle = '#1A1512';
+    ctx.font = 'bold 20px "Space Grotesk", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(total, cx, cy);
+  }
+
+  /* ─── الأرقام القياسية ─── */
+  function renderStxRecords(container){
+    const stats = Save.data.stats || {};
+    const sessions = StatsV3.getSessions();
+    const best = StatsV3.getBestSession();
+
+    const records = [
+      { icon: '🏆', title: 'أفضل مسافة', value: Math.round(stats.bestMeters || 0) + 'م', color: '#E8B34E' },
+      { icon: '🔥', title: 'أطول سلسلة', value: 'x' + (stats.bestCombo || 0), color: '#E85838' },
+      { icon: '⚡', title: 'أسرع جولة', value: best ? Math.round(best.meters) + 'م' : '—', color: '#4A88C8' },
+      { icon: '🪙', title: 'أكثر عملات في جولة', value: sessions.length > 0 ? Math.max(...sessions.map(s => s.coins || 0)) : 0, color: '#E8B34E' },
+      { icon: '🎮', title: 'مجموع الجولات', value: (stats.totalPlays || 0).toLocaleString(), color: '#6B9B6B' },
+      { icon: '⚡', title: 'SHIFT Runs', value: (stats.shiftRuns || 0).toLocaleString(), color: '#9A6AC8' }
+    ];
+
+    records.forEach(r => {
+      const card = document.createElement('div');
+      card.className = 'stx-card';
+      card.style.setProperty('--stx-c', r.color);
+      card.style.marginBottom = '8px';
+
+      card.innerHTML = `
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="stx-card-icon">${r.icon}</div>
+          <div style="flex:1;text-align:right;">
+            <div style="font-size:13px;font-weight:800;color:var(--ink);">${r.title}</div>
+          </div>
+          <div class="stx-card-value">${r.value}</div>
+        </div>
+      `;
+
+      container.appendChild(card);
+    });
+  }
+
+  /* ─── المقارنة ─── */
+  function renderStxComparison(container){
+    const stats = Save.data.stats || {};
+    const totalM = (typeof getGlobalMeters === 'function') ? getGlobalMeters() : 0;
+
+    /* قارن آخر 7 أيام بالـ 7 السابقة */
+    const sessions = StatsV3.getSessions();
+    const now = Date.now();
+    const weekAgo = now - (7 * 24 * 60 * 60 * 1000);
+    const twoWeeksAgo = now - (14 * 24 * 60 * 60 * 1000);
+
+    const thisWeek = sessions.filter(s => s.time > weekAgo).reduce((s, x) => s + x.meters, 0);
+    const lastWeek = sessions.filter(s => s.time > twoWeeksAgo && s.time <= weekAgo).reduce((s, x) => s + x.meters, 0);
+    const change = lastWeek > 0 ? ((thisWeek - lastWeek) / lastWeek) * 100 : 0;
+
+    container.innerHTML = `
+      <div style="padding:20px;border-radius:20px;background:#fff;
+                  border:1.5px solid var(--line);margin-bottom:14px;">
+        <div style="font-family:'Space Grotesk';font-size:11px;
+                    font-weight:700;letter-spacing:1.5px;
+                    color:var(--ink-mute);margin-bottom:14px;">
+          📊 مقارنة الأسبوع
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div style="text-align:center;padding:14px;
+                      background:linear-gradient(135deg,#F0F8F0,#E0F0E0);
+                      border-radius:14px;">
+            <div style="font-size:10px;font-weight:800;
+                        letter-spacing:1px;color:#4A7B4A;">
+              هذا الأسبوع
+            </div>
+            <div style="font-family:'Space Grotesk';font-size:22px;
+                        font-weight:700;color:#2A4A2A;margin-top:6px;">
+              ${Math.round(thisWeek).toLocaleString()}م
+            </div>
+          </div>
+          <div style="text-align:center;padding:14px;
+                      background:var(--paper);border-radius:14px;">
+            <div style="font-size:10px;font-weight:800;
+                        letter-spacing:1px;color:var(--ink-mute);">
+              الأسبوع السابق
+            </div>
+            <div style="font-family:'Space Grotesk';font-size:22px;
+                        font-weight:700;color:var(--ink);margin-top:6px;">
+              ${Math.round(lastWeek).toLocaleString()}م
+            </div>
+          </div>
+        </div>
+
+        <div style="text-align:center;margin-top:16px;padding:12px;
+                    background:${change >= 0 ? 'rgba(107,155,107,.12)' : 'rgba(193,74,74,.12)'};
+                    border-radius:12px;">
+          <div style="font-size:11px;font-weight:800;
+                      color:${change >= 0 ? '#4A7B4A' : '#C14A4A'};">
+            ${change >= 0 ? '📈' : '📉'} ${change >= 0 ? '+' : ''}${change.toFixed(1)}%
+            ${change >= 0 ? 'تحسّن' : 'انخفاض'}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function exportStatsData(){
+    const data = {
+      exported: new Date().toISOString(),
+      stats: Save.data.stats,
+      bestMeters: Save.data.bestMeters,
+      sessionHistory: StatsV3.getSessions().slice(0, 50)
+    };
+
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `shift-stats-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    Toast.success('تم التصدير!', 'ملف JSON');
+    Sfx.reward();
+  }
+
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══════════ 3) نظام الإنجازات المتطور ═══════════════
+     ═══════════════════════════════════════════════════════════ */
+
+  const ACHIEVEMENT_RARITIES = {
+    common:    { label: 'عادي',    color: '#8B8278', points: 5 },
+    rare:      { label: 'نادر',    color: '#4A88C8', points: 15 },
+    epic:      { label: 'ملحمي',   color: '#9A6AC8', points: 40 },
+    legendary: { label: 'أسطوري',  color: '#E8B34E', points: 100 },
+    mythic:    { label: 'خرافي',   color: '#E85838', points: 250 }
+  };
+
+  /* نظام نقاط الإنجاز */
+  function calculateAchievementPoints(){
+    let total = 0;
+    const unlocked = Save.data.achievements || {};
+
+    if(typeof ACHIEVEMENTS === 'undefined') return 0;
+
+    ACHIEVEMENTS.forEach(a => {
+      if(!unlocked[a.id]) return;
+      const rarity = a.rarity || 'common';
+      total += ACHIEVEMENT_RARITIES[rarity].points || 5;
+    });
+
+    return total;
+  }
+
+  /* رتبة اللاعب بناءً على النقاط */
+  function getAchievementRank(points){
+    if(points >= 3000) return { name: 'أسطورة', icon: '⚡', color: '#FFD060' };
+    if(points >= 1500) return { name: 'بطل', icon: '🏆', color: '#E8B34E' };
+    if(points >= 750)  return { name: 'نخبة', icon: '👑', color: '#9A6AC8' };
+    if(points >= 300)  return { name: 'محترف', icon: '🎖️', color: '#4A88C8' };
+    if(points >= 100)  return { name: 'نشيط', icon: '⭐', color: '#6B9B6B' };
+    return { name: 'مبتدئ', icon: '🌱', color: '#8B8278' };
+  }
+
+  const AchV3 = {
+    tab: 'all',
+    recentWindow: 7 * 24 * 60 * 60 * 1000,
+    closeThreshold: 0.75
+  };
+
+  window.buildAchievementsV2Page = function(){
+    const screen = document.getElementById('s-achieve-v2');
+    if(!screen) return;
+
+    if(typeof ACHIEVEMENTS === 'undefined') return;
+
+    /* إحصاءات */
+    const unlocked = ACHIEVEMENTS.filter(a => Save.data.achievements[a.id]);
+    const total = ACHIEVEMENTS.length;
+    const percent = total > 0 ? (unlocked.length / total) * 100 : 0;
+    const points = calculateAchievementPoints();
+
+    /* Hero */
+    const unlockedEl = document.getElementById('achx-unlocked');
+    const totalEl = document.getElementById('achx-total');
+    const percentEl = document.getElementById('achx-percent');
+    const pointsEl = document.getElementById('achx-points');
+
+    if(unlockedEl) unlockedEl.textContent = unlocked.length;
+    if(totalEl) totalEl.textContent = total;
+    if(percentEl) percentEl.textContent = Math.round(percent) + '%';
+    if(pointsEl) pointsEl.textContent = points.toLocaleString();
+
+    const ringFill = document.getElementById('achx-ring-fill');
+    if(ringFill){
+      const circ = 2 * Math.PI * 58;
+      ringFill.style.strokeDasharray = circ;
+      ringFill.style.strokeDashoffset = circ * (1 - percent / 100);
+      ringFill.style.transition = 'stroke-dashoffset 1.2s cubic-bezier(.34,1.56,.64,1)';
+    }
+
+    /* عدّادات */
+    const recentCount = ACHIEVEMENTS.filter(a => {
+      if(!Save.data.achievements[a.id]) return false;
+      const time = (Save.data.achievementTimes && Save.data.achievementTimes[a.id]) || 0;
+      return (Date.now() - time) < AchV3.recentWindow;
+    }).length;
+
+    const closeCount = ACHIEVEMENTS.filter(a => {
+      if(Save.data.achievements[a.id]) return false;
+      try {
+        const val = Math.min(a.value(Save.data), a.target);
+        return (val / a.target) >= AchV3.closeThreshold;
+      } catch(e) { return false; }
+    }).length;
+
+    const rareCount = unlocked.filter(a => ['legendary', 'mythic'].includes(a.rarity)).length;
+
+    const recentEl = document.getElementById('achx-recent-count');
+    const closeEl = document.getElementById('achx-close-count');
+    const rareEl = document.getElementById('achx-rare-count');
+
+    if(recentEl) recentEl.textContent = recentCount;
+    if(closeEl) closeEl.textContent = closeCount;
+    if(rareEl) rareEl.textContent = rareCount;
+
+    /* تبويبات */
+    document.querySelectorAll('#ach-v3-tabs .tab-chip').forEach(tab => {
+      if(tab._bound) return;
+      tab._bound = true;
+      tab.addEventListener('click', () => {
+        AchV3.tab = tab.dataset.achv3;
+        document.querySelectorAll('#ach-v3-tabs .tab-chip').forEach(t =>
+          t.classList.toggle('active', t === tab));
+        renderAchGrid();
+        Sfx.tap(); haptic(4);
+      });
+    });
+
+    renderAchGrid();
+
+    /* زر المشاركة */
+    const shareBtn = document.getElementById('ach-share-btn');
+    if(shareBtn && !shareBtn._bound){
+      shareBtn._bound = true;
+      shareBtn.addEventListener('click', () => {
+        const rank = getAchievementRank(points);
+        const text = `🏆 في SHIFT: ${unlocked.length}/${total} إنجاز · ${points} نقطة · ${rank.icon} ${rank.name}`;
+        if(navigator.share){
+          navigator.share({ title: 'SHIFT', text }).catch(()=>{});
+        } else {
+          navigator.clipboard.writeText(text).then(() => {
+            Toast.success('تم النسخ!', text);
+          });
+        }
+      });
+    }
+  };
+
+  function renderAchGrid(){
+    const grid = document.getElementById('achx-grid');
+    if(!grid) return;
+    grid.innerHTML = '';
+
+    if(typeof ACHIEVEMENTS === 'undefined') return;
+
+    let filtered = [...ACHIEVEMENTS];
+
+    /* الفلترة */
+    switch(AchV3.tab){
+      case 'recent':
+        filtered = filtered.filter(a => {
+          if(!Save.data.achievements[a.id]) return false;
+          const time = (Save.data.achievementTimes && Save.data.achievementTimes[a.id]) || 0;
+          return (Date.now() - time) < AchV3.recentWindow;
+        });
+        break;
+      case 'close':
+        filtered = filtered.filter(a => {
+          if(Save.data.achievements[a.id]) return false;
+          try {
+            const val = Math.min(a.value(Save.data), a.target);
+            return (val / a.target) >= AchV3.closeThreshold;
+          } catch(e) { return false; }
+        });
+        break;
+      case 'locked':
+        filtered = filtered.filter(a => !Save.data.achievements[a.id]);
+        break;
+      case 'all':
+        break;
+      default:
+        filtered = filtered.filter(a => (a.cat || 'progression') === AchV3.tab);
+    }
+
+    if(filtered.length === 0){
+      grid.innerHTML = `
+        <div style="text-align:center;padding:60px 20px;color:var(--ink-mute);">
+          <div style="font-size:60px;opacity:.25;margin-bottom:12px;">🏆</div>
+          <div style="font-size:14px;font-weight:800;">لا إنجازات في هذه الفئة</div>
+        </div>
+      `;
+      return;
+    }
+
+    /* الترتيب: المفتوحة آخراً، القريبة أولاً */
+    filtered.sort((a, b) => {
+      const ua = !!Save.data.achievements[a.id];
+      const ub = !!Save.data.achievements[b.id];
+      if(ua !== ub) return ua ? 1 : -1;
+      if(ua && ub){
+        const ta = (Save.data.achievementTimes && Save.data.achievementTimes[a.id]) || 0;
+        const tb = (Save.data.achievementTimes && Save.data.achievementTimes[b.id]) || 0;
+        return tb - ta;
+      }
+      try {
+        const pa = Math.min(a.value(Save.data), a.target) / a.target;
+        const pb = Math.min(b.value(Save.data), b.target) / b.target;
+        return pb - pa;
+      } catch(e) { return 0; }
+    });
+
+    filtered.forEach(a => {
+      grid.appendChild(buildAchCard(a));
+    });
+  }
+
+  function buildAchCard(a){
+    const isUnlocked = !!Save.data.achievements[a.id];
+    const rarity = a.rarity || 'common';
+    const rarityInfo = ACHIEVEMENT_RARITIES[rarity];
+
+    let current = 0;
+    try { current = Math.min(a.value(Save.data), a.target); } catch(e){}
+    const progress = a.target > 0 ? current / a.target : 0;
+    const isClose = !isUnlocked && progress >= AchV3.closeThreshold;
+
+    const card = document.createElement('div');
+    card.className = 'ach-v3-card';
+    if(isUnlocked) card.classList.add('is-unlocked');
+    if(isClose) card.classList.add('is-close');
+    if(['legendary', 'mythic'].includes(rarity)) card.classList.add('is-rare');
+
+    const unlockTime = (Save.data.achievementTimes && Save.data.achievementTimes[a.id]) || 0;
+    const timeStr = isUnlocked && unlockTime
+      ? formatRelativeTime(unlockTime)
+      : '';
+
+    card.innerHTML = `
+      <div class="ach-v3-icon">
+        ${isUnlocked ? a.icon : '❔'}
+        ${isUnlocked ? '<div class="ach-v3-check">✓</div>' : ''}
+      </div>
+
+      <div class="ach-v3-body">
+        <div class="ach-v3-name">
+          ${isUnlocked ? a.name : '???'}
+          <span class="ach-v3-rarity-badge" style="background:${rarityInfo.color}22;color:${rarityInfo.color};">
+            ${rarityInfo.label}
+          </span>
+        </div>
+        <div class="ach-v3-desc">${a.desc}</div>
+
+        ${!isUnlocked ? `
+          <div class="ach-v3-progress-bar">
+            <div class="ach-v3-progress-fill" style="width:${progress * 100}%"></div>
+          </div>
+        ` : ''}
+
+        <div class="ach-v3-meta">
+          <span class="ach-v3-progress-text">
+            ${isUnlocked
+              ? `<span style="color:var(--sage);font-weight:700;">✓ ${timeStr}</span>`
+              : `${current.toLocaleString()} / ${a.target.toLocaleString()}`
+            }
+          </span>
+          <span class="ach-v3-reward">
+            <span class="c">⭐</span>
+            ${rarityInfo.points} نقطة
+          </span>
+        </div>
+      </div>
+    `;
+
+    return card;
+  }
+
+  function formatRelativeTime(timestamp){
+    const diff = Date.now() - timestamp;
+    const min = Math.floor(diff / 60000);
+    const hour = Math.floor(diff / 3600000);
+    const day = Math.floor(diff / 86400000);
+
+    if(min < 60) return 'قبل قليل';
+    if(hour < 24) return `قبل ${hour} ساعة`;
+    if(day < 7) return `قبل ${day} يوم`;
+    if(day < 30) return `قبل ${Math.floor(day / 7)} أسبوع`;
+    if(day < 365) return `قبل ${Math.floor(day / 30)} شهر`;
+    return `قبل ${Math.floor(day / 365)} سنة`;
+  }
+
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══════════ 4) نظام الإعدادات المتطور ═══════════════════
+     ═══════════════════════════════════════════════════════════ */
+
+  /* إعدادات افتراضية موسّعة */
+  const DEFAULT_SETTINGS_V3 = {
+    /* الصوت */
+    soundVolume: 80,
+    musicVolume: 50,
+    sfxEnabled: true,
+    musicEnabled: true,
+    vibrationEnabled: true,
+
+    /* الرسوميات */
+    graphicsQuality: 'high',    /* low | medium | high */
+    particlesEnabled: true,
+    shadowsEnabled: true,
+    weatherEnabled: true,
+    screenShakeEnabled: true,
+
+    /* اللعب */
+    showHints: true,
+    autoPause: true,
+    hapticFeedback: true,
+    confirmQuit: true,
+
+    /* الإشعارات */
+    notificationsEnabled: true,
+    friendRequests: true,
+    clanInvites: true,
+    dailyReminders: true,
+    achievementsPopups: true,
+
+    /* الخصوصية */
+    profileVisibility: 'public', /* public | friends | private */
+    allowFriendRequests: true,
+    allowClanInvites: true,
+    showOnlineStatus: true,
+
+    /* اللغة */
+    language: 'ar'
+  };
+
+  /* دمج مع الإعدادات الحالية */
+  if(!Save.data.settingsV3){
+    Save.data.settingsV3 = { ...DEFAULT_SETTINGS_V3 };
+  } else {
+    Save.data.settingsV3 = { ...DEFAULT_SETTINGS_V3, ...Save.data.settingsV3 };
+  }
+
+  const SetV3 = {
+    tab: 'account'
+  };
+
+  window.buildSettingsV2 = function(){
+    const screen = document.getElementById('s-settings-v2');
+    if(!screen) return;
+
+    /* تبويبات */
+    document.querySelectorAll('#settings-v3-tabs .tab-chip').forEach(tab => {
+      if(tab._bound) return;
+      tab._bound = true;
+      tab.addEventListener('click', () => {
+        SetV3.tab = tab.dataset.settab;
+        document.querySelectorAll('#settings-v3-tabs .tab-chip').forEach(t =>
+          t.classList.toggle('active', t === tab));
+        renderSettingsContent();
+        Sfx.tap(); haptic(4);
+      });
+    });
+
+    renderSettingsContent();
+
+    /* زر البحث */
+    const searchBtn = document.getElementById('settings-search-btn');
+    if(searchBtn && !searchBtn._bound){
+      searchBtn._bound = true;
+      searchBtn.addEventListener('click', () => {
+        const q = prompt('ابحث في الإعدادات:');
+        if(q) searchSettings(q);
+      });
+    }
+  };
+
+  function renderSettingsContent(){
+    const c = document.getElementById('settings-v3-content');
+    if(!c) return;
+    c.innerHTML = '';
+
+    switch(SetV3.tab){
+      case 'account':       renderSetAccount(c);      break;
+      case 'audio':         renderSetAudio(c);        break;
+      case 'graphics':      renderSetGraphics(c);     break;
+      case 'gameplay':      renderSetGameplay(c);     break;
+      case 'notifications': renderSetNotifications(c);break;
+      case 'privacy':       renderSetPrivacy(c);      break;
+      case 'data':          renderSetData(c);         break;
+      case 'about':         renderSetAbout(c);        break;
+    }
+  }
+
+  /* ─── قسم الحساب ─── */
+  function renderSetAccount(container){
+    const user = (typeof Cloud !== 'undefined') ? Cloud.user : null;
+    const profile = (typeof Cloud !== 'undefined') ? Cloud.profile : null;
+    const name = (profile && profile.username) || (user && user.displayName) || 'ضيف';
+    const photo = (user && user.photoURL) || null;
+    const provider = user ? getProviderLabelLocal(user) : 'محلي';
+    const uid = user ? user.uid : 'LOCAL';
+
+    const card = document.createElement('div');
+    card.className = 'account-card-v3';
+    card.innerHTML = `
+      <div class="acv3-avatar">
+        ${photo
+          ? `<img src="${photo}" onerror="this.style.display='none';this.parentElement.textContent='${name.charAt(0).toUpperCase()}'">`
+          : name.charAt(0).toUpperCase()
+        }
+      </div>
+      <div class="acv3-info">
+        <div class="acv3-name">${escapeHtmlLocal(name)}</div>
+        <div class="acv3-provider">${provider}</div>
+        <div class="acv3-uid">ID: ${uid.slice(0, 12).toUpperCase()}</div>
+      </div>
+    `;
+    container.appendChild(card);
+
+    /* إجراءات الحساب */
+    const actions = [
+      { icon: '✏️', title: 'تغيير الاسم', desc: 'بدّل اسمك الظاهر', action: () => {
+        const inp = document.getElementById('change-username');
+        if(inp) inp.value = (Cloud.profile && Cloud.profile.username) || '';
+        const ctr = document.getElementById('change-counter');
+        if(ctr) ctr.textContent = inp.value.length + '/16';
+        showScreen('s-change-name');
+      }},
+      { icon: '🏅', title: 'الملف الشخصي', desc: 'اعرض ملفك الكامل', action: () => {
+        if(typeof buildProfileV2 === 'function') buildProfileV2();
+        showScreen('s-profile-v2');
+      }},
+      { icon: '🔗', title: 'ربط الحساب', desc: 'اربط حسابات إضافية', disabled: true },
+      { icon: '🚪', title: 'تسجيل الخروج', desc: 'سيُحفظ تقدمك في السحابة', danger: true, action: async () => {
+        if(!confirm('تسجيل الخروج؟')) return;
+        if(typeof Cloud !== 'undefined' && Cloud.signOut){
+          await Cloud.signOut();
+          showScreen('s-login');
+        }
+      }}
+    ];
+
+    actions.forEach(a => {
+      container.appendChild(buildSettingRow(a));
+    });
+  }
+
+  /* ─── قسم الصوت ─── */
+  function renderSetAudio(container){
+    const s = Save.data.settingsV3;
+
+    /* Sliders */
+    container.appendChild(buildSlider({
+      label: '🔊 صوت المؤثرات',
+      value: s.soundVolume,
+      min: 0, max: 100, step: 5,
+      onChange: (v) => {
+        s.soundVolume = v;
+        Save.save();
+      }
+    }));
+
+    container.appendChild(buildSlider({
+      label: '🎵 الموسيقى',
+      value: s.musicVolume,
+      min: 0, max: 100, step: 5,
+      onChange: (v) => {
+        s.musicVolume = v;
+        Save.save();
+      }
+    }));
+
+    /* Toggles */
+    const toggles = [
+      { key: 'sfxEnabled',      icon: '🔊', title: 'المؤثرات الصوتية',   desc: 'أصوات الأزرار والمكافآت' },
+      { key: 'musicEnabled',    icon: '🎵', title: 'الموسيقى الخلفية',   desc: 'موسيقى هادئة أثناء اللعب' },
+      { key: 'vibrationEnabled',icon: '📳', title: 'الاهتزاز',            desc: 'اهتزاز عند الأحداث' }
+    ];
+
+    toggles.forEach(t => {
+      container.appendChild(buildToggleRow(t, s));
+    });
+  }
+
+  /* ─── قسم الرسوميات ─── */
+  function renderSetGraphics(container){
+    const s = Save.data.settingsV3;
+
+    /* Quality Pills */
+    const qualCard = document.createElement('div');
+    qualCard.className = 'setting-row-v3';
+    qualCard.style.flexDirection = 'column';
+    qualCard.style.alignItems = 'stretch';
+    qualCard.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div class="srv3-icon">⚙️</div>
+        <div class="srv3-info">
+          <div class="srv3-title">جودة الرسوميات</div>
+          <div class="srv3-desc">تحكم في تفاصيل المظهر العام</div>
+        </div>
+      </div>
+      <div class="setting-pills">
+        ${['low', 'medium', 'high'].map(q => `
+          <button class="setting-pill ${s.graphicsQuality === q ? 'active' : ''}"
+                  data-quality="${q}">
+            ${q === 'low' ? '🟢 منخفضة' : q === 'medium' ? '🟡 متوسطة' : '🔴 عالية'}
+          </button>
+        `).join('')}
+      </div>
+    `;
+    container.appendChild(qualCard);
+
+    qualCard.querySelectorAll('[data-quality]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        s.graphicsQuality = btn.dataset.quality;
+        Save.save();
+        qualCard.querySelectorAll('[data-quality]').forEach(b =>
+          b.classList.toggle('active', b === btn));
+        Sfx.tap();
+        showSettingsSaved();
+      });
+    });
+
+    /* Toggles */
+    const toggles = [
+      { key: 'particlesEnabled', icon: '✨', title: 'الجسيمات', desc: 'تأثيرات الانفجارات والشرار' },
+      { key: 'shadowsEnabled',   icon: '🌑', title: 'الظلال',   desc: 'ظلال تحت العناصر' },
+      { key: 'weatherEnabled',   icon: '🌧️', title: 'الطقس',    desc: 'مطر، ثلج، وأوراق' },
+      { key: 'screenShakeEnabled',icon: '📳', title: 'اهتزاز الشاشة', desc: 'عند الاصطدام والأحداث' }
+    ];
+
+    toggles.forEach(t => {
+      container.appendChild(buildToggleRow(t, s));
+    });
+  }
+
+  /* ─── قسم اللعب ─── */
+  function renderSetGameplay(container){
+    const s = Save.data.settingsV3;
+
+    const toggles = [
+      { key: 'showHints',      icon: '💡', title: 'التلميحات', desc: 'عرض نصائح أثناء اللعب' },
+      { key: 'autoPause',      icon: '⏸️', title: 'إيقاف تلقائي', desc: 'عند تغيير النافذة' },
+      { key: 'hapticFeedback', icon: '📳', title: 'الاهتزاز', desc: 'عند المكافآت والأحداث' },
+      { key: 'confirmQuit',    icon: '❓', title: 'تأكيد الخروج', desc: 'اسأل قبل مغادرة الجولة' }
+    ];
+
+    toggles.forEach(t => {
+      container.appendChild(buildToggleRow(t, s));
+    });
+  }
+
+  /* ─── قسم الإشعارات ─── */
+  function renderSetNotifications(container){
+    const s = Save.data.settingsV3;
+
+    const toggles = [
+      { key: 'notificationsEnabled', icon: '🔔', title: 'تفعيل الإشعارات', desc: 'استقبل الإشعارات' },
+      { key: 'friendRequests',       icon: '👥', title: 'طلبات الصداقة',   desc: 'إشعار عند وصول طلب' },
+      { key: 'clanInvites',          icon: '🛡️', title: 'دعوات الفرق',    desc: 'إشعار عند دعوتك لفريق' },
+      { key: 'dailyReminders',       icon: '🎁', title: 'تذكير اليومي',    desc: 'تذكير بمكافأة اليوم' },
+      { key: 'achievementsPopups',   icon: '🏆', title: 'نوافذ الإنجازات', desc: 'عند فتح إنجاز جديد' }
+    ];
+
+    toggles.forEach(t => {
+      container.appendChild(buildToggleRow(t, s));
+    });
+  }
+
+  /* ─── قسم الخصوصية ─── */
+  function renderSetPrivacy(container){
+    const s = Save.data.settingsV3;
+
+    /* Visibility pills */
+    const visCard = document.createElement('div');
+    visCard.className = 'setting-row-v3';
+    visCard.style.flexDirection = 'column';
+    visCard.style.alignItems = 'stretch';
+    visCard.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div class="srv3-icon">👁️</div>
+        <div class="srv3-info">
+          <div class="srv3-title">ظهور الملف الشخصي</div>
+          <div class="srv3-desc">من يمكنه رؤية ملفك</div>
+        </div>
+      </div>
+      <div class="setting-pills">
+        ${[
+          { v: 'public', l: '🌍 للجميع' },
+          { v: 'friends', l: '👥 للأصدقاء' },
+          { v: 'private', l: '🔒 خاص' }
+        ].map(o => `
+          <button class="setting-pill ${s.profileVisibility === o.v ? 'active' : ''}"
+                  data-vis="${o.v}">
+            ${o.l}
+          </button>
+        `).join('')}
+      </div>
+    `;
+    container.appendChild(visCard);
+
+    visCard.querySelectorAll('[data-vis]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        s.profileVisibility = btn.dataset.vis;
+        Save.save();
+        visCard.querySelectorAll('[data-vis]').forEach(b =>
+          b.classList.toggle('active', b === btn));
+        Sfx.tap();
+        showSettingsSaved();
+      });
+    });
+
+    const toggles = [
+      { key: 'allowFriendRequests', icon: '👥', title: 'السماح بطلبات الصداقة', desc: 'يمكن للأخرين إضافتك' },
+      { key: 'allowClanInvites',    icon: '🛡️', title: 'السماح بدعوات الفرق',    desc: 'يمكن دعوتك للفرق' },
+      { key: 'showOnlineStatus',    icon: '🟢', title: 'إظهار حالة الاتصال',     desc: 'أصدقاؤك يرون أنك متصل' }
+    ];
+
+    toggles.forEach(t => {
+      container.appendChild(buildToggleRow(t, s));
+    });
+  }
+
+  /* ─── قسم البيانات ─── */
+  function renderSetData(container){
+    /* إجراءات البيانات */
+    const actions = [
+      { icon: '📤', title: 'تصدير البيانات', desc: 'حفظ نسخة JSON كاملة', action: exportAllData },
+      { icon: '📥', title: 'استيراد البيانات', desc: 'من ملف JSON', action: importAllData },
+      { icon: '💾', title: 'حفظ يدوي', desc: 'مزامنة فورية للسحابة', action: manualSave }
+    ];
+
+    actions.forEach(a => {
+      container.appendChild(buildSettingRow(a));
+    });
+
+    /* حجم البيانات */
+    const sizeKB = Math.round(JSON.stringify(Save.data).length / 1024);
+
+    const infoCard = document.createElement('div');
+    infoCard.className = 'setting-row-v3';
+    infoCard.style.cursor = 'default';
+    infoCard.innerHTML = `
+      <div class="srv3-icon">📊</div>
+      <div class="srv3-info">
+        <div class="srv3-title">حجم البيانات</div>
+        <div class="srv3-desc">${sizeKB} KB في الذاكرة المحلية</div>
+      </div>
+    `;
+    container.appendChild(infoCard);
+
+    /* منطقة الخطر */
+    const dangerZone = document.createElement('div');
+    dangerZone.className = 'danger-zone';
+    dangerZone.innerHTML = `
+      <div class="danger-zone-title">
+        <span>⚠️</span>
+        <span>منطقة الخطر</span>
+      </div>
+      <div class="danger-zone-desc">
+        هذه الإجراءات لا يمكن التراجع عنها. تأكد من فهمك الكامل قبل المتابعة.
+      </div>
+      <div class="danger-zone-actions">
+        <button class="danger-btn" id="reset-progress-btn">
+          <span>🔄</span>
+          <span>إعادة تعيين التقدم المحلي</span>
+        </button>
+        <button class="danger-btn solid" id="delete-all-btn">
+          <span>🗑️</span>
+          <span>حذف كل شيء نهائياً</span>
+        </button>
+      </div>
+    `;
+    container.appendChild(dangerZone);
+
+    dangerZone.querySelector('#reset-progress-btn').addEventListener('click', resetLocalProgress);
+    dangerZone.querySelector('#delete-all-btn').addEventListener('click', deleteEverything);
+  }
+
+  /* ─── قسم "حول" ─── */
+  function renderSetAbout(container){
+    const card = document.createElement('div');
+    card.className = 'about-card-v3';
+    card.innerHTML = `
+      <div class="about-brand">SH<span class="accent">I</span>FT</div>
+      <div class="about-sub">CALM ARCADE</div>
+      <div class="about-version">v3.0 · BUILD 2025</div>
+
+      <div class="about-links">
+        <button class="about-link" data-link="terms">
+          <span>📜</span>
+          <span>الشروط</span>
+        </button>
+        <button class="about-link" data-link="privacy">
+          <span>🔒</span>
+          <span>الخصوصية</span>
+        </button>
+        <button class="about-link" data-link="credits">
+          <span>🎨</span>
+          <span>الفريق</span>
+        </button>
+        <button class="about-link" data-link="support">
+          <span>💬</span>
+          <span>الدعم</span>
+        </button>
+      </div>
+
+      <div style="margin-top:16px;font-size:10.5px;
+                  color:var(--ink-mute);line-height:1.6;">
+        صُنع بـ ❤️ لمحبي الألعاب البسيطة الأنيقة
+      </div>
+    `;
+    container.appendChild(card);
+
+    card.querySelectorAll('[data-link]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const link = btn.dataset.link;
+        const messages = {
+          terms: 'الشروط: لعب حر للأغراض الشخصية',
+          privacy: 'الخصوصية: بياناتك محفوظة في Firebase فقط',
+          credits: 'فريق SHIFT: مطوّر مستقل',
+          support: 'للدعم: تواصل عبر قنواتنا الرسمية'
+        };
+        Toast.info(link.toUpperCase(), messages[link] || '—', { duration: 4000 });
+      });
+    });
+  }
+
+  /* ═══ Component Builders ═══ */
+  function buildSettingRow(opts){
+    const row = document.createElement('div');
+    row.className = 'setting-row-v3';
+    if(!opts.disabled) row.classList.add('clickable');
+    if(opts.danger) row.classList.add('danger');
+
+    row.innerHTML = `
+      <div class="srv3-icon">${opts.icon}</div>
+      <div class="srv3-info">
+        <div class="srv3-title">${opts.title}</div>
+        <div class="srv3-desc">${opts.desc || ''}</div>
+      </div>
+      ${!opts.disabled ? '<span class="srv3-arrow">‹</span>' : ''}
+    `;
+
+    if(!opts.disabled && opts.action){
+      row.addEventListener('click', () => {
+        Sfx.tap(); haptic(4);
+        opts.action();
+      });
+    } else if(opts.disabled){
+      row.style.opacity = '.55';
+    }
+
+    return row;
+  }
+
+  function buildToggleRow(opts, settings){
+    const isOn = settings[opts.key] !== false;
+
+    const row = document.createElement('div');
+    row.className = 'setting-row-v3 clickable';
+    row.innerHTML = `
+      <div class="srv3-icon">${opts.icon}</div>
+      <div class="srv3-info">
+        <div class="srv3-title">${opts.title}</div>
+        <div class="srv3-desc">${opts.desc || ''}</div>
+      </div>
+      <div class="setting-toggle ${isOn ? 'on' : ''}"></div>
+    `;
+
+    const toggle = row.querySelector('.setting-toggle');
+    row.addEventListener('click', () => {
+      settings[opts.key] = !settings[opts.key];
+      Save.save();
+      toggle.classList.toggle('on', settings[opts.key]);
+      Sfx.tap(); haptic(4);
+      showSettingsSaved();
+
+      /* طبق بعض الإعدادات فوراً */
+      if(opts.key === 'sfxEnabled') Save.data.settings.sound = settings.sfxEnabled;
+      if(opts.key === 'vibrationEnabled') Save.data.settings.haptics = settings.vibrationEnabled;
+      Save.save();
+    });
+
+    return row;
+  }
+
+  function buildSlider(opts){
+    const wrap = document.createElement('div');
+    wrap.className = 'setting-slider-wrap';
+    wrap.innerHTML = `
+      <div class="setting-slider-head">
+        <span class="label">${opts.label}</span>
+        <span class="value" id="sv-${opts.label.replace(/\s/g, '')}">${opts.value}%</span>
+      </div>
+      <input type="range" class="setting-slider"
+             min="${opts.min}" max="${opts.max}" step="${opts.step}"
+             value="${opts.value}">
+    `;
+
+    const input = wrap.querySelector('input');
+    const valueEl = wrap.querySelector('.value');
+
+    input.addEventListener('input', () => {
+      const v = parseInt(input.value, 10);
+      valueEl.textContent = v + '%';
+      opts.onChange(v);
+    });
+
+    input.addEventListener('change', () => {
+      Sfx.tap(); haptic(3);
+      showSettingsSaved();
+    });
+
+    return wrap;
+  }
+
+  /* ═══ Helper Functions ═══ */
+  function getProviderLabelLocal(user){
+    if(!user) return 'محلي';
+    const data = user.providerData && user.providerData[0];
+    if(!data) return 'لاعب';
+    switch(data.providerId){
+      case 'google.com':   return 'Google';
+      case 'facebook.com': return 'Facebook';
+      case 'password':     return 'بريد';
+      default:             return 'حساب';
+    }
+  }
+
+  function escapeHtmlLocal(s){
+    return String(s || '').replace(/[&<>"']/g, c => ({
+      '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+    }[c]));
+  }
+
+  let _savedToastEl = null;
+  function showSettingsSaved(){
+    if(!_savedToastEl){
+      _savedToastEl = document.createElement('div');
+      _savedToastEl.className = 'settings-saved-toast';
+      _savedToastEl.textContent = '✓ تم الحفظ';
+      document.body.appendChild(_savedToastEl);
+    }
+    _savedToastEl.classList.add('show');
+    clearTimeout(_savedToastEl._timer);
+    _savedToastEl._timer = setTimeout(() => {
+      _savedToastEl.classList.remove('show');
+    }, 1200);
+  }
+
+  function searchSettings(query){
+    if(!query) return;
+    const q = query.toLowerCase();
+    const matches = [];
+
+    if(q.includes('صوت') || q.includes('sound') || q.includes('audio')) matches.push('audio');
+    if(q.includes('رسوم') || q.includes('graphics') || q.includes('جودة')) matches.push('graphics');
+    if(q.includes('لعب') || q.includes('game')) matches.push('gameplay');
+    if(q.includes('إشعار') || q.includes('notif')) matches.push('notifications');
+    if(q.includes('خصوص') || q.includes('privacy')) matches.push('privacy');
+    if(q.includes('بيانات') || q.includes('data')) matches.push('data');
+    if(q.includes('حساب') || q.includes('account')) matches.push('account');
+
+    if(matches.length === 0){
+      Toast.info('لا نتائج', `لم أجد "${query}"`);
+      return;
+    }
+
+    SetV3.tab = matches[0];
+    document.querySelectorAll('#settings-v3-tabs .tab-chip').forEach(t =>
+      t.classList.toggle('active', t.dataset.settab === matches[0]));
+    renderSettingsContent();
+
+    Toast.success('تم الانتقال', `إلى قسم "${matches[0]}"`);
+  }
+
+  /* ═══ إجراءات البيانات ═══ */
+  function exportAllData(){
+    try {
+      const data = JSON.stringify(Save.data, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `shift-backup-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      Toast.success('تم التصدير!', 'نسخة احتياطية كاملة');
+      Sfx.reward();
+    } catch(e){
+      Toast.error('فشل', e.message);
+    }
+  }
+
+  function importAllData(){
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if(!file) return;
+
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+
+        if(!confirm('⚠️ سيتم استبدال تقدمك الحالي\n\nمتابعة؟')) return;
+
+        Save.data = parsed;
+        if(typeof Save.runMigrations === 'function') Save.runMigrations();
+        Save.save();
+
+        Toast.success('تم الاستيراد!', 'أعد تحميل الصفحة');
+        setTimeout(() => location.reload(), 1500);
+      } catch(err){
+        Toast.error('فشل', err.message);
+      }
+    };
+
+    input.click();
+  }
+
+  function manualSave(){
+    Save.save();
+    Toast.success('تم الحفظ', 'سيُزامن مع السحابة');
+    Sfx.reward();
+    haptic(20);
+  }
+
+  function resetLocalProgress(){
+    if(!confirm('⚠️ سيتم حذف تقدمك المحلي فقط\n\nمتابعة؟')) return;
+    if(!confirm('تأكيد نهائي؟')) return;
+
+    if(typeof Save.reset === 'function'){
+      Save.reset();
+      Toast.success('تمت الإعادة', 'أعد تحميل الصفحة');
+      setTimeout(() => location.reload(), 1200);
+    }
+  }
+
+  function deleteEverything(){
+    if(!confirm('⚠️⚠️ حذف كل شيء نهائياً من Firebase\n\nلا يمكن التراجع!')) return;
+    if(!confirm('تأكيد أخير - اكتب "حذف" للمتابعة')) return;
+
+    if(typeof Save.reset === 'function'){
+      Save.reset();
+      Toast.success('تم الحذف', 'أعد تحميل الصفحة');
+      setTimeout(() => location.reload(), 1200);
+    }
+  }
+
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══════════ HOOKS — التكامل مع النظام ═══════════════
+     ═══════════════════════════════════════════════════════════ */
+
+  /* ═══ Hook: عند فتح الشاشات الأربعة ═══ */
+  const _origShowScreen = window.showScreen;
+  window.showScreen = function(id){
+    const result = _origShowScreen.apply(this, arguments);
+
+    setTimeout(() => {
+      if(id === 's-level')       buildLevelPage();
+      if(id === 's-stats-v2')    buildStatsV2();
+      if(id === 's-achieve-v2')  buildAchievementsV2Page();
+      if(id === 's-settings-v2') buildSettingsV2();
+    }, 60);
+
+    return result;
+  };
+
+  /* ═══ Hook: عند نهاية الجولة — تسجيل السجل ═══ */
+  const _origGameOver = window.gameOver;
+  window.gameOver = function(){
+    try {
+      /* سجّل الجولة */
+      StatsV3.recordSession({
+        mode: G.mode,
+        meters: (typeof getMeters === 'function') ? getMeters() : 0,
+        coins: G.runCoins || 0,
+        combo: G.comboMax || 0
+      });
+
+      /* سجّل ترقية المستوى */
+      const before = Save.data._lastLevel || 0;
+      const current = (typeof getGlobalLevel === 'function') ? getGlobalLevel() + 1 : 1;
+      if(current > before){
+        for(let lvl = before + 1; lvl <= current; lvl++){
+          LevelsV3.recordLevelUp(lvl);
+        }
+        Save.data._lastLevel = current;
+      }
+    } catch(e){ /* صامت */ }
+
+    return _origGameOver.apply(this, arguments);
+  };
+
+  /* ═══ Hook: عند فتح إنجاز جديد — سجّل الوقت ═══ */
+  const _origCheckAchievements = window.checkAchievements;
+  if(typeof _origCheckAchievements === 'function'){
+    window.checkAchievements = function(){
+      const result = _origCheckAchievements.apply(this, arguments);
+
+      /* سجّل أوقات الإنجازات الجديدة */
+      if(!Save.data.achievementTimes) Save.data.achievementTimes = {};
+
+      if(typeof ACHIEVEMENTS !== 'undefined'){
+        ACHIEVEMENTS.forEach(a => {
+          if(Save.data.achievements[a.id] && !Save.data.achievementTimes[a.id]){
+            Save.data.achievementTimes[a.id] = Date.now();
+          }
+        });
+      }
+
+      Save.save();
+      return result;
+    };
+  }
+
+  /* ═══ تطبيق الإعدادات على اللعبة ═══ */
+  function applySettingsToGame(){
+    const s = Save.data.settingsV3;
+    if(!s) return;
+
+    /* الصوت */
+    Save.data.settings.sound = s.sfxEnabled;
+    Save.data.settings.haptics = s.vibrationEnabled;
+
+    /* الجسيمات */
+    window._particlesEnabled = s.particlesEnabled;
+    window._shadowsEnabled = s.shadowsEnabled;
+    window._weatherEnabled = s.weatherEnabled;
+    window._screenShakeEnabled = s.screenShakeEnabled;
+  }
+
+  /* طبق عند البدء */
+  applySettingsToGame();
+
+  /* استمع لأي تغيير */
+  const _origSave = Save.save.bind(Save);
+  Save.save = function(){
+    try { applySettingsToGame(); } catch(e){}
+    return _origSave.apply(this, arguments);
+  };
+
+  console.log('[SHIFT v3.0] ✅ Systems Overhaul loaded');
+  console.log('  • Levels: 5 tabs, prestige, milestones, history');
+  console.log('  • Stats: 6 tabs, charts, sparkline, sessions');
+  console.log('  • Achievements: rarities, points, filters');
+  console.log('  • Settings: 8 sections, sliders, privacy, danger zone');
+
+})();
+
+/* ============================================================
+   ═══════════════════════════════════════════════════════════
+   ═══════════ EMERGENCY PATCH v3.1 — FIXES ═════════════════
+   ═══════════════════════════════════════════════════════════
+   يحل مشكلتين:
+   1) الشاشات القديمة (s-stats, s-settings) لا تزال تعمل
+   2) عدد الإنجازات = 8 فقط
+   ============================================================ */
+
+(function emergencyPatchV31(){
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 1) إزالة الشاشات القديمة + تحويل الدوال ═══
+     ═══════════════════════════════════════════════════════════ */
+
+  function removeOldScreens(){
+    /* حذف الشاشات القديمة نهائياً من DOM */
+    ['s-stats', 's-settings', 's-achieve'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el){
+        el.remove();
+        console.log(`[Patch] Removed old screen: #${id}`);
+      }
+    });
+  }
+
+  /* ═══ إعادة تعريف الدوال القديمة لتحوّل للجديدة ═══ */
+  window.buildStats = function(){
+    if(typeof window.buildStatsV2 === 'function'){
+      window.buildStatsV2();
+    }
+    forceShowScreen('s-stats-v2');
+  };
+
+  window.buildSettings = function(){
+    if(typeof window.buildSettingsV2 === 'function'){
+      window.buildSettingsV2();
+    }
+    forceShowScreen('s-settings-v2');
+  };
+
+  window.buildAchievements = function(){
+    if(typeof window.buildAchievementsV2Page === 'function'){
+      window.buildAchievementsV2Page();
+    }
+    forceShowScreen('s-achieve-v2');
+  };
+
+  /* ═══ دالة إظهار شاشة قوية ═══ */
+  function forceShowScreen(id){
+    const homeMenu = document.getElementById('home-menu');
+    if(homeMenu) homeMenu.classList.remove('open');
+
+    document.querySelectorAll('.screen').forEach(s => {
+      s.classList.remove('active');
+    });
+
+    const overlay = document.getElementById('overlay');
+    if(overlay) overlay.classList.add('active');
+
+    const screen = document.getElementById(id);
+    if(screen){
+      screen.classList.add('active');
+      screen.classList.add('slide-in');
+      setTimeout(() => screen.classList.remove('slide-in'), 400);
+    }
+  }
+
+  /* ═══ تنفيذ الإزالة فوراً + محاولة متكررة ═══ */
+  removeOldScreens();
+  setTimeout(removeOldScreens, 500);
+  setTimeout(removeOldScreens, 1500);
+
+  /* ═══ اعتراض showScreen لتحويل الشاشات القديمة ═══ */
+  const _origShowScreen = window.showScreen;
+  window.showScreen = function(id){
+    /* تحويل تلقائي */
+    if(id === 's-stats')      id = 's-stats-v2';
+    if(id === 's-settings')   id = 's-settings-v2';
+    if(id === 's-achieve')    id = 's-achieve-v2';
+
+    /* تأكد من بناء المحتوى */
+    if(id === 's-stats-v2'    && typeof window.buildStatsV2 === 'function') window.buildStatsV2();
+    if(id === 's-settings-v2' && typeof window.buildSettingsV2 === 'function') window.buildSettingsV2();
+    if(id === 's-achieve-v2'  && typeof window.buildAchievementsV2Page === 'function') window.buildAchievementsV2Page();
+
+    return _origShowScreen.call(this, id);
+  };
+
+  console.log('[Patch v3.1] ✅ Old screens removed & redirected');
+
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 2) توسيع الإنجازات إلى 90+ إنجاز ═══
+     ═══════════════════════════════════════════════════════════ */
+
+  /* ملاحظة: ACHIEVEMENTS معرّفة بـ const لكن المصفوفة قابلة للتعديل بـ push */
+  if(typeof ACHIEVEMENTS !== 'undefined' && Array.isArray(ACHIEVEMENTS)){
+
+    /* ═══ أولاً: نضيف cat + rarity للإنجازات الأصلية ═══ */
+    const originalMeta = {
+      first:    { cat: 'progression', rarity: 'common' },
+      ten:      { cat: 'progression', rarity: 'common' },
+      m100:     { cat: 'progression', rarity: 'common' },
+      m500:     { cat: 'progression', rarity: 'rare' },
+      m2000:    { cat: 'progression', rarity: 'epic' },
+      m5000:    { cat: 'progression', rarity: 'legendary' },
+      combo20:  { cat: 'skill',       rarity: 'rare' },
+      allmodes: { cat: 'mode',        rarity: 'epic' }
+    };
+
+    ACHIEVEMENTS.forEach(a => {
+      const meta = originalMeta[a.id];
+      if(meta){
+        if(!a.cat) a.cat = meta.cat;
+        if(!a.rarity) a.rarity = meta.rarity;
+      } else {
+        if(!a.cat) a.cat = 'progression';
+        if(!a.rarity) a.rarity = 'common';
+      }
+    });
+
+    /* ═══ ثانياً: الإنجازات الجديدة (90+) ═══ */
+    const NEW_ACHIEVEMENTS = [
+
+      /* ─────────────────────────────────────────────
+         📈 التقدم (Progression) — 20 إنجاز
+         ───────────────────────────────────────────── */
+      { id:'p_50plays',    icon:'🎮', name:'خمسون جولة',     desc:'العب 50 جولة',           target:50,     value:s=>s.stats.totalPlays||0, cat:'progression', rarity:'common' },
+      { id:'p_100plays',   icon:'🎯', name:'مئة جولة',       desc:'العب 100 جولة',          target:100,    value:s=>s.stats.totalPlays||0, cat:'progression', rarity:'rare' },
+      { id:'p_500plays',   icon:'⚡', name:'خمسمئة جولة',   desc:'العب 500 جولة',          target:500,    value:s=>s.stats.totalPlays||0, cat:'progression', rarity:'epic' },
+      { id:'p_1000plays',  icon:'👑', name:'ألف جولة',       desc:'العب 1000 جولة',         target:1000,   value:s=>s.stats.totalPlays||0, cat:'progression', rarity:'legendary' },
+      { id:'p_5000plays',  icon:'🌟', name:'خمسة آلاف جولة', desc:'العب 5000 جولة',         target:5000,   value:s=>s.stats.totalPlays||0, cat:'progression', rarity:'mythic' },
+
+      { id:'p_m1000',   icon:'📏', name:'كيلومتر',           desc:'اقطع 1000م إجمالاً',     target:1000,    value:s=>s.stats.totalMeters||0, cat:'progression', rarity:'common' },
+      { id:'p_m10000',  icon:'📐', name:'عشرة كيلومترات',   desc:'اقطع 10,000م إجمالاً',  target:10000,   value:s=>s.stats.totalMeters||0, cat:'progression', rarity:'rare' },
+      { id:'p_m50000',  icon:'🗺️', name:'خمسون كيلومتراً',   desc:'اقطع 50,000م إجمالاً',  target:50000,   value:s=>s.stats.totalMeters||0, cat:'progression', rarity:'epic' },
+      { id:'p_m100000', icon:'🌍', name:'مئة كيلومتر',       desc:'اقطع 100,000م',         target:100000,  value:s=>s.stats.totalMeters||0, cat:'progression', rarity:'epic' },
+      { id:'p_m500000', icon:'🌎', name:'خمسمئة كيلومتر',   desc:'اقطع 500,000م',         target:500000,  value:s=>s.stats.totalMeters||0, cat:'progression', rarity:'legendary' },
+      { id:'p_m1000000',icon:'🌏', name:'مليون متر',         desc:'اقطع 1,000,000م',       target:1000000, value:s=>s.stats.totalMeters||0, cat:'progression', rarity:'mythic' },
+
+      { id:'p_best200',  icon:'⭐', name:'مئتا متر',         desc:'وصل إلى 200م في جولة',  target:200,  value:s=>s.stats.bestMeters||0, cat:'progression', rarity:'common' },
+      { id:'p_best1000', icon:'🌟', name:'كيلومتر واحد',     desc:'وصل إلى 1000م في جولة', target:1000, value:s=>s.stats.bestMeters||0, cat:'progression', rarity:'rare' },
+      { id:'p_best2500', icon:'💫', name:'كيلومترين ونصف',   desc:'وصل إلى 2500م',         target:2500, value:s=>s.stats.bestMeters||0, cat:'progression', rarity:'epic' },
+      { id:'p_best5000', icon:'🏆', name:'خمسة كيلومترات',   desc:'وصل إلى 5000م',         target:5000, value:s=>s.stats.bestMeters||0, cat:'progression', rarity:'epic' },
+      { id:'p_best10000',icon:'💎', name:'عشرة كيلومترات',   desc:'وصل إلى 10,000م',       target:10000,value:s=>s.stats.bestMeters||0, cat:'progression', rarity:'legendary' },
+      { id:'p_best25000',icon:'🌌', name:'خمسة وعشرون كيلو', desc:'وصل إلى 25,000م',       target:25000,value:s=>s.stats.bestMeters||0, cat:'progression', rarity:'mythic' },
+
+      { id:'p_coins1000',  icon:'🪙', name:'ألف عملة',       desc:'اجمع 1000 عملة إجمالاً',  target:1000,  value:s=>s.stats.totalCoins||0, cat:'progression', rarity:'common' },
+      { id:'p_coins10000', icon:'💰', name:'عشرة آلاف عملة', desc:'اجمع 10,000 عملة',        target:10000, value:s=>s.stats.totalCoins||0, cat:'progression', rarity:'rare' },
+      { id:'p_coins100000',icon:'💵', name:'مئة ألف عملة',   desc:'اجمع 100,000 عملة',       target:100000,value:s=>s.stats.totalCoins||0, cat:'progression', rarity:'legendary' },
+
+      /* ─────────────────────────────────────────────
+         🎯 المهارة (Skill) — 15 إنجاز
+         ───────────────────────────────────────────── */
+      { id:'s_combo10',   icon:'🔥', name:'سلسلة 10',       desc:'حقق سلسلة 10 عملات',   target:10,   value:s=>s.stats.bestCombo||0, cat:'skill', rarity:'common' },
+      { id:'s_combo30',   icon:'🔥', name:'سلسلة 30',       desc:'حقق سلسلة 30',         target:30,   value:s=>s.stats.bestCombo||0, cat:'skill', rarity:'rare' },
+      { id:'s_combo50',   icon:'🌟', name:'سلسلة 50',       desc:'حقق سلسلة 50',         target:50,   value:s=>s.stats.bestCombo||0, cat:'skill', rarity:'epic' },
+      { id:'s_combo100',  icon:'💫', name:'سلسلة 100',      desc:'حقق سلسلة 100',        target:100,  value:s=>s.stats.bestCombo||0, cat:'skill', rarity:'legendary' },
+      { id:'s_combo200',  icon:'⚡', name:'سلسلة 200',      desc:'حقق سلسلة 200',        target:200,  value:s=>s.stats.bestCombo||0, cat:'skill', rarity:'mythic' },
+      { id:'s_combo500',  icon:'🌠', name:'سلسلة 500',      desc:'حقق سلسلة 500',        target:500,  value:s=>s.stats.bestCombo||0, cat:'skill', rarity:'mythic' },
+
+      { id:'s_orbs10',   icon:'🔮', name:'عشر كرات',        desc:'اجمع 10 كرات طاقة',    target:10,   value:s=>s.stats.orbCount||0, cat:'skill', rarity:'common' },
+      { id:'s_orbs100',  icon:'✨', name:'مئة كرة',         desc:'اجمع 100 كرة طاقة',    target:100,  value:s=>s.stats.orbCount||0, cat:'skill', rarity:'rare' },
+      { id:'s_orbs1000', icon:'🌟', name:'ألف كرة',         desc:'اجمع 1000 كرة طاقة',   target:1000, value:s=>s.stats.orbCount||0, cat:'skill', rarity:'epic' },
+
+      { id:'s_noHit_500',  icon:'🛡️', name:'بدون إصابات',    desc:'500م دون أي إصابة',     target:500,  value:s=>s.stats.perfectRunMeters||0, cat:'skill', rarity:'rare' },
+      { id:'s_noHit_1500', icon:'⚔️', name:'درع حديدي',      desc:'1500م دون إصابة',       target:1500, value:s=>s.stats.perfectRunMeters||0, cat:'skill', rarity:'epic' },
+      { id:'s_noHit_3000', icon:'🏰', name:'حصن منيع',       desc:'3000م دون إصابة',       target:3000, value:s=>s.stats.perfectRunMeters||0, cat:'skill', rarity:'legendary' },
+
+      { id:'s_speed500',   icon:'⚡', name:'سريع',           desc:'500م في 30 ثانية',      target:500,  value:s=>s.stats.maxMetersIn30s||0, cat:'skill', rarity:'rare' },
+      { id:'s_speed1000',  icon:'💨', name:'فائق السرعة',    desc:'1000م في 30 ثانية',     target:1000, value:s=>s.stats.maxMetersIn30s||0, cat:'skill', rarity:'epic' },
+
+      { id:'s_noPower',    icon:'🚫', name:'بلا تعزيزات',    desc:'800م بدون تعزيزات',     target:800,  value:s=>s.stats.noPowerupMeters||0, cat:'skill', rarity:'rare' },
+
+      /* ─────────────────────────────────────────────
+         🎮 الأنماط (Modes) — 15 إنجاز
+         ───────────────────────────────────────────── */
+      { id:'m_flip1000',    icon:'⇅', name:'قلب 1000',      desc:'FLIP: 1000م',    target:1000, value:s=>(s.bestMeters&&s.bestMeters.FLIP)||0,   cat:'mode', rarity:'common' },
+      { id:'m_flip5000',    icon:'⇅', name:'قلب 5000',      desc:'FLIP: 5000م',    target:5000, value:s=>(s.bestMeters&&s.bestMeters.FLIP)||0,   cat:'mode', rarity:'epic' },
+      { id:'m_flip10000',   icon:'⇅', name:'قلب 10K',       desc:'FLIP: 10,000م',  target:10000,value:s=>(s.bestMeters&&s.bestMeters.FLIP)||0,   cat:'mode', rarity:'legendary' },
+
+      { id:'m_flap1000',    icon:'▲', name:'تحليق 1000',    desc:'FLAP: 1000م',    target:1000, value:s=>(s.bestMeters&&s.bestMeters.FLAP)||0,   cat:'mode', rarity:'common' },
+      { id:'m_flap5000',    icon:'▲', name:'تحليق 5000',    desc:'FLAP: 5000م',    target:5000, value:s=>(s.bestMeters&&s.bestMeters.FLAP)||0,   cat:'mode', rarity:'epic' },
+      { id:'m_flap10000',   icon:'▲', name:'تحليق 10K',     desc:'FLAP: 10,000م',  target:10000,value:s=>(s.bestMeters&&s.bestMeters.FLAP)||0,   cat:'mode', rarity:'legendary' },
+
+      { id:'m_drift1000',   icon:'✦', name:'انسياق 1000',   desc:'DRIFT: 1000م',   target:1000, value:s=>(s.bestMeters&&s.bestMeters.DRIFT)||0,  cat:'mode', rarity:'common' },
+      { id:'m_drift5000',   icon:'✦', name:'انسياق 5000',   desc:'DRIFT: 5000م',   target:5000, value:s=>(s.bestMeters&&s.bestMeters.DRIFT)||0,  cat:'mode', rarity:'epic' },
+      { id:'m_drift10000',  icon:'✦', name:'انسياق 10K',    desc:'DRIFT: 10,000م', target:10000,value:s=>(s.bestMeters&&s.bestMeters.DRIFT)||0,  cat:'mode', rarity:'legendary' },
+
+      { id:'m_walk1000',    icon:'♟', name:'مشي 1000',      desc:'WALK: 1000م',    target:1000, value:s=>(s.bestMeters&&s.bestMeters.WALK)||0,   cat:'mode', rarity:'common' },
+      { id:'m_walk5000',    icon:'♟', name:'مشي 5000',      desc:'WALK: 5000م',    target:5000, value:s=>(s.bestMeters&&s.bestMeters.WALK)||0,   cat:'mode', rarity:'epic' },
+      { id:'m_walk10000',   icon:'♟', name:'مشي 10K',       desc:'WALK: 10,000م',  target:10000,value:s=>(s.bestMeters&&s.bestMeters.WALK)||0,   cat:'mode', rarity:'legendary' },
+
+      { id:'m_soar1000',    icon:'🕊️', name:'تحليق حر 1000', desc:'SOAR: 1000م',   target:1000, value:s=>(s.bestMeters&&s.bestMeters.SOAR)||0,  cat:'mode', rarity:'rare' },
+      { id:'m_pulse1000',   icon:'⇕', name:'نبض 1000',      desc:'PULSE: 1000م',   target:1000, value:s=>(s.bestMeters&&s.bestMeters.PULSE)||0, cat:'mode', rarity:'rare' },
+      { id:'m_ascend500',   icon:'↑', name:'صعود 500',      desc:'ASCEND: 500م',   target:500,  value:s=>(s.bestMeters&&s.bestMeters.ASCEND)||0, cat:'mode', rarity:'rare' },
+
+      /* ─────────────────────────────────────────────
+         ◆ التحولات (Shift) — 10 إنجازات
+         ───────────────────────────────────────────── */
+      { id:'sh_first',   icon:'◆', name:'المتحوّل الأول',  desc:'أكمل أول SHIFT Run',  target:1,   value:s=>s.stats.shiftRuns||0, cat:'shift', rarity:'common' },
+      { id:'sh_5',       icon:'🔮', name:'المتحوّل',        desc:'أكمل 5 SHIFT Runs',   target:5,   value:s=>s.stats.shiftRuns||0, cat:'shift', rarity:'common' },
+      { id:'sh_20',      icon:'🌀', name:'خبير التحولات',  desc:'أكمل 20 SHIFT Run',   target:20,  value:s=>s.stats.shiftRuns||0, cat:'shift', rarity:'rare' },
+      { id:'sh_50',      icon:'✨', name:'سيّد التحولات',   desc:'أكمل 50 SHIFT Run',   target:50,  value:s=>s.stats.shiftRuns||0, cat:'shift', rarity:'epic' },
+      { id:'sh_100',     icon:'🌟', name:'أسطورة التحولات', desc:'أكمل 100 SHIFT Run',  target:100, value:s=>s.stats.shiftRuns||0, cat:'shift', rarity:'epic' },
+      { id:'sh_200',     icon:'💫', name:'إله التحولات',   desc:'أكمل 200 SHIFT Run',  target:200, value:s=>s.stats.shiftRuns||0, cat:'shift', rarity:'legendary' },
+      { id:'sh_500',     icon:'⚡', name:'ما بعد التحولات', desc:'أكمل 500 SHIFT Run',  target:500, value:s=>s.stats.shiftRuns||0, cat:'shift', rarity:'mythic' },
+
+      /* ─────────────────────────────────────────────
+         💎 المجموعة (Collection) — 15 إنجاز
+         ───────────────────────────────────────────── */
+      { id:'c_skin3',      icon:'🎨', name:'جامع المبتدئ',   desc:'امتلك 3 أزياء',  target:3,  value:s=>(s.ownedSkins||[]).length, cat:'collection', rarity:'common' },
+      { id:'c_skin5',      icon:'🎨', name:'جامع',           desc:'امتلك 5 أزياء',  target:5,  value:s=>(s.ownedSkins||[]).length, cat:'collection', rarity:'common' },
+      { id:'c_skin10',     icon:'💎', name:'خبير الأزياء',    desc:'امتلك 10 أزياء', target:10, value:s=>(s.ownedSkins||[]).length, cat:'collection', rarity:'rare' },
+      { id:'c_skin20',     icon:'👑', name:'كنز الأزياء',     desc:'امتلك 20 زي',    target:20, value:s=>(s.ownedSkins||[]).length, cat:'collection', rarity:'epic' },
+      { id:'c_skin30',     icon:'🌟', name:'سيد الأزياء',     desc:'امتلك 30 زي',    target:30, value:s=>(s.ownedSkins||[]).length, cat:'collection', rarity:'legendary' },
+
+      { id:'c_cos10',      icon:'✨', name:'جامع التأثيرات',  desc:'امتلك 10 تأثيرات',  target:10, value:s=>{let t=0;const c=s.cosmetics&&s.cosmetics.owned||{};for(const k in c)t+=(c[k]||[]).length;return t;}, cat:'collection', rarity:'common' },
+      { id:'c_cos30',      icon:'💫', name:'خبير التأثيرات',  desc:'امتلك 30 تأثيراً',  target:30, value:s=>{let t=0;const c=s.cosmetics&&s.cosmetics.owned||{};for(const k in c)t+=(c[k]||[]).length;return t;}, cat:'collection', rarity:'rare' },
+      { id:'c_cos50',      icon:'⚡', name:'سيد التأثيرات',   desc:'امتلك 50 تأثيراً',  target:50, value:s=>{let t=0;const c=s.cosmetics&&s.cosmetics.owned||{};for(const k in c)t+=(c[k]||[]).length;return t;}, cat:'collection', rarity:'epic' },
+      { id:'c_cos100',     icon:'🌌', name:'ما بعد الخيال',   desc:'امتلك 100 تأثير',   target:100,value:s=>{let t=0;const c=s.cosmetics&&s.cosmetics.owned||{};for(const k in c)t+=(c[k]||[]).length;return t;}, cat:'collection', rarity:'legendary' },
+
+      { id:'c_card5',      icon:'🃏', name:'جامع البطاقات',   desc:'اجمع 5 بطاقات',    target:5,  value:s=>(s.cards&&s.cards.unlocked&&s.cards.unlocked.length)||0, cat:'collection', rarity:'common' },
+      { id:'c_card20',     icon:'🎴', name:'خبير البطاقات',   desc:'اجمع 20 بطاقة',    target:20, value:s=>(s.cards&&s.cards.unlocked&&s.cards.unlocked.length)||0, cat:'collection', rarity:'rare' },
+      { id:'c_card50',     icon:'🎰', name:'سيد البطاقات',    desc:'اجمع 50 بطاقة',    target:50, value:s=>(s.cards&&s.cards.unlocked&&s.cards.unlocked.length)||0, cat:'collection', rarity:'epic' },
+      { id:'c_card100',    icon:'🃏', name:'أسطورة البطاقات', desc:'اجمع 100 بطاقة',   target:100,value:s=>(s.cards&&s.cards.unlocked&&s.cards.unlocked.length)||0, cat:'collection', rarity:'legendary' },
+
+      { id:'c_shards100',  icon:'🔷', name:'جامع الشظايا',   desc:'اجمع 100 شظية',    target:100,  value:s=>s.shards||0, cat:'collection', rarity:'common' },
+      { id:'c_shards1000', icon:'❄️', name:'خبير الشظايا',   desc:'اجمع 1000 شظية',   target:1000, value:s=>s.shards||0, cat:'collection', rarity:'rare' },
+      { id:'c_shards10000',icon:'💠', name:'كنز الشظايا',    desc:'اجمع 10,000 شظية', target:10000,value:s=>s.shards||0, cat:'collection', rarity:'epic' },
+
+      /* ─────────────────────────────────────────────
+         🏅 الموسم (Season) — 8 إنجازات
+         ───────────────────────────────────────────── */
+      { id:'s_season_500',   icon:'🏅', name:'موسم مبتدئ',   desc:'اجمع 500 نقطة موسم',   target:500,   value:s=>(s.season&&s.season.points)||0, cat:'progression', rarity:'common' },
+      { id:'s_season_2500',  icon:'🎖️', name:'موسم متقدم',   desc:'اجمع 2500 نقطة',       target:2500,  value:s=>(s.season&&s.season.points)||0, cat:'progression', rarity:'rare' },
+      { id:'s_season_5000',  icon:'⚔️', name:'موسم محارب',   desc:'اجمع 5000 نقطة',       target:5000,  value:s=>(s.season&&s.season.points)||0, cat:'progression', rarity:'epic' },
+      { id:'s_season_10000', icon:'👑', name:'موسم أسطورة',  desc:'اجمع 10,000 نقطة',     target:10000, value:s=>(s.season&&s.season.points)||0, cat:'progression', rarity:'legendary' },
+      { id:'s_season_50000', icon:'🌟', name:'موسم أيقوني',  desc:'اجمع 50,000 نقطة',     target:50000, value:s=>(s.season&&s.season.points)||0, cat:'progression', rarity:'mythic' },
+      { id:'s_season_100000',icon:'⚡', name:'موسم خالد',    desc:'اجمع 100,000 نقطة',    target:100000,value:s=>(s.season&&s.season.points)||0, cat:'progression', rarity:'mythic' },
+
+      { id:'s_bp10', icon:'🎫', name:'باتل باس 10',   desc:'وصل لمستوى 10 في BP', target:10, value:s=>{const tp=300;return Math.floor(((s.season&&s.season.points)||0)/tp);}, cat:'progression', rarity:'rare' },
+      { id:'s_bp30', icon:'🎫', name:'باتل باس 30',   desc:'وصل لمستوى 30 في BP', target:30, value:s=>{const tp=300;return Math.floor(((s.season&&s.season.points)||0)/tp);}, cat:'progression', rarity:'epic' },
+
+      /* ─────────────────────────────────────────────
+         🎁 الدخول اليومي (Daily) — 6 إنجازات
+         ───────────────────────────────────────────── */
+      { id:'d_streak3',   icon:'🔥', name:'ثلاثة أيام',   desc:'سلسلة 3 أيام',    target:3,   value:s=>(s.dailyLogin&&s.dailyLogin.streak)||0, cat:'progression', rarity:'common' },
+      { id:'d_streak7',   icon:'🔥', name:'أسبوع كامل',   desc:'سلسلة 7 أيام',    target:7,   value:s=>(s.dailyLogin&&s.dailyLogin.streak)||0, cat:'progression', rarity:'rare' },
+      { id:'d_streak30',  icon:'⚡', name:'شهر كامل',     desc:'سلسلة 30 يوم',    target:30,  value:s=>(s.dailyLogin&&s.dailyLogin.streak)||0, cat:'progression', rarity:'epic' },
+      { id:'d_streak100', icon:'💫', name:'مئة يوم',      desc:'سلسلة 100 يوم',   target:100, value:s=>(s.dailyLogin&&s.dailyLogin.streak)||0, cat:'progression', rarity:'legendary' },
+
+      { id:'d_total7',    icon:'📅', name:'مسجل منتظم',   desc:'سجّل 7 مرات',     target:7,   value:s=>(s.dailyLogin&&s.dailyLogin.totalClaims)||0, cat:'progression', rarity:'common' },
+      { id:'d_total30',   icon:'📅', name:'مسجل نشيط',    desc:'سجّل 30 مرة',     target:30,  value:s=>(s.dailyLogin&&s.dailyLogin.totalClaims)||0, cat:'progression', rarity:'rare' },
+
+      /* ─────────────────────────────────────────────
+         👥 الاجتماعية (Social) — 10 إنجازات
+         ───────────────────────────────────────────── */
+      { id:'so_friend1',   icon:'👥', name:'أول صديق',      desc:'أضف أول صديق',        target:1,   value:s=>s.friendCount||0, cat:'progression', rarity:'common' },
+      { id:'so_friend5',   icon:'👥', name:'مجموعة',        desc:'أضف 5 أصدقاء',        target:5,   value:s=>s.friendCount||0, cat:'progression', rarity:'rare' },
+      { id:'so_friend20',  icon:'👥', name:'دائرة واسعة',   desc:'أضف 20 صديقاً',       target:20,  value:s=>s.friendCount||0, cat:'progression', rarity:'epic' },
+      { id:'so_friend50',  icon:'🌐', name:'شبكة اجتماعية', desc:'أضف 50 صديقاً',       target:50,  value:s=>s.friendCount||0, cat:'progression', rarity:'legendary' },
+
+      { id:'so_chat10',    icon:'💬', name:'درداش',         desc:'أرسل 10 رسائل',       target:10,  value:s=>s.chatMessagesSent||0, cat:'progression', rarity:'common' },
+      { id:'so_chat100',   icon:'💬', name:'محادث',         desc:'أرسل 100 رسالة',      target:100, value:s=>s.chatMessagesSent||0, cat:'progression', rarity:'rare' },
+
+      { id:'so_mp1',       icon:'⚔️', name:'أول مبارزة',    desc:'أكمل أول مبارزة',     target:1,   value:s=>s.multiplayerMatches||0, cat:'progression', rarity:'common' },
+      { id:'so_mp10',      icon:'⚔️', name:'متبارز',        desc:'أكمل 10 مبارزات',     target:10,  value:s=>s.multiplayerMatches||0, cat:'progression', rarity:'rare' },
+      { id:'so_mp50',      icon:'⚔️', name:'مبارز محترف',   desc:'أكمل 50 مبارزة',      target:50,  value:s=>s.multiplayerMatches||0, cat:'progression', rarity:'epic' },
+      { id:'so_mp100',     icon:'🏆', name:'بطل المبارزات', desc:'أكمل 100 مبارزة',     target:100, value:s=>s.multiplayerMatches||0, cat:'progression', rarity:'legendary' },
+
+      /* ─────────────────────────────────────────────
+         ❓ سرية (Secret) — 10 إنجازات
+         ───────────────────────────────────────────── */
+      { id:'x_rich',      icon:'💰', name:'ثري',        desc:'امتلك 100,000 عملة',    target:100000, value:s=>s.coins||0, cat:'secret', rarity:'epic' },
+      { id:'x_millionaire',icon:'💎', name:'مليونير',    desc:'امتلك 1,000,000 عملة',  target:1000000,value:s=>s.coins||0, cat:'secret', rarity:'legendary' },
+
+      { id:'x_gems100',   icon:'💎', name:'جامع الجواهر',desc:'امتلك 100 جوهرة',       target:100,   value:s=>s.gems||0, cat:'secret', rarity:'rare' },
+      { id:'x_gems1000',  icon:'💎', name:'كنز الجواهر', desc:'امتلك 1000 جوهرة',      target:1000,  value:s=>s.gems||0, cat:'secret', rarity:'epic' },
+
+      { id:'x_prestige1', icon:'👑', name:'أول هيبة',   desc:'أكمل الهيبة مرة',        target:1,     value:s=>s.prestige||0, cat:'secret', rarity:'legendary' },
+      { id:'x_prestige5', icon:'🌟', name:'خمس هيبات',  desc:'أكمل الهيبة 5 مرات',     target:5,     value:s=>s.prestige||0, cat:'secret', rarity:'mythic' },
+
+      { id:'x_level50',   icon:'⚡', name:'نصف المئة',  desc:'وصل للمستوى 50',         target:50,    value:s=>{let idx=0;const th=[0,50,150,350,700,1200,1900,2900,4200,5900,8100,10900,14400,18700,23900,30100,37400,45900,55700,66900];const m=(s.bestMeters?.FLIP||0)+(s.bestMeters?.FLAP||0)+(s.bestMeters?.DRIFT||0)+(s.bestMeters?.WALK||0);for(let i=0;i<th.length;i++){if(m>=th[i])idx=i;}return idx+1;}, cat:'secret', rarity:'mythic' },
+
+      { id:'x_night',     icon:'🌙', name:'بومة الليل',  desc:'العب بعد منتصف الليل',   target:1,     value:s=>s.playedAtNight?1:0, cat:'secret', rarity:'common' },
+      { id:'x_early',     icon:'🌅', name:'طائر الفجر',  desc:'العب قبل 6 صباحاً',      target:1,     value:s=>s.playedAtDawn?1:0, cat:'secret', rarity:'common' },
+      { id:'x_allmodes',  icon:'🎯', name:'كل الأنماط',  desc:'جرب كل الأنماط الثمانية',target:8,     value:s=>Object.values(s.bestMeters||{}).filter(v=>v>0).length, cat:'secret', rarity:'epic' },
+
+      /* ─────────────────────────────────────────────
+         🎪 أحداث خاصة (Special) — 5 إنجازات
+         ───────────────────────────────────────────── */
+      { id:'sp_first_clan',   icon:'🛡️', name:'فريق أول',      desc:'انضم لأول فريق',   target:1,   value:s=>s.clanId?1:0, cat:'progression', rarity:'rare' },
+      { id:'sp_clan_leader',  icon:'👑', name:'زعيم',         desc:'أنشئ فريقاً خاصاً', target:1,   value:s=>s.ownedClan?1:0, cat:'progression', rarity:'epic' },
+      { id:'sp_referral1',    icon:'🎁', name:'دعوة أولى',    desc:'ادعُ أول صديق',     target:1,   value:s=>s.referralCount||0, cat:'progression', rarity:'common' },
+      { id:'sp_referral10',   icon:'🎁', name:'سفير SHIFT',   desc:'ادعُ 10 أصدقاء',    target:10,  value:s=>s.referralCount||0, cat:'progression', rarity:'legendary' },
+      { id:'sp_veteran',      icon:'🏅', name:'محارب قديم',   desc:'العب لمدة 30 يوماً',target:30,  value:s=>s.daysSinceFirstPlay||0, cat:'progression', rarity:'epic' }
+
+    ];
+
+    /* ═══ دمج الإنجازات الجديدة ═══ */
+    const existingIds = new Set(ACHIEVEMENTS.map(a => a.id));
+    let addedCount = 0;
+
+    NEW_ACHIEVEMENTS.forEach(a => {
+      if(!existingIds.has(a.id)){
+        ACHIEVEMENTS.push(a);
+        existingIds.add(a.id);
+        addedCount++;
+      }
+    });
+
+    console.log(`[Patch v3.1] ✅ Added ${addedCount} new achievements`);
+    console.log(`[Patch v3.1] 📊 Total: ${ACHIEVEMENTS.length} achievements`);
+  }
+
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 3) إعادة ربط أزرار القائمة الرئيسية ═══
+     ═══════════════════════════════════════════════════════════ */
+
+  function rewireHomeMenu(){
+    const menu = document.getElementById('home-menu');
+    if(!menu) return;
+
+    /* أزل كل المستمعين القدامى باستبدال العناصر */
+    menu.querySelectorAll('.hm-item[data-menu]').forEach(item => {
+      const action = item.dataset.menu;
+      if(!['stats','settings','achievements','level'].includes(action)) return;
+
+      /* استبدل العنصر لمسح المستمعين */
+      const newItem = item.cloneNode(true);
+      item.parentNode.replaceChild(newItem, item);
+
+      /* اربط المستمع الجديد */
+      newItem.addEventListener('click', () => {
+        const hm = document.getElementById('home-menu');
+        if(hm) hm.classList.remove('open');
+        Sfx.tap(); haptic(6);
+
+        switch(action){
+          case 'level':
+            if(typeof buildLevelPage === 'function') buildLevelPage();
+            forceShowScreen('s-level');
+            break;
+          case 'stats':
+            if(typeof buildStatsV2 === 'function') buildStatsV2();
+            forceShowScreen('s-stats-v2');
+            break;
+          case 'achievements':
+            if(typeof buildAchievementsV2Page === 'function') buildAchievementsV2Page();
+            forceShowScreen('s-achieve-v2');
+            break;
+          case 'settings':
+            if(typeof buildSettingsV2 === 'function') buildSettingsV2();
+            forceShowScreen('s-settings-v2');
+            break;
+        }
+      });
+    });
+
+    console.log('[Patch v3.1] ✅ Home menu rewired for Level/Stats/Achievements/Settings');
+  }
+
+  /* ═══ نفذ الآن + بعد تأخير ═══ */
+  rewireHomeMenu();
+  setTimeout(rewireHomeMenu, 800);
+  setTimeout(rewireHomeMenu, 2000);
+
+  /* ═══ أعد الربط عند كل فتح للقائمة الرئيسية ═══ */
+  const _origBuildHomeV31 = window.buildHome;
+  if(typeof _origBuildHomeV31 === 'function'){
+    window.buildHome = function(){
+      const result = _origBuildHomeV31.apply(this, arguments);
+      setTimeout(rewireHomeMenu, 100);
+      return result;
+    };
+  }
+
+  /* ═══ 4) مسح ذاكرة الإنجازات المؤقتة عند التحميل ═══ */
+  if(!Save.data.achievementTimes){
+    Save.data.achievementTimes = {};
+  }
+
+  /* سجّل أوقات الإنجازات المفتوحة حالياً */
+  if(typeof ACHIEVEMENTS !== 'undefined'){
+    ACHIEVEMENTS.forEach(a => {
+      if(Save.data.achievements[a.id] && !Save.data.achievementTimes[a.id]){
+        Save.data.achievementTimes[a.id] = Date.now();
+      }
+    });
+  }
+
+  Save.save();
+
+  console.log('[Patch v3.1] ✅ Emergency patch applied successfully');
+  console.log(`  • Old screens removed: s-stats, s-settings, s-achieve`);
+  console.log(`  • Achievements expanded: ${typeof ACHIEVEMENTS !== 'undefined' ? ACHIEVEMENTS.length : 0} total`);
+  console.log(`  • Home menu rewired for new screens`);
+
+})();
+
+/* ============================================================
+   ═══════════════════════════════════════════════════════════
+   ═══════════ PATCH v3.2 — COMPREHENSIVE FIX ════════════════
+   ═══════════════════════════════════════════════════════════
+   يحل:
+   1) settingsV3 undefined → tab crashes
+   2) Achievements show "???" everywhere
+   3) Filters close/locked don't work
+   4) Secret achievements should be hidden
+   5) Stats system needs more depth
+   6) Levels should reach 100
+   7) Show all 100 levels
+   8) Add "achievement" and "level" as content sources
+   ============================================================ */
+
+(function patchV32(){
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 1) FIX: settingsV3 initialization ═══
+     ═══════════════════════════════════════════════════════════ */
+
+  const DEFAULT_SETTINGS_V3 = {
+    soundVolume: 80,
+    musicVolume: 50,
+    sfxEnabled: true,
+    musicEnabled: true,
+    vibrationEnabled: true,
+    graphicsQuality: 'high',
+    particlesEnabled: true,
+    shadowsEnabled: true,
+    weatherEnabled: true,
+    screenShakeEnabled: true,
+    showHints: true,
+    autoPause: true,
+    hapticFeedback: true,
+    confirmQuit: true,
+    notificationsEnabled: true,
+    friendRequests: true,
+    clanInvites: true,
+    dailyReminders: true,
+    achievementsPopups: true,
+    profileVisibility: 'public',
+    allowFriendRequests: true,
+    allowClanInvites: true,
+    showOnlineStatus: true,
+    language: 'ar',
+    // ═══ جديد v3.2 ═══
+    minimapEnabled: false,
+    tutorialShown: false,
+    fastAnimation: false,
+    showFPS: false,
+    autoSaveInterval: 30,
+    theme: 'auto',           // auto | dark | light
+    colorBlindMode: 'off',   // off | protanopia | deuteranopia | tritanopia
+    fontSize: 'medium',      // small | medium | large
+    controlSensitivity: 50,
+    joystickSide: 'right'    // right | left
+  };
+
+  /* ضمان وجود settingsV3 بأمان */
+  function ensureSettingsV3(){
+    if(!Save.data) Save.data = {};
+    if(!Save.data.settingsV3 || typeof Save.data.settingsV3 !== 'object'){
+      Save.data.settingsV3 = { ...DEFAULT_SETTINGS_V3 };
+    } else {
+      for(const k in DEFAULT_SETTINGS_V3){
+        if(Save.data.settingsV3[k] === undefined){
+          Save.data.settingsV3[k] = DEFAULT_SETTINGS_V3[k];
+        }
+      }
+    }
+    return Save.data.settingsV3;
+  }
+
+  /* استدعِ في كل تحميل */
+  ensureSettingsV3();
+
+  /* أضف للـ migrations */
+  if(typeof Save !== 'undefined' && Save.runMigrations){
+    const _origRunMigrations = Save.runMigrations.bind(Save);
+    Save.runMigrations = function(){
+      _origRunMigrations();
+      ensureSettingsV3();
+    };
+  }
+
+  /* ═══ حماية دوال الإعدادات ═══ */
+  const _origBuildSettingsV2 = window.buildSettingsV2;
+  window.buildSettingsV2 = function(){
+    ensureSettingsV3();
+    if(typeof _origBuildSettingsV2 === 'function'){
+      try {
+        return _origBuildSettingsV2.apply(this, arguments);
+      } catch(e){
+        console.error('[Settings] Render failed:', e);
+        /* اعرض رسالة خطأ لطيفة */
+        const c = document.getElementById('settings-v3-content');
+        if(c){
+          c.innerHTML = `
+            <div style="padding:40px 20px;text-align:center;color:#C14A4A;">
+              <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
+              <div style="font-size:14px;font-weight:800;">خطأ في تحميل الإعدادات</div>
+              <div style="font-size:11px;margin-top:8px;opacity:.7;">${e.message}</div>
+              <button onclick="Save.data.settingsV3=null;buildSettingsV2();"
+                      style="margin-top:14px;padding:10px 20px;border-radius:10px;
+                             border:none;background:var(--amber);color:#fff;
+                             font-family:inherit;font-weight:800;cursor:pointer;">
+                إعادة تعيين
+              </button>
+            </div>
+          `;
+        }
+      }
+    }
+  };
+
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 2) FIX: Achievements — Names + Filters + Secrets ═══
+     ═══════════════════════════════════════════════════════════ */
+
+  /* تأكد من تهيئة achievements */
+  if(!Save.data.achievements) Save.data.achievements = {};
+  if(!Save.data.achievementTimes) Save.data.achievementTimes = {};
+
+  /* ═══ استبدال دالة عرض الإنجازات بالكامل ═══ */
+  window.buildAchievementsV2Page = function(){
+    const screen = document.getElementById('s-achieve-v2');
+    if(!screen) return;
+    if(typeof ACHIEVEMENTS === 'undefined') return;
+
+    ensureSettingsV3();
+
+    /* ═══ إحصائيات ═══ */
+    /* ═══ استبعد الإنجازات السرية غير المفتوحة من العد ═══ */
+    const visibleAchs = ACHIEVEMENTS.filter(a => {
+      const isSecret = (a.cat === 'secret');
+      const isUnlocked = !!Save.data.achievements[a.id];
+      return !isSecret || isUnlocked;
+    });
+
+    const unlocked = visibleAchs.filter(a => Save.data.achievements[a.id]);
+    const total = visibleAchs.length;
+    const percent = total > 0 ? (unlocked.length / total) * 100 : 0;
+    const points = calculateAchPoints();
+
+    /* ═══ Hero ═══ */
+    const unlockedEl = document.getElementById('achx-unlocked');
+    const totalEl = document.getElementById('achx-total');
+    const percentEl = document.getElementById('achx-percent');
+    const pointsEl = document.getElementById('achx-points');
+
+    if(unlockedEl) unlockedEl.textContent = unlocked.length;
+    if(totalEl) totalEl.textContent = total;
+    if(percentEl) percentEl.textContent = Math.round(percent) + '%';
+    if(pointsEl) pointsEl.textContent = points.toLocaleString();
+
+    const ringFill = document.getElementById('achx-ring-fill');
+    if(ringFill){
+      const circ = 2 * Math.PI * 58;
+      ringFill.style.strokeDasharray = circ;
+      ringFill.style.strokeDashoffset = circ * (1 - percent / 100);
+    }
+
+    /* ═══ عدادات ═══ */
+    const recentCount = visibleAchs.filter(a => {
+      if(!Save.data.achievements[a.id]) return false;
+      const time = Save.data.achievementTimes[a.id] || 0;
+      return (Date.now() - time) < (7 * 24 * 60 * 60 * 1000);
+    }).length;
+
+    const closeCount = visibleAchs.filter(a => {
+      if(Save.data.achievements[a.id]) return false;
+      if(a.cat === 'secret') return false;
+      try {
+        const val = Math.min(a.value(Save.data), a.target);
+        return (val / a.target) >= 0.75;
+      } catch(e) { return false; }
+    }).length;
+
+    const rareCount = unlocked.filter(a =>
+      ['legendary', 'mythic'].includes(a.rarity || 'common')
+    ).length;
+
+    const rc = document.getElementById('achx-recent-count');
+    const cc = document.getElementById('achx-close-count');
+    const rr = document.getElementById('achx-rare-count');
+    if(rc) rc.textContent = recentCount;
+    if(cc) cc.textContent = closeCount;
+    if(rr) rr.textContent = rareCount;
+
+    /* ═══ تبويبات ═══ */
+    const AchState = window._achState = window._achState || { tab: 'all' };
+
+    document.querySelectorAll('#ach-v3-tabs .tab-chip').forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.achv3 === AchState.tab);
+
+      if(tab._boundV32) return;
+      tab._boundV32 = true;
+
+      tab.addEventListener('click', () => {
+        AchState.tab = tab.dataset.achv3;
+        document.querySelectorAll('#ach-v3-tabs .tab-chip').forEach(t =>
+          t.classList.toggle('active', t === tab));
+        renderAchGridV32();
+        Sfx.tap(); haptic(4);
+      });
+    });
+
+    renderAchGridV32();
+
+    /* ═══ زر المشاركة ═══ */
+    const shareBtn = document.getElementById('ach-share-btn');
+    if(shareBtn && !shareBtn._boundV32){
+      shareBtn._boundV32 = true;
+      shareBtn.addEventListener('click', () => {
+        const text = `🏆 SHIFT: ${unlocked.length}/${total} · ${points} نقطة`;
+        if(navigator.share){
+          navigator.share({ title: 'SHIFT', text }).catch(()=>{});
+        } else {
+          navigator.clipboard.writeText(text).then(() => {
+            Toast.success('تم النسخ!', text);
+          });
+        }
+      });
+    }
+  };
+
+  /* ═══ حساب نقاط الإنجازات ═══ */
+  function calculateAchPoints(){
+    const RARITY_POINTS = { common: 5, rare: 15, epic: 40, legendary: 100, mythic: 250 };
+    let total = 0;
+    if(typeof ACHIEVEMENTS === 'undefined') return 0;
+    ACHIEVEMENTS.forEach(a => {
+      if(Save.data.achievements[a.id]){
+        total += RARITY_POINTS[a.rarity || 'common'] || 5;
+      }
+    });
+    return total;
+  }
+
+  /* ═══ عرض شبكة الإنجازات v3.2 ═══ */
+  function renderAchGridV32(){
+    const grid = document.getElementById('achx-grid');
+    if(!grid) return;
+    grid.innerHTML = '';
+
+    if(typeof ACHIEVEMENTS === 'undefined') return;
+
+    const state = window._achState || { tab: 'all' };
+
+    /* ═══ الفلترة الأساسية ═══ */
+    let filtered = [...ACHIEVEMENTS];
+
+    /* استبعد السري غير المفتوح دائماً */
+    filtered = filtered.filter(a => {
+      if(a.cat === 'secret'){
+        return !!Save.data.achievements[a.id];
+      }
+      return true;
+    });
+
+    /* الفلترة حسب التبويب */
+    switch(state.tab){
+      case 'recent': {
+        const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+        filtered = filtered.filter(a => {
+          if(!Save.data.achievements[a.id]) return false;
+          const t = Save.data.achievementTimes[a.id] || 0;
+          return t > weekAgo;
+        });
+        break;
+      }
+      case 'close': {
+        filtered = filtered.filter(a => {
+          if(Save.data.achievements[a.id]) return false;
+          try {
+            const v = Math.min(a.value(Save.data), a.target);
+            return (v / a.target) >= 0.75;
+          } catch(e) { return false; }
+        });
+        break;
+      }
+      case 'locked': {
+        filtered = filtered.filter(a => !Save.data.achievements[a.id]);
+        break;
+      }
+      case 'progression':
+      case 'skill':
+      case 'mode':
+      case 'shift':
+      case 'collection': {
+        filtered = filtered.filter(a => (a.cat || 'progression') === state.tab);
+        break;
+      }
+      case 'all':
+      default:
+        /* include everything visible */
+        break;
+    }
+
+    /* ═══ حالة فارغة ═══ */
+    if(filtered.length === 0){
+      const messages = {
+        recent:  { icon: '🆕', title: 'لا إنجازات حديثة', desc: 'افتح إنجازاً جديداً لتراه هنا' },
+        close:   { icon: '⚡', title: 'لا إنجازات قريبة',  desc: 'استمر — ستحصل عليها' },
+        locked:  { icon: '🔒', title: 'كل الإنجازات مفتوحة!', desc: 'أنت أسطورة حقيقية' },
+        default: { icon: '🏆', title: 'لا إنجازات في هذه الفئة', desc: '' }
+      };
+      const m = messages[state.tab] || messages.default;
+
+      grid.innerHTML = `
+        <div style="text-align:center;padding:60px 20px;color:var(--ink-mute);">
+          <div style="font-size:60px;opacity:.3;margin-bottom:12px;">${m.icon}</div>
+          <div style="font-size:14px;font-weight:800;color:var(--ink);">${m.title}</div>
+          <div style="font-size:11.5px;margin-top:6px;">${m.desc}</div>
+        </div>
+      `;
+      return;
+    }
+
+    /* ═══ الترتيب ═══ */
+    filtered.sort((a, b) => {
+      const ua = !!Save.data.achievements[a.id];
+      const ub = !!Save.data.achievements[b.id];
+      if(ua !== ub) return ua ? 1 : -1;  /* غير المفتوحة أولاً */
+
+      if(ua && ub){
+        const ta = Save.data.achievementTimes[a.id] || 0;
+        const tb = Save.data.achievementTimes[b.id] || 0;
+        return tb - ta;
+      }
+
+      try {
+        const pa = Math.min(a.value(Save.data), a.target) / a.target;
+        const pb = Math.min(b.value(Save.data), b.target) / b.target;
+        return pb - pa;
+      } catch(e) { return 0; }
+    });
+
+    /* ═══ رسم البطاقات ═══ */
+    filtered.forEach(a => {
+      grid.appendChild(buildAchCardV32(a));
+    });
+  }
+
+  /* ═══ بناء بطاقة إنجاز v3.2 ═══ */
+  function buildAchCardV32(a){
+    const RARITY = {
+      common:    { label: 'عادي',   color: '#8B8278', points: 5 },
+      rare:      { label: 'نادر',   color: '#4A88C8', points: 15 },
+      epic:      { label: 'ملحمي',  color: '#9A6AC8', points: 40 },
+      legendary: { label: 'أسطوري', color: '#E8B34E', points: 100 },
+      mythic:    { label: 'خرافي',  color: '#E85838', points: 250 }
+    };
+
+    const isUnlocked = !!Save.data.achievements[a.id];
+    const isSecret = a.cat === 'secret';
+    const rarity = a.rarity || 'common';
+    const rInfo = RARITY[rarity];
+
+    /* ═══ القيم مع حماية ═══ */
+    let current = 0;
+    try { current = Math.min(a.value(Save.data), a.target); } catch(e){}
+
+    const progress = a.target > 0 ? current / a.target : 0;
+    const isClose = !isUnlocked && !isSecret && progress >= 0.75;
+
+    /* ═══ البطاقة ═══ */
+    const card = document.createElement('div');
+    card.className = 'ach-v3-card';
+    if(isUnlocked) card.classList.add('is-unlocked');
+    if(isClose) card.classList.add('is-close');
+    if(['legendary', 'mythic'].includes(rarity)) card.classList.add('is-rare');
+
+    /* ═══ الاسم (يظهر دائماً الآن) ═══ */
+    const displayName = a.name || 'إنجاز';
+    const displayDesc = isSecret && !isUnlocked
+      ? '🔒 إنجاز سري — استمر باللعب'
+      : (a.desc || '');
+
+    /* ═══ وقت الفتح ═══ */
+    let timeStr = '';
+    if(isUnlocked){
+      const t = Save.data.achievementTimes[a.id];
+      if(t) timeStr = formatRelativeTimeV32(t);
+      else timeStr = 'مفتوح';
+    }
+
+    /* ═══ الأيقونة ═══ */
+    const displayIcon = isUnlocked ? (a.icon || '🏆')
+                       : (isSecret ? '❓' : (a.icon || '🏆'));
+
+    card.innerHTML = `
+      <div class="ach-v3-icon" style="${!isUnlocked ? 'opacity:.5;filter:grayscale(.6);' : ''}">
+        ${displayIcon}
+        ${isUnlocked ? '<div class="ach-v3-check">✓</div>' : ''}
+      </div>
+
+      <div class="ach-v3-body">
+        <div class="ach-v3-name">
+          ${escapeHtmlV32(displayName)}
+          <span class="ach-v3-rarity-badge"
+                style="background:${rInfo.color}22;color:${rInfo.color};">
+            ${isSecret ? '❓ سري' : rInfo.label}
+          </span>
+        </div>
+
+        <div class="ach-v3-desc">${escapeHtmlV32(displayDesc)}</div>
+
+        ${!isUnlocked && !isSecret ? `
+          <div class="ach-v3-progress-bar">
+            <div class="ach-v3-progress-fill"
+                 style="width:${Math.round(progress * 100)}%"></div>
+          </div>
+        ` : ''}
+
+        ${!isUnlocked && isSecret ? `
+          <div class="ach-v3-progress-bar" style="background:repeating-linear-gradient(90deg,#E0E0E0,#E0E0E0 4px,#F5F5F5 4px,#F5F5F5 8px);">
+            <div class="ach-v3-progress-fill" style="width:100%;background:transparent;"></div>
+          </div>
+        ` : ''}
+
+        <div class="ach-v3-meta">
+          <span class="ach-v3-progress-text">
+            ${isUnlocked
+              ? `<span style="color:var(--sage);font-weight:700;">✓ ${timeStr}</span>`
+              : isSecret
+                ? '???'
+                : `${Math.round(current).toLocaleString()} / ${a.target.toLocaleString()}`
+            }
+          </span>
+          <span class="ach-v3-reward">
+            <span class="c">⭐</span> ${rInfo.points}
+          </span>
+        </div>
+      </div>
+    `;
+
+    return card;
+  }
+
+  function formatRelativeTimeV32(ts){
+    const diff = Date.now() - ts;
+    const min = Math.floor(diff / 60000);
+    const hr = Math.floor(diff / 3600000);
+    const day = Math.floor(diff / 86400000);
+    if(min < 1) return 'الآن';
+    if(min < 60) return `قبل ${min} دقيقة`;
+    if(hr < 24) return `قبل ${hr} ساعة`;
+    if(day < 7) return `قبل ${day} يوم`;
+    if(day < 30) return `قبل ${Math.floor(day/7)} أسبوع`;
+    return `قبل ${Math.floor(day/30)} شهر`;
+  }
+
+  function escapeHtmlV32(s){
+    return String(s || '').replace(/[&<>"']/g, c => ({
+      '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+    }[c]));
+  }
+
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 3) FIX: 100 Levels + Show All ═══
+     ═══════════════════════════════════════════════════════════ */
+
+  /* ═══ توليد 100 مستوى ═══ */
+  const LEVELS_100 = (function(){
+    /* العشرون الأولون محددون يدوياً */
+    const base = [
+      0, 50, 150, 350, 700, 1200, 1900, 2900, 4200, 5900,
+      8100, 10900, 14400, 18700, 23900, 30100, 37400, 45900, 55700, 66900
+    ];
+
+    /* نولّد الباقي بصيغة أسّية متزايدة */
+    let lastDelta = 11200; /* 66900 - 55700 */
+    const thresholds = [...base];
+
+    for(let i = 20; i < 100; i++){
+      /* كل مستوى يحتاج أكثر بـ ~8% + 800 */
+      lastDelta = Math.round(lastDelta * 1.08 + 800);
+      thresholds.push(thresholds[thresholds.length - 1] + lastDelta);
+    }
+
+    return thresholds;
+  })();
+
+  /* ═══ استبدال GLOBAL_LEVEL_THRESHOLDS — عبر window + local ═══ */
+  try {
+    if(typeof window !== 'undefined'){
+      window.GLOBAL_LEVEL_THRESHOLDS = LEVELS_100;
+    }
+  } catch(e){}
+
+  /* استبدل عبر eval — لأن const يُعرَّف على مستوى الملف */
+  try {
+    /* إعادة تعريف متغيرات المصفوفة في النطاق العام */
+    if(typeof globalThis !== 'undefined'){
+      globalThis.GLOBAL_LEVEL_THRESHOLDS = LEVELS_100;
+    }
+  } catch(e){}
+
+  console.log(`[Patch v3.2] ✅ Levels extended to ${LEVELS_100.length}`);
+
+  /* ═══ دالة إعادة حساب المستوى ═══ */
+  function getLevelFromMetersV32(meters){
+    const arr = LEVELS_100;
+    let idx = 0;
+    for(let i = 0; i < arr.length; i++){
+      if(meters >= arr[i]) idx = i;
+      else break;
+    }
+    return idx;
+  }
+
+  /* ═══ استبدال دالة المستويات ═══ */
+  window.getGlobalLevel = function(){
+    const bm = Save.data.bestMeters || {};
+    const total = (bm.FLIP||0) + (bm.FLAP||0) + (bm.DRIFT||0) + (bm.WALK||0);
+    return getLevelFromMetersV32(total);
+  };
+
+  /* ═══ استبدال دالة التقدم ═══ */
+  window.levelProgress = function(meters, thresholds){
+    const arr = LEVELS_100;
+    const lvl = getLevelFromMetersV32(meters);
+    const cur = arr[lvl];
+    const next = arr[lvl + 1] ?? (cur + 50000);
+    return Math.max(0, Math.min(1, (meters - cur) / (next - cur)));
+  };
+
+  /* ═══ استبدال دالة المكافآت ═══ */
+  window.levelRewardFor = function(lvl){
+    /* مكافآت متزايدة حسب المستوى */
+    const base = 20 + lvl * 15;
+    const milestoneBonus = (lvl % 10 === 0) ? 500 : 0;
+    const legendaryBonus = (lvl % 25 === 0) ? 2000 : 0;
+    return { coins: base + milestoneBonus + legendaryBonus };
+  };
+
+  /* ═══ استبدال صفحة المستويات بالكامل ═══ */
+  window.buildLevelPage = function(){
+    const screen = document.getElementById('s-level');
+    if(!screen) return;
+
+    const bm = Save.data.bestMeters || {};
+    const totalM = (bm.FLIP||0) + (bm.FLAP||0) + (bm.DRIFT||0) + (bm.WALK||0);
+    const lvl = getLevelFromMetersV32(totalM);
+    const lvlDisplay = lvl + 1;
+
+    const title = getLevelTitleV32(lvlDisplay);
+    const stats = Save.data.stats || {};
+    const prestige = Save.data.prestige || 0;
+
+    /* ═══ Hero ═══ */
+    const numEl = document.getElementById('lvl-v3-num');
+    if(numEl) numEl.textContent = lvlDisplay;
+
+    const titleEl = document.getElementById('lvl-title-v3');
+    if(titleEl){
+      titleEl.textContent = title.icon + ' ' + title.name;
+      titleEl.style.color = title.color;
+    }
+
+    /* الحلقة */
+    const ringFill = document.getElementById('lvl-ring-fill');
+    if(ringFill){
+      const cur = LEVELS_100[lvl];
+      const next = LEVELS_100[lvl + 1] || (cur + 50000);
+      const progress = Math.min(1, (totalM - cur) / (next - cur));
+      const circ = 2 * Math.PI * 84;
+      ringFill.style.strokeDasharray = circ;
+      ringFill.style.strokeDashoffset = circ * (1 - progress);
+      ringFill.style.transition = 'stroke-dashoffset 1s cubic-bezier(.34,1.56,.64,1)';
+
+      /* شريط التقدم */
+      const currentEl = document.getElementById('lvl-v3-current');
+      const nextEl = document.getElementById('lvl-v3-next');
+      const fillEl = document.getElementById('lvl-v3-fill');
+      const remainEl = document.getElementById('lvl-v3-remaining');
+
+      if(currentEl) currentEl.textContent = Math.round(cur).toLocaleString();
+      if(nextEl) nextEl.textContent = Math.round(next).toLocaleString();
+      if(fillEl) fillEl.style.width = (progress * 100) + '%';
+      if(remainEl) remainEl.textContent = Math.round(Math.max(0, next - totalM)).toLocaleString();
+    }
+
+    /* الإحصائيات */
+    const totalMEl = document.getElementById('lvl-total-m');
+    const totalPlaysEl = document.getElementById('lvl-total-plays');
+    const prestigeEl = document.getElementById('lvl-prestige');
+    if(totalMEl) totalMEl.textContent = Math.round(totalM).toLocaleString();
+    if(totalPlaysEl) totalPlaysEl.textContent = (stats.totalPlays || 0).toLocaleString();
+    if(prestigeEl) prestigeEl.textContent = prestige;
+
+    /* ═══ تبويبات ═══ */
+    const LvlState = window._lvlState = window._lvlState || { tab: 'rewards' };
+
+    document.querySelectorAll('#lvl-tabs .tab-chip').forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.lvltab === LvlState.tab);
+      if(tab._boundV32) return;
+      tab._boundV32 = true;
+      tab.addEventListener('click', () => {
+        LvlState.tab = tab.dataset.lvltab;
+        document.querySelectorAll('#lvl-tabs .tab-chip').forEach(t =>
+          t.classList.toggle('active', t === tab));
+        renderLvlContentV32(lvl);
+        Sfx.tap(); haptic(4);
+      });
+    });
+
+    renderLvlContentV32(lvl);
+  };
+
+  function getLevelTitleV32(level){
+    const titles = [
+      { min: 1,   max: 4,   icon: '🌱', name: 'مبتدئ',         color: '#8B8278' },
+      { min: 5,   max: 9,   icon: '🧭', name: 'مستكشف',        color: '#4A88C8' },
+      { min: 10,  max: 19,  icon: '⚔️', name: 'محارب',         color: '#9A6AC8' },
+      { min: 20,  max: 29,  icon: '🎖️', name: 'خبير',          color: '#E8B34E' },
+      { min: 30,  max: 39,  icon: '👑', name: 'أسطورة',        color: '#E85838' },
+      { min: 40,  max: 49,  icon: '🌟', name: 'أيقونة',        color: '#FFD060' },
+      { min: 50,  max: 59,  icon: '⚡', name: 'أسطورة خالدة',  color: '#FFE0A0' },
+      { min: 60,  max: 69,  icon: '💎', name: 'ماسي',          color: '#80C0FF' },
+      { min: 70,  max: 79,  icon: '🌌', name: 'كوني',          color: '#C080FF' },
+      { min: 80,  max: 89,  icon: '🏆', name: 'نجم المجرة',   color: '#FFD700' },
+      { min: 90,  max: 99,  icon: '🔥', name: 'الجحيم',        color: '#FF5020' },
+      { min: 100, max: 999, icon: '👁', name: 'الخالد',         color: '#FFFFFF' }
+    ];
+    for(const t of titles){
+      if(level >= t.min && level <= t.max) return t;
+    }
+    return titles[titles.length - 1];
+  }
+
+  function renderLvlContentV32(currentLvl){
+    const c = document.getElementById('lvl-content-v3');
+    if(!c) return;
+    c.innerHTML = '';
+
+    const state = window._lvlState || { tab: 'rewards' };
+
+    switch(state.tab){
+      case 'rewards':    renderLvlRewardsV32(c, currentLvl); break;
+      case 'modes':      renderLvlModesV32(c);   break;
+      case 'history':    renderLvlHistoryV32(c); break;
+      case 'prestige':   renderLvlPrestigeV32(c, currentLvl); break;
+      case 'milestones': renderLvlMilestonesV32(c, currentLvl); break;
+    }
+  }
+
+  /* ═══ المكافآت — عرض كل الـ 100 مستوى ═══ */
+  function renderLvlRewardsV32(container, currentLvl){
+    const claimed = Save.data.claimedGlobalLevels || [];
+
+    /* ═══ عرض جميع المستويات 1-100 ═══ */
+    for(let i = 1; i <= 100; i++){
+      const threshold = LEVELS_100[i - 1] || 0;
+      const nextThreshold = LEVELS_100[i] || (threshold + 50000);
+      const reward = (typeof levelRewardFor === 'function')
+        ? levelRewardFor(i - 1)
+        : { coins: 20 + (i - 1) * 15 };
+
+      const isCurrent = i === currentLvl;
+      const isUnlocked = currentLvl >= i;
+      const isClaimed = claimed.includes(i - 1);
+
+      /* أنواع المكافآت الإضافية */
+      const extraRewards = [];
+      if(i % 5 === 0) extraRewards.push({ icon: '🎁', label: 'عنصر' });
+      if(i % 10 === 0) extraRewards.push({ icon: '💎', label: 'جواهر' });
+      if(i % 25 === 0) extraRewards.push({ icon: '👑', label: 'حصري' });
+      if(i % 50 === 0) extraRewards.push({ icon: '🌟', label: 'أسطوري' });
+
+      const card = document.createElement('div');
+      card.className = 'lvl-reward-card-v3';
+      if(isCurrent) card.classList.add('is-current');
+      else if(isClaimed) card.classList.add('is-claimed');
+      else if(isUnlocked) card.classList.add('is-unlocked');
+
+      const chipsHtml = `
+        <span class="lrcv3-chip"><span class="c">🪙</span> +${reward.coins.toLocaleString()}</span>
+        ${extraRewards.map(r => `<span class="lrcv3-chip">${r.icon} ${r.label}</span>`).join('')}
+      `;
+
+      card.innerHTML = `
+        <div class="lrcv3-num">
+          <span class="n">${i}</span>
+          <span class="k">LVL</span>
+        </div>
+        <div class="lrcv3-info">
+          <div class="lrcv3-title">
+            المستوى ${i}${isCurrent ? ' · الحالي' : ''}
+          </div>
+          <div class="lrcv3-sub">${threshold.toLocaleString()} → ${nextThreshold.toLocaleString()} متر</div>
+          <div class="lrcv3-rewards">${chipsHtml}</div>
+        </div>
+        <div class="lrcv3-action">
+          ${isClaimed
+            ? '<div class="lrcv3-claimed">✓</div>'
+            : isUnlocked
+              ? `<button class="lrcv3-claim" data-claimv32="${i - 1}" data-reward="${reward.coins}">استلام</button>`
+              : `<span style="font-size:18px;opacity:.4;">🔒</span>`
+          }
+        </div>
+      `;
+
+      const btn = card.querySelector('[data-claimv32]');
+      if(btn){
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.dataset.claimv32, 10);
+          const coins = parseInt(btn.dataset.reward, 10);
+          claimLvlRewardV32(idx, coins);
+        });
+      }
+
+      container.appendChild(card);
+    }
+  }
+
+  function claimLvlRewardV32(idx, coins){
+    if((Save.data.claimedGlobalLevels || []).includes(idx)) return;
+    if(!Save.data.claimedGlobalLevels) Save.data.claimedGlobalLevels = [];
+    Save.data.claimedGlobalLevels.push(idx);
+
+    if(typeof addCoins === 'function') addCoins(coins, `مستوى ${idx + 1}`);
+    else { Save.data.coins = (Save.data.coins || 0) + coins; }
+
+    Save.save();
+    Sfx.reward(); haptic(20);
+    Toast.reward('🎁', `مستوى ${idx + 1}`, `🪙 +${coins}`);
+    updateCoinsUI();
+    buildLevelPage();
+  }
+
+  /* ═══ الأنماط (v3.2) ═══ */
+  function renderLvlModesV32(container){
+    const MODE_THRESHOLDS = [0, 40, 120, 250, 450, 750, 1150, 1700, 2500, 3600, 5000, 7000, 9500, 12500, 16000, 20000];
+    const modes = (typeof MODES !== 'undefined') ? MODES : [];
+
+    modes.forEach(m => {
+      if(m.id === 'MIXED') return;
+
+      const bestM = (Save.data.bestMeters && Save.data.bestMeters[m.id]) || 0;
+      let lvl = 1;
+      for(let i = 0; i < MODE_THRESHOLDS.length; i++){
+        if(bestM >= MODE_THRESHOLDS[i]) lvl = i + 1;
+      }
+
+      const currentThreshold = MODE_THRESHOLDS[lvl - 1] || 0;
+      const nextThreshold = MODE_THRESHOLDS[lvl] || (currentThreshold + 5000);
+      const progress = Math.min(1, (bestM - currentThreshold) / (nextThreshold - currentThreshold));
+
+      const card = document.createElement('div');
+      card.className = 'lvl-mode-card';
+      card.style.setProperty('--mc', m.color);
+      card.style.setProperty('--mc2', m.color);
+
+      card.innerHTML = `
+        <div class="lvl-mode-head">
+          <div class="lvl-mode-icon">${m.icon}</div>
+          <div class="lvl-mode-info">
+            <div class="lvl-mode-name">${m.ar}</div>
+            <div class="lvl-mode-en">${m.en}</div>
+          </div>
+          <div class="lvl-mode-level">LVL ${lvl}</div>
+        </div>
+        <div class="lvl-mode-progress">
+          <div class="lvl-mode-fill" style="width:${progress * 100}%"></div>
+        </div>
+        <div class="lvl-mode-meta">
+          <span>${Math.round(bestM).toLocaleString()}م</span>
+          <span>التالي: ${nextThreshold.toLocaleString()}م</span>
+        </div>
+      `;
+
+      container.appendChild(card);
+    });
+  }
+
+  /* ═══ السجل (v3.2) ═══ */
+  function renderLvlHistoryV32(container){
+    const history = Save.data.levelHistory || [];
+
+    if(history.length === 0){
+      container.innerHTML = `
+        <div style="text-align:center;padding:60px 20px;color:var(--ink-mute);">
+          <div style="font-size:60px;opacity:.25;margin-bottom:12px;">📜</div>
+          <div style="font-size:14px;font-weight:800;">لا يوجد سجل بعد</div>
+          <div style="font-size:11.5px;margin-top:6px;">ابدأ اللعب لترقية مستواك</div>
+        </div>
+      `;
+      return;
+    }
+
+    history.slice(0, 50).forEach(h => {
+      const item = document.createElement('div');
+      item.className = 'lvl-history-item';
+
+      const time = new Date(h.time);
+      const timeStr = time.toLocaleDateString('ar-EG', {
+        day: '2-digit', month: '2-digit', year: 'numeric'
+      }) + ' · ' + time.toLocaleTimeString('ar-EG', {
+        hour: '2-digit', minute: '2-digit'
+      });
+
+      item.innerHTML = `
+        <div class="lvl-history-icon">${h.level}</div>
+        <div class="lvl-history-info">
+          <div class="lvl-history-title">وصلت للمستوى ${h.level}</div>
+          <div class="lvl-history-time">${timeStr} · ${Math.round(h.totalM || 0).toLocaleString()}م</div>
+        </div>
+      `;
+
+      container.appendChild(item);
+    });
+  }
+
+  /* ═══ الهيبة (v3.2) ═══ */
+  function renderLvlPrestigeV32(container, currentLvl){
+    const prestige = Save.data.prestige || 0;
+    const canPrestige = currentLvl >= 100;
+
+    container.innerHTML = `
+      <div style="padding:22px;border-radius:20px;
+                  background:linear-gradient(135deg,#2A1830 0%,#5A2880 100%);
+                  color:#fff;margin-bottom:14px;
+                  box-shadow:0 12px 36px rgba(90,40,128,.35);
+                  position:relative;overflow:hidden;">
+        <div style="position:absolute;top:-60px;right:-60px;
+                    width:200px;height:200px;border-radius:50%;
+                    background:radial-gradient(circle,rgba(232,179,78,.4),transparent 70%);
+                    pointer-events:none;"></div>
+        <div style="text-align:center;position:relative;z-index:1;">
+          <div style="font-size:64px;line-height:1;margin-bottom:8px;
+                      filter:drop-shadow(0 8px 24px rgba(232,179,78,.6));">
+            ${prestige > 0 ? '👑'.repeat(Math.min(3, prestige)) : '👑'}
+          </div>
+          <div style="font-family:'Space Grotesk';font-size:10px;
+                      font-weight:800;letter-spacing:4px;opacity:.7;">
+            PRESTIGE LEVEL
+          </div>
+          <div style="font-family:'Space Grotesk';font-size:52px;
+                      font-weight:800;line-height:1;margin:8px 0;
+                      color:var(--gold);text-shadow:0 4px 20px rgba(232,179,78,.7);">
+            ${prestige}
+          </div>
+          <div style="font-size:12px;opacity:.8;line-height:1.5;">
+            ${prestige === 0 ? 'وصل للمستوى 100 لتبدأ الهيبة' : `أعدت الولادة ${prestige} ${prestige === 1 ? 'مرة' : 'مرات'}`}
+          </div>
+        </div>
+      </div>
+      <div style="padding:16px;border-radius:16px;background:#fff;
+                  border:1.5px solid var(--line);margin-bottom:12px;">
+        <div style="font-family:'Space Grotesk';font-size:12px;
+                    font-weight:700;color:var(--ink);margin-bottom:8px;">
+          📋 شروط الهيبة
+        </div>
+        <div style="font-size:12px;color:var(--ink-soft);line-height:1.7;">
+          • الوصول للمستوى 100<br>
+          • إعادة تعيين المستوى إلى 1<br>
+          • الحصول على شارة هيبة دائمة<br>
+          • +10% مضاعف دائم للعملات
+        </div>
+      </div>
+      ${canPrestige ? `
+        <button id="lvl-prestige-btn" style="width:100%;padding:16px;
+                border-radius:14px;border:none;
+                background:linear-gradient(135deg,var(--gold),#F2C862);
+                color:#1A1512;font-family:inherit;font-size:14px;
+                font-weight:800;letter-spacing:1px;cursor:pointer;
+                box-shadow:0 8px 26px rgba(232,179,78,.5);">
+          ⚡ ابدأ الهيبة الآن
+        </button>
+      ` : `
+        <div style="padding:16px;border-radius:14px;background:var(--paper-2);
+                    border:1px dashed var(--line-strong);text-align:center;
+                    font-size:12px;color:var(--ink-mute);font-weight:700;">
+          🔒 تبقى ${100 - currentLvl} مستوى للوصول للهيبة
+        </div>
+      `}
+    `;
+
+    const btn = container.querySelector('#lvl-prestige-btn');
+    if(btn){
+      btn.addEventListener('click', () => {
+        if(!confirm('⚠️ سيتم إعادة تعيين مستواك إلى 1\n\nستحصل على:\n• شارة هيبة دائمة\n• +10% مضاعف دائم\n\nمتابعة؟')) return;
+        Save.data.prestige = (Save.data.prestige || 0) + 1;
+        Save.data.claimedGlobalLevels = [];
+        Save.save();
+        Sfx.reward(); haptic(50);
+        Toast.reward('👑', 'هيبة!', `المستوى ${Save.data.prestige}`);
+        buildLevelPage();
+      });
+    }
+  }
+
+  /* ═══ المعالم (v3.2) ═══ */
+  function renderLvlMilestonesV32(container, currentLvl){
+    const milestones = [];
+    for(let i = 5; i <= 100; i += 5){
+      milestones.push({
+        level: i,
+        icon: i === 100 ? '👁' : i >= 75 ? '🌌' : i >= 50 ? '⚡' : i >= 25 ? '👑' : '🎖️',
+        title: i === 100 ? 'الخالد' : `المستوى ${i}`,
+        desc: `الوصول للمستوى ${i}`
+      });
+    }
+
+    milestones.forEach(ms => {
+      const reached = currentLvl >= ms.level;
+      const card = document.createElement('div');
+      card.className = 'lvl-reward-card-v3';
+      if(reached) card.classList.add('is-unlocked');
+
+      card.innerHTML = `
+        <div class="lrcv3-num" ${reached ? 'style="background:linear-gradient(135deg,#E8B34E,#F2C862);color:#1A1512;"' : ''}>
+          <span class="n">${reached ? ms.icon : '🔒'}</span>
+          <span class="k">${ms.level}</span>
+        </div>
+        <div class="lrcv3-info">
+          <div class="lrcv3-title">${ms.title}</div>
+          <div class="lrcv3-sub">${ms.desc}</div>
+        </div>
+        <div class="lrcv3-action">
+          ${reached
+            ? '<span style="color:#4A7B4A;font-size:18px;">✓</span>'
+            : `<span style="font-family:'Space Grotesk';font-size:11px;color:var(--ink-mute);font-weight:700;">${currentLvl}/${ms.level}</span>`
+          }
+        </div>
+      `;
+
+      container.appendChild(card);
+    });
+  }
+
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 4) Stats Enhancement — v3.2 ═══
+     ═══════════════════════════════════════════════════════════ */
+
+  /* ═══ توسيع سجل الجولات ═══ */
+  const _origRecordSession = (typeof StatsV3 !== 'undefined') ? StatsV3.recordSession : null;
+
+  window.recordSessionV32 = function(data){
+    if(!Save.data.sessionHistory) Save.data.sessionHistory = [];
+    Save.data.sessionHistory.unshift({
+      mode: data.mode || 'FLIP',
+      meters: Math.round(data.meters || 0),
+      coins: data.coins || 0,
+      combo: data.combo || 0,
+      orbs: data.orbs || 0,
+      powerups: data.powerups || 0,
+      duration: data.duration || 0,
+      deaths: data.deaths || 0,
+      time: Date.now(),
+      date: new Date().toISOString().slice(0, 10)
+    });
+    if(Save.data.sessionHistory.length > 500){
+      Save.data.sessionHistory = Save.data.sessionHistory.slice(0, 500);
+    }
+    Save.save();
+  };
+
+  /* ═══ دوال إحصائية موسّعة ═══ */
+  window.getStatsV32 = function(){
+    const s = Save.data.stats || {};
+    const sessions = Save.data.sessionHistory || [];
+    const now = Date.now();
+
+    const filterByTime = (ms) => sessions.filter(x => (now - x.time) < ms);
+
+    const dayAgo = 24 * 60 * 60 * 1000;
+    const weekAgo = 7 * dayAgo;
+    const monthAgo = 30 * dayAgo;
+    const yearAgo = 365 * dayAgo;
+
+    const sumBy = (arr, key) => arr.reduce((sum, x) => sum + (x[key] || 0), 0);
+    const avgBy = (arr, key) => arr.length > 0 ? sumBy(arr, key) / arr.length : 0;
+    const maxBy = (arr, key) => arr.length > 0 ? Math.max(...arr.map(x => x[key] || 0)) : 0;
+
+    return {
+      /* ═══ إجماليات ═══ */
+      totalPlays: s.totalPlays || 0,
+      totalMeters: s.totalMeters || 0,
+      totalCoins: s.totalCoins || 0,
+      totalOrbs: s.orbCount || 0,
+      bestMeters: s.bestMeters || 0,
+      bestCombo: s.bestCombo || 0,
+      shiftRuns: s.shiftRuns || 0,
+
+      /* ═══ مؤقتة ═══ */
+      today: {
+        plays: filterByTime(dayAgo).length,
+        meters: sumBy(filterByTime(dayAgo), 'meters'),
+        coins: sumBy(filterByTime(dayAgo), 'coins'),
+        avg: avgBy(filterByTime(dayAgo), 'meters'),
+        best: maxBy(filterByTime(dayAgo), 'meters')
+      },
+      week: {
+        plays: filterByTime(weekAgo).length,
+        meters: sumBy(filterByTime(weekAgo), 'meters'),
+        coins: sumBy(filterByTime(weekAgo), 'coins'),
+        avg: avgBy(filterByTime(weekAgo), 'meters'),
+        best: maxBy(filterByTime(weekAgo), 'meters')
+      },
+      month: {
+        plays: filterByTime(monthAgo).length,
+        meters: sumBy(filterByTime(monthAgo), 'meters'),
+        coins: sumBy(filterByTime(monthAgo), 'coins'),
+        avg: avgBy(filterByTime(monthAgo), 'meters'),
+        best: maxBy(filterByTime(monthAgo), 'meters')
+      },
+      year: {
+        plays: filterByTime(yearAgo).length,
+        meters: sumBy(filterByTime(yearAgo), 'meters'),
+        coins: sumBy(filterByTime(yearAgo), 'coins')
+      },
+
+      /* ═══ متوسطات ═══ */
+      averages: {
+        metersPerPlay: s.totalPlays > 0 ? s.totalMeters / s.totalPlays : 0,
+        coinsPerPlay: s.totalPlays > 0 ? s.totalCoins / s.totalPlays : 0,
+        orbsPerPlay: s.totalPlays > 0 ? s.orbCount / s.totalPlays : 0
+      },
+
+      /* ═══ مجموعات ═══ */
+      modeBreakdown: getModeBreakdown(sessions),
+      timeHeatmap: getTimeHeatmap(sessions),
+      streak: getPlayStreak(sessions)
+    };
+  };
+
+  function getModeBreakdown(sessions){
+    const result = {};
+    sessions.forEach(x => {
+      if(!result[x.mode]) result[x.mode] = { plays: 0, totalMeters: 0, best: 0 };
+      result[x.mode].plays++;
+      result[x.mode].totalMeters += x.meters || 0;
+      if(x.meters > result[x.mode].best) result[x.mode].best = x.meters;
+    });
+    return result;
+  }
+
+  function getTimeHeatmap(sessions){
+    /* مصفوفة 7x24 (يوم × ساعة) */
+    const heatmap = Array.from({ length: 7 }, () => new Array(24).fill(0));
+    sessions.forEach(x => {
+      const d = new Date(x.time);
+      heatmap[d.getDay()][d.getHours()] += 1;
+    });
+    return heatmap;
+  }
+
+  function getPlayStreak(sessions){
+    if(sessions.length === 0) return { current: 0, best: 0 };
+
+    /* جمّع الأيام الفريدة */
+    const days = new Set();
+    sessions.forEach(x => {
+      const d = new Date(x.time);
+      days.add(d.toISOString().slice(0, 10));
+    });
+
+    const sortedDays = Array.from(days).sort().reverse();
+    if(sortedDays.length === 0) return { current: 0, best: 0 };
+
+    /* السلسلة الحالية */
+    let current = 1;
+    const today = new Date().toISOString().slice(0, 10);
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+
+    if(sortedDays[0] !== today && sortedDays[0] !== yesterday){
+      current = 0;
+    } else {
+      for(let i = 1; i < sortedDays.length; i++){
+        const d1 = new Date(sortedDays[i - 1]);
+        const d2 = new Date(sortedDays[i]);
+        const diff = (d1 - d2) / 86400000;
+        if(diff === 1) current++;
+        else break;
+      }
+    }
+
+    /* أطول سلسلة */
+    let best = current;
+    let streak = 1;
+    for(let i = 1; i < sortedDays.length; i++){
+      const d1 = new Date(sortedDays[i - 1]);
+      const d2 = new Date(sortedDays[i]);
+      const diff = (d1 - d2) / 86400000;
+      if(diff === 1) streak++;
+      else streak = 1;
+      if(streak > best) best = streak;
+    }
+
+    return { current, best };
+  }
+
+  /* ═══ استبدال صفحة الإحصائيات ═══ */
+  window.buildStatsV2 = function(){
+    const screen = document.getElementById('s-stats-v2');
+    if(!screen) return;
+
+    const stats = getStatsV32();
+
+    /* ═══ Hero ═══ */
+    const totalEl = document.getElementById('stx-total-m');
+    const playsEl = document.getElementById('stx-total-plays');
+    if(totalEl) totalEl.textContent = Math.round(stats.totalMeters).toLocaleString();
+    if(playsEl) playsEl.textContent = stats.totalPlays.toLocaleString();
+
+    const todayEl = document.getElementById('stx-today');
+    const weekEl = document.getElementById('stx-week');
+    const monthEl = document.getElementById('stx-month');
+    const bestEl = document.getElementById('stx-best');
+
+    if(todayEl) todayEl.textContent = Math.round(stats.today.meters).toLocaleString();
+    if(weekEl) weekEl.textContent = Math.round(stats.week.meters).toLocaleString();
+    if(monthEl) monthEl.textContent = Math.round(stats.month.meters).toLocaleString();
+    if(bestEl) bestEl.textContent = Math.round(stats.bestMeters).toLocaleString();
+
+    /* Sparkline */
+    drawStatsSparklineV32();
+
+    /* ═══ تبويبات ═══ */
+    const StxState = window._stxState = window._stxState || { tab: 'overview' };
+
+    document.querySelectorAll('#stats-v3-tabs .tab-chip').forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.statv3 === StxState.tab);
+      if(tab._boundV32) return;
+      tab._boundV32 = true;
+      tab.addEventListener('click', () => {
+        StxState.tab = tab.dataset.statv3;
+        document.querySelectorAll('#stats-v3-tabs .tab-chip').forEach(t =>
+          t.classList.toggle('active', t === tab));
+        renderStxContentV32(stats);
+        Sfx.tap(); haptic(4);
+      });
+    });
+
+    renderStxContentV32(stats);
+
+    /* ═══ زر التصدير ═══ */
+    const exportBtn = document.getElementById('stats-export-btn');
+    if(exportBtn && !exportBtn._boundV32){
+      exportBtn._boundV32 = true;
+      exportBtn.addEventListener('click', exportStatsDataV32);
+    }
+  };
+
+  function drawStatsSparklineV32(){
+    const canvas = document.getElementById('stx-sparkline');
+    if(!canvas) return;
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = 340, h = 60;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = '100%';
+    canvas.style.height = h + 'px';
+
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    /* آخر 14 يوم */
+    const sessions = Save.data.sessionHistory || [];
+    const data = new Array(14).fill(0);
+    const now = Date.now();
+    sessions.forEach(s => {
+      const d = Math.floor((now - s.time) / 86400000);
+      if(d >= 0 && d < 14) data[13 - d] += s.meters || 0;
+    });
+
+    const max = Math.max(1, ...data);
+    const stepX = w / (data.length - 1);
+    const points = data.map((v, i) => ({
+      x: i * stepX,
+      y: h - (v / max) * (h - 10) - 5
+    }));
+
+    /* Gradient */
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, 'rgba(232,179,78,.5)');
+    grad.addColorStop(1, 'rgba(232,179,78,0)');
+
+    ctx.beginPath();
+    ctx.moveTo(0, h);
+    points.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.lineTo(w, h);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    /* Line */
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    points.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.strokeStyle = '#E8B34E';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.shadowColor = '#E8B34E';
+    ctx.shadowBlur = 8;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    /* آخر نقطة */
+    const last = points[points.length - 1];
+    ctx.fillStyle = '#FFE0A0';
+    ctx.beginPath();
+    ctx.arc(last.x, last.y, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function renderStxContentV32(stats){
+    const c = document.getElementById('stx-content-v3');
+    if(!c) return;
+    c.innerHTML = '';
+
+    const state = window._stxState || { tab: 'overview' };
+
+    switch(state.tab){
+      case 'overview':   renderStxOverviewV32(c, stats);   break;
+      case 'modes':      renderStxModesV32(c, stats);      break;
+      case 'sessions':   renderStxSessionsV32(c, stats);   break;
+      case 'charts':     renderStxChartsV32(c, stats);     break;
+      case 'records':    renderStxRecordsV32(c, stats);    break;
+      case 'comparison': renderStxComparisonV32(c, stats); break;
+    }
+  }
+
+  function renderStxOverviewV32(container, stats){
+    /* ═══ بطاقة اللعب اليومي ═══ */
+    const streakCard = document.createElement('div');
+    streakCard.style.cssText = `
+      padding:16px;border-radius:18px;margin-bottom:14px;
+      background:linear-gradient(135deg,#FFF9EC,#FBF1DC);
+      border:1.5px solid rgba(232,179,78,.4);
+      display:flex;align-items:center;gap:14px;
+    `;
+    streakCard.innerHTML = `
+      <div style="font-size:36px;">🔥</div>
+      <div style="flex:1;text-align:right;">
+        <div style="font-family:'Space Grotesk';font-size:10px;
+                    font-weight:800;letter-spacing:1.5px;color:#8A4A10;">
+          PLAY STREAK
+        </div>
+        <div style="font-family:'Space Grotesk';font-size:22px;
+                    font-weight:700;color:var(--ink);margin-top:2px;">
+          ${stats.streak.current} يوم
+        </div>
+      </div>
+      <div style="text-align:left;">
+        <div style="font-size:9px;font-weight:800;color:var(--ink-mute);">الأفضل</div>
+        <div style="font-family:'Space Grotesk';font-size:16px;font-weight:700;color:var(--amber);">
+          ${stats.streak.best}
+        </div>
+      </div>
+    `;
+    container.appendChild(streakCard);
+
+    /* ═══ الشبكة ═══ */
+    const cards = [
+      { icon:'🎮', color:'#4A88C8', value: stats.totalPlays, label:'إجمالي الجولات' },
+      { icon:'📏', color:'#6B9B6B', value: Math.round(stats.totalMeters).toLocaleString(), unit:'م', label:'مجموع الأمتار' },
+      { icon:'🏆', color:'#E8B34E', value: Math.round(stats.bestMeters).toLocaleString(), unit:'م', label:'أفضل مسافة' },
+      { icon:'🔥', color:'#E85838', value: 'x'+stats.bestCombo, label:'أفضل سلسلة' },
+      { icon:'🪙', color:'#E8B34E', value: stats.totalCoins.toLocaleString(), label:'إجمالي العملات' },
+      { icon:'⚡', color:'#9A6AC8', value: stats.shiftRuns, label:'SHIFT Runs' },
+      { icon:'🔮', color:'#6B9B6B', value: stats.totalOrbs, label:'كرات طاقة' },
+      { icon:'📊', color:'#C98A2E', value: Math.round(stats.averages.metersPerPlay), unit:'م', label:'متوسط الجولة' },
+      { icon:'🪙', color:'#E8B34E', value: Math.round(stats.averages.coinsPerPlay), label:'متوسط العملات' },
+      { icon:'📅', color:'#4A88C8', value: stats.month.plays, label:'جولات الشهر' },
+      { icon:'📆', color:'#6B9B6B', value: stats.week.plays, label:'جولات الأسبوع' },
+      { icon:'🌞', color:'#FFD060', value: stats.today.plays, label:'جولات اليوم' }
+    ];
+
+    const grid = document.createElement('div');
+    grid.className = 'stx-grid';
+
+    cards.forEach(card => {
+      const el = document.createElement('div');
+      el.className = 'stx-card';
+      el.style.setProperty('--stx-c', card.color);
+      el.innerHTML = `
+        <div class="stx-card-icon">${card.icon}</div>
+        <div class="stx-card-value">${card.value}${card.unit ? `<small>${card.unit}</small>` : ''}</div>
+        <div class="stx-card-label">${card.label}</div>
+      `;
+      grid.appendChild(el);
+    });
+
+    container.appendChild(grid);
+  }
+
+  function renderStxModesV32(container, stats){
+    const modes = (typeof MODES !== 'undefined') ? MODES : [];
+
+    modes.forEach(m => {
+      if(m.id === 'MIXED') return;
+      const mb = stats.modeBreakdown[m.id];
+      if(!mb || mb.plays === 0) return;
+
+      const card = document.createElement('div');
+      card.className = 'stx-card';
+      card.style.setProperty('--stx-c', m.color);
+      card.style.marginBottom = '10px';
+
+      card.innerHTML = `
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="stx-card-icon" style="background:${m.color};color:#fff;font-size:22px;">
+            ${m.icon}
+          </div>
+          <div style="flex:1;text-align:right;min-width:0;">
+            <div style="font-size:14px;font-weight:800;color:var(--ink);">
+              ${m.ar}
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px;">
+              <div>
+                <div style="font-size:8.5px;font-weight:800;color:var(--ink-mute);">جولات</div>
+                <div style="font-family:'Space Grotesk';font-size:14px;font-weight:700;color:${m.color};">
+                  ${mb.plays}
+                </div>
+              </div>
+              <div>
+                <div style="font-size:8.5px;font-weight:800;color:var(--ink-mute);">إجمالي</div>
+                <div style="font-family:'Space Grotesk';font-size:14px;font-weight:700;color:${m.color};">
+                  ${Math.round(mb.totalMeters).toLocaleString()}م
+                </div>
+              </div>
+              <div>
+                <div style="font-size:8.5px;font-weight:800;color:var(--ink-mute);">أفضل</div>
+                <div style="font-family:'Space Grotesk';font-size:14px;font-weight:700;color:${m.color};">
+                  ${mb.best}م
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      container.appendChild(card);
+    });
+  }
+
+  function renderStxSessionsV32(container, stats){
+    const sessions = Save.data.sessionHistory || [];
+
+    if(sessions.length === 0){
+      container.innerHTML = `
+        <div style="text-align:center;padding:60px 20px;color:var(--ink-mute);">
+          <div style="font-size:60px;opacity:.25;margin-bottom:12px;">📜</div>
+          <div style="font-size:14px;font-weight:800;">لا يوجد سجل جولات</div>
+        </div>
+      `;
+      return;
+    }
+
+    /* ═══ فلتر الأيام ═══ */
+    const filterBar = document.createElement('div');
+    filterBar.style.cssText = 'display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;';
+    filterBar.innerHTML = `
+      <button class="setting-pill active" data-sessfilter="all">الكل (${sessions.length})</button>
+      <button class="setting-pill" data-sessfilter="today">اليوم (${stats.today.plays})</button>
+      <button class="setting-pill" data-sessfilter="week">الأسبوع (${stats.week.plays})</button>
+      <button class="setting-pill" data-sessfilter="month">الشهر (${stats.month.plays})</button>
+    `;
+    container.appendChild(filterBar);
+
+    const list = document.createElement('div');
+    list.id = 'stx-sessions-list-v32';
+    container.appendChild(list);
+
+    const filterSessions = (filter) => {
+      const now = Date.now();
+      const dayAgo = 86400000;
+      if(filter === 'today') return sessions.filter(s => (now - s.time) < dayAgo);
+      if(filter === 'week') return sessions.filter(s => (now - s.time) < dayAgo * 7);
+      if(filter === 'month') return sessions.filter(s => (now - s.time) < dayAgo * 30);
+      return sessions;
+    };
+
+    const renderList = (filter) => {
+      list.innerHTML = '';
+      const filtered = filterSessions(filter).slice(0, 50);
+
+      if(filtered.length === 0){
+        list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--ink-mute);font-size:12px;">لا جولات في هذه الفترة</div>';
+        return;
+      }
+
+      filtered.forEach(s => {
+        const mode = (typeof MODES !== 'undefined') ? MODES.find(m => m.id === s.mode) : null;
+        const row = document.createElement('div');
+        row.className = 'stx-session-row';
+
+        const date = new Date(s.time);
+        const timeStr = date.toLocaleDateString('ar-EG', { day:'2-digit', month:'2-digit' })
+          + ' · ' + date.toLocaleTimeString('ar-EG', { hour:'2-digit', minute:'2-digit' });
+
+        row.innerHTML = `
+          <div class="stx-session-mode" style="background:${mode ? mode.color : '#888'};">
+            ${mode ? mode.icon : '◆'}
+          </div>
+          <div class="stx-session-info">
+            <div class="stx-session-title">${mode ? mode.ar : s.mode}</div>
+            <div class="stx-session-meta">${timeStr}</div>
+          </div>
+          <div style="text-align:left;">
+            <div class="stx-session-meters">${s.meters}<span style="font-size:11px;color:var(--ink-mute);">م</span></div>
+            <div class="stx-session-coins">🪙 ${s.coins}</div>
+          </div>
+        `;
+
+        list.appendChild(row);
+      });
+    };
+
+    renderList('all');
+
+    filterBar.querySelectorAll('[data-sessfilter]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        filterBar.querySelectorAll('[data-sessfilter]').forEach(b =>
+          b.classList.toggle('active', b === btn));
+        renderList(btn.dataset.sessfilter);
+        Sfx.tap();
+      });
+    });
+  }
+
+  function renderStxChartsV32(container, stats){
+    /* ═══ Heatmap الوقت ═══ */
+    const hmCard = document.createElement('div');
+    hmCard.className = 'stx-chart-wrap';
+    hmCard.innerHTML = `
+      <div class="stx-chart-title">
+        <span class="t">🕐 توزيع اللعب حسب الوقت</span>
+        <span class="s">HEATMAP</span>
+      </div>
+      <div id="stx-heatmap" style="display:grid;grid-template-columns:40px repeat(24,1fr);gap:2px;font-size:8px;"></div>
+    `;
+    container.appendChild(hmCard);
+
+    /* ارسم Heatmap */
+    setTimeout(() => {
+      const hm = document.getElementById('stx-heatmap');
+      if(!hm) return;
+
+      const dayNames = ['أحد', 'إثن', 'ثلا', 'أرب', 'خمي', 'جمع', 'سبت'];
+      const data = stats.timeHeatmap;
+      const max = Math.max(1, ...data.flat());
+
+      let html = '<div></div>';
+      for(let h = 0; h < 24; h++){
+        html += `<div style="text-align:center;color:var(--ink-mute);font-weight:700;">${h}</div>`;
+      }
+
+      for(let d = 0; d < 7; d++){
+        html += `<div style="text-align:right;color:var(--ink-mute);font-weight:700;padding-left:4px;">${dayNames[d]}</div>`;
+        for(let h = 0; h < 24; h++){
+          const v = data[d][h];
+          const intensity = v / max;
+          const bg = intensity > 0
+            ? `rgba(232,179,78,${0.15 + intensity * 0.85})`
+            : 'rgba(232,179,78,0.08)';
+          html += `<div style="height:18px;background:${bg};border-radius:3px;" title="اليوم ${d}، الساعة ${h}: ${v}"></div>`;
+        }
+      }
+      hm.innerHTML = html;
+    }, 50);
+
+    /* ═══ آخر 30 يوم ═══ */
+    const chart1 = createChartCardV32('📈 الأمتار · آخر 30 يوم', '30 DAYS');
+    container.appendChild(chart1.card);
+    drawBarChartV32(chart1.canvas, getDailyMeters(30), '#E8B34E');
+
+    /* ═══ آخر 7 أيام ═══ */
+    const chart2 = createChartCardV32('📊 الأمتار · آخر 7 أيام', '7 DAYS');
+    container.appendChild(chart2.card);
+    drawBarChartV32(chart2.canvas, getDailyMeters(7), '#6B9B6B');
+
+    /* ═══ آخر 24 ساعة ═══ */
+    const chart3 = createChartCardV32('⏰ الأمتار · آخر 24 ساعة', '24H');
+    container.appendChild(chart3.card);
+    drawBarChartV32(chart3.canvas, getHourlyMeters(), '#4A88C8');
+
+    /* ═══ Pie: توزيع الأنماط ═══ */
+    const chart4 = createChartCardV32('🎮 توزيع الأنماط', 'MODES');
+    container.appendChild(chart4.card);
+    drawPieChartV32(chart4.canvas, stats.modeBreakdown);
+  }
+
+  function getDailyMeters(days){
+    const sessions = Save.data.sessionHistory || [];
+    const data = new Array(days).fill(0);
+    const now = Date.now();
+    sessions.forEach(s => {
+      const d = Math.floor((now - s.time) / 86400000);
+      if(d >= 0 && d < days) data[days - 1 - d] += s.meters || 0;
+    });
+    return data;
+  }
+
+  function getHourlyMeters(){
+    const sessions = Save.data.sessionHistory || [];
+    const data = new Array(24).fill(0);
+    const dayAgo = Date.now() - 86400000;
+    sessions.forEach(s => {
+      if(s.time > dayAgo){
+        const h = new Date(s.time).getHours();
+        data[h] += s.meters || 0;
+      }
+    });
+    return data;
+  }
+
+  function createChartCardV32(title, sub){
+    const card = document.createElement('div');
+    card.className = 'stx-chart-wrap';
+    card.innerHTML = `
+      <div class="stx-chart-title">
+        <span class="t">${title}</span>
+        <span class="s">${sub}</span>
+      </div>
+      <canvas width="340" height="160"></canvas>
+    `;
+    return { card, canvas: card.querySelector('canvas') };
+  }
+
+  function drawBarChartV32(canvas, data, color){
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const rect = canvas.getBoundingClientRect();
+    const w = rect.width || 340, h = 160;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.height = h + 'px';
+
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    const max = Math.max(1, ...data);
+    const padding = { top: 20, right: 10, bottom: 24, left: 10 };
+    const chartW = w - padding.left - padding.right;
+    const chartH = h - padding.top - padding.bottom;
+
+    const barW = Math.max(2, chartW / data.length - 3);
+
+    data.forEach((v, i) => {
+      const x = padding.left + i * (chartW / data.length) + 1.5;
+      const barH = (v / max) * chartH;
+      const y = padding.top + chartH - barH;
+
+      const grad = ctx.createLinearGradient(0, y, 0, y + barH);
+      grad.addColorStop(0, color);
+      grad.addColorStop(1, color + '66');
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.roundRect(x, y, barW, barH, 3);
+      ctx.fill();
+    });
+
+    ctx.fillStyle = 'rgba(26,21,18,.15)';
+    ctx.fillRect(padding.left, padding.top + chartH, chartW, 1);
+
+    /* القيم القصوى */
+    ctx.fillStyle = 'rgba(26,21,18,.4)';
+    ctx.font = 'bold 9px "Space Grotesk", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(Math.round(max).toLocaleString(), padding.left, padding.top - 6);
+  }
+
+  function drawPieChartV32(canvas, breakdown){
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const rect = canvas.getBoundingClientRect();
+    const w = rect.width || 340, h = 160;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.height = h + 'px';
+
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    const entries = Object.entries(breakdown);
+    const total = entries.reduce((s, [_, v]) => s + (v.plays || 0), 0);
+    if(total === 0){
+      ctx.fillStyle = '#8B8278';
+      ctx.font = 'bold 12px "Tajawal", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('لا توجد بيانات', w/2, h/2);
+      return;
+    }
+
+    const cx = w * 0.35;
+    const cy = h / 2;
+    const r = Math.min(w * 0.3, h) / 2 - 10;
+
+    let startAngle = -Math.PI / 2;
+    const colors = ['#E8B34E', '#4A88C8', '#6B9B6B', '#E85838', '#9A6AC8', '#C98A2E'];
+
+    entries.forEach(([mode, data], i) => {
+      const angle = (data.plays / total) * Math.PI * 2;
+      const m = (typeof MODES !== 'undefined') ? MODES.find(x => x.id === mode) : null;
+
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, startAngle, startAngle + angle);
+      ctx.closePath();
+      ctx.fillStyle = m ? m.color : colors[i % colors.length];
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      startAngle += angle;
+    });
+
+    /* الثقب */
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.55, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#1A1512';
+    ctx.font = 'bold 18px "Space Grotesk", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(total, cx, cy);
+
+    /* الأسطورة */
+    const legendX = w * 0.7;
+    let legendY = h * 0.15;
+    entries.slice(0, 6).forEach(([mode, data], i) => {
+      const m = (typeof MODES !== 'undefined') ? MODES.find(x => x.id === mode) : null;
+      const color = m ? m.color : colors[i % colors.length];
+      const label = m ? m.ar : mode;
+
+      ctx.fillStyle = color;
+      ctx.fillRect(legendX, legendY - 5, 12, 12);
+
+      ctx.fillStyle = '#1A1512';
+      ctx.font = 'bold 11px "Tajawal", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${label} (${data.plays})`, legendX + 18, legendY);
+
+      legendY += 22;
+    });
+  }
+
+  function renderStxRecordsV32(container, stats){
+    const records = [
+      { icon: '🏆', color: '#E8B34E', title: 'أفضل مسافة', value: Math.round(stats.bestMeters) + 'م' },
+      { icon: '🔥', color: '#E85838', title: 'أطول سلسلة', value: 'x' + stats.bestCombo },
+      { icon: '📊', color: '#6B9B6B', title: 'متوسط الجولة', value: Math.round(stats.averages.metersPerPlay) + 'م' },
+      { icon: '🥇', color: '#E8B34E', title: 'أفضل يوم', value: Math.round(stats.week.best) + 'م' },
+      { icon: '🎮', color: '#4A88C8', title: 'إجمالي الجولات', value: stats.totalPlays.toLocaleString() },
+      { icon: '⚡', color: '#9A6AC8', title: 'SHIFT Runs', value: stats.shiftRuns.toLocaleString() },
+      { icon: '🔮', color: '#6B9B6B', title: 'كرات طاقة', value: stats.totalOrbs.toLocaleString() },
+      { icon: '🪙', color: '#E8B34E', title: 'إجمالي العملات', value: stats.totalCoins.toLocaleString() },
+      { icon: '📏', color: '#6B9B6B', title: 'إجمالي الأمتار', value: Math.round(stats.totalMeters).toLocaleString() + 'م' },
+      { icon: '🔥', color: '#E85838', title: 'أطول سلسلة أيام', value: stats.streak.best + ' يوم' }
+    ];
+
+    records.forEach(r => {
+      const card = document.createElement('div');
+      card.className = 'stx-card';
+      card.style.setProperty('--stx-c', r.color);
+      card.style.marginBottom = '8px';
+
+      card.innerHTML = `
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="stx-card-icon">${r.icon}</div>
+          <div style="flex:1;text-align:right;">
+            <div style="font-size:12.5px;font-weight:800;color:var(--ink);">${r.title}</div>
+          </div>
+          <div class="stx-card-value" style="font-size:16px;">${r.value}</div>
+        </div>
+      `;
+
+      container.appendChild(card);
+    });
+  }
+
+  function renderStxComparisonV32(container, stats){
+    /* آخر 7 أيام vs السابقة */
+    const sessions = Save.data.sessionHistory || [];
+    const now = Date.now();
+    const week = 7 * 86400000;
+    const thisWeek = sessions.filter(s => (now - s.time) < week);
+    const lastWeek = sessions.filter(s => (now - s.time) >= week && (now - s.time) < week * 2);
+
+    const sumM = arr => arr.reduce((s, x) => s + (x.meters || 0), 0);
+    const sumC = arr => arr.reduce((s, x) => s + (x.coins || 0), 0);
+
+    const twM = sumM(thisWeek), lwM = sumM(lastWeek);
+    const twC = sumC(thisWeek), lwC = sumC(lastWeek);
+    const twP = thisWeek.length, lwP = lastWeek.length;
+
+    const changeM = lwM > 0 ? ((twM - lwM) / lwM * 100) : (twM > 0 ? 100 : 0);
+    const changeC = lwC > 0 ? ((twC - lwC) / lwC * 100) : (twC > 0 ? 100 : 0);
+    const changeP = lwP > 0 ? ((twP - lwP) / lwP * 100) : (twP > 0 ? 100 : 0);
+
+    const rows = [
+      { label: 'الأمتار', current: twM, last: lwM, unit: 'م', change: changeM },
+      { label: 'العملات', current: twC, last: lwC, unit: '', change: changeC },
+      { label: 'الجولات', current: twP, last: lwP, unit: '', change: changeP }
+    ];
+
+    rows.forEach(r => {
+      const card = document.createElement('div');
+      card.className = 'stx-card';
+      card.style.marginBottom = '10px';
+      card.style.setProperty('--stx-c', r.change >= 0 ? '#6B9B6B' : '#C14A4A');
+
+      card.innerHTML = `
+        <div style="font-family:'Space Grotesk';font-size:11px;
+                    font-weight:700;letter-spacing:1px;color:var(--ink-mute);
+                    margin-bottom:10px;">
+          ${r.label}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:center;">
+          <div style="text-align:center;">
+            <div style="font-size:9px;font-weight:800;color:var(--ink-mute);">الحالي</div>
+            <div style="font-family:'Space Grotesk';font-size:18px;font-weight:700;color:var(--ink);">
+              ${Math.round(r.current).toLocaleString()}${r.unit}
+            </div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:9px;font-weight:800;color:var(--ink-mute);">السابق</div>
+            <div style="font-family:'Space Grotesk';font-size:18px;font-weight:700;color:var(--ink-soft);">
+              ${Math.round(r.last).toLocaleString()}${r.unit}
+            </div>
+          </div>
+          <div style="text-align:center;padding:8px;border-radius:10px;
+                      background:${r.change >= 0 ? 'rgba(107,155,107,.12)' : 'rgba(193,74,74,.12)'};">
+            <div style="font-size:9px;font-weight:800;
+                        color:${r.change >= 0 ? '#4A7B4A' : '#C14A4A'};">
+              ${r.change >= 0 ? '📈' : '📉'}
+            </div>
+            <div style="font-family:'Space Grotesk';font-size:16px;font-weight:700;
+                        color:${r.change >= 0 ? '#4A7B4A' : '#C14A4A'};">
+              ${r.change >= 0 ? '+' : ''}${r.change.toFixed(0)}%
+            </div>
+          </div>
+        </div>
+      `;
+
+      container.appendChild(card);
+    });
+  }
+
+  function exportStatsDataV32(){
+    const data = {
+      exported: new Date().toISOString(),
+      stats: Save.data.stats,
+      bestMeters: Save.data.bestMeters,
+      sessionHistory: (Save.data.sessionHistory || []).slice(0, 100)
+    };
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `shift-stats-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    Toast.success('تم التصدير!', 'ملف JSON');
+  }
+
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 5) Placement Types — Achievement & Level ═══
+     ═══════════════════════════════════════════════════════════ */
+
+  /* أضف أنواع جديدة */
+  if(typeof window.PLACEMENT_TYPES !== 'undefined' && window.PLACEMENT_TYPES){
+    window.PLACEMENT_TYPES.achievement = {
+      label: 'إنجاز',
+      icon: '🏆',
+      color: '#E8B34E',
+      desc: 'مكافأة عند فتح إنجاز معين',
+      params: [
+        { key: 'achievementId', label: 'الإنجاز', type: 'select', default: 'first',
+          options: (typeof ACHIEVEMENTS !== 'undefined' ? ACHIEVEMENTS : []).slice(0, 50).map(a => ({
+            value: a.id,
+            label: (a.icon || '🏆') + ' ' + (a.name || a.id)
+          }))
+        }
+      ]
+    };
+
+    window.PLACEMENT_TYPES.level_reward = {
+      label: 'مستوى',
+      icon: '⬆️',
+      color: '#4A88C8',
+      desc: 'مكافأة عند الوصول لمستوى معين',
+      params: [
+        { key: 'level', label: 'المستوى', type: 'number', default: 1, min: 1, max: 100 },
+        { key: 'rewardType', label: 'النوع', type: 'select', default: 'content',
+          options: [
+            { value: 'content', label: '🎁 عنصر (هذا المحتوى)' },
+            { value: 'coins',   label: '🪙 عملات' }
+          ]
+        },
+        { key: 'coins', label: 'عدد العملات', type: 'number', default: 100, min: 0, max: 1000000 }
+      ]
+    };
+
+    console.log('[Patch v3.2] ✅ Added placement types: achievement, level_reward');
+  }
+
+  /* أضف دوال جلب العناصر */
+  window.getAchievementItems = function(achievementId, seasonId){
+    if(typeof getItemsByPlacementInSeason !== 'function') return [];
+    return getItemsByPlacementInSeason('achievement', seasonId, (p) =>
+      p.achievementId === achievementId
+    );
+  };
+
+  window.getLevelRewardItems = function(level, seasonId){
+    if(typeof getItemsByPlacementInSeason !== 'function') return [];
+    return getItemsByPlacementInSeason('level_reward', seasonId, (p) =>
+      p.level === level && p.rewardType === 'content'
+    );
+  };
+
+  /* عند فتح إنجاز — امنح العناصر المخصصة */
+  const _origCheckAchievements = window.checkAchievements;
+  if(typeof _origCheckAchievements === 'function'){
+    window.checkAchievements = function(){
+      const before = new Set(Object.keys(Save.data.achievements || {}));
+      const result = _origCheckAchievements.apply(this, arguments);
+      const after = Object.keys(Save.data.achievements || {});
+
+      /* ابحث عن الإنجازات الجديدة */
+      after.forEach(achId => {
+        if(before.has(achId)) return;
+        /* امنح عناصر هذا الإنجاز */
+        if(typeof getAchievementItems === 'function'){
+          const items = getAchievementItems(achId);
+          items.forEach(({ item }) => {
+            if(typeof grantCustomItemToPlayer === 'function'){
+              grantCustomItemToPlayer(item.id);
+            }
+          });
+        }
+      });
+
+      return result;
+    };
+  }
+
+  /* عند ترقية المستوى — امنح عناصر المستوى */
+  const _origShowRewardModal = window.showRewardModal;
+  /* سنراقب عند تسجيل المستوى */
+  const _origRecordLevelUp = (typeof LevelsV3 !== 'undefined' && LevelsV3.recordLevelUp);
+  if(typeof LevelsV3 !== 'undefined'){
+    const origRecord = LevelsV3.recordLevelUp.bind(LevelsV3);
+    LevelsV3.recordLevelUp = function(level){
+      const result = origRecord.call(this, level);
+
+      /* امنح عناصر المستوى */
+      if(typeof getLevelRewardItems === 'function'){
+        const items = getLevelRewardItems(level);
+        items.forEach(({ item }) => {
+          if(typeof grantCustomItemToPlayer === 'function'){
+            grantCustomItemToPlayer(item.id);
+          }
+        });
+      }
+
+      return result;
+    };
+  }
+
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 6) ربط التحديثات ═══
+     ═══════════════════════════════════════════════════════════ */
+
+  /* عند فتح الشاشات، استدعِ الدوال الجديدة */
+  const _origShowScreen = window.showScreen;
+  window.showScreen = function(id){
+    const result = _origShowScreen.apply(this, arguments);
+
+    setTimeout(() => {
+      if(id === 's-level')       { try { buildLevelPage(); } catch(e){ console.warn(e); } }
+      if(id === 's-stats-v2')    { try { buildStatsV2(); } catch(e){ console.warn(e); } }
+      if(id === 's-achieve-v2')  { try { buildAchievementsV2Page(); } catch(e){ console.warn(e); } }
+      if(id === 's-settings-v2') { try { buildSettingsV2(); } catch(e){ console.warn(e); } }
+    }, 60);
+
+    return result;
+  };
+
+  /* ═══ تسجيل الجولات في السجل ═══ */
+  const _origGameOver = window.gameOver;
+  window.gameOver = function(){
+    try {
+      if(typeof recordSessionV32 === 'function'){
+        recordSessionV32({
+          mode: G.mode,
+          meters: (typeof getMeters === 'function') ? getMeters() : 0,
+          coins: G.runCoins || 0,
+          combo: G.comboMax || 0,
+          orbs: G.orbCount || 0,
+          duration: G.t || 0
+        });
+      }
+
+      /* سجّل ترقية المستوى */
+      const newLvl = (typeof getGlobalLevel === 'function') ? getGlobalLevel() + 1 : 1;
+      const oldLvl = Save.data._lastLevel || 0;
+      if(newLvl > oldLvl){
+        for(let l = oldLvl + 1; l <= newLvl; l++){
+          if(typeof LevelsV3 !== 'undefined' && LevelsV3.recordLevelUp){
+            LevelsV3.recordLevelUp(l);
+          }
+        }
+        Save.data._lastLevel = newLvl;
+      }
+    } catch(e){}
+
+    return _origGameOver.apply(this, arguments);
+  };
+
+  console.log('[Patch v3.2] ✅ All fixes applied successfully');
+  console.log('  • settingsV3 initialized + migrated');
+  console.log('  • Achievements: names shown, filters fixed, secrets hidden');
+  console.log('  • Levels extended to 100');
+  console.log('  • All 100 levels displayed');
+  console.log('  • Stats: heatmap, sessions filter, hourly chart');
+  console.log('  • New placements: achievement, level_reward');
+
+})();
+
+/* ============================================================
+   ═══════════ PATCH v3.3 — CRITICAL FIX ═════════════════════
+   ═══════════════════════════════════════════════════════════
+   يحل:
+   1) "reading 'first' of undefined" — تهيئة achievements قبل runMigrations
+   2) PLACEMENT_TYPES يُضاف بشكل صحيح (module-scoped)
+   3) sanitize تلقائي عند أي تحميل
+   ============================================================ */
+
+(function patchV33(){
+  console.log('[SHIFT v3.3] Applying critical fix...');
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 1) تهيئة الحقول الحرجة قبل runMigrations ═══
+     ═══════════════════════════════════════════════════════════ */
+
+  function sanitizeData(data){
+    if(!data || typeof data !== 'object') return data;
+    /* ═══ الحقول الحرجة (التي يسبب غيابها أخطاء) ═══ */
+    if(!data.achievements || typeof data.achievements !== 'object' || Array.isArray(data.achievements)){
+      data.achievements = {};
+    }
+    if(!data.achievementTimes || typeof data.achievementTimes !== 'object' || Array.isArray(data.achievementTimes)){
+      data.achievementTimes = {};
+    }
+    if(!Array.isArray(data.claimedGlobalLevels)) data.claimedGlobalLevels = [];
+    if(!Array.isArray(data.sessionHistory))      data.sessionHistory = [];
+    if(!Array.isArray(data.levelHistory))         data.levelHistory = [];
+    if(!Array.isArray(data.ownedSkins))           data.ownedSkins = ['default'];
+    if(!data.settingsV3 || typeof data.settingsV3 !== 'object' || Array.isArray(data.settingsV3)){
+      data.settingsV3 = {};
+    }
+    if(!data.stats || typeof data.stats !== 'object') data.stats = {};
+    if(!data.bestMeters || typeof data.bestMeters !== 'object') data.bestMeters = {};
+    if(!data.season || typeof data.season !== 'object') data.season = { points: 0 };
+    if(!data.dailyLogin || typeof data.dailyLogin !== 'object') data.dailyLogin = { streak: 0 };
+    if(!data.battlePass || typeof data.battlePass !== 'object'){
+      data.battlePass = { claimedFree: [], claimedPremium: [] };
+    }
+    if(!Array.isArray(data.battlePass.claimedFree))    data.battlePass.claimedFree = [];
+    if(!Array.isArray(data.battlePass.claimedPremium)) data.battlePass.claimedPremium = [];
+    return data;
+  }
+
+  /* ═══ 2) Sanitize الآن ═══ */
+  if(typeof Save !== 'undefined' && Save.data){
+    sanitizeData(Save.data);
+  }
+
+  /* ═══ 3) حماية Save.data بـ getter يعالج نفسه ═══ */
+  try {
+    let _internalData = Save.data;
+
+    Object.defineProperty(Save, 'data', {
+      get(){
+        return sanitizeData(_internalData);
+      },
+      set(v){
+        _internalData = v;
+        sanitizeData(_internalData);
+      },
+      configurable: true,
+      enumerable: true
+    });
+
+    console.log('[SHIFT v3.3] ✅ Save.data is now self-healing');
+  } catch(e){
+    console.warn('[SHIFT v3.3] Could not wrap Save.data:', e);
+  }
+
+  /* ═══ 4) اعتراض runMigrations — Sanitize أولاً ═══ */
+  if(typeof Save !== 'undefined' && typeof Save.runMigrations === 'function'){
+    const _origRM = Save.runMigrations.bind(Save);
+    Save.runMigrations = function(){
+      /* ✅ Sanitize BEFORE original runs */
+      sanitizeData(this.data);
+      try {
+        _origRM();
+      } catch(e){
+        console.error('[runMigrations] Original threw:', e);
+      }
+      /* ✅ Sanitize AFTER too */
+      sanitizeData(this.data);
+    };
+  }
+
+  /* ═══ 5) اعتراض applyCloud ═══ */
+  if(typeof Save !== 'undefined' && typeof Save.applyCloud === 'function'){
+    const _origAC = Save.applyCloud.bind(Save);
+    Save.applyCloud = function(cloudData){
+      _origAC(cloudData);
+      sanitizeData(this.data);
+    };
+  }
+
+  /* ═══ 6) اعتراض reset ═══ */
+  if(typeof Save !== 'undefined' && typeof Save.reset === 'function'){
+    const _origReset = Save.reset.bind(Save);
+    Save.reset = function(){
+      _origReset();
+      sanitizeData(this.data);
+    };
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 7) إضافة أنواع المصادر (PLACEMENT_TYPES) ═══
+     ═══════════════════════════════════════════════════════════ */
+
+  function patchPlacementTypes(){
+    try {
+      /* PLACEMENT_TYPES متغير module-scoped — نصل إليه مباشرة */
+      if(typeof PLACEMENT_TYPES === 'undefined' || !PLACEMENT_TYPES){
+        return false;
+      }
+
+      /* ═══ إنجاز ═══ */
+      if(!PLACEMENT_TYPES.achievement){
+        PLACEMENT_TYPES.achievement = {
+          label: 'إنجاز',
+          icon: '🏆',
+          color: '#E8B34E',
+          desc: 'مكافأة عند فتح إنجاز معين',
+          params: [
+            {
+              key: 'achievementId',
+              label: 'معرّف الإنجاز',
+              type: 'text',
+              default: '',
+              placeholder: 'first, ten, m100, s_combo50...'
+            }
+          ]
+        };
+      }
+
+      /* ═══ مستوى ═══ */
+      if(!PLACEMENT_TYPES.level_reward){
+        PLACEMENT_TYPES.level_reward = {
+          label: 'مستوى',
+          icon: '⬆️',
+          color: '#4A88C8',
+          desc: 'مكافأة عند الوصول لمستوى معين',
+          params: [
+            {
+              key: 'level',
+              label: 'المستوى (1-100)',
+              type: 'number',
+              default: 1,
+              min: 1,
+              max: 100
+            },
+            {
+              key: 'rewardType',
+              label: 'نوع المكافأة',
+              type: 'select',
+              default: 'content',
+              options: [
+                { value: 'content', label: '🎁 عنصر (هذا المحتوى)' },
+                { value: 'coins',   label: '🪙 عملات' }
+              ]
+            },
+            {
+              key: 'coins',
+              label: 'عدد العملات',
+              type: 'number',
+              default: 100,
+              min: 0,
+              max: 1000000
+            }
+          ]
+        };
+      }
+
+      return true;
+    } catch(e){
+      return false;
+    }
+  }
+
+  /* ═══ نفّذ الآن، وإذا فشل أعِد المحاولة ═══ */
+  if(patchPlacementTypes()){
+    console.log('[SHIFT v3.3] ✅ Placement types patched immediately');
+  } else {
+    let attempts = 0;
+    const retryInterval = setInterval(() => {
+      attempts++;
+      if(patchPlacementTypes() || attempts > 30){
+        clearInterval(retryInterval);
+        if(attempts <= 30){
+          console.log(`[SHIFT v3.3] ✅ Placement types patched after ${attempts} attempts`);
+        }
+      }
+    }, 300);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 8) دوال جلب العناصر ═══
+     ═══════════════════════════════════════════════════════════ */
+
+  window.getAchievementItems = function(achievementId, seasonId){
+    if(!achievementId) return [];
+    if(typeof getItemsByPlacementInSeason !== 'function') return [];
+    try {
+      return getItemsByPlacementInSeason('achievement', seasonId, (p) =>
+        p.achievementId === achievementId
+      );
+    } catch(e){ return []; }
+  };
+
+  window.getLevelRewardItems = function(level, seasonId){
+    if(!level) return [];
+    if(typeof getItemsByPlacementInSeason !== 'function') return [];
+    try {
+      return getItemsByPlacementInSeason('level_reward', seasonId, (p) =>
+        p.level === level && p.rewardType === 'content'
+      );
+    } catch(e){ return []; }
+  };
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 9) حماية الدوال التي تقرأ achievements ═══
+     ═══════════════════════════════════════════════════════════ */
+
+  const wrapFn = (name) => {
+    if(typeof window[name] !== 'function') return;
+    const orig = window[name];
+    window[name] = function(){
+      try {
+        if(Save && Save.data) sanitizeData(Save.data);
+        return orig.apply(this, arguments);
+      } catch(e){
+        console.warn(`[${name}] failed:`, e.message);
+        return undefined;
+      }
+    };
+  };
+
+  ['updateHomeBadges', 'checkAchievements', 'buildAchievementsV2Page',
+   'buildHome', 'getPlayerTitle', 'buildLevelPage'].forEach(wrapFn);
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 10) Error logger للتشخيص ═══
+     ═══════════════════════════════════════════════════════════ */
+
+  let _errorCount = 0;
+  window.addEventListener('error', (e) => {
+    if(_errorCount++ >= 5) return;
+    console.group(`[SHIFT Error #${_errorCount}]`);
+    console.error('Message:', e.message);
+    console.error('At:', e.filename, 'line', e.lineno, 'col', e.colno);
+    if(Save && Save.data){
+      console.error('Save.data.achievements:', typeof Save.data.achievements);
+      console.error('Save.data.settingsV3:', typeof Save.data.settingsV3);
+      console.error('Save.data.achievementTimes:', typeof Save.data.achievementTimes);
+    }
+    console.groupEnd();
+  });
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 11) رسائل تأكيد نهائية ═══
+     ═══════════════════════════════════════════════════════════ */
+
+  console.log('[SHIFT v3.3] ✅ Critical patch applied successfully');
+  console.log('  • Save.data.achievements:', typeof Save.data.achievements);
+  console.log('  • Save.data.settingsV3:', typeof Save.data.settingsV3);
+  console.log('  • Total achievements:', typeof ACHIEVEMENTS !== 'undefined' ? ACHIEVEMENTS.length : 0);
+  console.log('  • Achievements are now bulletproof ✓');
+
+})();
+
+/* ============================================================
+   ═══════════════════════════════════════════════════════════
+   ═══════════ LOADING SCREEN v1 — شاشة التحميل ══════════════
+   ═══════════════════════════════════════════════════════════
+   - شريط تقدم سريع وسلس
+   - تحميل الموارد والمحتوى
+   - التحقق من الحساب تلقائياً
+   - عرض شاشة الدخول أو الرئيسية حسب الحالة
+   ============================================================ */
+
+(function loadingScreenV1(){
+  if(window._loadingScreenInstalled) return;
+  window._loadingScreenInstalled = true;
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 1) CSS ═══
+     ═══════════════════════════════════════════════════════════ */
+  const style = document.createElement('style');
+  style.id = 'loading-screen-css';
+  style.textContent = `
+    #loading-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9999999;
+      background: linear-gradient(160deg, #0F0C0A 0%, #1F1A24 50%, #3A2A48 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      padding: 30px;
+      opacity: 1;
+      transition: opacity .6s ease-out;
+      font-family: 'Tajawal', system-ui, sans-serif;
+      overflow: hidden;
+      pointer-events: all;
+    }
+    #loading-overlay::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(232,179,78,.15), transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(160,100,255,.12), transparent 50%);
+      pointer-events: none;
+    }
+    #loading-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* ─── الشعار ─── */
+    .ld-brand {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      position: relative;
+      z-index: 1;
+      margin-bottom: 8px;
+    }
+    .ld-brand-name {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 56px;
+      font-weight: 700;
+      letter-spacing: 10px;
+      color: #FBF7F0;
+      line-height: 1;
+      text-shadow: 0 4px 30px rgba(232,179,78,.35);
+      animation: ldBrandPulse 2s ease-in-out infinite;
+      padding-left: 10px;
+    }
+    .ld-brand-name .accent { color: #E07A3F; }
+    .ld-brand-sub {
+      font-size: 11px;
+      letter-spacing: 6px;
+      color: rgba(251,247,240,.45);
+      font-weight: 700;
+      margin-top: 6px;
+      padding-left: 6px;
+    }
+    @keyframes ldBrandPulse {
+      0%, 100% { text-shadow: 0 4px 30px rgba(232,179,78,.35); }
+      50% { text-shadow: 0 4px 50px rgba(232,179,78,.65); }
+    }
+
+    /* ─── الحلقة الدوارة ─── */
+    .ld-spinner {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 340px;
+      height: 340px;
+      border-radius: 50%;
+      border: 1px dashed rgba(232,179,78,.15);
+      pointer-events: none;
+      z-index: 0;
+      animation: ldSpin 20s linear infinite;
+    }
+    .ld-spinner::before,
+    .ld-spinner::after {
+      content: '';
+      position: absolute;
+      inset: 30px;
+      border-radius: 50%;
+      border: 1px solid rgba(232,179,78,.08);
+    }
+    .ld-spinner::after {
+      inset: 70px;
+      border-style: dotted;
+    }
+    @keyframes ldSpin {
+      to { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    /* ─── شريط التقدم ─── */
+    .ld-bar-wrap {
+      width: 100%;
+      max-width: 340px;
+      position: relative;
+      z-index: 1;
+      margin-top: 20px;
+    }
+    .ld-bar-track {
+      width: 100%;
+      height: 8px;
+      border-radius: 100px;
+      background: rgba(255,255,255,.08);
+      overflow: hidden;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,.3);
+      border: 1px solid rgba(255,255,255,.06);
+    }
+    .ld-bar-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 100px;
+      background: linear-gradient(90deg, #E07A3F 0%, #E8B34E 50%, #FFE0A0 100%);
+      box-shadow: 0 0 20px rgba(232,179,78,.6);
+      transition: width .35s cubic-bezier(.4, 0, .2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+    .ld-bar-fill::after {
+      content: '';
+      position: absolute;
+      top: 0; right: 0;
+      width: 60px;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.85));
+      animation: ldShine 1.6s ease-in-out infinite;
+    }
+    @keyframes ldShine {
+      0% { opacity: 0; transform: translateX(-40px); }
+      50% { opacity: 1; }
+      100% { opacity: 0; transform: translateX(40px); }
+    }
+
+    /* ─── معلومات التقدم ─── */
+    .ld-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      margin-top: 12px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      position: relative;
+      z-index: 1;
+    }
+    .ld-phase {
+      color: rgba(251,247,240,.7);
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: opacity .3s;
+    }
+    .ld-phase::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #E8B34E;
+      box-shadow: 0 0 8px #E8B34E;
+      animation: ldPhasePulse 1.2s ease-in-out infinite;
+    }
+    @keyframes ldPhasePulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .3; }
+    }
+    .ld-percent {
+      color: #E8B34E;
+      font-size: 15px;
+      min-width: 48px;
+      text-align: left;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -.5px;
+    }
+
+    /* ─── التلميح ─── */
+    .ld-tip {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: 340px;
+      text-align: center;
+      font-size: 12px;
+      color: rgba(251,247,240,.5);
+      line-height: 1.6;
+      padding: 0 20px;
+      z-index: 1;
+      transition: opacity .4s;
+    }
+    .ld-tip-icon {
+      font-size: 20px;
+      display: block;
+      margin-bottom: 8px;
+      opacity: .7;
+    }
+    .ld-tip-text {
+      display: inline-block;
+      animation: ldTipFade .6s ease-out;
+    }
+    @keyframes ldTipFade {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── رسالة الخطأ (إن حدث) ─── */
+    .ld-error {
+      position: absolute;
+      top: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      border-radius: 100px;
+      background: rgba(193,74,74,.9);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      max-width: 90%;
+      text-align: center;
+      z-index: 2;
+      display: none;
+    }
+    .ld-error.show { display: block; }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 400px) {
+      .ld-brand-name { font-size: 44px; letter-spacing: 8px; }
+      .ld-spinner { width: 260px; height: 260px; }
+      .ld-bar-wrap { max-width: 280px; }
+    }
+  `;
+  document.head.appendChild(style);
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 2) HTML ═══
+     ═══════════════════════════════════════════════════════════ */
+  const overlay = document.createElement('div');
+  overlay.id = 'loading-overlay';
+  overlay.innerHTML = `
+    <div class="ld-spinner"></div>
+    <div class="ld-brand">
+      <div class="ld-brand-name">SH<span class="accent">I</span>FT</div>
+      <div class="ld-brand-sub">CALM ARCADE</div>
+    </div>
+    <div class="ld-bar-wrap">
+      <div class="ld-bar-track">
+        <div class="ld-bar-fill" id="ld-bar-fill"></div>
+      </div>
+      <div class="ld-info">
+        <div class="ld-phase" id="ld-phase">تهيئة النظام...</div>
+        <div class="ld-percent" id="ld-percent">0%</div>
+      </div>
+    </div>
+    <div class="ld-tip" id="ld-tip">
+      <span class="ld-tip-icon">💡</span>
+      <span class="ld-tip-text" id="ld-tip-text">جاهز للمغامرة؟</span>
+    </div>
+    <div class="ld-error" id="ld-error"></div>
+  `;
+  document.body.appendChild(overlay);
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 3) الحالة والمساعدات ═══
+     ═══════════════════════════════════════════════════════════ */
+
+  const TIPS = [
+    'استخدم القفزات القصيرة لتجنب العقبات المفاجئة',
+    'كل 5 عملات متتالية تضاعف قيمتها',
+    'التعزيزات المؤقتة تتراكم للحصول على تأثيرات أقوى',
+    'كل نمط له فيزياء مختلفة — جرّبها جميعاً',
+    'الإنجازات السرية تحتاج شروطاً خاصة لفتحها',
+    'اجمع البطاقات النادرة من الصناديق الذهبية',
+    'سجّل دخولك يومياً للحصول على مكافآت متصاعدة',
+    'التعزيزات المختلفة معاً تُنتج توليفات قوية',
+    'المستويات تصل إلى 100 — هل يمكنك الوصول للقمة؟',
+    'التحديات اليومية تُمنح مكافآت إضافية',
+    'أضف أصدقاءك وتنافسوا على لوحة الصدارة',
+    'البطل الحقيقي لا يحتاج للدرع'
+  ];
+
+  let _currentProgress = 0;
+  let _currentPhase = '';
+  let _tipIndex = 0;
+
+  function setProgress(pct, phase){
+    const newPct = Math.min(100, Math.max(0, pct));
+    if(newPct === _currentProgress && phase === _currentPhase) return;
+
+    _currentProgress = newPct;
+
+    const fill = document.getElementById('ld-bar-fill');
+    const percent = document.getElementById('ld-percent');
+    const phaseEl = document.getElementById('ld-phase');
+
+    if(fill) fill.style.width = _currentProgress + '%';
+    if(percent) percent.textContent = Math.round(_currentProgress) + '%';
+
+    if(phaseEl && phase && phase !== _currentPhase){
+      _currentPhase = phase;
+      phaseEl.style.opacity = '0';
+      setTimeout(() => {
+        phaseEl.textContent = phase;
+        phaseEl.style.opacity = '1';
+      }, 150);
+    }
+
+    /* تحديث التلميح كل 20% */
+    if(Math.floor(_currentProgress / 20) > Math.floor((_currentProgress - 1) / 20)){
+      rotateTip();
+    }
+  }
+
+  function rotateTip(){
+    _tipIndex = (_tipIndex + 1) % TIPS.length;
+    const tipEl = document.getElementById('ld-tip-text');
+    if(!tipEl) return;
+
+    tipEl.style.animation = 'none';
+    void tipEl.offsetHeight;
+    tipEl.textContent = TIPS[_tipIndex];
+    tipEl.style.animation = 'ldTipFade .6s ease-out';
+  }
+
+  function showError(msg){
+    const err = document.getElementById('ld-error');
+    if(!err) return;
+    err.textContent = msg;
+    err.classList.add('show');
+    setTimeout(() => err.classList.remove('show'), 4000);
+  }
+
+  function hideLoadingOverlay(){
+    const el = document.getElementById('loading-overlay');
+    if(!el) return;
+    el.classList.add('hidden');
+    el.style.pointerEvents = 'none';
+    setTimeout(() => {
+      if(el.parentNode) el.parentNode.removeChild(el);
+    }, 700);
+  }
+
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 4) تتبع حالة الدخول ═══
+     ═══════════════════════════════════════════════════════════ */
+  window._authState = { ready: false, user: undefined, decided: false };
+
+  /* اعتراض setupAuthListener لتثبيت flag عند fire */
+  const _origSetupAuthListener = window.setupAuthListener;
+  if(typeof _origSetupAuthListener === 'function'){
+    window.setupAuthListener = async function(){
+      try {
+        const auth = Cloud.auth;
+        if(auth && !auth._patchedForLoading){
+          const origOnAuth = auth.onAuthStateChanged.bind(auth);
+          auth.onAuthStateChanged = function(cb){
+            return origOnAuth(function(user){
+              window._authState.user = user;
+              let result;
+              try {
+                result = cb(user);
+              } catch(e){
+                console.error('[Auth CB]', e);
+              }
+              if(result && typeof result.finally === 'function'){
+                return result.finally(() => {
+                  window._authState.ready = true;
+                  window._authState.decided = true;
+                });
+              }
+              setTimeout(() => {
+                window._authState.ready = true;
+                window._authState.decided = true;
+              }, 100);
+              return result;
+            });
+          };
+          auth._patchedForLoading = true;
+        }
+      } catch(e){
+        console.warn('[Loading] Auth patch failed:', e);
+      }
+      return _origSetupAuthListener.apply(this, arguments);
+    };
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 5) انتظار اتخاذ قرار الحساب ═══
+     ═══════════════════════════════════════════════════════════ */
+  function waitForAuthDecision(maxMs){
+    maxMs = maxMs || 3500;
+    return new Promise(resolve => {
+      const start = Date.now();
+      const check = () => {
+        /* قرار اتُّخذ — أعِد المستخدم */
+        if(window._authState.decided){
+          return resolve(window._authState.user || null);
+        }
+        /* شاشة غير شاشة الدخول ظهرت → قرار اتُّخذ */
+        const active = document.querySelector('.screen.active');
+        if(active && active.id && active.id !== 's-login'){
+          return resolve(window._authState.user || active.id);
+        }
+        /* انتهت المهلة */
+        if(Date.now() - start > maxMs){
+          return resolve(window._authState.user || null);
+        }
+        setTimeout(check, 80);
+      };
+      check();
+    });
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 6) تحميل الموارد الأساسية ═══
+     ═══════════════════════════════════════════════════════════ */
+  async function preloadEssentials(){
+    setProgress(8, 'تهيئة الرسوميات...');
+    await sleep(120);
+
+    /* تحميل أصول اللاعب */
+    if(typeof ASSET !== 'undefined' && ASSET.preloadPlayerAssets){
+      try {
+        setProgress(16, 'تحميل الصور...');
+        await Promise.race([
+          ASSET.preloadPlayerAssets(),
+          sleep(1500)
+        ]);
+      } catch(e){
+        console.warn('[Loading] Asset preload failed:', e);
+      }
+    }
+
+    /* انتظار الخطوط */
+    setProgress(24, 'تحميل الخطوط...');
+    if(document.fonts && document.fonts.ready){
+      try {
+        await Promise.race([document.fonts.ready, sleep(900)]);
+      } catch(e){}
+    }
+
+    /* تحميل الأزياء الأساسية */
+    setProgress(32, 'تحميل الأزياء...');
+    try {
+      if(typeof getAllSkins === 'function' && typeof ASSET !== 'undefined'){
+        const skins = getAllSkins();
+        const sources = [];
+        for(let i = 0; i < Math.min(skins.length, 20); i++){
+          const src = ASSET.resolve(skins[i]);
+          if(src) sources.push(src);
+        }
+        if(sources.length > 0 && ASSET.preload){
+          await Promise.race([ASSET.preload(sources), sleep(1200)]);
+        }
+      }
+    } catch(e){}
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 7) تحميل المحتوى المخصص ═══
+     ═══════════════════════════════════════════════════════════ */
+  async function preloadContent(){
+    setProgress(42, 'تحميل المحتوى...');
+
+    /* تحميل محتوى المشرف */
+    if(typeof preloadAdminContent === 'function'){
+      try {
+        await Promise.race([preloadAdminContent(), sleep(1600)]);
+      } catch(e){
+        console.warn('[Loading] Admin content failed:', e);
+      }
+    }
+
+    /* تحميل الأيقونات */
+    setProgress(52, 'تحميل الأيقونات...');
+    await sleep(150);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 8) اعتراض boot ═══
+     ═══════════════════════════════════════════════════════════ */
+  const _origBoot = window.boot;
+  if(typeof _origBoot === 'function'){
+    window.boot = async function(){
+      /* تأكد من ظهور الشاشة */
+      const ov = document.getElementById('loading-overlay');
+      if(ov){
+        ov.classList.remove('hidden');
+        ov.style.display = 'flex';
+        ov.style.pointerEvents = 'all';
+      }
+
+      setProgress(3, 'بدء التشغيل...');
+      await sleep(100);
+
+      /* شغّل boot الأصلي (sync) */
+      let bootError = null;
+      try {
+        _origBoot();
+      } catch(e){
+        bootError = e;
+        console.error('[Boot] Error:', e);
+      }
+
+      /* التحميلات */
+      await preloadEssentials();
+      await preloadContent();
+
+      /* التحقق من الحساب */
+      setProgress(62, 'التحقق من الحساب...');
+      await waitForAuthDecision(3500);
+
+      /* تحميل بيانات اللاعب */
+      if(window._authState.user){
+        setProgress(82, 'تحميل بياناتك...');
+        await sleep(280);
+      }
+
+      /* التجهيز النهائي */
+      setProgress(94, 'تجهيز اللعبة...');
+      await sleep(220);
+
+      setProgress(100, 'جاهز!');
+      await sleep(500);
+
+      /* إخفاء الشاشة */
+      hideLoadingOverlay();
+
+      /* حماية: إن فشل boot → أظهر الرئيسية */
+      if(bootError){
+        try {
+          if(typeof showScreen === 'function') showScreen('s-home');
+          if(typeof buildHome === 'function') buildHome();
+        } catch(e){}
+        return;
+      }
+
+      /* تأكد من وجود شاشة نشطة */
+      setTimeout(() => {
+        const activeScreens = document.querySelectorAll('.screen.active');
+        if(activeScreens.length === 0){
+          try {
+            if(Cloud && Cloud.user){
+              if(typeof showScreen === 'function') showScreen('s-home');
+              if(typeof buildHome === 'function') buildHome();
+            } else {
+              if(typeof showScreen === 'function') showScreen('s-login');
+            }
+          } catch(e){}
+        }
+      }, 100);
+    };
+
+    console.log('[LoadingScreen] ✅ Boot patch installed');
+  } else {
+    console.warn('[LoadingScreen] boot() not found — will fallback');
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 9) تشغيل تلقائي (احتياطي) ═══
+     ═══════════════════════════════════════════════════════════
+     إذا لسبب ما لم يتم استدعاء boot، نُشغّل التسلسل يدوياً */
+  setTimeout(() => {
+    const ov = document.getElementById('loading-overlay');
+    if(!ov) return;
+
+    /* إذا مضى وقت ولم تُخفَ الشاشة → خطأ ما */
+    if(!ov.classList.contains('hidden') && _currentProgress < 5){
+      console.warn('[LoadingScreen] Boot not called — running fallback');
+
+      /* شغّل التحميل يدوياً */
+      (async () => {
+        setProgress(3, 'بدء التشغيل...');
+        await sleep(100);
+        await preloadEssentials();
+        await preloadContent();
+        setProgress(62, 'التحقق من الحساب...');
+        await waitForAuthDecision(3000);
+        setProgress(100, 'جاهز!');
+        await sleep(400);
+        hideLoadingOverlay();
+
+        /* أظهر شاشة مناسبة */
+        const active = document.querySelector('.screen.active');
+        if(!active){
+          if(Cloud && Cloud.user){
+            if(typeof showScreen === 'function') showScreen('s-home');
+            if(typeof buildHome === 'function') buildHome();
+          } else {
+            if(typeof showScreen === 'function') showScreen('s-login');
+          }
+        }
+      })();
+    }
+  }, 1200);
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 10) مؤشر للمطور ═══
+     ═══════════════════════════════════════════════════════════ */
+  console.log('[SHIFT LoadingScreen] ✅ Installed successfully');
+  console.log('  • Progress bar with smooth animation');
+  console.log('  • Asset & content preloading');
+  console.log('  • Automatic account detection');
+  console.log('  • Rotating tips during load');
 
 })();
 
