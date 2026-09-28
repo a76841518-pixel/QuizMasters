@@ -10834,14 +10834,33 @@ function drawCharacterBody(c, r, skin, t){
   if(hasItemImage(skin)){
     const img = getItemImageEl(skin);
 
-    /* جاهزة → ارسمها */
+    /* جاهزة → ارسمها بقيم render */
     if(img && img.complete && img.naturalWidth > 0){
-      const size = r * 2.6;
-      c.drawImage(img, -size/2, -size/2, size, size);
+      /* ✅ قراءة قيم render */
+      const custom = skin.render || {};
+      const sizeMul = custom.sizeMul  ?? 2.6;
+      const offsetX = custom.offsetX  ?? 0;
+      const offsetY = custom.offsetY  ?? 0;
+      const anchorX = custom.anchorX  ?? 0.5;
+      const anchorY = custom.anchorY  ?? 0.5;
+
+      const drawW = r * sizeMul;
+      const drawH = drawW * (img.naturalHeight / img.naturalWidth || 1);
+
+      c.save();
+      c.translate(offsetX * r, offsetY * r);
+      c.drawImage(
+        img,
+        -drawW * anchorX,
+        -drawH * anchorY,
+        drawW,
+        drawH
+      );
+      c.restore();
       return;
     }
 
-    /* قيد التحميل → دائرة نابضة خفيفة */
+    /* قيد التحميل → دائرة نابضة */
     const pulse = 0.5 + Math.sin(t * 0.15) * 0.2;
     c.fillStyle = skin.body || '#E07A3F';
     c.globalAlpha = pulse;
@@ -10852,7 +10871,7 @@ function drawCharacterBody(c, r, skin, t){
     return;
   }
 
-  /* ═══ لا صورة → دائرة placeholder رمادية ═══ */
+  /* ═══ لا صورة → placeholder ═══ */
   c.fillStyle = '#CCCCCC';
   c.beginPath();
   c.arc(0, 0, r, 0, Math.PI * 2);
@@ -11033,21 +11052,23 @@ if(!skipExtras){
     c.restore();
   }
 
-  /* ═══ طبقة 2: العيون ═══ */
-  const skinIsImage = hasItemImage(skin);
-  if(!skinIsImage){
-    const eyes = currentEyes();
-    if(eyes && eyes.id !== 'none' && hasItemImage(eyes)){
-      const cfg = getCategoryConfig('eyes').render;
-      ASSET.drawItem(c, eyes, {
-        x: 0,
-        y: r * (cfg.offsetY || -0.15),
-        size: r * (cfg.sizeMul || 1.6),
-        anchorX: cfg.anchor.x,
-        anchorY: cfg.anchor.y
-      });
-    }
+/* ═══ طبقة 2: العيون ═══ */
+const skinIsImage = hasItemImage(skin);
+if(!skinIsImage){
+  const eyes = currentEyes();
+  if(eyes && eyes.id !== 'none' && hasItemImage(eyes)){
+    const cfg = getCategoryConfig('eyes').render;
+    const custom = eyes.render || {};    // ✅ جديد
+
+    ASSET.drawItem(c, eyes, {
+      x: (custom.offsetX ?? 0) * r,
+      y: r * (custom.offsetY ?? cfg.offsetY ?? -0.15),
+      size: r * (custom.sizeMul ?? cfg.sizeMul ?? 1.6),
+      anchorX: custom.anchorX ?? cfg.anchor.x,
+      anchorY: custom.anchorY ?? cfg.anchor.y
+    });
   }
+}
 
   /* ═══ طبقة 3: الرأس ═══ */
 /* ابحث في renderCharacter عن طبقة الرأس */
@@ -20478,6 +20499,21 @@ function startAdminPreviewLoop(canvas, key, prevValue, cat){
     }
     c.restore();
 
+/* ═══ ملاحظة للفئات غير المرئية ═══ */
+const PARTICLE_CATS = ['trail', 'spark', 'jump', 'spawn', 'revive', 'death'];
+if(PARTICLE_CATS.includes(cat)){
+  c.save();
+  c.font = 'bold 11px "Tajawal", sans-serif';
+  c.fillStyle = '#8A4A10';
+  c.textAlign = 'center';
+  c.textBaseline = 'top';
+  c.fillText('⚡ تأثير متحرك — لا يظهر في المعاينة الثابتة', W/2, 8);
+  c.fillStyle = '#8B8278';
+  c.font = 'bold 9.5px "Tajawal", sans-serif';
+  c.fillText('(سيُطبَّق أثناء اللعب الفعلي)', W/2, 24);
+  c.restore();
+}
+
     _adminPreviewRAF = requestAnimationFrame(drawFrame);
   };
 
@@ -20622,21 +20658,20 @@ function wireAdjustmentSliders(){
 
     /* عند كل حركة → حدّث الرقم + المعاينة */
     let raf = null;
-    const handler = () => {
-      if(label) label.textContent = parseFloat(input.value).toFixed(2);
+const handler = () => {
+  if(label) label.textContent = parseFloat(input.value).toFixed(2);
 
-      /* throttle الرسم */
-      if(raf) cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        if(typeof updateAdminLivePreview === 'function'){
-          updateAdminLivePreview();
-        }
-      });
-    };
+  // ✅ throttle بـ RAF فقط (أسرع)
+  if(raf) cancelAnimationFrame(raf);
+  raf = requestAnimationFrame(() => {
+    if(typeof updateAdminLivePreview === 'function'){
+      updateAdminLivePreview();
+    }
+  });
+};
 
-    input.addEventListener('input', handler);
-    /* السحب المستمر */
-    input.addEventListener('change', handler);
+input.addEventListener('input', handler);  // ← نار أثناء السحب
+input.addEventListener('change', handler); // ← تأكيد نهائي
   });
 
   /* ═══ أزرار إعادة الضبط الفردية ═══ */
