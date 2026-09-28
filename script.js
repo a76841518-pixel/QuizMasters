@@ -20904,6 +20904,8 @@ function getAllSkins(){
   const custom = (Save.data.admin.customSkins || [])
     .filter(s => s.enabled !== false)
     .map(s => ({
+      /* ✅ انسخ كل الحقول الأصلية — بما فيها render */
+      ...s,
       id: s.id,
       ar: s.name,
       en: s.nameEn || s.name,
@@ -20925,13 +20927,14 @@ function getAllSkins(){
 function getAllCosmetics(cat){
   const base = (typeof COSMETICS !== 'undefined' && COSMETICS[cat]) || [];
 
-  /* ═══ مفتاح الأدمن الموحّد ═══ */
   const key = 'custom' + cat.charAt(0).toUpperCase() + cat.slice(1);
   const customRaw = (Save.data.admin && Save.data.admin[key]) || [];
 
   const custom = customRaw
     .filter(c => c.enabled !== false)
     .map(c => ({
+      /* ✅ انسخ كل الحقول الأصلية — بما فيها render */
+      ...c,
       id: c.id,
       name: c.name || c.nameEn || 'بدون اسم',
       price: (c.placements || []).find(p => p.type === 'shop')?.price || 0,
