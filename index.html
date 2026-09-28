@@ -734,6 +734,65 @@
   </div>
 </div>
 
+<!-- ═══ ضبط الموضع (Slider Adjustments) ═══ -->
+<div class="afv3-section">
+  <div class="afv3-section-head">🎯 ضبط الموضع</div>
+  <div class="af-hint">
+    حرّك الأشرطة حتى تبدو الصورة مثالية على الشخصية. القيم تُحفظ مع العنصر.
+  </div>
+
+  <!-- الحجم -->
+  <div class="af-slider-group">
+    <div class="af-slider-head">
+      <label>الحجم</label>
+      <span class="af-slider-val" id="af-size-val">2.40</span>
+    </div>
+    <input type="range" class="af-slider" id="af-size"
+           min="0.5" max="6" step="0.05" value="2.4"
+           data-unit="">
+    <button class="af-reset-btn" data-reset="size" title="إعادة للافتراضي">↺</button>
+  </div>
+
+  <!-- الإزاحة الرأسية -->
+  <div class="af-slider-group">
+    <div class="af-slider-head">
+      <label>الإزاحة الرأسية (لأعلى/لأسفل)</label>
+      <span class="af-slider-val" id="af-offsetY-val">-0.82</span>
+    </div>
+    <input type="range" class="af-slider" id="af-offsetY"
+           min="-2.5" max="2.5" step="0.02" value="-0.82">
+    <button class="af-reset-btn" data-reset="offsetY" title="إعادة للافتراضي">↺</button>
+  </div>
+
+  <!-- الإزاحة الأفقية -->
+  <div class="af-slider-group">
+    <div class="af-slider-head">
+      <label>الإزاحة الأفقية (يمين/يسار)</label>
+      <span class="af-slider-val" id="af-offsetX-val">0.00</span>
+    </div>
+    <input type="range" class="af-slider" id="af-offsetX"
+           min="-1.5" max="1.5" step="0.02" value="0">
+    <button class="af-reset-btn" data-reset="offsetX" title="إعادة للافتراضي">↺</button>
+  </div>
+
+  <!-- نقطة الارتكاز رأسياً -->
+  <div class="af-slider-group">
+    <div class="af-slider-head">
+      <label>نقطة الارتكاز (Anchor Y)</label>
+      <span class="af-slider-val" id="af-anchorY-val">1.00</span>
+    </div>
+    <input type="range" class="af-slider" id="af-anchorY"
+           min="0" max="1" step="0.05" value="1">
+    <button class="af-reset-btn" data-reset="anchorY" title="إعادة للافتراضي">↺</button>
+  </div>
+
+  <!-- زر إعادة ضبط الكل -->
+  <button class="admin-btn-full soft" id="af-reset-all"
+          style="margin-top:12px;font-size:12px;">
+    🔄 إعادة ضبط كل القيم للافتراضي
+  </button>
+</div>
+
       <!-- ═══ الألوان ═══ -->
       <div class="afv3-section">
         <div class="afv3-section-head">🎨 الألوان الاحتياطية</div>

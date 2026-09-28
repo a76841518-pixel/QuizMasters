@@ -10986,21 +10986,24 @@ function renderCharacter(c, r, skin, opts){
   c.save();
   c.globalAlpha = alpha;
 
-  /* ═══ طبقة 0: الظهر ═══ */
-  if(!skipExtras){
-    const back = currentBack();
-    if(back && back.id !== 'none' && hasItemImage(back)){
-      const cfg = getCategoryConfig('back').render;
-      ASSET.drawItem(c, back, {
-        x: 0,
-        y: r * (cfg.offsetY || 0),
-        size: r * (cfg.sizeMul || 4.5),
-        anchorX: cfg.anchor.x,
-        anchorY: cfg.anchor.y,
-        rotation: Math.sin(t * (cfg.rotationSpeed || 0.05)) * (cfg.rotationAmp || 0.03)
-      });
-    }
+/* ═══ طبقة 0: الظهر ═══ */
+if(!skipExtras){
+  const back = currentBack();
+  if(back && back.id !== 'none' && hasItemImage(back)){
+    const cfg = getCategoryConfig('back').render;
+    const custom = back.render || {};
+    
+    ASSET.drawItem(c, back, {
+      x: (custom.offsetX ?? 0) * r,
+      y: r * (custom.offsetY ?? cfg.offsetY ?? 0),
+      size: r * (custom.sizeMul ?? cfg.sizeMul ?? 4.5),
+      anchorX: custom.anchorX ?? cfg.anchor.x,
+      anchorY: custom.anchorY ?? cfg.anchor.y,
+      rotation: Math.sin(t * (custom.rotationSpeed ?? cfg.rotationSpeed ?? 0.05))
+              * (custom.rotationAmp ?? cfg.rotationAmp ?? 0.03)
+    });
   }
+}
 
   /* ═══ دوران المركبة / قلب المشي ═══ */
   if(isShip && facingRot !== 0) c.rotate(facingRot);
@@ -11048,30 +11051,21 @@ function renderCharacter(c, r, skin, opts){
 
   /* ═══ طبقة 3: الرأس ═══ */
 /* ابحث في renderCharacter عن طبقة الرأس */
+/* ═══ طبقة 3: الرأس ═══ */
 if(!skipExtras){
   const head = currentHead();
   if(head && head.id !== 'none' && hasItemImage(head)){
     const cfg = getCategoryConfig('head').render;
-    
-    /* ✅ ضبط ديناميكي حسب حجم العنصر */
-    let dynamicOffsetY = cfg.offsetY || -0.82;
-    
-    /* العناصر الأكبر (تاج/خوذة) → أعلى قليلاً */
-    if(head.sizeMul && head.sizeMul > 2.6){
-      dynamicOffsetY = -0.92;
-    }
-    /* العناصر الصغيرة (قرون/آذان) → أقرب للرأس */
-    else if(head.sizeMul && head.sizeMul < 2.2){
-      dynamicOffsetY = -0.75;
-    }
+    const custom = head.render || {};   /* ✅ إعدادات مخصصة لكل عنصر */
     
     ASSET.drawItem(c, head, {
-      x: 0,
-      y: r * dynamicOffsetY,
-      size: r * (cfg.sizeMul || 2.4),
-      anchorX: cfg.anchor.x,
-      anchorY: cfg.anchor.y,
-      rotation: Math.sin(t * (cfg.rotationSpeed || 0.04)) * (cfg.rotationAmp || 0.02)
+      x: (custom.offsetX ?? 0) * r,
+      y: r * (custom.offsetY ?? cfg.offsetY ?? -0.82),
+      size: r * (custom.sizeMul ?? cfg.sizeMul ?? 2.4),
+      anchorX: custom.anchorX ?? cfg.anchor.x,
+      anchorY: custom.anchorY ?? cfg.anchor.y,
+      rotation: Math.sin(t * (custom.rotationSpeed ?? cfg.rotationSpeed ?? 0.04))
+              * (custom.rotationAmp ?? cfg.rotationAmp ?? 0.02)
     });
   }
 }
@@ -19435,6 +19429,69 @@ function buildAdminContentList(){
   });
 }
 
+/* ============================================================
+   ═══════════ ADMIN EDIT FORM v1 ════════════════════════════
+   ============================================================ */
+
+let _editingItemRef = null;   /* { key, idx } */
+
+function openAdminEditForm(key, idx, item){
+  const $ = id => document.getElementById(id);
+
+  /* ═══ تذكّر العنصر الجاري تعديله ═══ */
+  _editingItemRef = { key, idx };
+
+  /* ═══ املأ الحقول من العنصر الموجود ═══ */
+  const setVal = (id, val) => { const el = $(id); if(el) el.value = val ?? ''; };
+
+  setVal('af-name',         item.name || '');
+  setVal('af-name-en',      item.nameEn || '');
+  setVal('af-rarity',       item.rarity || 'common');
+  setVal('af-enabled',      item.enabled === false ? 'false' : 'true');
+  setVal('af-color',        item.color || '#E07A3F');
+  setVal('af-color2',       item.color2 || '#E8B34E');
+  setVal('af-image-path',   item.imagePath || '');
+  setVal('af-shards-cost',  item.shardsCost || 0);
+
+  /* ═══ أعد بناء الأشرطة بقيم العنصر ═══ */
+  wireAdjustmentSliders();
+  setAdjustmentSliders(item);
+
+  /* ═══ تحديث التسميات ═══ */
+  const catLabel = $('af-cat-label');
+  if(catLabel){
+    catLabel.textContent = (CATEGORY_LABELS && CATEGORY_LABELS[currentAdminTab]) || currentAdminTab;
+  }
+  const pathCat = $('af-path-cat');
+  if(pathCat){
+    pathCat.textContent = (CATEGORY_FOLDERS && CATEGORY_FOLDERS[currentAdminTab]) || 'misc';
+  }
+
+  /* ═══ شغّل المعاينة ═══ */
+  setTimeout(() => {
+    updateAdminImagePreview();
+    updateAdminLivePreview();
+  }, 100);
+
+  /* ═══ افتح النموذج ═══ */
+  const form = $('admin-form');
+  if(form){
+    form.classList.add('active');
+    form.style.display = '';
+    requestAnimationFrame(() => {
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
+  /* ═══ غيّر نص زر الحفظ ═══ */
+  const saveBtn = $('af-save');
+  if(saveBtn){
+    saveBtn.textContent = '💾 حفظ التعديلات';
+  }
+
+  Sfx.tap(); haptic(6);
+}
+
 function buildAdminSourcesList(){
   const list = document.getElementById('admin-sources-list');
   if(!list) return;
@@ -20190,6 +20247,9 @@ function openAdminItemForm(){
     status.className = 'af-status';
   }
 
+    wireAdjustmentSliders();
+  setAdjustmentSliders(null);  // ← قيم افتراضية
+
   /* تحديث التسميات */
   const catLabel = $('af-cat-label');
   if(catLabel){
@@ -20422,16 +20482,17 @@ function updateAdminLivePreview(){
   const pathInput = document.getElementById('af-image-path');
   const path = pathInput ? pathInput.value.trim() : '';
 
-  /* لا مسار → placeholder */
   if(!path){
     drawAdminPreviewPlaceholder(canvas);
     return;
   }
 
-  /* ═══ بناء العنصر المؤقت ═══ */
   const nameEl = document.getElementById('af-name');
   const colorEl = document.getElementById('af-color');
   const color2El = document.getElementById('af-color2');
+
+  /* ✅ اقرأ إعدادات الأشرطة */
+  const adjust = getAdjustmentValues();
 
   const tempItem = {
     id: '__admin_preview__',
@@ -20442,7 +20503,13 @@ function updateAdminLivePreview(){
     imagePath: path,
     enabled: true,
     placements: [],
-    isPreview: true
+    isPreview: true,
+    render: {                         /* ✅ إعدادات الموضع */
+      sizeMul:  adjust.sizeMul,
+      offsetY:  adjust.offsetY,
+      offsetX:  adjust.offsetX,
+      anchorY:  adjust.anchorY
+    }
   };
 
   /* ═══ حقن مؤقت في admin data ═══ */
@@ -20466,6 +20533,130 @@ function updateAdminLivePreview(){
   /* ═══ تنظيف فوري بعد الرسم ═══ */
   Save.data.admin[key].pop();
   Save.data.cosmetics.current[cat] = prevCurrent;
+}
+
+/* ============================================================
+   ═══════════ ADJUSTMENT SLIDERS v1 ═════════════════════════
+   ═══════════════════════════════════════════════════════════
+   يضبط كل صورة فردياً — تُحفظ القيم مع العنصر في Firebase
+   ============================================================ */
+
+/* ═══ القيم الافتراضية لكل فئة ═══ */
+function _getDefaultRender(cat){
+  const cfg = getCategoryConfig(cat).render || {};
+  return {
+    sizeMul:  cfg.sizeMul  ?? 2.4,
+    offsetY:  cfg.offsetY  ?? -0.82,
+    offsetX:  cfg.offsetX  ?? 0,
+    anchorY:  cfg.anchor?.y ?? 1.0
+  };
+}
+
+/* ═══ ملء الأشرطة بقيم (أو قيم افتراضية) ═══ */
+function setAdjustmentSliders(item){
+  const cat = currentAdminTab;
+  const defaults = _getDefaultRender(cat);
+  const r = item?.render || {};
+
+  const vals = {
+    size:    r.sizeMul  ?? defaults.sizeMul,
+    offsetY: r.offsetY  ?? defaults.offsetY,
+    offsetX: r.offsetX  ?? defaults.offsetX,
+    anchorY: r.anchorY  ?? defaults.anchorY
+  };
+
+  /* حدّث كل شريط + قيمته */
+  Object.entries(vals).forEach(([key, val]) => {
+    const input = document.getElementById('af-' + key);
+    const label = document.getElementById('af-' + key + '-val');
+    if(input) input.value = val;
+    if(label) label.textContent = key === 'size' 
+      ? Number(val).toFixed(2) 
+      : Number(val).toFixed(2);
+  });
+}
+
+/* ═══ قراءة قيم الأشرطة ═══ */
+function getAdjustmentValues(){
+  const read = id => {
+    const el = document.getElementById(id);
+    return el ? parseFloat(el.value) : 0;
+  };
+  return {
+    sizeMul: read('af-size'),
+    offsetY: read('af-offsetY'),
+    offsetX: read('af-offsetX'),
+    anchorY: read('af-anchorY')
+  };
+}
+
+/* ═══ ربط الأشرطة (يُنفَّذ مرة واحدة) ═══ */
+let _slidersWired = false;
+function wireAdjustmentSliders(){
+  if(_slidersWired) return;
+  _slidersWired = true;
+
+  const fields = ['af-size', 'af-offsetY', 'af-offsetX', 'af-anchorY'];
+
+  fields.forEach(id => {
+    const input = document.getElementById(id);
+    const label = document.getElementById(id + '-val');
+    if(!input) return;
+
+    /* عند كل حركة → حدّث الرقم + المعاينة */
+    let raf = null;
+    const handler = () => {
+      if(label) label.textContent = parseFloat(input.value).toFixed(2);
+
+      /* throttle الرسم */
+      if(raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        if(typeof updateAdminLivePreview === 'function'){
+          updateAdminLivePreview();
+        }
+      });
+    };
+
+    input.addEventListener('input', handler);
+    /* السحب المستمر */
+    input.addEventListener('change', handler);
+  });
+
+  /* ═══ أزرار إعادة الضبط الفردية ═══ */
+  document.querySelectorAll('.af-reset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.reset;
+      const cat = currentAdminTab;
+      const defaults = _getDefaultRender(cat);
+
+      const input = document.getElementById('af-' + key);
+      const label = document.getElementById('af-' + key + '-val');
+
+      const map = {
+        size:    defaults.sizeMul,
+        offsetY: defaults.offsetY,
+        offsetX: defaults.offsetX,
+        anchorY: defaults.anchorY
+      };
+
+      if(input) input.value = map[key];
+      if(label) label.textContent = Number(map[key]).toFixed(2);
+
+      updateAdminLivePreview();
+      Sfx.tap();
+    });
+  });
+
+  /* ═══ زر إعادة ضبط الكل ═══ */
+  const resetAllBtn = document.getElementById('af-reset-all');
+  if(resetAllBtn){
+    resetAllBtn.addEventListener('click', () => {
+      setAdjustmentSliders(null);
+      updateAdminLivePreview();
+      Sfx.tap(); haptic(6);
+      Toast.info('تمت إعادة ضبط القيم');
+    });
+  }
 }
 
 /* ═══ إيقاف المعاينة (عند إغلاق النموذج) ═══ */
@@ -20543,6 +20734,7 @@ if(placements.length === 0){
 
     /* ═══ بناء العنصر ═══ */
     const cat = currentAdminTab;
+/* ابحث عن الكائن item داخل handleAdminItemSave */
 const item = {
   id:        'c_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
   category:  cat,
@@ -20553,8 +20745,12 @@ const item = {
   color2,
   imagePath,
   enabled,
-  shardsCost,      /* ✅ جديد */
+  shardsCost,
   placements,
+
+  /* ✅ أضف هذا السطر */
+  render: getAdjustmentValues(),
+
   createdBy: (typeof Cloud !== 'undefined' && Cloud.user) ? Cloud.user.uid : 'local',
   createdAt: Date.now()
 };
