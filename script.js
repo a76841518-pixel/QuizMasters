@@ -42634,6 +42634,2667 @@ ${MODES.map(m => `
 })();
 
 /* ============================================================
+   ═══════════════════════════════════════════════════════════
+   ═══════════ TUTORIAL + AUDIO ENGINE v1 ═══════════════════
+   ═══════════════════════════════════════════════════════════
+   نظامان متكاملان:
+   1) Tutorial System — تعليم تفاعلي للاعب الجديد
+   2) Audio Engine — موسيقى + Ambient + SFX احترافية
+   ============================================================ */
+
+(function tutorialAndAudioSystems(){
+  if(window._tutorialAudioInstalled) return;
+  window._tutorialAudioInstalled = true;
+
+  /* ═══════════════════════════════════════════════════════════
+     ██████████ PART 1: TUTORIAL SYSTEM ██████████
+     ═══════════════════════════════════════════════════════════ */
+
+  /* ═══ تعريف الأنماط وشروحها ═══ */
+  const TUTORIAL_MODES = {
+    FLIP: {
+      ar: 'قلب الجاذبية',
+      en: 'FLIP',
+      icon: '⇅',
+      color: '#4A7FA0',
+      tagline: 'اسحب عالمك رأساً على عقب',
+      steps: [
+        { icon: '👆', text: 'اضغط في أي مكان على الشاشة لقلب الجاذبية' },
+        { icon: '🎯', text: 'مرّر بين الأسطح العلوية والسفلية بدون اصطدام' },
+        { icon: '🔥', text: 'حافظ على السلسلة بجمع العملات المتتالية' }
+      ],
+      inGameHints: [
+        { trigger: 'start',      text: 'اضغط الآن لقلب الجاذبية!',   duration: 3000, pulse: true },
+        { trigger: 'afterFlip',  text: 'ممتاز! الآن تجنب العقبات',   duration: 2500 },
+        { trigger: 'survived',   text: 'أحسنت! استمر بهذه الطريقة',  duration: 2500 }
+      ]
+    },
+    FLAP: {
+      ar: 'التحليق',
+      en: 'FLAP',
+      icon: '▲',
+      color: '#8E6AA8',
+      tagline: 'حلّق بين الفجوات',
+      steps: [
+        { icon: '👆', text: 'اضغط باستمرار للارتفاع، ارفع إصبعك للهبوط' },
+        { icon: '🎯', text: 'مرّر من خلال الفجوات بين الأعمدة' },
+        { icon: '⚡', text: 'الضغطات القصيرة تعطيك تحكماً أفضل' }
+      ],
+      inGameHints: [
+        { trigger: 'start',      text: 'اضغط باستمرار للطيران!',     duration: 3000, pulse: true },
+        { trigger: 'afterRise',  text: 'اضبط الارتفاع بتنظيم الضغط', duration: 2500 },
+        { trigger: 'survived',   text: 'ممتاز! أنت تتحكم جيداً',     duration: 2500 }
+      ]
+    },
+    SOAR: {
+      ar: 'التحليق الحر',
+      en: 'SOAR',
+      icon: '🕊️',
+      color: '#5AA0D8',
+      tagline: 'سيطر على السماء بحرية',
+      steps: [
+        { icon: '👆', text: 'اضغط باستمرار للطيران للأعلى' },
+        { icon: '🎈', text: 'ارفع إصبعك للهبوط ببطء — أنت تطفو' },
+        { icon: '✨', text: 'التنقل بين الفجوات أسهل من FLAP' }
+      ],
+      inGameHints: [
+        { trigger: 'start',     text: 'اضغط وابقَ مضغوطاً للطيران',   duration: 3000, pulse: true },
+        { trigger: 'afterRise', text: 'ارفع إصبعك للهبوط ببطء',       duration: 2500 },
+        { trigger: 'survived',  text: 'أنت سيد السماء الآن!',          duration: 2500 }
+      ]
+    },
+    DRIFT: {
+      ar: 'الانسياق',
+      en: 'DRIFT',
+      icon: '✦',
+      color: '#C98A2E',
+      tagline: 'تحكم كامل بالإصبع',
+      steps: [
+        { icon: '👆', text: 'اسحب إصبعك على الشاشة لتحريك السفينة' },
+        { icon: '🎯', text: 'تجنب الجدران والعقبات بمرونة' },
+        { icon: '⚡', text: 'كلما اقتربت من الحواف، زادت المخاطرة' }
+      ],
+      inGameHints: [
+        { trigger: 'start',     text: 'اسحب إصبعك لتحريك السفينة!',   duration: 3500, pulse: true },
+        { trigger: 'afterMove', text: 'ممتاز! تجنب العقبات القادمة',  duration: 2500 },
+        { trigger: 'survived',  text: 'أنت منسيق محترف!',              duration: 2500 }
+      ]
+    },
+    WALK: {
+      ar: 'المشي والقفز',
+      en: 'RUN',
+      icon: '♟',
+      color: '#4A8040',
+      tagline: 'الجري على الأرض مع قفزات',
+      steps: [
+        { icon: '👆', text: 'اضغط للقفز فوق العقبات' },
+        { icon: '👆', text: 'اضغط مرة أخرى في الهواء للقفز المزدوج' },
+        { icon: '🚀', text: 'اضغط على النوابض للقفز عالياً' }
+      ],
+      inGameHints: [
+        { trigger: 'start',        text: 'اضغط للقفز فوق أول عقبة!',  duration: 3000, pulse: true },
+        { trigger: 'afterJump',    text: 'اضغط مرة أخرى في الهواء!',  duration: 2500 },
+        { trigger: 'afterDouble',  text: 'قفزة مزدوجة رائعة!',         duration: 2000 },
+        { trigger: 'survived',     text: 'أحسنت! استمر في الجري',      duration: 2500 }
+      ]
+    },
+    PULSE: {
+      ar: 'النبض',
+      en: 'PULSE',
+      icon: '⇕',
+      color: '#A05AD8',
+      tagline: 'تنقّل بين الأرض والسقف',
+      steps: [
+        { icon: '👆', text: 'اضغط لقلب الاتجاه — من الأرض للسقف والعكس' },
+        { icon: '⏱️', text: 'انتظر حتى تصل للأرض قبل النقرة التالية' },
+        { icon: '🎯', text: 'تجنب الأعمدتين في نفس الوقت' }
+      ],
+      inGameHints: [
+        { trigger: 'start',       text: 'اضغط لقلب الاتجاه نحو السقف!', duration: 3000, pulse: true },
+        { trigger: 'afterFlip',   text: 'الآن اضغط مرة أخرى للعودة!',   duration: 2500 },
+        { trigger: 'survived',    text: 'أنت تتنقل بمهارة!',              duration: 2500 }
+      ]
+    },
+    ASCEND: {
+      ar: 'الصعود',
+      en: 'ASCEND',
+      icon: '↑',
+      color: '#5A8FD8',
+      tagline: 'اقفز بين المنصات نحو الفضاء',
+      steps: [
+        { icon: '🎯', text: 'المس يسار الشاشة للقفز يساراً' },
+        { icon: '🎯', text: 'المس يمين الشاشة للقفز يميناً' },
+        { icon: '🎯', text: 'المس الوسط للقفز للأعلى' }
+      ],
+      inGameHints: [
+        { trigger: 'start',      text: 'المس وسط الشاشة للقفز للأعلى!', duration: 3500, pulse: true },
+        { trigger: 'afterJump',  text: 'جرّب المس يساراً أو يميناً!',   duration: 2800 },
+        { trigger: 'survived',   text: 'أنت تصعد بنجاح!',                duration: 2500 }
+      ]
+    },
+    MIXED: {
+      ar: 'المتنوّع',
+      en: 'MIXED',
+      icon: '◆',
+      color: '#A06AD8',
+      tagline: 'كل 120 متر يتغير النمط',
+      steps: [
+        { icon: '🔮', text: 'ينتقل بين الأنماط تلقائياً كل 120م' },
+        { icon: '🎯', text: 'ادخل من بوابة التحول (◆) للانتقال' },
+        { icon: '⚡', text: 'كن مستعداً لكل نمط بأدواته' }
+      ],
+      inGameHints: [
+        { trigger: 'start',      text: 'استعد — النمط سيتغير قريباً!', duration: 3000, pulse: true },
+        { trigger: 'afterShift', text: 'تحوّلت! تأقلم مع النمط الجديد', duration: 2800 },
+        { trigger: 'survived',   text: 'أنت متعدد المواهب!',              duration: 2500 }
+      ]
+    }
+  };
+
+  /* ═══ حالة التعلم ═══ */
+  function getTutorialState(){
+    if(!Save.data.tutorial){
+      Save.data.tutorial = {
+        completed: false,
+        seenModes: [],
+        welcomed: false,
+        firstRunAt: null,
+        completedAt: null,
+        skippedModes: []
+      };
+    }
+    if(!Array.isArray(Save.data.tutorial.seenModes)){
+      Save.data.tutorial.seenModes = [];
+    }
+    return Save.data.tutorial;
+  }
+
+  function isNewPlayer(){
+    const t = getTutorialState();
+    return !t.completed && !t.welcomed;
+  }
+
+  function isModeSeen(modeId){
+    const t = getTutorialState();
+    return t.seenModes.includes(modeId);
+  }
+
+  function markModeSeen(modeId){
+    const t = getTutorialState();
+    if(!t.seenModes.includes(modeId)){
+      t.seenModes.push(modeId);
+    }
+    /* اكتمل التعليم إذا شاهد كل الأنماط الأساسية */
+    const essentialModes = ['FLIP', 'FLAP', 'SOAR', 'DRIFT', 'WALK', 'PULSE', 'ASCEND'];
+    const allSeen = essentialModes.every(m => t.seenModes.includes(m));
+    if(allSeen && !t.completed){
+      t.completed = true;
+      t.completedAt = Date.now();
+      onTutorialComplete();
+    }
+    Save.save();
+  }
+
+  /* ═══ عند اكتمال التعليم ═══ */
+  function onTutorialComplete(){
+    Toast.reward('🎓', 'أكملت التدريب!', 'أنت جاهز للمغامرة الكاملة', { duration: 5000 });
+    if(typeof addCoins === 'function'){
+      addCoins(500, 'إكمال التدريب');
+    }
+    if(typeof Sfx !== 'undefined' && Sfx.reward){
+      Sfx.reward();
+    }
+    if(typeof haptic === 'function') haptic(30);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ CSS ═══
+     ═══════════════════════════════════════════════════════════ */
+  const tutCSS = document.createElement('style');
+  tutCSS.id = 'tutorial-css';
+  tutCSS.textContent = `
+    /* ─── Welcome overlay ─── */
+    #tutorial-welcome {
+      position: fixed;
+      inset: 0;
+      z-index: 999998;
+      background: linear-gradient(160deg, #0F0C0A 0%, #1F1A24 50%, #3A2A48 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 22px;
+      padding: 30px;
+      opacity: 0;
+      transition: opacity .5s;
+      font-family: 'Tajawal', system-ui, sans-serif;
+      color: #fff;
+      text-align: center;
+    }
+    #tutorial-welcome.show { opacity: 1; }
+    #tutorial-welcome::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 30%, rgba(232,179,78,.15), transparent 60%);
+      pointer-events: none;
+    }
+    .tw-icon {
+      font-size: 88px;
+      line-height: 1;
+      filter: drop-shadow(0 8px 32px rgba(232,179,78,.5));
+      animation: twBounce 2s ease-in-out infinite;
+      position: relative;
+      z-index: 1;
+    }
+    @keyframes twBounce {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-10px) scale(1.05); }
+    }
+    .tw-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 30px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      position: relative;
+      z-index: 1;
+      text-shadow: 0 4px 20px rgba(232,179,78,.4);
+    }
+    .tw-subtitle {
+      font-size: 14px;
+      opacity: .75;
+      line-height: 1.7;
+      max-width: 340px;
+      position: relative;
+      z-index: 1;
+    }
+    .tw-features {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+      max-width: 320px;
+      position: relative;
+      z-index: 1;
+      margin: 8px 0;
+    }
+    .tw-feature {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.1);
+      text-align: right;
+      font-size: 12.5px;
+      font-weight: 700;
+      backdrop-filter: blur(10px);
+      animation: twFeatureIn .5s ease-out backwards;
+    }
+    .tw-feature:nth-child(1) { animation-delay: .1s; }
+    .tw-feature:nth-child(2) { animation-delay: .2s; }
+    .tw-feature:nth-child(3) { animation-delay: .3s; }
+    @keyframes twFeatureIn {
+      from { opacity: 0; transform: translateX(-20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    .tw-feature .ic {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #E07A3F, #E8B34E);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(224,122,63,.35);
+    }
+    .tw-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+      max-width: 320px;
+      position: relative;
+      z-index: 1;
+      margin-top: 10px;
+    }
+    .tw-btn {
+      padding: 14px 24px;
+      border-radius: 16px;
+      border: none;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: .5px;
+      cursor: pointer;
+      transition: all .2s cubic-bezier(.34,1.56,.64,1);
+    }
+    .tw-btn:active { transform: scale(.96); }
+    .tw-btn.primary {
+      background: linear-gradient(135deg, #E07A3F, #E8B34E);
+      color: #fff;
+      box-shadow: 0 10px 30px rgba(224,122,63,.4);
+    }
+    .tw-btn.ghost {
+      background: transparent;
+      color: rgba(255,255,255,.7);
+      border: 1.5px solid rgba(255,255,255,.15);
+    }
+
+    /* ─── Mode intro overlay ─── */
+    #tutorial-mode-intro {
+      position: fixed;
+      inset: 0;
+      z-index: 999997;
+      background: rgba(15,12,10,.92);
+      backdrop-filter: blur(16px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      font-family: 'Tajawal', system-ui, sans-serif;
+    }
+    #tutorial-mode-intro.show {
+      display: flex;
+      animation: tmiFadeIn .35s ease-out;
+    }
+    @keyframes tmiFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .tmi-panel {
+      background: linear-gradient(160deg, #1F1A24, #3A2A48);
+      border-radius: 26px;
+      padding: 28px 24px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 30px 90px rgba(0,0,0,.7);
+      border: 2px solid var(--mode-color, #E8B34E);
+      position: relative;
+      overflow: hidden;
+      animation: tmiPop .4s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes tmiPop {
+      from { transform: scale(.85); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .tmi-panel::before {
+      content: '';
+      position: absolute;
+      top: -60px;
+      right: -60px;
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--mode-color, #E8B34E) 0%, transparent 70%);
+      opacity: .25;
+      pointer-events: none;
+    }
+    .tmi-head {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 20px;
+      position: relative;
+      z-index: 1;
+    }
+    .tmi-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 18px;
+      background: var(--mode-color, #E8B34E);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      color: #fff;
+      box-shadow: 0 8px 24px color-mix(in srgb, var(--mode-color, #E8B34E) 50%, transparent);
+      flex-shrink: 0;
+      animation: tmiIconPulse 2s ease-in-out infinite;
+    }
+    @keyframes tmiIconPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    .tmi-info { flex: 1; min-width: 0; }
+    .tmi-mode-name {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 1px;
+      line-height: 1.1;
+    }
+    .tmi-mode-tagline {
+      font-size: 12px;
+      color: rgba(255,255,255,.65);
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+    .tmi-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+      position: relative;
+      z-index: 1;
+    }
+    .tmi-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.08);
+      animation: tmiStepIn .5s ease-out backwards;
+    }
+    .tmi-step:nth-child(1) { animation-delay: .15s; }
+    .tmi-step:nth-child(2) { animation-delay: .3s; }
+    .tmi-step:nth-child(3) { animation-delay: .45s; }
+    @keyframes tmiStepIn {
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    .tmi-step-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--mode-color, #E8B34E) 25%, transparent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .tmi-step-text {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: rgba(255,255,255,.9);
+      line-height: 1.5;
+      padding-top: 5px;
+    }
+    .tmi-actions {
+      display: flex;
+      gap: 8px;
+      position: relative;
+      z-index: 1;
+    }
+    .tmi-btn {
+      flex: 1;
+      padding: 14px;
+      border-radius: 14px;
+      border: none;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .tmi-btn:active { transform: scale(.96); }
+    .tmi-btn.start {
+      background: linear-gradient(135deg, var(--mode-color, #E8B34E), color-mix(in srgb, var(--mode-color, #E8B34E) 70%, #000));
+      color: #fff;
+      box-shadow: 0 8px 24px color-mix(in srgb, var(--mode-color, #E8B34E) 40%, transparent);
+    }
+    .tmi-btn.skip {
+      background: rgba(255,255,255,.08);
+      color: rgba(255,255,255,.7);
+      flex: 0 0 100px;
+    }
+
+    /* ─── In-game hint ─── */
+    #tutorial-ingame {
+      position: fixed;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      z-index: 99999;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .35s, transform .35s;
+      max-width: 340px;
+      width: calc(100% - 40px);
+      font-family: 'Tajawal', system-ui, sans-serif;
+    }
+    #tutorial-ingame.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    .tig-card {
+      padding: 14px 18px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(15,12,10,.94), rgba(31,26,36,.94));
+      backdrop-filter: blur(14px);
+      border: 2px solid var(--hint-color, #E8B34E);
+      box-shadow:
+        0 12px 40px rgba(0,0,0,.5),
+        0 0 0 4px color-mix(in srgb, var(--hint-color, #E8B34E) 15%, transparent);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: tigCardIn .5s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes tigCardIn {
+      from { transform: scale(.7); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .tig-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--hint-color, #E8B34E);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+      animation: tigIconPulse 1.2s ease-in-out infinite;
+    }
+    @keyframes tigIconPulse {
+      0%, 100% { transform: scale(1) rotate(0deg); }
+      50% { transform: scale(1.12) rotate(-5deg); }
+    }
+    .tig-text {
+      flex: 1;
+      font-size: 13.5px;
+      font-weight: 800;
+      line-height: 1.4;
+      letter-spacing: .2px;
+      text-align: right;
+    }
+
+    /* ─── Pulse effect for tap indicator ─── */
+    #tutorial-tap-pulse {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      border: 3px solid #E8B34E;
+      pointer-events: none;
+      z-index: 99998;
+      display: none;
+      opacity: 0;
+    }
+    #tutorial-tap-pulse.show {
+      display: block;
+      animation: ttpPulse 1.4s ease-out infinite;
+    }
+    @keyframes ttpPulse {
+      0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(1.8); opacity: 0; }
+    }
+
+    /* ─── Mode bubbles showcase ─── */
+    .tw-mode-showcase {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      width: 100%;
+      max-width: 320px;
+      margin: 4px 0;
+      position: relative;
+      z-index: 1;
+    }
+    .tw-mode-bubble {
+      aspect-ratio: 1;
+      border-radius: 14px;
+      background: rgba(255,255,255,.06);
+      border: 1.5px solid rgba(255,255,255,.12);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      animation: twBubbleIn .5s cubic-bezier(.34,1.56,.64,1) backwards;
+    }
+    .tw-mode-bubble:nth-child(1) { animation-delay: .35s; }
+    .tw-mode-bubble:nth-child(2) { animation-delay: .42s; }
+    .tw-mode-bubble:nth-child(3) { animation-delay: .49s; }
+    .tw-mode-bubble:nth-child(4) { animation-delay: .56s; }
+    .tw-mode-bubble:nth-child(5) { animation-delay: .63s; }
+    .tw-mode-bubble:nth-child(6) { animation-delay: .70s; }
+    .tw-mode-bubble:nth-child(7) { animation-delay: .77s; }
+    @keyframes twBubbleIn {
+      from { transform: scale(0); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .tw-mode-bubble .ic {
+      font-size: 18px;
+      line-height: 1;
+    }
+    .tw-mode-bubble .lbl {
+      font-size: 8px;
+      font-weight: 800;
+      letter-spacing: .5px;
+      opacity: .7;
+    }
+  `;
+  document.head.appendChild(tutCSS);
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ Welcome Screen ═══
+     ═══════════════════════════════════════════════════════════ */
+  function showTutorialWelcome(){
+    if(document.getElementById('tutorial-welcome')) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'tutorial-welcome';
+    overlay.innerHTML = `
+      <div class="tw-icon">🎓</div>
+      <div class="tw-title">أهلاً بك في SHIFT</div>
+      <div class="tw-subtitle">
+        جولة سريعة نعلّمك فيها كل شيء تحتاجه
+        <br>قبل الانطلاق في مغامرتك
+      </div>
+
+      <div class="tw-mode-showcase">
+        ${Object.values(TUTORIAL_MODES).slice(0, 7).map(m => `
+          <div class="tw-mode-bubble">
+            <span class="ic">${m.icon}</span>
+            <span class="lbl">${m.en}</span>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="tw-features">
+        <div class="tw-feature">
+          <div class="ic">🎮</div>
+          <div>تعلّم <strong>7 أنماط لعب</strong> بأدواتها الفريدة</div>
+        </div>
+        <div class="tw-feature">
+          <div class="ic">💡</div>
+          <div>تلميحات <strong>داخل اللعب</strong> في أول مباراة لكل نمط</div>
+        </div>
+        <div class="tw-feature">
+          <div class="ic">🎁</div>
+          <div>مكافأة <strong>+500 عملة</strong> عند الإكمال</div>
+        </div>
+      </div>
+
+      <div class="tw-actions">
+        <button class="tw-btn primary" id="tw-start">
+          🚀 ابدأ التدريب
+        </button>
+        <button class="tw-btn ghost" id="tw-skip">
+          تخطّي — أنا أعرف اللعبة
+        </button>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('show'));
+
+    /* ─── الأزرار ─── */
+    document.getElementById('tw-start').addEventListener('click', () => {
+      closeTutorialWelcome();
+      const t = getTutorialState();
+      t.welcomed = true;
+      Save.save();
+      /* فتح شاشة اختيار النمط */
+      setTimeout(() => {
+        if(typeof buildModeSelectorPage === 'function') buildModeSelectorPage();
+        if(typeof showScreen === 'function') showScreen('s-mode-select');
+      }, 500);
+      Sfx.reward(); haptic(20);
+    });
+
+    document.getElementById('tw-skip').addEventListener('click', () => {
+      if(!confirm('هل أنت متأكد؟ ستفوتك التلميحات المهمة.')) return;
+      closeTutorialWelcome();
+      const t = getTutorialState();
+      t.welcomed = true;
+      t.completed = true;
+      t.completedAt = Date.now();
+      Save.save();
+      Toast.info('تم تخطي التعليم', 'يمكنك اللعب مباشرة');
+      Sfx.tap();
+    });
+  }
+
+  function closeTutorialWelcome(){
+    const el = document.getElementById('tutorial-welcome');
+    if(!el) return;
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 500);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ Mode Intro Overlay ═══
+     ═══════════════════════════════════════════════════════════ */
+  function showModeIntro(modeId, onStart){
+    const mode = TUTORIAL_MODES[modeId];
+    if(!mode) return onStart();
+
+    /* إزالة قديمة */
+    const existing = document.getElementById('tutorial-mode-intro');
+    if(existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'tutorial-mode-intro';
+    overlay.innerHTML = `
+      <div class="tmi-panel" style="--mode-color: ${mode.color};">
+        <div class="tmi-head">
+          <div class="tmi-icon">${mode.icon}</div>
+          <div class="tmi-info">
+            <div class="tmi-mode-name">${mode.ar}</div>
+            <div class="tmi-mode-tagline">${mode.tagline}</div>
+          </div>
+        </div>
+
+        <div class="tmi-steps">
+          ${mode.steps.map(s => `
+            <div class="tmi-step">
+              <div class="tmi-step-icon">${s.icon}</div>
+              <div class="tmi-step-text">${s.text}</div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="tmi-actions">
+          <button class="tmi-btn skip" id="tmi-skip">تخطي</button>
+          <button class="tmi-btn start" id="tmi-start">
+            ▶ ابدأ المباراة
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('show'));
+
+    /* ─── الأزرار ─── */
+    document.getElementById('tmi-start').addEventListener('click', () => {
+      closeModeIntro();
+      markModeSeen(modeId);
+      Sfx.reward(); haptic(15);
+      setTimeout(() => onStart(), 250);
+    });
+
+    document.getElementById('tmi-skip').addEventListener('click', () => {
+      closeModeIntro();
+      markModeSeen(modeId);
+      Sfx.tap();
+      setTimeout(() => onStart(), 200);
+    });
+  }
+
+  function closeModeIntro(){
+    const el = document.getElementById('tutorial-mode-intro');
+    if(!el) return;
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 350);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ In-Game Hints ═══
+     ═══════════════════════════════════════════════════════════ */
+  const hintState = {
+    currentMode: null,
+    triggered: new Set(),
+    activeHint: null,
+    timeout: null,
+    tapCount: 0,
+    startTime: 0
+  };
+
+  function startInGameHints(modeId){
+    const mode = TUTORIAL_MODES[modeId];
+    if(!mode) return;
+    /* لا تظهر التلميحات إذا كان النمط مرئياً مسبقاً */
+    if(isModeSeenBeforeThisRun(modeId)) return;
+
+    hintState.currentMode = modeId;
+    hintState.triggered = new Set();
+    hintState.tapCount = 0;
+    hintState.startTime = Date.now();
+
+    /* التلميح الأول يظهر بعد بدء اللعب */
+    setTimeout(() => {
+      if(!window._tutorialRunActive) return;
+      triggerHint(modeId, 'start');
+    }, 800);
+  }
+
+  function isModeSeenBeforeThisRun(modeId){
+    /* تحقق من قائمة الأنماط المرئية قبل هذه الجولة */
+    const t = getTutorialState();
+    return t.seenModes.includes(modeId);
+  }
+
+  function triggerHint(modeId, triggerKey){
+    const mode = TUTORIAL_MODES[modeId];
+    if(!mode) return;
+
+    const hint = mode.inGameHints.find(h => h.trigger === triggerKey);
+    if(!hint) return;
+    if(hintState.triggered.has(triggerKey)) return;
+
+    hintState.triggered.add(triggerKey);
+    showInGameHint(hint.text, mode.color, hint.duration, hint.pulse);
+  }
+
+  function showInGameHint(text, color, duration, pulse){
+    /* إزالة سابقة */
+    const existing = document.getElementById('tutorial-ingame');
+    if(existing) existing.remove();
+
+    const el = document.createElement('div');
+    el.id = 'tutorial-ingame';
+    el.style.setProperty('--hint-color', color);
+
+    el.innerHTML = `
+      <div class="tig-card">
+        <div class="tig-icon">💡</div>
+        <div class="tig-text">${text}</div>
+      </div>
+    `;
+
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('show'));
+
+    /* مؤشر النقر إن لزم */
+    if(pulse){
+      const pulseEl = document.getElementById('tutorial-tap-pulse');
+      if(pulseEl) pulseEl.classList.add('show');
+    }
+
+    /* إخفاء تلقائي */
+    if(hintState.timeout) clearTimeout(hintState.timeout);
+    hintState.timeout = setTimeout(() => {
+      el.classList.remove('show');
+      setTimeout(() => el.remove(), 400);
+
+      const pulseEl = document.getElementById('tutorial-tap-pulse');
+      if(pulseEl) pulseEl.classList.remove('show');
+    }, duration);
+  }
+
+  function stopInGameHints(){
+    hintState.currentMode = null;
+    hintState.triggered.clear();
+
+    const el = document.getElementById('tutorial-ingame');
+    if(el){
+      el.classList.remove('show');
+      setTimeout(() => el.remove(), 400);
+    }
+
+    const pulseEl = document.getElementById('tutorial-tap-pulse');
+    if(pulseEl) pulseEl.classList.remove('show');
+
+    if(hintState.timeout){
+      clearTimeout(hintState.timeout);
+      hintState.timeout = null;
+    }
+  }
+
+  /* ═══ زر النقر النابض ═══ */
+  function ensureTapPulseElement(){
+    if(document.getElementById('tutorial-tap-pulse')) return;
+    const el = document.createElement('div');
+    el.id = 'tutorial-tap-pulse';
+    document.body.appendChild(el);
+  }
+  ensureTapPulseElement();
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ Hooks — التكامل مع اللعبة ═══
+     ═══════════════════════════════════════════════════════════ */
+
+  /* ① اعتراض startGame */
+  const _origStartGame = window.startGame;
+  window.startGame = function(){
+    const modeId = Save.data.mode || G.mode || 'FLIP';
+
+    /* هل نحتاج عرض intro؟ */
+    const t = getTutorialState();
+    const needsIntro = !t.completed && !t.seenModes.includes(modeId) && !t.skippedModes?.includes(modeId);
+
+    if(needsIntro){
+      /* علّق البدء — اظهر المقدمة أولاً */
+      showModeIntro(modeId, () => {
+        _origStartGame.apply(this, arguments);
+        startInGameHints(modeId);
+        window._tutorialRunActive = true;
+      });
+    } else {
+      _origStartGame.apply(this, arguments);
+      if(!t.completed){
+        startInGameHints(modeId);
+        window._tutorialRunActive = true;
+      }
+    }
+  };
+
+  /* ② اعتراض gameOver */
+  const _origGameOverTut = window.gameOver;
+  window.gameOver = function(){
+    window._tutorialRunActive = false;
+    stopInGameHints();
+    return _origGameOverTut.apply(this, arguments);
+  };
+
+  /* ③ مراقبة النقرات — لتشغيل تلميحات متقدمة */
+  const _origHandleTap = window.handleTap;
+  if(typeof _origHandleTap === 'function'){
+    window.handleTap = function(){
+      const result = _origHandleTap.apply(this, arguments);
+
+      if(hintState.currentMode){
+        hintState.tapCount++;
+
+        /* تلميح بعد أول نقرة */
+        if(hintState.tapCount === 1){
+          setTimeout(() => {
+            triggerHint(hintState.currentMode, 'afterFlip');
+            triggerHint(hintState.currentMode, 'afterRise');
+            triggerHint(hintState.currentMode, 'afterJump');
+          }, 200);
+        }
+
+        /* تلميح بعد 5 ثوان */
+        if(Date.now() - hintState.startTime > 5000 && !hintState.triggered.has('survived')){
+          triggerHint(hintState.currentMode, 'survived');
+        }
+      }
+
+      return result;
+    };
+  }
+
+  /* ④ عند فتح اللعبة لأول مرة (بعد التحميل) */
+  function checkFirstTimeAfterBoot(){
+    const t = getTutorialState();
+
+    /* مستخدم موجود (Google) لكن لم يرَ التعليم */
+    if(!t.completed && !t.welcomed && window._authState && window._authState.user){
+      setTimeout(() => {
+        showTutorialWelcome();
+      }, 800);
+    }
+    /* مستخدم جديد سجّل للتو */
+    if(!t.completed && !t.welcomed && !window._authState.user){
+      /* ننتظر حتى يسجل الدخول */
+    }
+  }
+
+  /* اعتراض mergeAndGoHome */
+  const _origMergeAndGoHome = window.mergeAndGoHome;
+  if(typeof _origMergeAndGoHome === 'function'){
+    window.mergeAndGoHome = async function(){
+      const result = await _origMergeAndGoHome.apply(this, arguments);
+
+      const t = getTutorialState();
+      if(!t.completed && !t.welcomed){
+        setTimeout(() => showTutorialWelcome(), 900);
+      }
+      return result;
+    };
+  }
+
+  /* ═══ تصدير للاختبار اليدوي ═══ */
+  window.TutorialSystem = {
+    showWelcome: showTutorialWelcome,
+    showModeIntro,
+    reset: () => {
+      Save.data.tutorial = null;
+      Save.save();
+      Toast.info('تم إعادة تعيين التعليم');
+    },
+    completeAll: () => {
+      const t = getTutorialState();
+      t.seenModes = Object.keys(TUTORIAL_MODES);
+      t.welcomed = true;
+      t.completed = true;
+      Save.save();
+      Toast.success('تم إكمال التعليم');
+    }
+  };
+
+  console.log('[Tutorial] ✅ System loaded');
+
+
+  /* ═══════════════════════════════════════════════════════════
+     ██████████ PART 2: ADVANCED AUDIO ENGINE ██████████
+     ═══════════════════════════════════════════════════════════ */
+
+  /* ═══ حالات الموسيقى والجو ═══ */
+  const AUDIO = {
+    ctx: null,
+    master: null,
+    musicGain: null,
+    ambientGain: null,
+    sfxGain: null,
+    reverb: null,
+    reverbGain: null,
+    initialized: false,
+    unlocked: false,
+    currentMusic: null,
+    currentAmbient: null,
+    musicVolume: 0.35,
+    ambientVolume: 0.25,
+    sfxVolume: 0.5,
+    enabled: true
+  };
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ قاعدة الأنغام ═══
+     ═══════════════════════════════════════════════════════════ */
+  const NOTES = {
+    C2: 65.41, D2: 73.42, E2: 82.41, F2: 87.31, G2: 98.00, A2: 110.00, B2: 123.47,
+    C3: 130.81, D3: 146.83, E3: 164.81, F3: 174.61, G3: 196.00, A3: 220.00, B3: 246.94,
+    C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.00, A4: 440.00, B4: 493.88,
+    C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99, A5: 880.00, B5: 987.77,
+    C6: 1046.50, D6: 1174.66, E6: 1318.51
+  };
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ ثيمات الموسيقى — لكل مشهد ═══
+     ═══════════════════════════════════════════════════════════ */
+  const MUSIC_THEMES = {
+    /* ─── مشهد الفجر ─── */
+    dawn: {
+      tempo: 52,
+      beatUnit: 60,
+      wave: 'sine',
+      leadWave: 'triangle',
+      chords: [
+        [NOTES.C3, NOTES.E3, NOTES.G3, NOTES.C4],
+        [NOTES.A2, NOTES.C3, NOTES.E3, NOTES.A3],
+        [NOTES.F2, NOTES.A2, NOTES.C3, NOTES.F3],
+        [NOTES.G2, NOTES.B2, NOTES.D3, NOTES.G3]
+      ],
+      arpeggio: [NOTES.C4, NOTES.E4, NOTES.G4, NOTES.E4],
+      bass: [NOTES.C2, NOTES.A1_ || 55, NOTES.F2, NOTES.G2]
+    },
+    /* ─── المرج ─── */
+    meadow: {
+      tempo: 60,
+      beatUnit: 60,
+      wave: 'triangle',
+      leadWave: 'sine',
+      chords: [
+        [NOTES.G3, NOTES.B3, NOTES.D4, NOTES.G4],
+        [NOTES.E3, NOTES.G3, NOTES.B3, NOTES.E4],
+        [NOTES.C3, NOTES.E3, NOTES.G3, NOTES.C4],
+        [NOTES.D3, NOTES.F3, NOTES.A3, NOTES.D4]
+      ],
+      arpeggio: [NOTES.G4, NOTES.B4, NOTES.D5, NOTES.B4],
+      bass: [NOTES.G2, NOTES.E2, NOTES.C2, NOTES.D2]
+    },
+    /* ─── الغابة ─── */
+    forest: {
+      tempo: 48,
+      beatUnit: 60,
+      wave: 'sine',
+      leadWave: 'triangle',
+      chords: [
+        [NOTES.D3, NOTES.F3, NOTES.A3, NOTES.D4],
+        [NOTES.A2, NOTES.C3, NOTES.E3, NOTES.A3],
+        [NOTES.F2, NOTES.A2, NOTES.C3, NOTES.F3],
+        [NOTES.C3, NOTES.E3, NOTES.G3, NOTES.C4]
+      ],
+      arpeggio: [NOTES.D4, NOTES.F4, NOTES.A4, NOTES.F4],
+      bass: [NOTES.D2, NOTES.A1, NOTES.F2, NOTES.C2]
+    },
+    /* ─── البحيرة ─── */
+    lagoon: {
+      tempo: 56,
+      beatUnit: 60,
+      wave: 'sine',
+      leadWave: 'triangle',
+      chords: [
+        [NOTES.F3, NOTES.A3, NOTES.C4, NOTES.F4],
+        [NOTES.C3, NOTES.E3, NOTES.G3, NOTES.C4],
+        [NOTES.G2, NOTES.B2, NOTES.D3, NOTES.G3],
+        [NOTES.A2, NOTES.C3, NOTES.E3, NOTES.A3]
+      ],
+      arpeggio: [NOTES.F4, NOTES.A4, NOTES.C5, NOTES.A4],
+      bass: [NOTES.F2, NOTES.C2, NOTES.G2, NOTES.A2]
+    },
+    /* ─── الوادي ─── */
+    canyon: {
+      tempo: 50,
+      beatUnit: 60,
+      wave: 'sawtooth',
+      leadWave: 'triangle',
+      chords: [
+        [NOTES.E3, NOTES.G3, NOTES.B3, NOTES.E4],
+        [NOTES.B2, NOTES.D3, NOTES.F3, NOTES.B3],
+        [NOTES.A2, NOTES.C3, NOTES.E3, NOTES.A3],
+        [NOTES.G2, NOTES.B2, NOTES.D3, NOTES.G3]
+      ],
+      arpeggio: [NOTES.E4, NOTES.G4, NOTES.B4, NOTES.G4],
+      bass: [NOTES.E2, NOTES.B1, NOTES.A1, NOTES.G2]
+    },
+    /* ─── المعبد ─── */
+    temple: {
+      tempo: 46,
+      beatUnit: 60,
+      wave: 'sine',
+      leadWave: 'triangle',
+      chords: [
+        [NOTES.D3, NOTES.F3, NOTES.A3, NOTES.D4],
+        [NOTES.G2, NOTES.B2, NOTES.D3, NOTES.G3],
+        [NOTES.A2, NOTES.C3, NOTES.E3, NOTES.A3],
+        [NOTES.D3, NOTES.F3, NOTES.A3, NOTES.D4]
+      ],
+      arpeggio: [NOTES.D4, NOTES.F4, NOTES.A4, NOTES.C5],
+      bass: [NOTES.D2, NOTES.G2, NOTES.A2, NOTES.D2]
+    },
+    /* ─── الغسق ─── */
+    dusk: {
+      tempo: 44,
+      beatUnit: 60,
+      wave: 'triangle',
+      leadWave: 'sine',
+      chords: [
+        [NOTES.A2, NOTES.C3, NOTES.E3, NOTES.A3],
+        [NOTES.F2, NOTES.A2, NOTES.C3, NOTES.F3],
+        [NOTES.G2, NOTES.B2, NOTES.D3, NOTES.G3],
+        [NOTES.E2, NOTES.G2, NOTES.B2, NOTES.E3]
+      ],
+      arpeggio: [NOTES.A3, NOTES.C4, NOTES.E4, NOTES.A4],
+      bass: [NOTES.A2, NOTES.F2, NOTES.G2, NOTES.E2]
+    },
+    /* ─── الصقيع ─── */
+    frost: {
+      tempo: 40,
+      beatUnit: 60,
+      wave: 'sine',
+      leadWave: 'triangle',
+      chords: [
+        [NOTES.C3, NOTES.E3, NOTES.G3, NOTES.C4],
+        [NOTES.A2, NOTES.C3, NOTES.E3, NOTES.A3],
+        [NOTES.F2, NOTES.A2, NOTES.C3, NOTES.F3],
+        [NOTES.G2, NOTES.B2, NOTES.D3, NOTES.G3]
+      ],
+      arpeggio: [NOTES.C5, NOTES.E5, NOTES.G5, NOTES.E5],
+      bass: [NOTES.C2, NOTES.A2, NOTES.F2, NOTES.G2]
+    },
+    /* ─── العاصفة ─── */
+    storm: {
+      tempo: 56,
+      beatUnit: 60,
+      wave: 'sawtooth',
+      leadWave: 'square',
+      chords: [
+        [NOTES.D3, NOTES.F3, NOTES.A3, NOTES.D4],
+        [NOTES.A2, NOTES.C3, NOTES.E3, NOTES.A3],
+        [NOTES.B2, NOTES.D3, NOTES.F3, NOTES.B3],
+        [NOTES.G2, NOTES.B2, NOTES.D3, NOTES.G3]
+      ],
+      arpeggio: [NOTES.D4, NOTES.F4, NOTES.A4, NOTES.D5],
+      bass: [NOTES.D2, NOTES.A1, NOTES.B1, NOTES.G2]
+    },
+    /* ─── الليل ─── */
+    night: {
+      tempo: 42,
+      beatUnit: 60,
+      wave: 'sine',
+      leadWave: 'triangle',
+      chords: [
+        [NOTES.A2, NOTES.C3, NOTES.E3, NOTES.A3],
+        [NOTES.E3, NOTES.G3, NOTES.B3, NOTES.E4],
+        [NOTES.F2, NOTES.A2, NOTES.C3, NOTES.F3],
+        [NOTES.D3, NOTES.F3, NOTES.A3, NOTES.D4]
+      ],
+      arpeggio: [NOTES.A4, NOTES.C5, NOTES.E5, NOTES.C5],
+      bass: [NOTES.A2, NOTES.E2, NOTES.F2, NOTES.D2]
+    },
+    /* ─── الساكورا ─── */
+    sakura: {
+      tempo: 54,
+      beatUnit: 60,
+      wave: 'sine',
+      leadWave: 'triangle',
+      chords: [
+        [NOTES.F3, NOTES.A3, NOTES.C4, NOTES.F4],
+        [NOTES.D3, NOTES.F3, NOTES.A3, NOTES.D4],
+        [NOTES.G2, NOTES.B2, NOTES.D3, NOTES.G3],
+        [NOTES.C3, NOTES.E3, NOTES.G3, NOTES.C4]
+      ],
+      arpeggio: [NOTES.F4, NOTES.A4, NOTES.C5, NOTES.F5],
+      bass: [NOTES.F2, NOTES.D2, NOTES.G2, NOTES.C2]
+    },
+    /* ─── الصحراء ─── */
+    desert: {
+      tempo: 58,
+      beatUnit: 60,
+      wave: 'sawtooth',
+      leadWave: 'triangle',
+      chords: [
+        [NOTES.D3, NOTES.F3, NOTES.A3, NOTES.D4],
+        [NOTES.A2, NOTES.C3, NOTES.E3, NOTES.A3],
+        [NOTES.C3, NOTES.E3, NOTES.G3, NOTES.C4],
+        [NOTES.G2, NOTES.B2, NOTES.D3, NOTES.G3]
+      ],
+      arpeggio: [NOTES.D4, NOTES.F4, NOTES.A4, NOTES.F4],
+      bass: [NOTES.D2, NOTES.A1, NOTES.C2, NOTES.G2]
+    },
+    /* ─── المدينة النيون ─── */
+    city: {
+      tempo: 90,
+      beatUnit: 60,
+      wave: 'square',
+      leadWave: 'sawtooth',
+      chords: [
+        [NOTES.A2, NOTES.C3, NOTES.E3, NOTES.A3],
+        [NOTES.G2, NOTES.B2, NOTES.D3, NOTES.G3],
+        [NOTES.F2, NOTES.A2, NOTES.C3, NOTES.F3],
+        [NOTES.E2, NOTES.G2, NOTES.B2, NOTES.E3]
+      ],
+      arpeggio: [NOTES.A4, NOTES.E5, NOTES.C5, NOTES.G4],
+      bass: [NOTES.A2, NOTES.G2, NOTES.F2, NOTES.E2]
+    },
+    /* ─── الفضاء ─── */
+    space: {
+      tempo: 32,
+      beatUnit: 60,
+      wave: 'sine',
+      leadWave: 'sine',
+      chords: [
+        [NOTES.C3, NOTES.G3, NOTES.D4, NOTES.A4],
+        [NOTES.F2, NOTES.C3, NOTES.G3, NOTES.D4],
+        [NOTES.E2, NOTES.B2, NOTES.F3, NOTES.C4],
+        [NOTES.G2, NOTES.D3, NOTES.A3, NOTES.E4]
+      ],
+      arpeggio: [NOTES.C5, NOTES.G5, NOTES.D6, NOTES.A5],
+      bass: [NOTES.C2, NOTES.F1 || 43.65, NOTES.E2, NOTES.G2]
+    },
+    /* ─── الشفق القطبي ─── */
+    aurora: {
+      tempo: 40,
+      beatUnit: 60,
+      wave: 'sine',
+      leadWave: 'triangle',
+      chords: [
+        [NOTES.E3, NOTES.G3, NOTES.B3, NOTES.E4],
+        [NOTES.B2, NOTES.D3, NOTES.F3, NOTES.B3],
+        [NOTES.G2, NOTES.B2, NOTES.D3, NOTES.G3],
+        [NOTES.A2, NOTES.C3, NOTES.E3, NOTES.A3]
+      ],
+      arpeggio: [NOTES.E4, NOTES.B4, NOTES.G4, NOTES.D5],
+      bass: [NOTES.E2, NOTES.B1, NOTES.G2, NOTES.A2]
+    },
+    /* ─── البركان ─── */
+    volcano: {
+      tempo: 62,
+      beatUnit: 60,
+      wave: 'sawtooth',
+      leadWave: 'square',
+      chords: [
+        [NOTES.E2, NOTES.G2, NOTES.B2, NOTES.E3],
+        [NOTES.B1, NOTES.D2, NOTES.F2, NOTES.B2],
+        [NOTES.A1, NOTES.C2, NOTES.E2, NOTES.A2],
+        [NOTES.F2, NOTES.A2, NOTES.C3, NOTES.F3]
+      ],
+      arpeggio: [NOTES.E4, NOTES.B4, NOTES.G4, NOTES.D5],
+      bass: [NOTES.E2, NOTES.B1, NOTES.A1, NOTES.F2]
+    },
+    /* ─── النهر الجليدي ─── */
+    glacier: {
+      tempo: 38,
+      beatUnit: 60,
+      wave: 'sine',
+      leadWave: 'triangle',
+      chords: [
+        [NOTES.D3, NOTES.F3, NOTES.A3, NOTES.D4],
+        [NOTES.A2, NOTES.C3, NOTES.E3, NOTES.A3],
+        [NOTES.F2, NOTES.A2, NOTES.C3, NOTES.F3],
+        [NOTES.G2, NOTES.B2, NOTES.D3, NOTES.G3]
+      ],
+      arpeggio: [NOTES.D5, NOTES.A5, NOTES.F5, NOTES.C5],
+      bass: [NOTES.D2, NOTES.A1, NOTES.F2, NOTES.G2]
+    },
+    /* ─── الكون/السديم ─── */
+    nebula: {
+      tempo: 30,
+      beatUnit: 60,
+      wave: 'sine',
+      leadWave: 'sine',
+      chords: [
+        [NOTES.D3, NOTES.F3, NOTES.A3, NOTES.D4],
+        [NOTES.A2, NOTES.E3, NOTES.G3, NOTES.C4],
+        [NOTES.F2, NOTES.C3, NOTES.E3, NOTES.A3],
+        [NOTES.G2, NOTES.D3, NOTES.F3, NOTES.B3]
+      ],
+      arpeggio: [NOTES.D5, NOTES.A5, NOTES.F5, NOTES.C6],
+      bass: [NOTES.D2, NOTES.A1, NOTES.F2, NOTES.G2]
+    },
+    /* ─── الزرقة (افتراضي) ─── */
+    default: {
+      tempo: 50,
+      beatUnit: 60,
+      wave: 'sine',
+      leadWave: 'triangle',
+      chords: [
+        [NOTES.C3, NOTES.E3, NOTES.G3, NOTES.C4],
+        [NOTES.A2, NOTES.C3, NOTES.E3, NOTES.A3],
+        [NOTES.F2, NOTES.A2, NOTES.C3, NOTES.F3],
+        [NOTES.G2, NOTES.B2, NOTES.D3, NOTES.G3]
+      ],
+      arpeggio: [NOTES.C4, NOTES.E4, NOTES.G4, NOTES.E4],
+      bass: [NOTES.C2, NOTES.A1, NOTES.F2, NOTES.G2]
+    }
+  };
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ Ambient Themes ═══
+     ═══════════════════════════════════════════════════════════ */
+  const AMBIENT_THEMES = {
+    rain:      { type: 'noise',   filter: 'lowpass',  freq: 800,  gain: 0.15, drops: true },
+    storm:     { type: 'noise',   filter: 'lowpass',  freq: 600,  gain: 0.20, thunder: true },
+    wind:      { type: 'noise',   filter: 'bandpass', freq: 500,  gain: 0.12, lfo: 0.15 },
+    snow:      { type: 'noise',   filter: 'highpass', freq: 3000, gain: 0.05 },
+    forest:    { type: 'noise',   filter: 'bandpass', freq: 1200, gain: 0.08, birds: true },
+    ocean:     { type: 'noise',   filter: 'lowpass',  freq: 400,  gain: 0.18, lfo: 0.08 },
+    space:     { type: 'drone',   freqs: [55, 82.5, 110], gain: 0.06 },
+    fire:      { type: 'noise',   filter: 'highpass', freq: 1500, gain: 0.10, crackle: true },
+    night:     { type: 'noise',   filter: 'lowpass',  freq: 300,  gain: 0.08, cricket: true }
+  };
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ التهيئة ═══
+     ═══════════════════════════════════════════════════════════ */
+  function initAudio(){
+    if(AUDIO.initialized) return AUDIO.ctx;
+
+    try {
+      AUDIO.ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+      /* ─── Master chain ─── */
+      AUDIO.master = AUDIO.ctx.createGain();
+      AUDIO.master.gain.value = 1;
+
+      /* ─── Compressor ─── */
+      const comp = AUDIO.ctx.createDynamicsCompressor();
+      comp.threshold.value = -18;
+      comp.knee.value = 30;
+      comp.ratio.value = 12;
+      comp.attack.value = 0.003;
+      comp.release.value = 0.25;
+
+      AUDIO.master.connect(comp);
+      comp.connect(AUDIO.ctx.destination);
+
+      /* ─── Sub-mixes ─── */
+      AUDIO.musicGain = AUDIO.ctx.createGain();
+      AUDIO.musicGain.gain.value = AUDIO.musicVolume;
+      AUDIO.musicGain.connect(AUDIO.master);
+
+      AUDIO.ambientGain = AUDIO.ctx.createGain();
+      AUDIO.ambientGain.gain.value = AUDIO.ambientVolume;
+      AUDIO.ambientGain.connect(AUDIO.master);
+
+      AUDIO.sfxGain = AUDIO.ctx.createGain();
+      AUDIO.sfxGain.gain.value = AUDIO.sfxVolume;
+      AUDIO.sfxGain.connect(AUDIO.master);
+
+      /* ─── Reverb (generated impulse response) ─── */
+      try {
+        const reverb = AUDIO.ctx.createConvolver();
+        const len = AUDIO.ctx.sampleRate * 2.5;
+        const impulse = AUDIO.ctx.createBuffer(2, len, AUDIO.ctx.sampleRate);
+        for(let ch = 0; ch < 2; ch++){
+          const data = impulse.getChannelData(ch);
+          for(let i = 0; i < len; i++){
+            data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.5);
+          }
+        }
+        reverb.buffer = impulse;
+
+        AUDIO.reverb = reverb;
+        AUDIO.reverbGain = AUDIO.ctx.createGain();
+        AUDIO.reverbGain.gain.value = 0.25;
+
+        reverb.connect(AUDIO.reverbGain);
+        AUDIO.reverbGain.connect(AUDIO.master);
+      } catch(e){
+        console.warn('[Audio] Reverb setup failed:', e);
+      }
+
+      AUDIO.initialized = true;
+      console.log('[Audio] Engine initialized');
+
+      return AUDIO.ctx;
+    } catch(e){
+      console.error('[Audio] Init failed:', e);
+      return null;
+    }
+  }
+
+  /* ═══ Unlock AudioContext on user interaction ═══ */
+  function unlockAudio(){
+    if(AUDIO.unlocked) return;
+    initAudio();
+    if(!AUDIO.ctx) return;
+
+    if(AUDIO.ctx.state === 'suspended'){
+      AUDIO.ctx.resume().then(() => {
+        AUDIO.unlocked = true;
+        console.log('[Audio] Unlocked');
+      }).catch(() => {});
+    } else {
+      AUDIO.unlocked = true;
+    }
+  }
+
+  /* ربط بأول نقرة */
+  document.addEventListener('touchstart', unlockAudio, { once: false, passive: true });
+  document.addEventListener('mousedown', unlockAudio, { once: false });
+  document.addEventListener('keydown', unlockAudio, { once: false });
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ Music Player ═══
+     ═══════════════════════════════════════════════════════════ */
+
+  const musicState = {
+    theme: null,
+    themeId: null,
+    nextNoteTime: 0,
+    step: 0,
+    schedulerId: null,
+    activeVoices: [],
+    fadeGain: null
+  };
+
+  function playTheme(themeId, crossfade){
+    if(!AUDIO.initialized) initAudio();
+    if(!AUDIO.ctx) return;
+
+    /* إذا نفس الثيم، لا شيء */
+    if(musicState.themeId === themeId && musicState.schedulerId) return;
+
+    const theme = MUSIC_THEMES[themeId] || MUSIC_THEMES.default;
+
+    /* ─── Crossfade ─── */
+    if(crossfade && musicState.fadeGain && AUDIO.musicGain){
+      const oldGain = musicState.fadeGain;
+      const t = AUDIO.ctx.currentTime;
+      oldGain.gain.cancelScheduledValues(t);
+      oldGain.gain.setValueAtTime(oldGain.gain.value, t);
+      oldGain.gain.linearRampToValueAtTime(0, t + 1.2);
+      setTimeout(() => {
+        try { oldGain.disconnect(); } catch(e){}
+      }, 1400);
+    }
+
+    /* ─── Stop old scheduler ─── */
+    if(musicState.schedulerId){
+      clearInterval(musicState.schedulerId);
+      musicState.schedulerId = null;
+    }
+
+    /* ─── Kill old voices ─── */
+    musicState.activeVoices.forEach(v => {
+      try {
+        v.gain.gain.cancelScheduledValues(AUDIO.ctx.currentTime);
+        v.gain.gain.setValueAtTime(v.gain.gain.value, AUDIO.ctx.currentTime);
+        v.gain.gain.linearRampToValueAtTime(0, AUDIO.ctx.currentTime + 0.5);
+        v.osc.stop(AUDIO.ctx.currentTime + 0.6);
+      } catch(e){}
+    });
+    musicState.activeVoices = [];
+
+    /* ─── Create fade gain ─── */
+    const fadeGain = AUDIO.ctx.createGain();
+    fadeGain.gain.value = crossfade ? 0 : 1;
+    fadeGain.connect(AUDIO.musicGain);
+    if(crossfade){
+      const t = AUDIO.ctx.currentTime;
+      fadeGain.gain.linearRampToValueAtTime(1, t + 1.5);
+    }
+    musicState.fadeGain = fadeGain;
+
+    musicState.theme = theme;
+    musicState.themeId = themeId;
+    musicState.nextNoteTime = AUDIO.ctx.currentTime + 0.05;
+    musicState.step = 0;
+
+    /* ─── Scheduler ─── */
+    musicState.schedulerId = setInterval(() => {
+      scheduleMusic();
+    }, 80);
+
+    /* ─── الإيقاف عند عدم اللعب مؤقتاً ─── */
+    console.log(`[Audio] Playing theme: ${themeId}`);
+  }
+
+  function scheduleMusic(){
+    if(!AUDIO.ctx || !musicState.theme) return;
+    if(!AUDIO.enabled) return;
+    /* تحقق من أن اللعبة لاتزال نشطة */
+    if(typeof G !== 'undefined' && (G.state === 'PAUSED')) return;
+
+    const theme = musicState.theme;
+    const beatDur = theme.beatUnit / theme.tempo;
+    const lookahead = 0.3;
+
+    while(musicState.nextNoteTime < AUDIO.ctx.currentTime + lookahead){
+      const time = musicState.nextNoteTime;
+      const step = musicState.step;
+
+      /* ─── Chord (يبدأ كل 4 beats) ─── */
+      if(step % 4 === 0){
+        const chord = theme.chords[Math.floor(step / 4) % theme.chords.length];
+        playChord(chord, time, beatDur * 4, theme.wave);
+      }
+
+      /* ─── Bass (كل 2 beats) ─── */
+      if(step % 2 === 0 && theme.bass){
+        const bassNote = theme.bass[Math.floor(step / 2) % theme.bass.length];
+        if(bassNote){
+          playVoice({
+            freq: bassNote,
+            time: time,
+            duration: beatDur * 1.8,
+            wave: 'sine',
+            vol: 0.35,
+            attack: 0.05,
+            release: 0.6,
+            filter: { type: 'lowpass', freq: 250 }
+          });
+        }
+      }
+
+      /* ─── Arpeggio (كل beat) ─── */
+      if(theme.arpeggio){
+        const note = theme.arpeggio[step % theme.arpeggio.length];
+        playVoice({
+          freq: note,
+          time: time,
+          duration: beatDur * 0.7,
+          wave: theme.leadWave || 'triangle',
+          vol: 0.14,
+          attack: 0.02,
+          release: 0.4,
+          filter: { type: 'lowpass', freq: 3500 }
+        });
+      }
+
+      musicState.step++;
+      musicState.nextNoteTime += beatDur;
+    }
+  }
+
+  function playChord(notes, time, duration, wave){
+    notes.forEach((freq, i) => {
+      playVoice({
+        freq,
+        time: time + i * 0.015,
+        duration,
+        wave: wave || 'sine',
+        vol: 0.10,
+        attack: 0.6,
+        release: 1.2,
+        filter: { type: 'lowpass', freq: 1200 + i * 200 },
+        reverb: 0.4
+      });
+    });
+  }
+
+  function playVoice(opts){
+    if(!AUDIO.ctx) return;
+    const {
+      freq, time, duration,
+      wave = 'sine', vol = 0.1,
+      attack = 0.05, release = 0.3,
+      filter, reverb = 0
+    } = opts;
+    if(!freq) return;
+
+    try {
+      const osc = AUDIO.ctx.createOscillator();
+      osc.type = wave;
+      osc.frequency.value = freq;
+
+      const gain = AUDIO.ctx.createGain();
+      gain.gain.setValueAtTime(0, time);
+      gain.gain.linearRampToValueAtTime(vol, time + attack);
+      gain.gain.setValueAtTime(vol, time + duration - release * 0.5);
+      gain.gain.linearRampToValueAtTime(0, time + duration + release);
+
+      let lastNode = osc;
+
+      if(filter){
+        const f = AUDIO.ctx.createBiquadFilter();
+        f.type = filter.type || 'lowpass';
+        f.frequency.value = filter.freq || 1000;
+        f.Q.value = filter.q || 1;
+        osc.connect(f);
+        lastNode = f;
+      }
+
+      lastNode.connect(gain);
+
+      const destination = musicState.fadeGain || AUDIO.musicGain;
+      gain.connect(destination);
+
+      if(reverb > 0 && AUDIO.reverb){
+        const sendGain = AUDIO.ctx.createGain();
+        sendGain.gain.value = reverb;
+        gain.connect(sendGain);
+        sendGain.connect(AUDIO.reverb);
+      }
+
+      osc.start(time);
+      osc.stop(time + duration + release + 0.1);
+
+      musicState.activeVoices.push({ osc, gain });
+
+      /* تنظيف */
+      osc.onended = () => {
+        const idx = musicState.activeVoices.findIndex(v => v.osc === osc);
+        if(idx >= 0) musicState.activeVoices.splice(idx, 1);
+      };
+    } catch(e){ /* silent */ }
+  }
+
+  /* ═══ إيقاف/استئناف ═══ */
+  function pauseMusic(){
+    if(AUDIO.ctx && AUDIO.master){
+      AUDIO.master.gain.linearRampToValueAtTime(0, AUDIO.ctx.currentTime + 0.4);
+    }
+  }
+
+  function resumeMusic(){
+    if(AUDIO.ctx && AUDIO.master){
+      AUDIO.master.gain.linearRampToValueAtTime(1, AUDIO.ctx.currentTime + 0.4);
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ Ambient Player ═══
+     ═══════════════════════════════════════════════════════════ */
+
+  const ambientState = {
+    active: null,
+    nodes: [],
+    noiseBuffer: null
+  };
+
+  function generateNoiseBuffer(duration){
+    if(!AUDIO.ctx) return null;
+    if(ambientState.noiseBuffer && ambientState.noiseBuffer.duration >= duration){
+      return ambientState.noiseBuffer;
+    }
+    const len = AUDIO.ctx.sampleRate * duration;
+    const buffer = AUDIO.ctx.createBuffer(1, len, AUDIO.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i = 0; i < len; i++){
+      data[i] = Math.random() * 2 - 1;
+    }
+    ambientState.noiseBuffer = buffer;
+    return buffer;
+  }
+
+  function playAmbient(ambientId){
+    if(!AUDIO.initialized) initAudio();
+    if(!AUDIO.ctx) return;
+    if(ambientState.active === ambientId) return;
+
+    stopAmbient();
+
+    const theme = AMBIENT_THEMES[ambientId];
+    if(!theme) return;
+
+    ambientState.active = ambientId;
+
+    try {
+      if(theme.type === 'noise'){
+        const buffer = generateNoiseBuffer(3);
+        const src = AUDIO.ctx.createBufferSource();
+        src.buffer = buffer;
+        src.loop = true;
+
+        const filter = AUDIO.ctx.createBiquadFilter();
+        filter.type = theme.filter;
+        filter.frequency.value = theme.freq;
+        filter.Q.value = 0.7;
+
+        const gain = AUDIO.ctx.createGain();
+        gain.gain.value = 0;
+        gain.gain.linearRampToValueAtTime(theme.gain, AUDIO.ctx.currentTime + 2);
+
+        src.connect(filter);
+        filter.connect(gain);
+        gain.connect(AUDIO.ambientGain);
+
+        src.start();
+
+        ambientState.nodes.push({ src, gain, filter });
+
+        /* ─── LFO للتنويع ─── */
+        if(theme.lfo){
+          const lfo = AUDIO.ctx.createOscillator();
+          lfo.type = 'sine';
+          lfo.frequency.value = theme.lfo;
+          const lfoGain = AUDIO.ctx.createGain();
+          lfoGain.gain.value = theme.gain * 0.5;
+          lfo.connect(lfoGain);
+          lfoGain.connect(gain.gain);
+          lfo.start();
+          ambientState.nodes.push({ osc: lfo, gain: lfoGain });
+        }
+
+        /* ─── قطرات المطر ─── */
+        if(theme.drops){
+          scheduleRandomDrops(theme.gain * 0.6);
+        }
+        /* ─── الرعد ─── */
+        if(theme.thunder){
+          scheduleRandomThunder();
+        }
+        /* ─── الطيور ─── */
+        if(theme.birds){
+          scheduleRandomBirds();
+        }
+        /* ─── الصراصير ─── */
+        if(theme.cricket){
+          scheduleRandomCrickets();
+        }
+        /* ─── أزيز النار ─── */
+        if(theme.crackle){
+          scheduleRandomCrackle();
+        }
+      }
+      else if(theme.type === 'drone'){
+        theme.freqs.forEach((freq, i) => {
+          const osc = AUDIO.ctx.createOscillator();
+          osc.type = 'sine';
+          osc.frequency.value = freq + Math.random() * 2 - 1;
+
+          const gain = AUDIO.ctx.createGain();
+          gain.gain.value = 0;
+          gain.gain.linearRampToValueAtTime(theme.gain / theme.freqs.length, AUDIO.ctx.currentTime + 3);
+
+          osc.connect(gain);
+          gain.connect(AUDIO.ambientGain);
+          osc.start();
+
+          ambientState.nodes.push({ osc, gain });
+        });
+      }
+    } catch(e){
+      console.warn('[Ambient] Failed:', e);
+    }
+  }
+
+  function scheduleRandomDrops(intensity){
+    const play = () => {
+      if(ambientState.active === null || !AMBIENT_THEMES[ambientState.active]?.drops) return;
+
+      try {
+        const now = AUDIO.ctx.currentTime;
+        const osc = AUDIO.ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(2000 + Math.random() * 2000, now);
+        osc.frequency.exponentialRampToValueAtTime(800, now + 0.08);
+
+        const gain = AUDIO.ctx.createGain();
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(intensity * (0.3 + Math.random() * 0.7), now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+
+        osc.connect(gain);
+        gain.connect(AUDIO.ambientGain);
+        osc.start(now);
+        osc.stop(now + 0.15);
+      } catch(e){}
+
+      setTimeout(play, 100 + Math.random() * 400);
+    };
+    setTimeout(play, 500);
+  }
+
+  function scheduleRandomThunder(){
+    const play = () => {
+      if(ambientState.active === null || !AMBIENT_THEMES[ambientState.active]?.thunder) return;
+
+      try {
+        const now = AUDIO.ctx.currentTime;
+        const buf = generateNoiseBuffer(3);
+        const src = AUDIO.ctx.createBufferSource();
+        src.buffer = buf;
+        src.loop = true;
+
+        const filter = AUDIO.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 150;
+
+        const gain = AUDIO.ctx.createGain();
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.6 + Math.random() * 0.3, now + 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 2.5);
+
+        src.connect(filter);
+        filter.connect(gain);
+        gain.connect(AUDIO.ambientGain);
+        src.start(now);
+        src.stop(now + 3);
+      } catch(e){}
+
+      setTimeout(play, 8000 + Math.random() * 15000);
+    };
+    setTimeout(play, 5000);
+  }
+
+  function scheduleRandomBirds(){
+    const play = () => {
+      if(ambientState.active === null || !AMBIENT_THEMES[ambientState.active]?.birds) return;
+
+      try {
+        const now = AUDIO.ctx.currentTime;
+        const numChirps = 2 + Math.floor(Math.random() * 3);
+        for(let i = 0; i < numChirps; i++){
+          const t = now + i * 0.08;
+          const osc = AUDIO.ctx.createOscillator();
+          osc.type = 'sine';
+          const baseFreq = 2500 + Math.random() * 1500;
+          osc.frequency.setValueAtTime(baseFreq, t);
+          osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.4, t + 0.05);
+
+          const gain = AUDIO.ctx.createGain();
+          gain.gain.setValueAtTime(0, t);
+          gain.gain.linearRampToValueAtTime(0.08, t + 0.01);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+
+          osc.connect(gain);
+          gain.connect(AUDIO.ambientGain);
+          osc.start(t);
+          osc.stop(t + 0.12);
+        }
+      } catch(e){}
+
+      setTimeout(play, 4000 + Math.random() * 8000);
+    };
+    setTimeout(play, 2000);
+  }
+
+  function scheduleRandomCrickets(){
+    const play = () => {
+      if(ambientState.active === null || !AMBIENT_THEMES[ambientState.active]?.cricket) return;
+
+      try {
+        const now = AUDIO.ctx.currentTime;
+        for(let i = 0; i < 3; i++){
+          const t = now + i * 0.04;
+          const osc = AUDIO.ctx.createOscillator();
+          osc.type = 'square';
+          osc.frequency.value = 4500 + Math.random() * 500;
+
+          const gain = AUDIO.ctx.createGain();
+          gain.gain.setValueAtTime(0, t);
+          gain.gain.linearRampToValueAtTime(0.02, t + 0.005);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+
+          osc.connect(gain);
+          gain.connect(AUDIO.ambientGain);
+          osc.start(t);
+          osc.stop(t + 0.05);
+        }
+      } catch(e){}
+
+      setTimeout(play, 300 + Math.random() * 600);
+    };
+    setTimeout(play, 1000);
+  }
+
+  function scheduleRandomCrackle(){
+    const play = () => {
+      if(ambientState.active === null || !AMBIENT_THEMES[ambientState.active]?.crackle) return;
+
+      try {
+        const now = AUDIO.ctx.currentTime;
+        const osc = AUDIO.ctx.createOscillator();
+        osc.type = 'square';
+        osc.frequency.value = 100 + Math.random() * 400;
+
+        const gain = AUDIO.ctx.createGain();
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.04, now + 0.005);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+        osc.connect(gain);
+        gain.connect(AUDIO.ambientGain);
+        osc.start(now);
+        osc.stop(now + 0.07);
+      } catch(e){}
+
+      setTimeout(play, 80 + Math.random() * 400);
+    };
+    setTimeout(play, 500);
+  }
+
+  function stopAmbient(){
+    if(!AUDIO.ctx) return;
+    const t = AUDIO.ctx.currentTime;
+
+    ambientState.nodes.forEach(n => {
+      try {
+        if(n.gain && n.gain.gain){
+          n.gain.gain.cancelScheduledValues(t);
+          n.gain.gain.setValueAtTime(n.gain.gain.value, t);
+          n.gain.gain.linearRampToValueAtTime(0, t + 1);
+        }
+        if(n.src) n.src.stop(t + 1.1);
+        if(n.osc) n.osc.stop(t + 1.1);
+      } catch(e){}
+    });
+
+    setTimeout(() => {
+      ambientState.nodes = [];
+    }, 1300);
+
+    ambientState.active = null;
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ ربط الموسيقى بالمشاهد ═══
+     ═══════════════════════════════════════════════════════════ */
+
+  const SCENE_TO_THEME = {
+    dawn: 'dawn',
+    meadow: 'meadow',
+    forest: 'forest',
+    lagoon: 'lagoon',
+    canyon: 'canyon',
+    temple: 'temple',
+    dusk: 'dusk',
+    frost: 'frost',
+    storm: 'storm',
+    night: 'night',
+    sakura: 'sakura',
+    desert: 'desert',
+    city: 'city',
+    space: 'space',
+    aurora: 'aurora',
+    volcano: 'volcano',
+    glacier: 'glacier',
+    nebula: 'nebula',
+    candy: 'meadow',
+    jungle: 'forest',
+    swamp: 'forest',
+    beach: 'lagoon',
+    mountain: 'frost',
+    bloom: 'sakura',
+    thunder: 'storm',
+    ember: 'volcano',
+    starfall: 'space',
+    prism: 'nebula',
+    crystalcave: 'glacier',
+    ocean: 'lagoon',
+    abyss: 'space',
+    cosmos: 'space'
+  };
+
+  const SCENE_TO_AMBIENT = {
+    dawn: null,
+    meadow: null,
+    forest: 'forest',
+    lagoon: null,
+    canyon: 'wind',
+    temple: null,
+    dusk: 'night',
+    frost: 'snow',
+    storm: 'storm',
+    night: 'night',
+    sakura: 'wind',
+    desert: 'wind',
+    city: null,
+    space: 'space',
+    aurora: null,
+    volcano: 'fire',
+    glacier: 'wind',
+    nebula: 'space',
+    candy: null,
+    jungle: 'forest',
+    swamp: 'forest',
+    beach: 'ocean',
+    mountain: 'wind',
+    bloom: null,
+    thunder: 'storm',
+    ember: 'fire',
+    starfall: 'space',
+    prism: null,
+    crystalcave: null,
+    ocean: 'ocean',
+    abyss: 'space',
+    cosmos: 'space'
+  };
+
+  /* ═══ اعتراض تحديث المشهد ═══ */
+  let lastSceneId = null;
+
+  function checkSceneChange(){
+    if(typeof G === 'undefined' || !G.currentScene) return;
+
+    const sceneId = G.currentScene.id || 'dawn';
+    if(sceneId === lastSceneId) return;
+
+    /* تغيير! */
+    const themeId = SCENE_TO_THEME[sceneId] || 'default';
+    const ambientId = SCENE_TO_AMBIENT[sceneId];
+
+    /* موسيقى — فقط أثناء اللعب */
+    if(G.state === 'PLAYING' && AUDIO.enabled){
+      playTheme(themeId, lastSceneId !== null);
+      if(ambientId) playAmbient(ambientId);
+      else stopAmbient();
+    }
+
+    lastSceneId = sceneId;
+  }
+
+  /* ربط في loop اللعبة */
+  setInterval(checkSceneChange, 800);
+
+  /* ═══ اعتراض pause / resume ═══ */
+  const _origPauseGame = window.pauseGame;
+  if(typeof _origPauseGame === 'function'){
+    window.pauseGame = function(){
+      pauseMusic();
+      stopAmbient();
+      return _origPauseGame.apply(this, arguments);
+    };
+  }
+
+  const _origResumeGame = window.resumeGame;
+  if(typeof _origResumeGame === 'function'){
+    window.resumeGame = function(){
+      resumeMusic();
+      lastSceneId = null; /* إعادة فحص المشهد */
+      return _origResumeGame.apply(this, arguments);
+    };
+  }
+
+  const _origQuitToMenu = window.quitToMenu;
+  if(typeof _origQuitToMenu === 'function'){
+    window.quitToMenu = function(){
+      stopAmbient();
+      if(musicState.schedulerId){
+        clearInterval(musicState.schedulerId);
+        musicState.schedulerId = null;
+      }
+      /* موسيقى القائمة */
+      playMenuMusic();
+      return _origQuitToMenu.apply(this, arguments);
+    };
+  }
+
+  /* ═══ موسيقى القائمة ═══ */
+  function playMenuMusic(){
+    playTheme('dawn', musicState.themeId !== null);
+  }
+
+  /* ═══ اعتراض startGame ═══ */
+  const _origStartGameAudio = window.startGame;
+  window.startGame = function(){
+    playTheme('meadow', musicState.themeId !== null);
+    lastSceneId = null;
+    return _origStartGameAudio.apply(this, arguments);
+  };
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ ترقية SFX الموجود ═══
+     ═══════════════════════════════════════════════════════════ */
+  setTimeout(() => {
+    if(typeof Sfx === 'undefined') return;
+
+    const _origSfxPlay = Sfx.play.bind(Sfx);
+    Sfx.play = function(freq, dur, type, vol, slideTo){
+      /* تشغيل النسخة الأصلية */
+      try {
+        _origSfxPlay(freq, dur, type, vol, slideTo);
+      } catch(e){}
+
+      /* إضافة طبقة رنين عبر محركنا */
+      if(!AUDIO.initialized || !AUDIO.enabled || !AUDIO.unlocked) return;
+      if(!Save.data.settings || !Save.data.settings.sound) return;
+
+      try {
+        const ctx = AUDIO.ctx;
+        const now = ctx.currentTime;
+
+        /* طبقة رنين خفيفة */
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq * 2, now);
+        if(slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo * 2, now + dur);
+
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0, now);
+        g.gain.linearRampToValueAtTime((vol || 0.05) * 0.6, now + 0.005);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + dur * 1.3);
+
+        osc.connect(g);
+        g.connect(AUDIO.sfxGain);
+        osc.start(now);
+        osc.stop(now + dur * 1.4 + 0.05);
+      } catch(e){}
+    };
+
+    console.log('[Audio] ✅ SFX enhanced');
+  }, 1000);
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ دوال التحكم بالصوت ═══
+     ═══════════════════════════════════════════════════════════ */
+
+  function setMusicVolume(v){
+    AUDIO.musicVolume = Math.max(0, Math.min(1, v));
+    if(AUDIO.musicGain){
+      AUDIO.musicGain.gain.value = AUDIO.musicVolume;
+    }
+    if(Save.data.settingsV3){
+      Save.data.settingsV3.musicVolume = Math.round(v * 100);
+    }
+  }
+
+  function setAmbientVolume(v){
+    AUDIO.ambientVolume = Math.max(0, Math.min(1, v));
+    if(AUDIO.ambientGain){
+      AUDIO.ambientGain.gain.value = AUDIO.ambientVolume;
+    }
+  }
+
+  function setSfxVolume(v){
+    AUDIO.sfxVolume = Math.max(0, Math.min(1, v));
+    if(AUDIO.sfxGain){
+      AUDIO.sfxGain.gain.value = AUDIO.sfxVolume;
+    }
+    if(Save.data.settingsV3){
+      Save.data.settingsV3.soundVolume = Math.round(v * 100);
+    }
+  }
+
+  /* ─── ربط الإعدادات ─── */
+  function syncVolumeFromSettings(){
+    if(!Save.data.settingsV3) return;
+    const s = Save.data.settingsV3;
+
+    if(typeof s.musicVolume === 'number'){
+      AUDIO.musicVolume = s.musicVolume / 100;
+      if(AUDIO.musicGain) AUDIO.musicGain.gain.value = AUDIO.musicVolume;
+    }
+    if(typeof s.soundVolume === 'number'){
+      AUDIO.sfxVolume = s.soundVolume / 100;
+      if(AUDIO.sfxGain) AUDIO.sfxGain.gain.value = AUDIO.sfxVolume;
+    }
+
+    /* الحالة */
+    AUDIO.enabled = (s.sfxEnabled !== false);
+
+    if(s.musicEnabled === false){
+      if(AUDIO.musicGain) AUDIO.musicGain.gain.value = 0;
+    }
+  }
+
+  /* ربط بعد كل حفظ */
+  setTimeout(() => {
+    const _origSave = Save.save.bind(Save);
+    Save.save = function(){
+      const result = _origSave.apply(this, arguments);
+      setTimeout(() => syncVolumeFromSettings(), 50);
+      return result;
+    };
+  }, 500);
+
+  /* ═══ استئناف بعد فتح الإعدادات ═══ */
+  setTimeout(syncVolumeFromSettings, 2000);
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ تشغيل عند الجاهزية ═══
+     ═══════════════════════════════════════════════════════════ */
+  function startMusicWhenReady(){
+    if(typeof Cloud !== 'undefined' && Cloud.user){
+      /* موسيقى القائمة */
+      setTimeout(() => {
+        playMenuMusic();
+      }, 2500);
+    } else {
+      setTimeout(() => {
+        const active = document.querySelector('.screen.active');
+        if(active && active.id !== 's-login'){
+          playMenuMusic();
+        }
+      }, 3500);
+    }
+  }
+
+  /* بدء عند فتح اللعبة */
+  setTimeout(startMusicWhenReady, 1500);
+  setTimeout(startMusicWhenReady, 5000);
+
+  /* عند أول نقرة، شغّل الموسيقى */
+  document.addEventListener('touchstart', function onFirstTap(){
+    document.removeEventListener('touchstart', onFirstTap);
+    setTimeout(() => {
+      if(!musicState.schedulerId){
+        playMenuMusic();
+      }
+    }, 300);
+  }, { once: true });
+
+  document.addEventListener('mousedown', function onFirstClick(){
+    document.removeEventListener('mousedown', onFirstClick);
+    setTimeout(() => {
+      if(!musicState.schedulerId){
+        playMenuMusic();
+      }
+    }, 300);
+  }, { once: true });
+
+  /* ═══ تصدير للاختبار ═══ */
+  window.AudioEngine = {
+    playTheme,
+    playAmbient,
+    stopAmbient,
+    setMusicVolume,
+    setAmbientVolume,
+    setSfxVolume,
+    getState: () => ({ ...AUDIO }),
+    themes: MUSIC_THEMES,
+    ambient: AMBIENT_THEMES
+  };
+
+  console.log('[Audio] ✅ Engine loaded');
+  console.log(`  • ${Object.keys(MUSIC_THEMES).length} music themes`);
+  console.log(`  • ${Object.keys(AMBIENT_THEMES).length} ambient themes`);
+  console.log('  • Reverb, compressor, crossfade enabled');
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ تشغيل تلقائي للتلميحات عند أول دخول ═══
+     ═══════════════════════════════════════════════════════════ */
+  setTimeout(checkFirstTimeAfterBoot, 3000);
+  setTimeout(checkFirstTimeAfterBoot, 8000);
+
+  console.log('[SHIFT Tutorial+Audio] ✅ Both systems installed successfully');
+
+})();
+
+/* ============================================================
+   ═══════════════════════════════════════════════════════════
+   ═══════════ HOME MODE BACKGROUNDS v1 ═════════════════════
+   ═══════════════════════════════════════════════════════════
+   خلفيات ثابتة وجميلة لكل نمط لعب
+   - 8 أنماط × 8 خلفيات مميزة
+   - انتقالات سلسة عند التبديل
+   - تحسين تلقائي للقراءة
+   ============================================================ */
+
+(function homeModeBackgrounds(){
+  if(window._homeModeBackgroundsInstalled) return;
+  window._homeModeBackgroundsInstalled = true;
+
+  /* ═══════════════ 1) حقن CSS ═══════════════ */
+  const style = document.createElement('style');
+  style.id = 'home-mode-bg-css';
+  style.textContent = `
+
+    /* ═══ الحاوية الرئيسية ═══ */
+    #s-home .home {
+      position: relative;
+      transition: background .8s cubic-bezier(.4, 0, .2, 1);
+      background: var(--paper); /* افتراضي */
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       ═══ FLIP · قلب الجاذبية ═══
+       سماء زرقاء في الأعلى، أرض ترابية في الأسفل
+       ═══════════════════════════════════════════════════════ */
+    #s-home .home[data-mode="FLIP"] {
+      background:
+        linear-gradient(180deg,
+          rgba(251,247,240,0.60) 0%,
+          rgba(251,247,240,0.32) 25%,
+          rgba(251,247,240,0.26) 50%,
+          rgba(251,247,240,0.38) 75%,
+          rgba(251,247,240,0.55) 100%
+        ),
+        linear-gradient(180deg,
+          #6FB3E8 0%,
+          #A8D8F0 25%,
+          #E8D8B8 50%,
+          #C88850 75%,
+          #8A5030 100%
+        );
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       ═══ FLAP · التحليق ═══
+       بنفسجي غامق مع توهج مركزي
+       ═══════════════════════════════════════════════════════ */
+    #s-home .home[data-mode="FLAP"] {
+      background:
+        linear-gradient(180deg,
+          rgba(251,247,240,0.55) 0%,
+          rgba(251,247,240,0.30) 25%,
+          rgba(251,247,240,0.25) 50%,
+          rgba(251,247,240,0.35) 75%,
+          rgba(251,247,240,0.55) 100%
+        ),
+        radial-gradient(circle at 50% 20%, rgba(200,150,255,0.45) 0%, transparent 55%),
+        linear-gradient(180deg,
+          #1F1030 0%,
+          #3A1860 40%,
+          #6A3A98 70%,
+          #8E6AA8 100%
+        );
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       ═══ SOAR · التحليق الحر ═══
+       أزرق سماوي عميق مع توهج علوي
+       ═══════════════════════════════════════════════════════ */
+    #s-home .home[data-mode="SOAR"] {
+      background:
+        linear-gradient(180deg,
+          rgba(251,247,240,0.55) 0%,
+          rgba(251,247,240,0.30) 25%,
+          rgba(251,247,240,0.25) 50%,
+          rgba(251,247,240,0.38) 75%,
+          rgba(251,247,240,0.55) 100%
+        ),
+        radial-gradient(circle at 30% 10%, rgba(255,255,255,0.55) 0%, transparent 45%),
+        linear-gradient(180deg,
+          #0A2850 0%,
+          #1A5888 30%,
+          #5AA0D8 65%,
+          #B8E0F5 100%
+        );
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       ═══ DRIFT · الانسياق ═══
+       غروب ذهبي مع توهج شمسي
+       ═══════════════════════════════════════════════════════ */
+    #s-home .home[data-mode="DRIFT"] {
+      background:
+        linear-gradient(180deg,
+          rgba(251,247,240,0.55) 0%,
+          rgba(251,247,240,0.32) 25%,
+          rgba(251,247,240,0.26) 50%,
+          rgba(251,247,240,0.38) 75%,
+          rgba(251,247,240,0.55) 100%
+        ),
+        radial-gradient(circle at 70% 25%, rgba(255,220,120,0.55) 0%, transparent 50%),
+        linear-gradient(180deg,
+          #3A1810 0%,
+          #7A3818 30%,
+          #C87838 60%,
+          #E8A860 100%
+        );
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       ═══ WALK · المشي والقفز ═══
+       سماء صافية + مرج أخضر
+       ═══════════════════════════════════════════════════════ */
+    #s-home .home[data-mode="WALK"] {
+      background:
+        linear-gradient(180deg,
+          rgba(251,247,240,0.55) 0%,
+          rgba(251,247,240,0.30) 25%,
+          rgba(251,247,240,0.25) 50%,
+          rgba(251,247,240,0.38) 75%,
+          rgba(251,247,240,0.55) 100%
+        ),
+        radial-gradient(circle at 50% 5%, rgba(255,255,255,0.65) 0%, transparent 40%),
+        linear-gradient(180deg,
+          #88C8F0 0%,
+          #B8DCF0 25%,
+          #C8E8A0 50%,
+          #6B9B37 75%,
+          #2A5620 100%
+        );
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       ═══ PULSE · النبض ═══
+       تنقل بين الأسطح - تدرج متماثل
+       ═══════════════════════════════════════════════════════ */
+    #s-home .home[data-mode="PULSE"] {
+      background:
+        linear-gradient(180deg,
+          rgba(251,247,240,0.55) 0%,
+          rgba(251,247,240,0.30) 25%,
+          rgba(251,247,240,0.25) 50%,
+          rgba(251,247,240,0.30) 75%,
+          rgba(251,247,240,0.55) 100%
+        ),
+        radial-gradient(ellipse at 50% 50%, rgba(220,150,255,0.4) 0%, transparent 60%),
+        linear-gradient(180deg,
+          #2A1058 0%,
+          #4A2880 20%,
+          #A05AD8 50%,
+          #4A2880 80%,
+          #2A1058 100%
+        );
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       ═══ ASCEND · الصعود ═══
+       من الأرض إلى الفضاء - تدرج تصاعدي
+       ═══════════════════════════════════════════════════════ */
+    #s-home .home[data-mode="ASCEND"] {
+      background:
+        linear-gradient(180deg,
+          rgba(251,247,240,0.55) 0%,
+          rgba(251,247,240,0.30) 25%,
+          rgba(251,247,240,0.25) 50%,
+          rgba(251,247,240,0.35) 75%,
+          rgba(251,247,240,0.45) 100%
+        ),
+        radial-gradient(circle at 50% 95%, rgba(255,220,120,0.6) 0%, transparent 45%),
+        linear-gradient(180deg,
+          #0A0420 0%,
+          #2A1058 30%,
+          #7A48B8 65%,
+          #E8B34E 100%
+        );
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       ═══ MIXED · المتنوّع ═══
+       قوس قزح متعدد الألوان
+       ═══════════════════════════════════════════════════════ */
+    #s-home .home[data-mode="MIXED"] {
+      background:
+        linear-gradient(180deg,
+          rgba(251,247,240,0.55) 0%,
+          rgba(251,247,240,0.32) 25%,
+          rgba(251,247,240,0.28) 50%,
+          rgba(251,247,240,0.36) 75%,
+          rgba(251,247,240,0.55) 100%
+        ),
+        radial-gradient(circle at 20% 20%, rgba(160,100,255,0.35) 0%, transparent 45%),
+        radial-gradient(circle at 80% 80%, rgba(232,179,78,0.35) 0%, transparent 45%),
+        linear-gradient(135deg,
+          #4A7FA0 0%,
+          #8E6AA8 25%,
+          #C98A2E 50%,
+          #4A8040 75%,
+          #A06AD8 100%
+        );
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       ═══ تحسينات إضافية ═══
+       ═══════════════════════════════════════════════════════ */
+
+    /* ضمان أن جميع العناصر تحتفظ بترتيبها */
+    #s-home .home > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* انتقال ناعم عند أول ظهور */
+    #s-home.active .home {
+      animation: homeModeBgFadeIn .55s ease-out;
+    }
+
+    @keyframes homeModeBgFadeIn {
+      from { opacity: .85; }
+      to   { opacity: 1; }
+    }
+
+    /* تظليل خفيف أسفل الأزرار لتحسين القراءة */
+    #s-home .hs-action,
+    #s-home .mode-selector-btn,
+    #s-home .play-btn,
+    #s-home .invite-btn {
+      box-shadow:
+        0 4px 14px rgba(26,21,18,.08),
+        0 1px 3px rgba(26,21,18,.06);
+    }
+
+    /* الحفاظ على تباين عالي للنصوص */
+    #s-home .section-title,
+    #s-home .section-sub,
+    #s-home .brand-name,
+    #s-home .brand-sub {
+      text-shadow: 0 1px 2px rgba(255,255,255,.4);
+    }
+
+  `;
+  document.head.appendChild(style);
+
+  console.log('[HomeModeBackgrounds] ✅ CSS injected');
+
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 2) دالة تطبيق الخلفية ═══
+     ═══════════════════════════════════════════════════════════ */
+  function applyHomeModeBackground(){
+    const home = document.querySelector('#s-home .home');
+    if(!home) return;
+
+    const modeId = Save.data.mode || 'FLIP';
+    const current = home.getAttribute('data-mode');
+
+    if(current !== modeId){
+      home.setAttribute('data-mode', modeId);
+      console.log('[HomeModeBackgrounds] 🎨 Applied:', modeId);
+    }
+  }
+
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 3) الربط التلقائي مع النظام ═══
+     ═══════════════════════════════════════════════════════════ */
+
+  /* ① عند بناء الرئيسية */
+  const _origBuildHomeV2 = window.buildHomeV2;
+  if(typeof _origBuildHomeV2 === 'function'){
+    window.buildHomeV2 = function(){
+      const r = _origBuildHomeV2.apply(this, arguments);
+      setTimeout(applyHomeModeBackground, 30);
+      return r;
+    };
+  }
+
+  /* ② عند فتح الشاشة */
+  const _origShowScreen = window.showScreen;
+  if(typeof _origShowScreen === 'function'){
+    window.showScreen = function(id){
+      const r = _origShowScreen.apply(this, arguments);
+      if(id === 's-home'){
+        setTimeout(applyHomeModeBackground, 30);
+      }
+      return r;
+    };
+  }
+
+  /* ③ عند اختيار نمط من صفحة الاختيار */
+  const _origBuildModeSelectorPage = window.buildModeSelectorPage;
+  if(typeof _origBuildModeSelectorPage === 'function'){
+    window.buildModeSelectorPage = function(){
+      const r = _origBuildModeSelectorPage.apply(this, arguments);
+
+      setTimeout(() => {
+        const grid = document.getElementById('mode-grid-v2');
+        if(!grid) return;
+
+        grid.querySelectorAll('.mode-card-v2').forEach(card => {
+          if(card._bgBound) return;
+          card._bgBound = true;
+          card.addEventListener('click', () => {
+            /* حدّث الخلفية بعد اختيار النمط */
+            setTimeout(applyHomeModeBackground, 150);
+          });
+        });
+      }, 60);
+
+      return r;
+    };
+  }
+
+  /* ④ مراقبة Save.data.mode (احتياطي) */
+  let _lastModeWatch = Save.data.mode;
+  setInterval(() => {
+    if(Save.data.mode !== _lastModeWatch){
+      _lastModeWatch = Save.data.mode;
+      applyHomeModeBackground();
+    }
+  }, 600);
+
+  /* ⑤ عند الجاهزية */
+  function bootApply(){
+    /* انتظر حتى ينشئ boot الرئيسية */
+    let attempts = 0;
+    const tryApply = setInterval(() => {
+      attempts++;
+      const home = document.querySelector('#s-home .home');
+      if(home){
+        applyHomeModeBackground();
+        clearInterval(tryApply);
+        console.log('[HomeModeBackgrounds] 🚀 Initialized');
+      }
+      if(attempts > 40){
+        clearInterval(tryApply);
+      }
+    }, 250);
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', bootApply);
+  } else {
+    bootApply();
+  }
+
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══ 4) واجهات للاختبار ═══
+     ═══════════════════════════════════════════════════════════ */
+  window.HomeModeBackground = {
+    apply: applyHomeModeBackground,
+    setMode: (modeId) => {
+      Save.data.mode = modeId;
+      Save.save();
+      applyHomeModeBackground();
+    },
+    getAllModes: () => ['FLIP', 'FLAP', 'SOAR', 'DRIFT', 'WALK', 'PULSE', 'ASCEND', 'MIXED'],
+    preview: (modeId) => {
+      const home = document.querySelector('#s-home .home');
+      if(home) home.setAttribute('data-mode', modeId);
+    }
+  };
+
+  console.log('[HomeModeBackgrounds] ✅ System installed — 8 unique backgrounds ready');
+
+})();
+
+/* ============================================================
    ==================== BOOT =================================
    ============================================================ */
 function boot() {
