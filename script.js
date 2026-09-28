@@ -20413,46 +20413,57 @@ function drawAdminPreviewPlaceholder(canvas){
   c.fillText('للمعاينة المباشرة', W/2, H/2 + 48);
 }
 
-/* ═══ رسم الشخصية بالعنصر ═══ */
-function drawAdminPreviewCanvas(canvas){
-  if(_adminPreviewRAF){
-    cancelAnimationFrame(_adminPreviewRAF);
-    _adminPreviewRAF = null;
-  }
-  if(!canvas) return;
-
+/* ═══ رسم الشخصية مع العنصر المؤقت ═══ */
+function startAdminPreviewLoop(canvas, key, prevValue, cat){
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const W = 200, H = 240;
   canvas.width = W * dpr;
   canvas.height = H * dpr;
 
   const c = canvas.getContext('2d');
-  c.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-  const groundY = H * 0.82;
+  /* ✅ دالة التنظيف — تُنفَّذ عند الإيقاف */
+  canvas._adminPreviewCleanup = () => {
+    if(Save.data.admin && Save.data.admin[key]){
+      const idx = Save.data.admin[key].findIndex(i => i.id === '__admin_preview__');
+      if(idx >= 0) Save.data.admin[key].splice(idx, 1);
+    }
+    if(cat === 'skin'){
+      Save.data.currentSkin = prevValue || 'default';
+    } else {
+      if(!Save.data.cosmetics) Save.data.cosmetics = { owned:{}, current:{} };
+      if(!Save.data.cosmetics.current) Save.data.cosmetics.current = {};
+      Save.data.cosmetics.current[cat] = prevValue || 'none';
+    }
+  };
 
   const drawFrame = () => {
-    /* خلفية */
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.clearRect(0, 0, W, H);
+
+    const groundY = H * 0.82;
+
+    /* خلفية متدرجة */
     const bg = c.createRadialGradient(W/2, H/2, 10, W/2, H/2, W/2);
     bg.addColorStop(0, '#FBF7F0');
     bg.addColorStop(1, '#E8E0D2');
     c.fillStyle = bg;
     c.fillRect(0, 0, W, H);
 
-    /* أرضية خفيفة */
+    /* توهج سفلي */
     const groundGrad = c.createLinearGradient(0, groundY - 20, 0, H);
     groundGrad.addColorStop(0, 'rgba(232,179,78,0.10)');
     groundGrad.addColorStop(1, 'rgba(232,179,78,0)');
     c.fillStyle = groundGrad;
     c.fillRect(0, groundY, W, H - groundY);
 
-    /* ظل */
+    /* ظل الشخصية */
     c.fillStyle = 'rgba(0,0,0,0.18)';
     c.beginPath();
     c.ellipse(W/2, groundY + 5, 40, 7, 0, 0, Math.PI * 2);
     c.fill();
 
-    /* الشخصية */
+    /* ✅ الشخصية مع العنصر المُطبَّق */
     c.save();
     c.translate(W/2, groundY - 60);
     try {
@@ -20478,61 +20489,67 @@ function updateAdminLivePreview(){
   const canvas = document.getElementById('af-live-canvas');
   if(!canvas) return;
 
+  /* ✅ أوقف المعاينة السابقة + نظّف البيانات المؤقتة القديمة */
+  stopAdminLivePreview();
+
   const cat = currentAdminTab;
   const pathInput = document.getElementById('af-image-path');
   const path = pathInput ? pathInput.value.trim() : '';
 
+  /* لا مسار → placeholder */
   if(!path){
     drawAdminPreviewPlaceholder(canvas);
     return;
   }
 
-  const nameEl = document.getElementById('af-name');
-  const colorEl = document.getElementById('af-color');
+  const nameEl   = document.getElementById('af-name');
+  const colorEl  = document.getElementById('af-color');
   const color2El = document.getElementById('af-color2');
+  const adjust   = getAdjustmentValues();
 
-  /* ✅ اقرأ إعدادات الأشرطة */
-  const adjust = getAdjustmentValues();
-
+  /* ✅ العنصر المؤقت — يحتوي كل الحقول المطلوبة */
   const tempItem = {
     id: '__admin_preview__',
     name: (nameEl && nameEl.value.trim()) || 'Preview',
+    ar:   (nameEl && nameEl.value.trim()) || 'Preview',     /* للـ skins */
+    en:   (nameEl && nameEl.value.trim()) || 'PREVIEW',
     category: cat,
-    color: (colorEl && colorEl.value) || '#E07A3F',
+    color:  (colorEl  && colorEl.value)  || '#E07A3F',
     color2: (color2El && color2El.value) || '#E8B34E',
     imagePath: path,
     enabled: true,
     placements: [],
     isPreview: true,
-    render: {                         /* ✅ إعدادات الموضع */
-      sizeMul:  adjust.sizeMul,
-      offsetY:  adjust.offsetY,
-      offsetX:  adjust.offsetX,
-      anchorY:  adjust.anchorY
+    render: {
+      sizeMul: adjust.sizeMul,
+      offsetY: adjust.offsetY,
+      offsetX: adjust.offsetX,
+      anchorY: adjust.anchorY
     }
   };
 
-  /* ═══ حقن مؤقت في admin data ═══ */
+  /* ═══ حقن في بيانات الأدمن ═══ */
   const key = (typeof ADMIN_KEY_MAP !== 'undefined' && ADMIN_KEY_MAP[cat]) ||
               ('custom' + cat.charAt(0).toUpperCase() + cat.slice(1));
 
+  if(!Save.data.admin) Save.data.admin = {};
   if(!Save.data.admin[key]) Save.data.admin[key] = [];
   Save.data.admin[key].push(tempItem);
 
-  /* ═══ حقنها كـ current ═══ */
-  const prevCurrent = Save.data.cosmetics.current[cat];
-  Save.data.cosmetics.current[cat] = '__admin_preview__';
-
-  /* ═══ الرسم ═══ */
-  try {
-    drawAdminPreviewCanvas(canvas);
-  } catch(e){
-    console.warn('[AdminLivePreview] Failed:', e);
+  /* ═══ حفظ القيمة السابقة ═══ */
+  let prevValue;
+  if(cat === 'skin'){
+    prevValue = Save.data.currentSkin;
+    Save.data.currentSkin = '__admin_preview__';
+  } else {
+    if(!Save.data.cosmetics) Save.data.cosmetics = { owned:{}, current:{} };
+    if(!Save.data.cosmetics.current) Save.data.cosmetics.current = {};
+    prevValue = Save.data.cosmetics.current[cat];
+    Save.data.cosmetics.current[cat] = '__admin_preview__';
   }
 
-  /* ═══ تنظيف فوري بعد الرسم ═══ */
-  Save.data.admin[key].pop();
-  Save.data.cosmetics.current[cat] = prevCurrent;
+  /* ═══ ابدأ حلقة الرسم مع الحفاظ على الحقن ═══ */
+  startAdminPreviewLoop(canvas, key, prevValue, cat);
 }
 
 /* ============================================================
@@ -20659,11 +20676,17 @@ function wireAdjustmentSliders(){
   }
 }
 
-/* ═══ إيقاف المعاينة (عند إغلاق النموذج) ═══ */
+/* ═══ إيقاف المعاينة مع التنظيف الكامل ═══ */
 function stopAdminLivePreview(){
   if(_adminPreviewRAF){
     cancelAnimationFrame(_adminPreviewRAF);
     _adminPreviewRAF = null;
+  }
+
+  const canvas = document.getElementById('af-live-canvas');
+  if(canvas && canvas._adminPreviewCleanup){
+    try { canvas._adminPreviewCleanup(); } catch(e){}
+    canvas._adminPreviewCleanup = null;
   }
 }
 
