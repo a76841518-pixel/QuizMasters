@@ -12624,3 +12624,78 @@ input, select, textarea, button{
   .stx-quick-row { grid-template-columns: repeat(2, 1fr); }
   .stx-grid { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   ═══════════ P2P INDICATOR STYLES ═════════════════════════
+   ============================================================ */
+
+/* شارة الاتصال في وضع P2P */
+.mp-conn-badge.p2p-mode {
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(107, 155, 107, 0.15));
+  border-color: rgba(107, 155, 107, 0.4);
+  box-shadow:
+    0 4px 16px rgba(107, 155, 107, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.mp-conn-badge.p2p-mode .mp-conn-dot {
+  animation: p2pPulse 1.2s ease-in-out infinite;
+  box-shadow: 0 0 10px currentColor;
+}
+
+@keyframes p2pPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.15);
+  }
+}
+
+.mp-conn-badge.p2p-mode .mp-conn-lbl {
+  color: #E8F4E8;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+/* ─── لوحة التشخيص (اختياري) ─── */
+#p2p-diagnostics {
+  position: fixed;
+  top: 100px;
+  left: 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(15, 12, 10, 0.92);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-family: 'Space Grotesk', monospace;
+  font-size: 10px;
+  z-index: 9999;
+  pointer-events: none;
+  display: none;
+  line-height: 1.5;
+  max-width: 220px;
+}
+
+#p2p-diagnostics.show {
+  display: block;
+}
+
+#p2p-diagnostics .p2p-diag-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 3px;
+}
+
+#p2p-diagnostics .p2p-diag-key {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+#p2p-diagnostics .p2p-diag-val {
+  color: #E8B34E;
+  font-weight: 700;
+}
