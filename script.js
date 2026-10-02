@@ -45920,6 +45920,180 @@ async function normalizeAllSkinSizes(){
 }
 
 /* ============================================================
+   ═══════════════════════════════════════════════════════════
+   ═══════════ P2P INTEGRATION WITH MULTIPLAYER ════════════
+   ═══════════════════════════════════════════════════════════ */
+
+(function integrateP2PWithMP(){
+  if(window._p2pIntegrated) return;
+  window._p2pIntegrated = true;
+  
+  /* ═══════════════════════════════════════════════════════
+     1) Hook: mpCreateRoom
+     ═══════════════════════════════════════════════════════ */
+  const _origCreateRoom = window.mpCreateRoom;
+  window.mpCreateRoom = async function(mode){
+    const result = await _origCreateRoom.apply(this, arguments);
+    
+    if(MP.active && MP.isHost && MP.roomId && Cloud.user){
+      setTimeout(() => {
+        P2P.init(MP.roomId, true, Cloud.user.uid).catch(e => {
+          console.warn('[P2P] Host init failed:', e);
+        });
+      }, 800);
+    }
+    
+    return result;
+  };
+  
+  /* ═══════════════════════════════════════════════════════
+     2) Hook: mpJoinRoom
+     ═══════════════════════════════════════════════════════ */
+  const _origJoinRoom = window.mpJoinRoom;
+  window.mpJoinRoom = async function(code){
+    const result = await _origJoinRoom.apply(this, arguments);
+    
+    if(MP.active && !MP.isHost && MP.roomId && Cloud.user){
+      setTimeout(() => {
+        P2P.init(MP.roomId, false, Cloud.user.uid).catch(e => {
+          console.warn('[P2P] Guest init failed:', e);
+        });
+      }, 800);
+    }
+    
+    return result;
+  };
+  
+  /* ═══════════════════════════════════════════════════════
+     3) Hook: mpLeaveRoom — Cleanup P2P
+     ═══════════════════════════════════════════════════════ */
+  const _origLeaveRoom = window.mpLeaveRoom;
+  window.mpLeaveRoom = async function(){
+    try { P2P.cleanup(); } catch(e){}
+    return _origLeaveRoom.apply(this, arguments);
+  };
+  
+  /* ═══════════════════════════════════════════════════════
+     4) Hook: gameOver — أرسل حدث الموت
+     ═══════════════════════════════════════════════════════ */
+  const _origGameOver = window.gameOver;
+  window.gameOver = function(){
+    if(P2P.enabled && P2P.peers.size > 0){
+      try {
+        P2P.sendEvent({
+          kind: 'death',
+          meters: (typeof getMeters === 'function') ? getMeters() : 0
+        });
+      } catch(e){}
+    }
+    return _origGameOver.apply(this, arguments);
+  };
+  
+  /* ═══════════════════════════════════════════════════════
+     5) Hook: mpSendEmoji — استخدم P2P
+     ═══════════════════════════════════════════════════════ */
+  const _origSendEmoji = window.mpSendEmoji;
+  if(typeof _origSendEmoji === 'function'){
+    window.mpSendEmoji = async function(emoji){
+      /* ═══ جرّب P2P أولاً ═══ */
+      if(P2P.enabled && !P2P.usingFallback && P2P.peers.size > 0){
+        const sent = P2P.sendEmoji(emoji);
+        if(sent > 0){
+          /* أظهر محلياً */
+          if(typeof mpShowOpponentEmoji === 'function'){
+            mpShowOpponentEmoji(emoji);
+          }
+          /* سجّل في Firebase للأرشيف (بدون انتظار) */
+          _origSendEmoji.apply(this, arguments).catch(()=>{});
+          return;
+        }
+      }
+      /* ═══ Fallback ═══ */
+      return _origSendEmoji.apply(this, arguments);
+    };
+  }
+  
+  /* ═══════════════════════════════════════════════════════
+     6) Hook: mpPushMyState — تجاهل عند P2P نشط
+     ═══════════════════════════════════════════════════════ */
+  const _origPushState = window.mpPushMyState;
+  if(typeof _origPushState === 'function'){
+    window.mpPushMyState = async function(){
+      /* ═══ عند P2P النشط، فقط حالة backup كل 250ms ═══ */
+      if(P2P.enabled && !P2P.usingFallback && P2P.peers.size > 0){
+        const now = Date.now();
+        if(!this._lastBackupPush || now - this._lastBackupPush > 250){
+          this._lastBackupPush = now;
+          return _origPushState.apply(this, arguments);
+        }
+        return;
+      }
+      return _origPushState.apply(this, arguments);
+    };
+  }
+  
+  /* ═══════════════════════════════════════════════════════
+     7) تحديث شارة الاتصال
+     ═══════════════════════════════════════════════════════ */
+  const _origUpdateBadge = window.mpUpdateConnectionBadge;
+  window.mpUpdateConnectionBadge = function(){
+    const badge = document.getElementById('mp-conn-badge');
+    if(!badge) return;
+    
+    /* ═══ P2P Active ═══ */
+    if(P2P.enabled && !P2P.usingFallback && P2P.peers.size > 0){
+      const ping = P2P.stats.avgLatency;
+      let color = '#4CAF50';
+      let label = '⚡ P2P';
+      
+      if(ping >= 150){ color = '#FFB060'; label = '⚡ P2P'; }
+      if(ping >= 300){ color = '#C14A4A'; label = '⚠️ P2P'; }
+      
+      badge.innerHTML = `
+        <span class="mp-conn-dot" style="background:${color};"></span>
+        <span class="mp-conn-lbl">${label} · ${ping || '<50'}ms</span>
+      `;
+      badge.classList.add('p2p-mode');
+      return;
+    }
+    
+    /* ═══ Fallback ═══ */
+    badge.classList.remove('p2p-mode');
+    if(typeof _origUpdateBadge === 'function'){
+      _origUpdateBadge.apply(this, arguments);
+    }
+  };
+  
+  /* ═══════════════════════════════════════════════════════
+     8) أمر تشخيصي في الـ Console
+     ═══════════════════════════════════════════════════════ */
+  window.p2pStatus = function(){
+    if(!P2P._initialized){
+      console.log('❌ P2P غير مُهيّأ');
+      return;
+    }
+    const diag = P2P.getDiagnostics();
+    console.table(diag.peers);
+    console.log('📊 Stats:', diag.stats);
+    console.log('⚙️ Config:', {
+      enabled: diag.enabled,
+      ready: diag.ready,
+      usingFallback: diag.usingFallback,
+      isHost: diag.isHost,
+      uptime: diag.uptime + 's'
+    });
+    return diag;
+  };
+  
+  window.p2pForceFallback = function(){
+    P2P.activateFallback('manual');
+    console.log('✅ تم التحويل إلى Firebase يدوياً');
+  };
+  
+  console.log('[P2P Integration] ✅ Integrated with MP system');
+})();
+
+/* ============================================================
    ==================== BOOT =================================
    ============================================================ */
 function boot() {
