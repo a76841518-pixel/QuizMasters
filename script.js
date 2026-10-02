@@ -20460,7 +20460,58 @@ function openAdminItemForm(){
       PLACEMENT_TYPES = buildPlacementTypes();
     }
   }
+  /* ═══ بناء محرر المصادر (مفعّل للإضافة) ═══ */
   if(typeof buildSourcesEditor === 'function') buildSourcesEditor();
+  
+  /* ✅ أعد تفعيل محرر المصادر */
+  setTimeout(() => {
+    const sourcesSection = document.getElementById('sources-editor');
+    if(sourcesSection){
+      sourcesSection.style.pointerEvents = '';
+      sourcesSection.style.opacity = '1';
+      
+      /* احذف شارة "للقراءة فقط" إن وُجدت */
+      const parent = sourcesSection.closest('.afv3-section');
+      if(parent){
+        const badge = parent.querySelector('.ro-badge');
+        if(badge) badge.remove();
+      }
+    }
+  }, 50);
+    
+    /* ✅ اجعل قسم المصادر للقراءة فقط عند التعديل */
+    setTimeout(() => {
+      const sourcesSection = document.getElementById('sources-editor');
+      if(sourcesSection){
+        /* أضف خلفية رمادية ونص توضيحي */
+        const parent = sourcesSection.closest('.afv3-section');
+        if(parent){
+          /* أضف شارة "للقراءة فقط" */
+          const head = parent.querySelector('.afv3-section-head');
+          if(head && !head.querySelector('.ro-badge')){
+            const badge = document.createElement('span');
+            badge.className = 'ro-badge';
+            badge.style.cssText = `
+              margin-right:auto;
+              padding:3px 10px;
+              border-radius:100px;
+              background:rgba(74,136,200,.15);
+              color:#4A88C8;
+              font-family:'Space Grotesk',sans-serif;
+              font-size:9px;
+              font-weight:800;
+              letter-spacing:1px;
+            `;
+            badge.textContent = '🔒 للقراءة فقط';
+            head.appendChild(badge);
+          }
+          
+          /* اجعلها غير قابلة للتفاعل */
+          sourcesSection.style.pointerEvents = 'none';
+          sourcesSection.style.opacity = '0.7';
+        }
+      }
+    }, 50);
 
   /* ✅ الإصلاح: استخدم .active بدل style.display */
   const form = $('admin-form');
@@ -20488,9 +20539,40 @@ function closeAdminItemForm(){
     form.classList.remove('active');
     form.style.display = 'none';
   }
+  
   /* ✅ إيقاف أنيميشن المعاينة */
   if(typeof stopAdminLivePreview === 'function'){
     stopAdminLivePreview();
+  }
+  
+  /* ═══════════════════════════════════════════════════════
+     ✅ تصفير حالة التعديل وإعادة تفعيل كل شيء
+     ═══════════════════════════════════════════════════════ */
+  _editingItemRef = null;
+  
+  /* أعد تفعيل محرر المصادر */
+  const sourcesSection = document.getElementById('sources-editor');
+  if(sourcesSection){
+    sourcesSection.style.pointerEvents = '';
+    sourcesSection.style.opacity = '1';
+    
+    const parent = sourcesSection.closest('.afv3-section');
+    if(parent){
+      const badge = parent.querySelector('.ro-badge');
+      if(badge) badge.remove();
+    }
+  }
+  
+  /* أعد نص زر الحفظ */
+  const saveBtn = document.getElementById('af-save');
+  if(saveBtn){
+    saveBtn.textContent = '💾 حفظ ونشر';
+  }
+  
+  /* أعد نص العنوان */
+  const formTitle = document.querySelector('.afv3-title');
+  if(formTitle){
+    formTitle.innerHTML = 'عنصر جديد — <span id="af-cat-label">أزياء</span>';
   }
 }
 
@@ -20943,21 +21025,33 @@ async function handleAdminItemSave(){
       return;
     }
 
-    /* ═══ جمع الأماكن ═══ */
-const placements = (typeof collectPlacements === 'function')
-  ? collectPlacements()
-  : [];
+    /* ═══════════════════════════════════════════════════════
+       ✅ هل نحن في وضع التعديل؟
+       ═══════════════════════════════════════════════════════ */
+    const isEdit = _editingItemRef && _editingItemRef.isEdit === true;
 
-if(placements.length === 0){
-  setStatus('✗ اختر الموسم ومكاناً واحداً على الأقل', 'err');
-  Sfx.play(220, 0.15, 'sine', 0.05, 180); haptic(20);
-  return;
-}
+    /* ═══════════════════════════════════════════════════════
+       ✅ جمع المصادر — فقط عند الإضافة الجديدة
+       ═══════════════════════════════════════════════════════ */
+    let placements;
 
-    if(placements.length === 0){
-      setStatus('✗ اختر مكاناً واحداً على الأقل', 'err');
-      Sfx.play(220, 0.15, 'sine', 0.05, 180); haptic(20);
-      return;
+    if(isEdit){
+      /* ═══ وضع التعديل: احتفظ بالمصادر الأصلية ═══ */
+      const existing = Save.data.admin[_editingItemRef.key]?.[_editingItemRef.idx];
+      placements = (existing && existing.placements) || [];
+      
+      console.log('[Edit] Keeping original placements:', placements);
+    } else {
+      /* ═══ وضع الإضافة: اجمع من محرر المصادر ═══ */
+      placements = (typeof collectPlacements === 'function')
+        ? collectPlacements()
+        : [];
+
+      if(placements.length === 0){
+        setStatus('✗ اختر الموسم ومكاناً واحداً على الأقل', 'err');
+        Sfx.play(220, 0.15, 'sine', 0.05, 180); haptic(20);
+        return;
+      }
     }
 
     /* ═══ تحديد المفتاح ═══ */
@@ -20971,7 +21065,6 @@ if(placements.length === 0){
     /* ═══════════════════════════════════════════════════════
        ✅ التمييز بين الإضافة والتعديل
        ═══════════════════════════════════════════════════════ */
-    const isEdit = _editingItemRef && _editingItemRef.isEdit === true;
     const editKey = isEdit ? _editingItemRef.key : key;
     const editIdx = isEdit ? _editingItemRef.idx : -1;
 
