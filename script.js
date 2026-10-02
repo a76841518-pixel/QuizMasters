@@ -10845,41 +10845,143 @@ function updateCapePhysics(){
   /* ❌ نظام العباءات البرمجي محذوف */
 }
 
-/* ============================================================
-   ═══════════ DRAW CHARACTER BODY v3 — IMAGE ONLY ═══════════
-   ═══════════════════════════════════════════════════════════ */
+/* ═══ Cache لأبعاد المحتوى ═══ */
+const _contentBoundsCache = new Map();
+
+/**
+ * يقيس الحدود الفعلية للمحتوى غير الشفاف في الصورة
+ * @returns {Object} { x, y, w, h, ratio } — نسبة المحتوى للإطار الكامل
+ */
+function measureContentBounds(img){
+  const cacheKey = img.src;
+  if(_contentBoundsCache.has(cacheKey)){
+    return _contentBoundsCache.get(cacheKey);
+  }
+
+  try {
+    /* ─── ارسم الصورة على canvas مؤقت ─── */
+    const tmp = document.createElement('canvas');
+    tmp.width = img.naturalWidth;
+    tmp.height = img.naturalHeight;
+    const tctx = tmp.getContext('2d');
+    tctx.drawImage(img, 0, 0);
+
+    /* ─── احصل على بيانات البكسل ─── */
+    const imageData = tctx.getImageData(0, 0, tmp.width, tmp.height);
+    const data = imageData.data;
+
+    let minX = tmp.width, minY = tmp.height;
+    let maxX = 0, maxY = 0;
+
+    /* ─── ابحث عن البكسلات غير الشفافة ─── */
+    for(let y = 0; y < tmp.height; y++){
+      for(let x = 0; x < tmp.width; x++){
+        const alpha = data[(y * tmp.width + x) * 4 + 3];
+        if(alpha > 10){  /* تجاهل الشفافية الجزئية الطفيفة */
+          if(x < minX) minX = x;
+          if(x > maxX) maxX = x;
+          if(y < minY) minY = y;
+          if(y > maxY) maxY = y;
+        }
+      }
+    }
+
+    /* ─── إذا لم نجد محتوى ─── */
+    if(maxX <= minX || maxY <= minY){
+      const result = { x: 0, y: 0, w: 1, h: 1, ratio: 1 };
+      _contentBoundsCache.set(cacheKey, result);
+      return result;
+    }
+
+    const contentW = maxX - minX + 1;
+    const contentH = maxY - minY + 1;
+
+    const result = {
+      /* ✅ نسبة المحتوى للإطار الكامل */
+      x: minX / tmp.width,
+      y: minY / tmp.height,
+      w: contentW / tmp.width,
+      h: contentH / tmp.height,
+      ratio: contentH / contentW,
+      /* ✅ الأبعاد المطلقة */
+      pxW: contentW,
+      pxH: contentH,
+      pxX: minX,
+      pxY: minY
+    };
+
+    _contentBoundsCache.set(cacheKey, result);
+    return result;
+
+  } catch(e){
+    /* فشل القياس (CORS مثلاً) → افتراضي */
+    console.warn('[ContentBounds] Failed:', e.message);
+    const result = { x: 0, y: 0, w: 1, h: 1, ratio: 1 };
+    _contentBoundsCache.set(cacheKey, result);
+    return result;
+  }
+}
+
+/**
+ * النسخة المُحسّنة — تستخدم قياس المحتوى الفعلي
+ */
 function drawCharacterBody(c, r, skin, t){
-  /* ═══ صورة الزي ═══ */
   if(hasItemImage(skin)){
     const img = getItemImageEl(skin);
 
-    /* جاهزة → ارسمها بقيم render */
     if(img && img.complete && img.naturalWidth > 0){
-      /* ✅ قراءة قيم render */
       const custom = skin.render || {};
-      const sizeMul = custom.sizeMul  ?? 2.6;
-      const offsetX = custom.offsetX  ?? 0;
-      const offsetY = custom.offsetY  ?? 0;
-      const anchorX = custom.anchorX  ?? 0.5;
-      const anchorY = custom.anchorY  ?? 0.5;
 
-      const drawW = r * sizeMul;
-      const drawH = drawW * (img.naturalHeight / img.naturalWidth || 1);
+      const sizeMul = custom.sizeMul ?? 2.6;
+      const offsetX = custom.offsetX ?? 0;
+      const offsetY = custom.offsetY ?? 0;
+      const anchorX = custom.anchorX ?? 0.5;
+      const anchorY = custom.anchorY ?? 0.5;
 
+      /* ✅ قِس المحتوى الفعلي */
+      const bounds = measureContentBounds(img);
+
+      /* ─── احسب الأبعاد المطلوبة بناءً على المحتوى ─── */
+      const targetW = r * sizeMul;
+      const targetH = targetW;
+
+      /* ─── احترم نسبة المحتوى ─── */
+      let drawW, drawH;
+      if(bounds.ratio > 1){
+        drawH = targetH;
+        drawW = drawH / bounds.ratio;
+      } else {
+        drawW = targetW;
+        drawH = drawW * bounds.ratio;
+      }
+
+      /* ─── احسب إزاحة المحتوى داخل الصورة الأصلية ─── */
+      const contentCenterX = (bounds.x + bounds.w / 2);
+      const contentCenterY = (bounds.y + bounds.h / 2);
+      const offsetFromCenterX = contentCenterX - 0.5;
+      const offsetFromCenterY = contentCenterY - 0.5;
+
+      /* ─── أبعاد الصورة الكاملة على الشاشة ─── */
+      const imgScaleW = drawW / bounds.w;   /* العرض الكامل للصورة */
+      const imgScaleH = drawH / bounds.h;
+
+      /* ─── ارسم باستخدام slicing ─── */
       c.save();
       c.translate(offsetX * r, offsetY * r);
+
+      /* ✅ استخدم drawImage مع slice لقصّ المحتوى فقط */
       c.drawImage(
         img,
-        -drawW * anchorX,
-        -drawH * anchorY,
-        drawW,
-        drawH
+        bounds.pxX, bounds.pxY, bounds.pxW, bounds.pxH,   /* مصدر: المحتوى فقط */
+        -drawW * anchorX, -drawH * anchorY,               /* الوجهة */
+        drawW, drawH
       );
+
       c.restore();
       return;
     }
 
-    /* قيد التحميل → دائرة نابضة */
+    /* loading */
     const pulse = 0.5 + Math.sin(t * 0.15) * 0.2;
     c.fillStyle = skin.body || '#E07A3F';
     c.globalAlpha = pulse;
@@ -10890,7 +10992,7 @@ function drawCharacterBody(c, r, skin, t){
     return;
   }
 
-  /* ═══ لا صورة → placeholder ═══ */
+  /* placeholder */
   c.fillStyle = '#CCCCCC';
   c.beginPath();
   c.arc(0, 0, r, 0, Math.PI * 2);
@@ -20138,11 +20240,37 @@ function wireAdminPanel(){
   /* ============================================================
      ═══ 4) زر "إضافة عنصر جديد" ═══
      ============================================================ */
-const addBtn = $('admin-add-content');
-if(addBtn && !addBtn._bound){
-  addBtn._bound = true;
-  addBtn.addEventListener('click', () => openAdminItemForm());
-}
+  const addBtn = $('admin-add-content');
+  if(addBtn && !addBtn._bound){
+    addBtn._bound = true;
+    addBtn.addEventListener('click', () => openAdminItemForm());
+  }
+
+  /* ⭐ زر التطبيع */
+  const normalizeBtn = $('admin-normalize-sizes');
+  if(normalizeBtn && !normalizeBtn._bound){
+    normalizeBtn._bound = true;
+    normalizeBtn.addEventListener('click', () => {
+      if(!confirm('⚖️ تطبيع كل العناصر؟\n\nسيتم إعادة ضبط أحجام كل الصور لتكون بنفس الحجم البصري.\n\nالقيم اليدوية (offset/size) ستُفقد.')) return;
+      
+      const count = normalizeAllSkinSizes();
+      
+      Toast.success(`تم التطبيع`, `${count} عنصر`);
+      Sfx.reward();
+      haptic(20);
+      
+      /* أعد بناء القوائم */
+      if(typeof Admin !== 'undefined' && Admin.initialized){
+        Admin.renderContentList();
+        Admin.renderContentStats();
+        Admin.addActivity?.('⚖️', `تطبيع ${count} عنصر`);
+        Admin.logAudit?.('content', 'normalize', `⚖️ تطبيع ${count} عنصر`);
+      }
+      if(typeof refreshContentEverywhere === 'function'){
+        refreshContentEverywhere();
+      }
+    });
+  }
 
   /* ============================================================
      ═══ 5) حقول النموذج ═══
@@ -45293,6 +45421,52 @@ ${MODES.map(m => `
   console.log('[HomeModeBackgrounds] ✅ System installed — 8 unique backgrounds ready');
 
 })();
+
+/**
+ * زر تطبيع كل العناصر — يجعلها كلها بنفس الحجم البصري
+ * يُضاف إلى لوحة الإدارة
+ */
+function normalizeAllSkinSizes(){
+  const keys = ['customSkins', 'customHead', 'customBack', 'customShoes',
+                'customEyes', 'customTrail', 'customSpark', 'customJump',
+                'customSpawn', 'customRevive', 'customDeath', 'customAvatar',
+                'customAvatarFrame', 'customBanner', 'customNameTag', 'customBadge'];
+
+  const DEFAULTS = {
+    customSkins:       { sizeMul: 2.6, offsetY: 0,     anchorY: 0.5 },
+    customHead:        { sizeMul: 2.4, offsetY: -0.82, anchorY: 1.0 },
+    customBack:        { sizeMul: 4.5, offsetY: 0,     anchorY: 0.5 },
+    customShoes:       { sizeMul: 1.8, offsetY: 1.15,  anchorY: 0.5 },
+    customEyes:        { sizeMul: 1.6, offsetY: -0.15, anchorY: 0.5 },
+    customTrail:       { sizeMul: 1.4, offsetY: 0,     anchorY: 0.5 },
+    customSpark:       { sizeMul: 1.2, offsetY: 0,     anchorY: 0.5 },
+    customJump:        { sizeMul: 5.0, offsetY: 0,     anchorY: 0.5 },
+    customSpawn:       { sizeMul: 8.0, offsetY: 0,     anchorY: 0.5 },
+    customRevive:      { sizeMul: 8.0, offsetY: 0,     anchorY: 0.5 },
+    customDeath:       { sizeMul: 6.0, offsetY: 0,     anchorY: 0.5 },
+    customAvatar:      { sizeMul: 1.0, offsetY: 0,     anchorY: 0.5 },
+    customAvatarFrame: { sizeMul: 2.4, offsetY: 0,     anchorY: 0.5 },
+    customBanner:      { sizeMul: 1.0, offsetY: 0,     anchorY: 0.5 },
+    customNameTag:     { sizeMul: 6.0, offsetY: 0,     anchorY: 0.5 },
+    customBadge:       { sizeMul: 1.2, offsetY: 0,     anchorY: 0.5 }
+  };
+
+  let count = 0;
+  for(const key of keys){
+    const list = Save.data.admin[key] || [];
+    const def = DEFAULTS[key] || { sizeMul: 2.4, offsetY: 0, anchorY: 0.5 };
+
+    for(const item of list){
+      /* ✅ احذف render القديم وأعد ضبطه للافتراضي */
+      item.render = { ...def };
+      count++;
+    }
+  }
+
+  Save.save();
+  console.log(`[Normalize] ✅ Normalized ${count} items`);
+  return count;
+}
 
 /* ============================================================
    ==================== BOOT =================================
