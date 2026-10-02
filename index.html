@@ -294,18 +294,21 @@
   <button class="act-chip" data-act="cards">🃏 بطاقات</button>
 </div>
 
-      <!-- Add New Button -->
-      <button class="admin-add-btn" id="admin-add-content">
-        <span style="font-size:18px;">➕</span>
-        <span>إضافة عنصر جديد</span>
-      </button>
-
-      <!-- ⭐ زر التطبيع الجديد -->
-      <button class="admin-add-btn" id="admin-normalize-sizes" 
-              style="border-color:#9A6AC8;color:#9A6AC8;background:linear-gradient(135deg,#F0E0FF,#E0D0F0);">
-        <span style="font-size:18px;">⚖️</span>
-        <span>تطبيع أحجام كل العناصر</span>
-      </button>
+      <!-- ═══ Action Buttons ═══ -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+        <button class="admin-add-btn" id="admin-add-content" style="margin:0;">
+          <span style="font-size:18px;">➕</span>
+          <span>إضافة عنصر</span>
+        </button>
+        
+        <button class="admin-add-btn" id="admin-normalize-sizes" 
+                style="margin:0;border-color:#9A6AC8;
+                       background:linear-gradient(135deg,#F0E0FF,#E0D0F0);
+                       color:#7A4A98;">
+          <span style="font-size:18px;">⚖️</span>
+          <span>تطبيع الأحجام</span>
+        </button>
+      </div>
 
       <!-- Content List -->
       <div id="admin-content-list" class="admin-content-list"></div>
