@@ -47107,6 +47107,141 @@ window.P2P = P2P;
 })();
 
 /* ============================================================
+   ═══════════════════════════════════════════════════════════
+   ═══════════ P2P FIX — docChanges() BUG FIX ═══════════════
+   ═══════════════════════════════════════════════════════════
+   المشكلة:
+   snap.docChanges() يُعيد DocumentChange objects،
+   وليس DocumentSnapshot. لذلك doc.data() يفشل.
+
+   الحل:
+   استخدم change.doc.data() بدلاً من change.data()
+   ============================================================ */
+
+(function fixP2PDocChanges(){
+  if(window._p2pDocFixApplied) return;
+  window._p2pDocFixApplied = true;
+
+  if(!window.P2P) {
+    console.warn('[P2P Fix] P2P module not found');
+    return;
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     استبدل listenForGuestSignals بالنسخة المُصلَحة
+     ═══════════════════════════════════════════════════════ */
+  P2P.listenForGuestSignals = async function(){
+    if(!Cloud.db || !this.roomId) return;
+
+    const signalsRef = Cloud.db
+      .collection(MP_CONFIG.collection)
+      .doc(this.roomId)
+      .collection(P2P_CONFIG.signalCollection);
+
+    const unsub = signalsRef.onSnapshot(async (snap) => {
+      /* ═══ ⚠️ الإصلاح هنا ═══ */
+      for(const change of snap.docChanges()){
+        /* ✅ change.doc = DocumentSnapshot
+           ✅ change.doc.id = معرّف الوثيقة
+           ✅ change.doc.data() = البيانات
+           ✅ change.type = 'added' | 'modified' | 'removed' */
+        
+        const guestUid = change.doc.id;
+        if(!guestUid || guestUid === this.myUid) continue;
+
+        const data = change.doc.data();
+        if(!data || data.role !== 'guest') continue;
+
+        /* ═══ offer جديد من ضيف ═══ */
+        if(data.offer && !this.peers.has(guestUid)){
+          console.log(`[P2P] 📥 Guest offer from: ${guestUid.slice(0,8)}`);
+          try {
+            await this.handleGuestOffer(guestUid, data.offer);
+          } catch(e){
+            console.error('[P2P] handleGuestOffer failed:', e);
+          }
+        }
+
+        /* ═══ ICE candidates جديدة من الضيف ═══ */
+        if(Array.isArray(data.guestIce) && data.guestIce.length > 0){
+          const peer = this.peers.get(guestUid);
+          if(peer && peer.pc){
+            try {
+              await this.addIceCandidates(peer, data.guestIce);
+            } catch(e){
+              /* silent */
+            }
+          }
+        }
+
+        /* ═══ cleanup عند إزالة الضيف ═══ */
+        if(change.type === 'removed'){
+          const peer = this.peers.get(guestUid);
+          if(peer){
+            try {
+              if(peer.dc) peer.dc.close();
+              if(peer.pc) peer.pc.close();
+            } catch(e){}
+            this.peers.delete(guestUid);
+          }
+        }
+      }
+    }, err => {
+      console.warn('[P2P] Host listener error:', err);
+      this.activateFallback('listener-error');
+    });
+
+    this.signalUnsubs.set('host-all', unsub);
+  };
+
+  /* ═══════════════════════════════════════════════════════
+     تحقق من باقي الأماكن التي تستخدم docChanges
+     ═══════════════════════════════════════════════════════ */
+
+  /* ═══ ملاحظة: listenForHostAnswer و listenForGuestIce
+         يستخدمان snap.data() على DocumentSnapshot — وهذا صحيح ✅ ═══ */
+
+  /* ═══ أي كود آخر يستخدم .docChanges() في MP أو P2P
+         يجب أن يتبع نفس النمط ═══ */
+
+  /* ═══════════════════════════════════════════════════════
+     Patch إضافي: حماية شاملة في المستقبل
+     ═══════════════════════════════════════════════════════ */
+  
+  /* ═══ إذا كان الاتصال P2P نشطاً، أعد التشغيل بمصفوفة نظيفة ═══ */
+  if(P2P._initialized && P2P.roomId && P2P.myUid){
+    console.log('[P2P Fix] 🔄 Re-initializing listeners...');
+    
+    /* أغلق المستمعين القدامى */
+    for(const unsub of P2P.signalUnsubs.values()){
+      try { unsub(); } catch(e){}
+    }
+    P2P.signalUnsubs.clear();
+    
+    /* أعد التشغيل */
+    setTimeout(() => {
+      if(P2P.isHost){
+        P2P.listenForGuestSignals();
+      } else {
+        /* Guest — أعد الاشتراك على إشارة الـ host */
+        const hostUid = P2P.peers.size > 0
+          ? Array.from(P2P.peers.keys())[0]
+          : null;
+        if(hostUid){
+          P2P.listenForHostAnswer(hostUid);
+        }
+      }
+      console.log('[P2P Fix] ✅ Listeners restarted');
+    }, 200);
+  }
+
+  console.log('[P2P Fix] ✅ docChanges() bug fixed');
+  console.log('   • listenForGuestSignals patched');
+  console.log('   • Added removed event cleanup');
+  console.log('   • Added try/catch wrappers');
+})();
+
+/* ============================================================
    ==================== BOOT =================================
    ============================================================ */
 function boot() {
