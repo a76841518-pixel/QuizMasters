@@ -46094,6 +46094,1334 @@ async function normalizeAllSkinSizes(){
 })();
 
 /* ============================================================
+   ═══════════════════════════════════════════════════════════
+   ═══════════ ARENA LOBBY v5 — CLEAN REWRITE ═══════════════
+   ═══════════════════════════════════════════════════════════
+   ✅ إصلاح كامل لساحة الانتظار:
+   - يستبدل كل النسخ القديمة (arenaV4 + waitingRoomInviteV2)
+   - زر استعداد يعمل بشكل صحيح للضيوف
+   - يُظهر حالة كل لاعب مباشرة
+   - قسم دعوة الأصدقاء مدمج
+   - لا حاجة لأي setInterval أو setTimeout للتصحيح
+   - يمنع الـ flickering
+   ============================================================ */
+
+(function arenaLobbyV5(){
+  if(window._arenaLobbyV5Installed) return;
+  window._arenaLobbyV5Installed = true;
+
+  /* ═══════════════════════════════════════════════════════
+     الحالة المحلية للساحة
+     ═══════════════════════════════════════════════════════ */
+  const Lobby = {
+    invitePickerOpen: false,
+    invited: new Set(),
+    selected: new Set(),
+    friends: [],
+    building: false,        /* منع البناء المتزامن */
+    lastBuildAt: 0,
+    buildCooldownMs: 100    /* debounce */
+  };
+
+  /* ═══════════════════════════════════════════════════════
+     دالة البناء الرئيسية
+     ═══════════════════════════════════════════════════════ */
+  window.mpBuildWaitingRoom = function(){
+    /* ═══ حماية من البناء المتزامن ═══ */
+    const now = Date.now();
+    if(Lobby.building) return;
+    if(now - Lobby.lastBuildAt < Lobby.buildCooldownMs) return;
+    Lobby.building = true;
+    Lobby.lastBuildAt = now;
+
+    try {
+      buildLobby();
+    } catch(e){
+      console.error('[Lobby v5] Build failed:', e);
+    } finally {
+      setTimeout(() => { Lobby.building = false; }, 50);
+    }
+  };
+
+  /* ═══════════════════════════════════════════════════════
+     البناء الفعلي
+     ═══════════════════════════════════════════════════════ */
+  function buildLobby(){
+    if(!MP || !MP.active || !MP.roomData) return;
+
+    const screen = document.getElementById('s-multiplayer-waiting');
+    if(!screen) return;
+
+    const sub = screen.querySelector('.sub');
+    if(!sub) return;
+
+    const rd = MP.roomData;
+    const players = rd.players || [];
+    const maxPlayers = MP_CONFIG.maxPlayers || 4;
+    const myUid = (typeof Cloud !== 'undefined' && Cloud.user) ? Cloud.user.uid : null;
+    const isHost = !!MP.isHost;
+
+    /* ═══ احفظ موضع التمرير ═══ */
+    const scrollTop = sub.scrollTop || 0;
+
+    /* ═══ امسح كل شيء ═══ */
+    sub.innerHTML = '';
+
+    /* ═══════════════════════════════════════════════════════
+       ① شريط علوي
+       ═══════════════════════════════════════════════════════ */
+    const top = document.createElement('div');
+    top.className = 'sub-top';
+    top.innerHTML = `
+      <button class="back-btn" data-lobby-leave>←</button>
+      <div style="flex:1;text-align:right;">
+        <div class="sub-title">ساحة الانتظار</div>
+        <div class="sub-eyebrow">ARENA LOBBY · ${players.length}/${maxPlayers}</div>
+      </div>
+      <button class="admin-mini-btn" data-lobby-leave title="مغادرة">✕</button>
+    `;
+    sub.appendChild(top);
+
+    /* ربط أزرار المغادرة */
+    top.querySelectorAll('[data-lobby-leave]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if(!confirm('مغادرة الساحة؟')) return;
+        if(typeof window.mpLeaveRoom === 'function') await window.mpLeaveRoom();
+        if(typeof G !== 'undefined' && (G.state === 'PLAYING' || G.state === 'PAUSED')){
+          if(typeof quitToMenu === 'function') quitToMenu();
+        } else {
+          if(typeof showScreen === 'function') showScreen('s-home');
+          if(typeof buildHome === 'function') buildHome();
+        }
+      });
+    });
+
+    /* ═══════════════════════════════════════════════════════
+       ② بطاقة كود الساحة
+       ═══════════════════════════════════════════════════════ */
+    const codeCard = document.createElement('div');
+    codeCard.className = 'ar-lobby-hero';
+    codeCard.innerHTML = `
+      <div class="ar-lobby-label">كود الساحة</div>
+      <div class="ar-lobby-code" id="lobby-code">${escapeHtmlV5(MP.roomCode || '—')}</div>
+      <div class="ar-lobby-label" style="opacity:.55;font-size:9px;letter-spacing:2px;">
+        شارك الكود لدعوة أصدقائك
+      </div>
+      <button class="ar-lobby-copy" id="lobby-copy-btn">
+        <span>📋</span>
+        <span>نسخ الكود</span>
+      </button>
+    `;
+    sub.appendChild(codeCard);
+
+    codeCard.querySelector('#lobby-copy-btn').addEventListener('click', async () => {
+      const code = MP.roomCode || '';
+      try {
+        await navigator.clipboard.writeText(code);
+        const btn = codeCard.querySelector('#lobby-copy-btn');
+        btn.innerHTML = '<span>✓</span><span>تم النسخ</span>';
+        setTimeout(() => {
+          btn.innerHTML = '<span>📋</span><span>نسخ الكود</span>';
+        }, 1500);
+        if(typeof Toast !== 'undefined') Toast.success('تم نسخ الكود!', code);
+        if(typeof Sfx !== 'undefined') Sfx.tap();
+      } catch(e){
+        if(typeof Toast !== 'undefined') Toast.error('فشل النسخ', code);
+      }
+    });
+
+    /* ═══════════════════════════════════════════════════════
+       ③ شبكة اللاعبين
+       ═══════════════════════════════════════════════════════ */
+    const playersGrid = document.createElement('div');
+    playersGrid.className = 'ar-lobby-players';
+    playersGrid.style.cssText = `
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    `;
+    sub.appendChild(playersGrid);
+
+    for(let i = 0; i < maxPlayers; i++){
+      playersGrid.appendChild(buildPlayerCardV5(players[i], myUid, isHost));
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       ④ قسم دعوة الأصدقاء
+       ═══════════════════════════════════════════════════════ */
+    const inviteSection = buildInviteSectionV5(players, maxPlayers);
+    sub.appendChild(inviteSection);
+
+    /* ═══════════════════════════════════════════════════════
+       ⑤ مُنتقي النمط
+       ═══════════════════════════════════════════════════════ */
+    const currentMode = rd.mode || 'FLIP';
+    const modeData = (MODES || []).find(m => m.id === currentMode) || { icon: '◆', ar: currentMode, color: '#888' };
+
+    const modeSelector = document.createElement('div');
+    modeSelector.className = 'ar-mode-selector';
+    modeSelector.style.cssText = `
+      padding: 14px;
+      border-radius: 18px;
+      background: #fff;
+      border: 1.5px solid var(--line);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    `;
+    modeSelector.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">
+        <div style="width:48px;height:48px;border-radius:14px;
+                    background:${modeData.color};color:#fff;
+                    display:flex;align-items:center;justify-content:center;
+                    font-size:24px;flex-shrink:0;
+                    box-shadow:inset 0 -3px 0 rgba(0,0,0,.15);">
+          ${modeData.icon}
+        </div>
+        <div style="min-width:0;flex:1;text-align:right;">
+          <div style="font-family:'Space Grotesk',sans-serif;
+                      font-size:9.5px;font-weight:700;
+                      color:var(--ink-mute);letter-spacing:1.5px;">
+            النمط الحالي
+          </div>
+          <div style="font-size:15px;font-weight:800;
+                      color:${modeData.color};margin-top:2px;
+                      white-space:nowrap;overflow:hidden;
+                      text-overflow:ellipsis;">
+            ${modeData.ar}
+          </div>
+        </div>
+      </div>
+      ${isHost
+        ? `<button id="lobby-mode-change"
+                   style="padding:10px 16px;border-radius:12px;border:none;
+                          background:linear-gradient(135deg,var(--amber),#F2A671);
+                          color:#fff;font-family:inherit;font-size:11.5px;
+                          font-weight:800;cursor:pointer;flex-shrink:0;">
+             تغيير
+           </button>`
+        : `<span style="font-size:10px;color:var(--ink-mute);
+                       font-weight:700;white-space:nowrap;">
+             👑 المضيف يتحكم
+           </span>`
+      }
+    `;
+    sub.appendChild(modeSelector);
+
+    if(isHost){
+      const changeBtn = modeSelector.querySelector('#lobby-mode-change');
+      if(changeBtn && typeof openHostModePickerV5 === 'function'){
+        changeBtn.addEventListener('click', openHostModePickerV5);
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       ⑥ شارة حالة الاتصال
+       ═══════════════════════════════════════════════════════ */
+    const connBadge = document.createElement('div');
+    connBadge.id = 'mp-conn-badge';
+    connBadge.className = 'mp-conn-badge';
+    connBadge.style.cssText = `
+      position: static;
+      margin: 0 auto 14px;
+      justify-content: center;
+    `;
+    sub.appendChild(connBadge);
+    if(typeof mpUpdateConnectionBadge === 'function'){
+      mpUpdateConnectionBadge();
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       ⑦ الزر الرئيسي: بدء / استعداد
+       ═══════════════════════════════════════════════════════ */
+    const primaryBtn = buildPrimaryActionButton(players, maxPlayers, isHost);
+    sub.appendChild(primaryBtn);
+
+    /* ═══════════════════════════════════════════════════════
+       ⑧ زر مغادرة
+       ═══════════════════════════════════════════════════════ */
+    const leaveBtn = document.createElement('button');
+    leaveBtn.className = 'action-btn soft';
+    leaveBtn.style.cssText = `
+      width: 100%;
+      max-width: 100%;
+      margin-top: 10px;
+      color: #C14A4A;
+      border-color: rgba(193,74,74,.25);
+    `;
+    leaveBtn.textContent = '🚪 مغادرة الساحة';
+    leaveBtn.addEventListener('click', async () => {
+      if(!confirm('مغادرة الساحة؟')) return;
+      if(typeof window.mpLeaveRoom === 'function') await window.mpLeaveRoom();
+      if(typeof G !== 'undefined' && (G.state === 'PLAYING' || G.state === 'PAUSED')){
+        if(typeof quitToMenu === 'function') quitToMenu();
+      } else {
+        if(typeof showScreen === 'function') showScreen('s-home');
+        if(typeof buildHome === 'function') buildHome();
+      }
+    });
+    sub.appendChild(leaveBtn);
+
+    /* ═══ أعد موضع التمرير ═══ */
+    sub.scrollTop = scrollTop;
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     بناء بطاقة لاعب
+     ═══════════════════════════════════════════════════════ */
+  function buildPlayerCardV5(player, myUid, isHost){
+    const card = document.createElement('div');
+    card.className = 'ar-player-card';
+    card.style.cssText = `
+      position: relative;
+      padding: 16px 10px;
+      border-radius: 18px;
+      background: #fff;
+      border: 2px solid var(--line);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      min-height: 160px;
+      justify-content: center;
+      transition: all .3s cubic-bezier(.34,1.56,.64,1);
+    `;
+
+    /* ═══ مقعد فارغ ═══ */
+    if(!player){
+      card.style.background = 'repeating-linear-gradient(45deg, var(--paper), var(--paper) 8px, var(--paper-2) 8px, var(--paper-2) 16px)';
+      card.style.borderStyle = 'dashed';
+      card.style.opacity = '.75';
+      card.innerHTML = `
+        <div style="font-size:34px;opacity:.3;">👤</div>
+        <div style="font-size:11.5px;font-weight:700;
+                    color:var(--ink-mute);text-align:center;">
+          بانتظار لاعب
+        </div>
+      `;
+      return card;
+    }
+
+    /* ═══ لاعب حقيقي ═══ */
+    const isMe = player.uid === myUid;
+    const playerIsHost = player.isHost;
+    const isReady = !!player.ready;
+
+    if(isReady){
+      card.style.borderColor = '#6B9B6B';
+      card.style.background = 'linear-gradient(135deg,#E8F4E8,#D8EED8)';
+      card.style.boxShadow = '0 6px 22px rgba(107,155,107,.3)';
+    }
+    if(isMe){
+      card.style.background = isReady
+        ? 'linear-gradient(135deg,#E8F4E8,#D8EED8)'
+        : 'linear-gradient(135deg,#FFF9EC,#FBF1DC)';
+      card.style.boxShadow = isReady
+        ? '0 6px 22px rgba(107,155,107,.3)'
+        : '0 6px 22px rgba(232,179,78,.3)';
+    }
+    if(playerIsHost){
+      card.style.borderColor = isReady ? '#6B9B6B' : 'var(--gold)';
+    }
+
+    /* ═══ شارة المضيف ═══ */
+    if(playerIsHost){
+      const badge = document.createElement('div');
+      badge.style.cssText = `
+        position: absolute;
+        top: -10px;
+        right: 10px;
+        padding: 3px 10px;
+        border-radius: 100px;
+        background: linear-gradient(135deg, var(--gold), #F2C862);
+        color: #1A1512;
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 1px;
+        box-shadow: 0 3px 10px rgba(232,179,78,.5);
+        z-index: 2;
+      `;
+      badge.textContent = '👑 HOST';
+      card.appendChild(badge);
+    }
+
+    /* ═══ شارة "أنت" ═══ */
+    if(isMe && !playerIsHost){
+      const youBadge = document.createElement('div');
+      youBadge.style.cssText = `
+        position: absolute;
+        top: -10px;
+        left: 10px;
+        padding: 3px 10px;
+        border-radius: 100px;
+        background: linear-gradient(135deg, var(--amber), #F2A671);
+        color: #fff;
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 1px;
+        box-shadow: 0 3px 10px rgba(224,122,63,.4);
+        z-index: 2;
+      `;
+      youBadge.textContent = 'أنت';
+      card.appendChild(youBadge);
+    }
+
+    /* ═══ الأفاتار ═══ */
+    const skinId = player.skin || 'default';
+    const skin = (typeof getAllSkins === 'function')
+      ? (getAllSkins().find(s => s.id === skinId) || SKINS[0])
+      : (SKINS ? SKINS[0] : null);
+
+    const avatar = document.createElement('div');
+    avatar.style.cssText = `
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%,
+        ${skin ? mixColor(skin.body, '#FFFFFF', 0.4) : '#FFE0A0'},
+        ${skin ? skin.body : '#E8B34E'} 55%,
+        ${skin ? skin.bodyDark : '#C98A2E'});
+      border: 3px solid rgba(255,255,255,.8);
+      box-shadow: 0 6px 20px rgba(0,0,0,.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex-shrink: 0;
+    `;
+
+    if(skin && typeof hasItemImage === 'function' && hasItemImage(skin)){
+      const src = (typeof ASSET !== 'undefined' && ASSET.resolve)
+        ? ASSET.resolve(skin)
+        : null;
+      if(src){
+        avatar.innerHTML = `<img src="${src}"
+          style="width:100%;height:100%;object-fit:cover;border-radius:50%;"
+          onerror="this.style.display='none'">`;
+      }
+    }
+    card.appendChild(avatar);
+
+    /* ═══ الاسم ═══ */
+    const nameEl = document.createElement('div');
+    nameEl.style.cssText = `
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--ink);
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      padding: 0 4px;
+    `;
+    nameEl.textContent = player.name || 'لاعب';
+    card.appendChild(nameEl);
+
+    /* ═══ حالة الاستعداد ═══ */
+    const statusPill = document.createElement('div');
+    if(isReady){
+      statusPill.style.cssText = `
+        padding: 5px 14px;
+        border-radius: 100px;
+        background: #6B9B6B;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: .5px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        box-shadow: 0 3px 10px rgba(107,155,107,.4);
+      `;
+      statusPill.innerHTML = '✓ جاهز';
+    } else {
+      statusPill.style.cssText = `
+        padding: 5px 14px;
+        border-radius: 100px;
+        background: var(--paper-2);
+        color: var(--ink-mute);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: .5px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      `;
+      statusPill.innerHTML = '⏳ بانتظار';
+    }
+    card.appendChild(statusPill);
+
+    /* ═══ زر الطرد (للمضيف فقط) ═══ */
+    if(isHost && !isMe){
+      const kickBtn = document.createElement('button');
+      kickBtn.style.cssText = `
+        position: absolute;
+        bottom: 6px;
+        left: 6px;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(193,74,74,.12);
+        color: #C14A4A;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 700;
+        opacity: .6;
+        transition: all .2s;
+        z-index: 3;
+      `;
+      kickBtn.title = 'طرد اللاعب';
+      kickBtn.textContent = '✕';
+      kickBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if(!confirm(`طرد ${player.name}؟`)) return;
+        if(typeof window.kickPlayer === 'function'){
+          await window.kickPlayer(player.uid, player.name);
+        }
+      });
+      kickBtn.addEventListener('mouseenter', () => {
+        kickBtn.style.opacity = '1';
+        kickBtn.style.background = '#C14A4A';
+        kickBtn.style.color = '#fff';
+      });
+      kickBtn.addEventListener('mouseleave', () => {
+        kickBtn.style.opacity = '.6';
+        kickBtn.style.background = 'rgba(193,74,74,.12)';
+        kickBtn.style.color = '#C14A4A';
+      });
+      card.appendChild(kickBtn);
+    }
+
+    return card;
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     قسم دعوة الأصدقاء
+     ═══════════════════════════════════════════════════════ */
+  function buildInviteSectionV5(players, maxPlayers){
+    const section = document.createElement('div');
+    section.id = 'lobby-invite-section';
+    section.style.cssText = `
+      margin-bottom: 14px;
+      padding: 16px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #1F0A20 0%, #4A2860 100%);
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 8px 26px rgba(74,40,96,.4);
+      border: 1px solid rgba(255,255,255,.08);
+    `;
+
+    section.innerHTML = `
+      <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;
+                  border-radius:50%;
+                  background:radial-gradient(circle,rgba(232,179,78,.3),transparent 70%);
+                  pointer-events:none;"></div>
+
+      <div style="display:flex;align-items:center;gap:12px;
+                  position:relative;z-index:1;margin-bottom:12px;">
+        <div style="width:46px;height:46px;border-radius:14px;
+                    background:linear-gradient(135deg,var(--gold),#F2C862);
+                    display:flex;align-items:center;justify-content:center;
+                    font-size:22px;box-shadow:0 6px 18px rgba(232,179,78,.4);
+                    flex-shrink:0;">
+          👥
+        </div>
+        <div style="flex:1;min-width:0;text-align:right;">
+          <div style="font-family:'Space Grotesk',sans-serif;
+                      font-size:13.5px;font-weight:700;letter-spacing:.5px;">
+            ادعُ أصدقاءك
+          </div>
+          <div style="font-size:10.5px;opacity:.75;margin-top:3px;">
+            ${players.length}/${maxPlayers} في الساحة
+          </div>
+        </div>
+      </div>
+
+      <button id="lobby-invite-btn"
+              style="width:100%;padding:12px;border-radius:14px;border:none;
+                     background:linear-gradient(135deg,var(--amber),#F2A671);
+                     color:#fff;font-family:inherit;font-size:13px;
+                     font-weight:800;cursor:pointer;position:relative;z-index:1;
+                     display:flex;align-items:center;justify-content:center;
+                     gap:8px;box-shadow:0 6px 18px rgba(224,122,63,.4);
+                     transition:transform .15s;">
+        <span style="font-size:16px;">＋</span>
+        <span>فتح قائمة الأصدقاء</span>
+      </button>
+    `;
+
+    const btn = section.querySelector('#lobby-invite-btn');
+    btn.addEventListener('click', () => openFriendsPickerV5());
+    btn.addEventListener('mousedown', () => { btn.style.transform = 'scale(.97)'; });
+    btn.addEventListener('mouseup', () => { btn.style.transform = 'scale(1)'; });
+
+    return section;
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     الزر الرئيسي: بدء / استعداد
+     ═══════════════════════════════════════════════════════ */
+  function buildPrimaryActionButton(players, maxPlayers, isHost){
+    const btn = document.createElement('button');
+    btn.id = 'mp-start-btn';
+    btn.style.cssText = `
+      width: 100%;
+      max-width: 100%;
+      padding: 18px;
+      border-radius: 18px;
+      border: none;
+      font-family: 'Tajawal', sans-serif;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: .5px;
+      cursor: pointer;
+      transition: all .25s cubic-bezier(.34,1.56,.64,1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      min-height: 58px;
+      margin-bottom: 10px;
+    `;
+
+    if(isHost){
+      /* ═══ المضيف: زر البدء ═══ */
+      const guests = players.filter(p => p.uid !== MP.roomData.hostUid);
+      const canStart = players.length >= 2 && guests.length > 0 && guests.every(p => p.ready === true);
+
+      btn.disabled = !canStart;
+      btn.style.cursor = canStart ? 'pointer' : 'not-allowed';
+      btn.style.opacity = canStart ? '1' : '.55';
+
+      if(canStart){
+        btn.style.background = 'linear-gradient(135deg,#6B9B6B,#4A7B4A)';
+        btn.style.color = '#fff';
+        btn.style.boxShadow = '0 10px 30px rgba(107,155,107,.4)';
+        btn.innerHTML = `<span>🏁</span><span>ابدأ السباق (${players.length} لاعبين)</span>`;
+      } else if(players.length < 2){
+        btn.style.background = 'var(--paper-3)';
+        btn.style.color = 'var(--ink-mute)';
+        btn.style.boxShadow = 'none';
+        btn.innerHTML = `<span>⏳</span><span>بانتظار لاعبين (${players.length}/${maxPlayers})</span>`;
+      } else {
+        btn.style.background = 'linear-gradient(135deg,var(--gold),#F2C862)';
+        btn.style.color = '#1A1512';
+        btn.style.boxShadow = '0 8px 24px rgba(232,179,78,.4)';
+        btn.innerHTML = `<span>⏳</span><span>بانتظار جهوزية اللاعبين...</span>`;
+      }
+
+      if(canStart){
+        btn.addEventListener('click', () => {
+          if(typeof window.mpStartRace === 'function'){
+            window.mpStartRace();
+          }
+        });
+      }
+    } else {
+      /* ═══ الضيف: زر الاستعداد ═══ */
+      const myReady = !!MP.myReady;
+
+      if(myReady){
+        btn.style.background = 'linear-gradient(135deg,#6B9B6B,#4A7B4A)';
+        btn.style.color = '#fff';
+        btn.style.boxShadow = '0 10px 30px rgba(107,155,107,.4)';
+        btn.innerHTML = `<span>✓</span><span>جاهز — اضغط للإلغاء</span>`;
+      } else {
+        btn.style.background = 'linear-gradient(135deg,var(--amber),#F2A671)';
+        btn.style.color = '#fff';
+        btn.style.boxShadow = '0 10px 30px rgba(224,122,63,.4)';
+        btn.innerHTML = `<span>⚔️</span><span>أعلن الاستعداد</span>`;
+      }
+
+      btn.addEventListener('click', async () => {
+        /* ═══ عطّل الزر مؤقتاً ═══ */
+        btn.disabled = true;
+        const origHTML = btn.innerHTML;
+
+        btn.innerHTML = `<span>⏳</span><span>جارٍ...</span>`;
+
+        try {
+          await toggleReadyV5();
+          /* Rebuild سيتم تلقائياً من listener */
+        } catch(e){
+          console.error('[Lobby v5] Toggle ready failed:', e);
+          btn.disabled = false;
+          btn.innerHTML = origHTML;
+          if(typeof Toast !== 'undefined'){
+            Toast.error('فشل تغيير الحالة', e.message || '');
+          }
+        }
+      });
+    }
+
+    return btn;
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     تبديل حالة الاستعداد — النسخة المُصلَحة
+     ═══════════════════════════════════════════════════════ */
+  async function toggleReadyV5(){
+    if(!MP.active || MP.isHost) return;
+    if(!Cloud.db || !Cloud.user) return;
+
+    const uid = Cloud.user.uid;
+    const newReady = !MP.myReady;
+
+    console.log(`[Lobby v5] Toggling ready: ${MP.myReady} → ${newReady}`);
+
+    try {
+      const roomRef = Cloud.db
+        .collection(MP_CONFIG.collection)
+        .doc(MP.roomId);
+
+      /* ═══ استخدم transaction لتجنب race conditions ═══ */
+      await Cloud.db.runTransaction(async (tx) => {
+        const snap = await tx.get(roomRef);
+        if(!snap.exists) throw new Error('Room not found');
+
+        const data = snap.data();
+        const players = data.players || [];
+        const me = players.find(p => p.uid === uid);
+        if(!me) throw new Error('Player not in room');
+
+        me.ready = newReady;
+
+        tx.update(roomRef, {
+          players,
+          playerUids: data.playerUids || players.map(p => p.uid)
+        });
+      });
+
+      MP.myReady = newReady;
+      console.log(`[Lobby v5] ✓ Ready state: ${newReady}`);
+
+      if(typeof Sfx !== 'undefined'){
+        Sfx.play(newReady ? 660 : 440, 0.18, 'sine', 0.06, newReady ? 990 : 330);
+      }
+      if(typeof haptic === 'function') haptic(12);
+
+      if(typeof Toast !== 'undefined'){
+        if(newReady){
+          Toast.success('✓ أنت جاهز!', 'بانتظار بدء المضيف', { duration: 2000 });
+        } else {
+          Toast.info('تم إلغاء الاستعداد');
+        }
+      }
+    } catch(e){
+      console.error('[Lobby v5] Toggle ready error:', e);
+      throw e;
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     Override الدالة القديمة — يُستخدَم في أماكن أخرى
+     ═══════════════════════════════════════════════════════ */
+  window.mpToggleReady = toggleReadyV5;
+
+  /* ═══════════════════════════════════════════════════════
+     منتقي النمط للمضيف
+     ═══════════════════════════════════════════════════════ */
+  function openHostModePickerV5(){
+    if(!MP.isHost) return;
+
+    let modal = document.getElementById('lobby-mode-picker');
+    if(modal) modal.remove();
+
+    modal = document.createElement('div');
+    modal.id = 'lobby-mode-picker';
+    modal.style.cssText = `
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: rgba(26,21,18,.8);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      animation: fadeIn .25s ease-out;
+    `;
+
+    const currentMode = MP.roomData ? MP.roomData.mode : 'FLIP';
+
+    modal.innerHTML = `
+      <div style="width:100%;max-width:400px;background:#fff;
+                  border-radius:22px;box-shadow:0 30px 80px rgba(0,0,0,.5);
+                  padding:22px;max-height:85vh;display:flex;
+                  flex-direction:column;
+                  animation:popIn .3s cubic-bezier(.34,1.56,.64,1);">
+
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    margin-bottom:16px;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;
+                      font-weight:700;color:var(--ink);">
+            اختر النمط
+          </div>
+          <button id="lobby-picker-close"
+                  style="width:34px;height:34px;border-radius:10px;border:none;
+                         background:var(--paper-2);cursor:pointer;font-size:16px;">
+            ✕
+          </button>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px;
+                    overflow-y:auto;flex:1;">
+          ${(MODES || []).map(m => `
+            <button class="lobby-mode-option" data-mode="${m.id}"
+                    style="display:flex;align-items:center;gap:12px;
+                           padding:12px;border-radius:14px;
+                           border:2px solid ${m.id === currentMode ? m.color : 'transparent'};
+                           background:${m.id === currentMode
+                             ? `linear-gradient(135deg,${m.color}18,${m.color}08)`
+                             : 'var(--paper)'};
+                           cursor:pointer;font-family:inherit;
+                           text-align:right;width:100%;
+                           transition:all .18s;">
+              <div style="width:44px;height:44px;border-radius:12px;
+                          background:${m.color};color:#fff;
+                          display:flex;align-items:center;justify-content:center;
+                          font-size:22px;font-weight:800;flex-shrink:0;
+                          box-shadow:inset 0 -3px 0 rgba(0,0,0,.15);">
+                ${m.icon}
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:14px;font-weight:800;color:var(--ink);">
+                  ${m.ar}
+                </div>
+                <div style="font-size:10.5px;color:var(--ink-mute);margin-top:2px;">
+                  ${m.desc || m.en || ''}
+                </div>
+              </div>
+              ${m.id === currentMode
+                ? `<span style="color:${m.color};font-size:20px;font-weight:800;">✓</span>`
+                : ''}
+            </button>
+          `).join('')}
+        </div>
+
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector('#lobby-picker-close').addEventListener('click', () => {
+      modal.remove();
+    });
+
+    modal.addEventListener('click', (e) => {
+      if(e.target === modal) modal.remove();
+    });
+
+    modal.querySelectorAll('.lobby-mode-option').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const newMode = btn.dataset.mode;
+        try {
+          await Cloud.db
+            .collection(MP_CONFIG.collection)
+            .doc(MP.roomId)
+            .update({ mode: newMode });
+
+          MP.hostSelectedMode = newMode;
+          modal.remove();
+          if(typeof Sfx !== 'undefined') Sfx.tap();
+        } catch(e){
+          console.error('[Lobby v5] Change mode failed:', e);
+          if(typeof Toast !== 'undefined') Toast.error('فشل التغيير', e.message);
+        }
+      });
+    });
+  }
+  window.openHostModePickerV5 = openHostModePickerV5;
+
+  /* ═══════════════════════════════════════════════════════
+     قائمة دعوة الأصدقاء
+     ═══════════════════════════════════════════════════════ */
+  async function openFriendsPickerV5(){
+    if(Lobby.invitePickerOpen) return;
+    Lobby.invitePickerOpen = true;
+    Lobby.selected.clear();
+
+    let modal = document.getElementById('lobby-friends-picker');
+    if(modal) modal.remove();
+
+    modal = document.createElement('div');
+    modal.id = 'lobby-friends-picker';
+    modal.style.cssText = `
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: rgba(15,12,10,.85);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      animation: fadeIn .25s ease-out;
+    `;
+
+    modal.innerHTML = `
+      <div style="width:100%;max-width:420px;background:#fff;
+                  border-radius:24px;box-shadow:0 30px 80px rgba(0,0,0,.55);
+                  display:flex;flex-direction:column;
+                  max-height:88vh;overflow:hidden;
+                  animation:popIn .32s cubic-bezier(.34,1.56,.64,1);">
+
+        <div style="padding:18px 20px 14px;
+                    background:linear-gradient(135deg,#1F1A24 0%,#3A2A48 100%);
+                    color:#fff;position:relative;">
+          <div style="display:flex;align-items:center;
+                      justify-content:space-between;gap:10px;">
+            <div style="display:flex;align-items:center;gap:10px;flex:1;">
+              <span style="font-size:22px;">👥</span>
+              <div style="flex:1;">
+                <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;
+                            font-weight:700;letter-spacing:.5px;">
+                  دعوة أصدقاء
+                </div>
+                <div style="font-size:10.5px;opacity:.7;margin-top:2px;">
+                  اختر حتى 3 أصدقاء للانضمام
+                </div>
+              </div>
+            </div>
+            <button id="lobby-picker-close-2"
+                    style="width:34px;height:34px;border-radius:12px;
+                           border:none;background:rgba(255,255,255,.12);
+                           color:#fff;font-size:16px;cursor:pointer;
+                           display:flex;align-items:center;
+                           justify-content:center;flex-shrink:0;">
+              ✕
+            </button>
+          </div>
+
+          <div id="lobby-picker-counter"
+               style="margin-top:12px;padding:8px 14px;
+                      border-radius:100px;
+                      background:rgba(255,255,255,.1);
+                      display:inline-flex;align-items:center;gap:8px;
+                      font-family:'Space Grotesk',sans-serif;
+                      font-size:11px;font-weight:700;letter-spacing:.5px;">
+            <span style="color:#FFE8A0;" id="lobby-picker-count">0</span>
+            <span style="opacity:.7;">/ 3 مختارون</span>
+          </div>
+        </div>
+
+        <div style="padding:14px 18px 0;">
+          <div style="position:relative;">
+            <span style="position:absolute;top:50%;right:12px;
+                         transform:translateY(-50%);
+                         font-size:14px;opacity:.4;pointer-events:none;">
+              🔍
+            </span>
+            <input type="text" id="lobby-picker-search"
+                   placeholder="ابحث بالاسم..."
+                   autocomplete="off"
+                   style="width:100%;padding:11px 36px 11px 14px;
+                          border-radius:12px;border:1.5px solid var(--line);
+                          background:var(--paper);font-family:inherit;
+                          font-size:13px;color:var(--ink);
+                          outline:none;transition:border-color .2s;">
+          </div>
+        </div>
+
+        <div id="lobby-picker-list"
+             style="flex:1;overflow-y:auto;padding:14px 18px;
+                    scrollbar-width:thin;">
+          <div style="text-align:center;padding:40px 20px;">
+            <div style="width:26px;height:26px;border-radius:50%;
+                        border:2.5px solid rgba(232,179,78,.3);
+                        border-top-color:var(--amber);
+                        animation:spin .8s linear infinite;
+                        margin:0 auto 12px;"></div>
+            <div style="font-size:12px;font-weight:700;
+                        color:var(--ink-mute);">
+              جارٍ تحميل الأصدقاء...
+            </div>
+          </div>
+        </div>
+
+        <div style="padding:14px 18px 18px;
+                    border-top:1px solid var(--line);
+                    background:#fff;
+                    display:grid;grid-template-columns:1fr 1.5fr;
+                    gap:8px;">
+          <button id="lobby-picker-cancel"
+                  style="padding:12px;border-radius:14px;
+                         border:1.5px solid var(--line);
+                         background:#fff;color:var(--ink);
+                         font-family:inherit;font-size:12.5px;
+                         font-weight:800;cursor:pointer;">
+            إلغاء
+          </button>
+          <button id="lobby-picker-send"
+                  style="padding:12px;border-radius:14px;
+                         border:none;opacity:.5;
+                         background:linear-gradient(135deg,#6B9B6B,#4A7B4A);
+                         color:#fff;font-family:inherit;font-size:12.5px;
+                         font-weight:800;cursor:not-allowed;
+                         display:flex;align-items:center;
+                         justify-content:center;gap:6px;
+                         box-shadow:0 6px 18px rgba(107,155,107,.35);">
+            <span>📨</span>
+            <span>إرسال الدعوات</span>
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    /* ═══ ربط الأزرار ═══ */
+    const close = () => {
+      modal.style.animation = 'fadeIn .2s ease-in reverse';
+      setTimeout(() => {
+        modal.remove();
+        Lobby.invitePickerOpen = false;
+        Lobby.selected.clear();
+      }, 180);
+    };
+
+    modal.querySelector('#lobby-picker-close-2').addEventListener('click', close);
+    modal.querySelector('#lobby-picker-cancel').addEventListener('click', close);
+    modal.addEventListener('click', (e) => {
+      if(e.target === modal) close();
+    });
+
+    /* ═══ بحث ═══ */
+    let searchTimer = null;
+    const searchInput = modal.querySelector('#lobby-picker-search');
+    searchInput.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        renderFriendsListV5(modal, searchInput.value.trim());
+      }, 200);
+    });
+
+    /* ═══ إرسال ═══ */
+    modal.querySelector('#lobby-picker-send').addEventListener('click', async () => {
+      await sendInvitesV5(modal);
+    });
+
+    /* ═══ حمّل الأصدقاء ═══ */
+    await loadFriendsForPickerV5();
+
+    /* ═══ ارسم القائمة ═══ */
+    renderFriendsListV5(modal, '');
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     تحميل الأصدقاء للقائمة
+     ═══════════════════════════════════════════════════════ */
+  async function loadFriendsForPickerV5(){
+    try {
+      if(typeof loadFriendsData === 'function'){
+        await loadFriendsData();
+      }
+      Lobby.friends = (window._friends || []).slice();
+    } catch(e){
+      console.warn('[Lobby v5] Load friends failed:', e);
+      Lobby.friends = [];
+    }
+
+    /* استبعد اللاعبين الموجودين في الساحة */
+    const players = (MP.roomData && MP.roomData.players) || [];
+    const currentUids = new Set(players.map(p => p.uid));
+    const myUid = Cloud.user ? Cloud.user.uid : null;
+
+    Lobby.friends = Lobby.friends.filter(f => {
+      if(!f || !f.uid) return false;
+      if(f.uid === myUid) return false;
+      if(currentUids.has(f.uid)) return false;
+      return true;
+    });
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     رسم قائمة الأصدقاء
+     ═══════════════════════════════════════════════════════ */
+  function renderFriendsListV5(modal, query){
+    const list = modal.querySelector('#lobby-picker-list');
+    if(!list) return;
+
+    let filtered = Lobby.friends;
+
+    if(query){
+      const q = query.toLowerCase();
+      filtered = filtered.filter(f => {
+        const profile = f.profile || {};
+        const name = (profile.username || f.username || '').toLowerCase();
+        return name.includes(q);
+      });
+    }
+
+    if(filtered.length === 0){
+      list.innerHTML = `
+        <div style="text-align:center;padding:50px 20px;">
+          <div style="font-size:52px;opacity:.25;margin-bottom:12px;">
+            ${query ? '🔍' : '👥'}
+          </div>
+          <div style="font-size:13.5px;font-weight:800;
+                      color:var(--ink);margin-bottom:6px;">
+            ${query ? 'لا نتائج' : 'لا يوجد أصدقاء'}
+          </div>
+          <div style="font-size:11.5px;color:var(--ink-mute);
+                      line-height:1.5;max-width:240px;margin:0 auto;">
+            ${query
+              ? 'جرّب البحث باسم آخر'
+              : 'أضف أصدقاء أولاً من صفحة الأصدقاء'}
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    list.innerHTML = '';
+
+    filtered.forEach(friend => {
+      const profile = friend.profile || {};
+      const name = profile.username || friend.username || 'صديق';
+      const uid = friend.uid;
+      const isSelected = Lobby.selected.has(uid);
+      const isInvited = Lobby.invited.has(uid);
+
+      const photo = profile.photoURL || null;
+      const el = document.createElement('div');
+
+      el.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        border-radius: 14px;
+        background: ${isInvited
+          ? 'linear-gradient(135deg,#E8F4E8,#D8EED8)'
+          : (isSelected ? 'linear-gradient(135deg,#FFF9EC,#FBF1DC)' : '#fff')};
+        border: 2px solid ${isInvited
+          ? '#6B9B6B'
+          : (isSelected ? 'var(--amber)' : 'var(--line)')};
+        margin-bottom: 8px;
+        cursor: ${isInvited ? 'default' : 'pointer'};
+        transition: all .18s cubic-bezier(.34,1.56,.64,1);
+        opacity: ${isInvited ? '.75' : '1'};
+      `;
+
+      const avatarContent = photo
+        ? `<img src="${photo}" alt=""
+                style="width:100%;height:100%;object-fit:cover;border-radius:50%;"
+                onerror="this.style.display='none';this.parentElement.textContent='${name.charAt(0).toUpperCase()}'">`
+        : name.charAt(0).toUpperCase();
+
+      const checkBg = isInvited
+        ? 'linear-gradient(135deg,#6B9B6B,#4A7B4A)'
+        : (isSelected ? 'var(--amber)' : 'transparent');
+      const checkBorder = isInvited
+        ? '#6B9B6B'
+        : (isSelected ? 'var(--amber)' : 'var(--line-strong)');
+      const checkMark = isInvited
+        ? '<span style="font-size:14px;color:#fff;font-weight:800;">✓</span>'
+        : (isSelected ? '<span style="font-size:14px;color:#fff;font-weight:800;">✓</span>' : '');
+
+      el.innerHTML = `
+        <div style="width:44px;height:44px;border-radius:50%;
+                    background:linear-gradient(135deg,#FFE0A0,#E8B34E);
+                    display:flex;align-items:center;justify-content:center;
+                    font-size:18px;font-weight:800;color:#fff;
+                    overflow:hidden;flex-shrink:0;
+                    border:2px solid rgba(255,255,255,.6);">
+          ${avatarContent}
+        </div>
+        <div style="flex:1;min-width:0;text-align:right;">
+          <div style="font-size:13px;font-weight:800;color:var(--ink);
+                      white-space:nowrap;overflow:hidden;
+                      text-overflow:ellipsis;">
+            ${escapeHtmlV5(name)}
+          </div>
+          <div style="font-size:10px;color:var(--ink-mute);margin-top:3px;">
+            ${isInvited ? '✓ دُعي' : (isSelected ? 'مختار' : 'اضغط للاختيار')}
+          </div>
+        </div>
+        <div style="width:26px;height:26px;border-radius:50%;
+                    background:${checkBg};
+                    border:2px solid ${checkBorder};
+                    display:flex;align-items:center;justify-content:center;
+                    flex-shrink:0;transition:all .15s;">
+          ${checkMark}
+        </div>
+      `;
+
+      if(!isInvited){
+        el.addEventListener('click', () => toggleFriendSelectionV5(uid, el, modal));
+      }
+
+      list.appendChild(el);
+    });
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     تبديل اختيار صديق
+     ═══════════════════════════════════════════════════════ */
+  function toggleFriendSelectionV5(uid, el, modal){
+    const isSelected = Lobby.selected.has(uid);
+
+    if(!isSelected && Lobby.selected.size >= 3){
+      if(typeof Toast !== 'undefined'){
+        Toast.warning('الحد الأقصى 3 أصدقاء', 'الساحة تستوعب 4 لاعبين');
+      }
+      return;
+    }
+
+    if(isSelected){
+      Lobby.selected.delete(uid);
+    } else {
+      Lobby.selected.add(uid);
+      if(typeof Sfx !== 'undefined') Sfx.tap();
+      if(typeof haptic === 'function') haptic(6);
+    }
+
+    const nowSelected = !isSelected;
+
+    /* ═══ حدّث UI العنصر ═══ */
+    el.style.background = nowSelected
+      ? 'linear-gradient(135deg,#FFF9EC,#FBF1DC)'
+      : '#fff';
+    el.style.borderColor = nowSelected ? 'var(--amber)' : 'var(--line)';
+
+    const checkEl = el.querySelector('div:last-child');
+    if(checkEl){
+      checkEl.style.background = nowSelected ? 'var(--amber)' : 'transparent';
+      checkEl.style.borderColor = nowSelected ? 'var(--amber)' : 'var(--line-strong)';
+      checkEl.innerHTML = nowSelected
+        ? '<span style="font-size:14px;color:#fff;font-weight:800;">✓</span>'
+        : '';
+    }
+
+    /* ═══ حدّث العدّاد ═══ */
+    const countEl = modal.querySelector('#lobby-picker-count');
+    if(countEl) countEl.textContent = Lobby.selected.size;
+
+    /* ═══ حدّث زر الإرسال ═══ */
+    const sendBtn = modal.querySelector('#lobby-picker-send');
+    if(sendBtn){
+      const canSend = Lobby.selected.size > 0;
+      sendBtn.disabled = !canSend;
+      sendBtn.style.opacity = canSend ? '1' : '.5';
+      sendBtn.style.cursor = canSend ? 'pointer' : 'not-allowed';
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     إرسال الدعوات
+     ═══════════════════════════════════════════════════════ */
+  async function sendInvitesV5(modal){
+    const selected = Array.from(Lobby.selected);
+    if(selected.length === 0) return;
+
+    if(!MP.active || !MP.roomCode){
+      if(typeof Toast !== 'undefined') Toast.error('لا توجد ساحة نشطة');
+      return;
+    }
+
+    if(!Cloud.user || !Cloud.db) return;
+
+    const sendBtn = modal.querySelector('#lobby-picker-send');
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = '<span>⏳</span><span>جارٍ الإرسال...</span>';
+
+    const uid = Cloud.user.uid;
+    const myName = (Cloud.profile && Cloud.profile.username) || 'لاعب';
+    const myPhoto = Cloud.user.photoURL || null;
+    const roomCode = MP.roomCode;
+
+    let success = 0;
+    let failed = 0;
+
+    for(const friendUid of selected){
+      try {
+        await Cloud.db.collection('friend_requests').add({
+          fromUid: uid,
+          fromName: myName,
+          fromPhoto: myPhoto,
+          toUid: friendUid,
+          type: 'multiplayer_invite',
+          roomCode,
+          status: 'pending',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        Lobby.invited.add(friendUid);
+        Lobby.selected.delete(friendUid);
+        success++;
+      } catch(e){
+        console.warn('[Lobby v5] Invite failed for', friendUid, e);
+        failed++;
+      }
+    }
+
+    /* ═══ أغلق المودال ═══ */
+    modal.style.animation = 'fadeIn .2s ease-in reverse';
+    setTimeout(() => {
+      modal.remove();
+      Lobby.invitePickerOpen = false;
+    }, 180);
+
+    /* ═══ إشعارات ═══ */
+    if(success > 0 && typeof Toast !== 'undefined'){
+      Toast.reward('📨', `تم إرسال ${success} دعوة`,
+        success === 1 ? 'سيظهر الإشعار لصديقك الآن' : 'سيظهر الإشعار لأصدقائك الآن',
+        { duration: 4000 });
+      if(typeof Sfx !== 'undefined') Sfx.reward();
+      if(typeof haptic === 'function') haptic(20);
+    }
+
+    if(failed > 0 && typeof Toast !== 'undefined'){
+      Toast.warning(`فشل إرسال ${failed} دعوة`);
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     Helper
+     ═══════════════════════════════════════════════════════ */
+  function escapeHtmlV5(s){
+    return String(s || '').replace(/[&<>"']/g, c => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[c]));
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     تعطيل الدوال القديمة لمنع التعارض
+     ═══════════════════════════════════════════════════════ */
+  window.enhanceWaitingRoom = function(){
+    /* no-op — v5 handles everything */
+  };
+
+  console.log('[SHIFT Arena Lobby v5] ✅ Clean lobby system installed');
+  console.log('  • Guest ready button works correctly');
+  console.log('  • No more flickering');
+  console.log('  • Integrated friend invites');
+  console.log('  • Transaction-based ready toggle');
+
+})();
+
+/* ============================================================
    ==================== BOOT =================================
    ============================================================ */
 function boot() {
