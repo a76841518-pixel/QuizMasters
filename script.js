@@ -20025,17 +20025,75 @@ function drawAvatarFrame(ctx, x, y, radius){
 
 async function pullAdminContent(){
   if(!Cloud.user || !Cloud.db) return { ok: false };
+
   try {
     const snap = await Cloud.db.collection('admin_content').doc('global').get();
     if(!snap.exists) return { ok: true, empty: true };
+
     const data = snap.data();
+
+    /* ═══════════════════════════════════════════════════════
+       ✅ دمج ذكي: احتفظ بالأحدث من كل عنصر
+       ═══════════════════════════════════════════════════════ */
     for(const k of ALL_CUSTOM_KEYS){
-      Save.data.admin[k] = data[k] || [];
+      const cloudList = data[k] || [];
+      const localList = Save.data.admin[k] || [];
+
+      /* ─── ابنِ خريطة من العناصر السحابية ─── */
+      const cloudMap = new Map();
+      cloudList.forEach(item => {
+        if(item && item.id) cloudMap.set(item.id, item);
+      });
+
+      /* ─── ادمج مع المحلي ─── */
+      const merged = [];
+      const processedIds = new Set();
+
+      /* 1) ابدأ من العناصر السحابية */
+      for(const cloudItem of cloudList){
+        if(!cloudItem || !cloudItem.id) continue;
+
+        const localItem = localList.find(x => x.id === cloudItem.id);
+
+        if(localItem){
+          /* ← اختر الأحدث */
+          const cloudTs = cloudItem.updatedAt || cloudItem.createdAt || 0;
+          const localTs = localItem.updatedAt || localItem.createdAt || 0;
+
+          if(localTs > cloudTs){
+            /* المحلي أحدث → احتفظ به */
+            merged.push(localItem);
+            console.log(`[Pull] Keeping local (newer): ${cloudItem.name}`);
+          } else {
+            /* السحابي أحدث → استخدمه */
+            merged.push(cloudItem);
+          }
+        } else {
+          /* عنصر سحابي فقط */
+          merged.push(cloudItem);
+        }
+        processedIds.add(cloudItem.id);
+      }
+
+      /* 2) أضف العناصر المحلية الفريدة (لم تُرفع للسحابة) */
+      for(const localItem of localList){
+        if(!localItem || !localItem.id) continue;
+        if(!processedIds.has(localItem.id)){
+          merged.push(localItem);
+          console.log(`[Pull] Local-only item: ${localItem.name}`);
+        }
+      }
+
+      Save.data.admin[k] = merged;
     }
+
     Save.data.admin.lastContentSync = Date.now();
     Save.save();
+    console.log('[Pull] ✅ Merged admin content');
     return { ok: true };
+
   } catch(e){
+    console.error('[Pull] Failed:', e);
     return { ok: false, msg: e.message };
   }
 }
@@ -20246,25 +20304,34 @@ function wireAdminPanel(){
     addBtn.addEventListener('click', () => openAdminItemForm());
   }
 
-  /* ⭐ زر التطبيع */
+  /* ═══ زر تطبيع الأحجام ═══ */
   const normalizeBtn = $('admin-normalize-sizes');
   if(normalizeBtn && !normalizeBtn._bound){
     normalizeBtn._bound = true;
     normalizeBtn.addEventListener('click', () => {
-      if(!confirm('⚖️ تطبيع كل العناصر؟\n\nسيتم إعادة ضبط أحجام كل الصور لتكون بنفس الحجم البصري.\n\nالقيم اليدوية (offset/size) ستُفقد.')) return;
-      
+      if(!confirm(
+        '⚖️ تطبيع أحجام كل العناصر؟\n\n' +
+        'سيتم إعادة ضبط قيم (الحجم، الإزاحة، نقطة الارتكاز)\n' +
+        'لكل العناصر المخصصة إلى القيم الافتراضية المثالية.\n\n' +
+        '⚠️ أي تعديلات يدوية سابقة ستُفقد.\n\n' +
+        'هل تريد المتابعة؟'
+      )) return;
+
       const count = normalizeAllSkinSizes();
-      
-      Toast.success(`تم التطبيع`, `${count} عنصر`);
+
+      Toast.success('تم التطبيع بنجاح!', `تم ضبط ${count} عنصر`);
       Sfx.reward();
       haptic(20);
-      
+
       /* أعد بناء القوائم */
       if(typeof Admin !== 'undefined' && Admin.initialized){
         Admin.renderContentList();
         Admin.renderContentStats();
-        Admin.addActivity?.('⚖️', `تطبيع ${count} عنصر`);
-        Admin.logAudit?.('content', 'normalize', `⚖️ تطبيع ${count} عنصر`);
+        if(Admin.addActivity) Admin.addActivity('⚖️', `تطبيع ${count} عنصر`);
+        if(Admin.logAudit) Admin.logAudit('content', 'normalize', `⚖️ تطبيع ${count} عنصر`);
+      }
+      if(typeof buildAdminContentList === 'function'){
+        buildAdminContentList();
       }
       if(typeof refreshContentEverywhere === 'function'){
         refreshContentEverywhere();
@@ -45669,11 +45736,7 @@ ${MODES.map(m => `
 
 })();
 
-/**
- * زر تطبيع كل العناصر — يجعلها كلها بنفس الحجم البصري
- * يُضاف إلى لوحة الإدارة
- */
-function normalizeAllSkinSizes(){
+async function normalizeAllSkinSizes(){
   const keys = ['customSkins', 'customHead', 'customBack', 'customShoes',
                 'customEyes', 'customTrail', 'customSpark', 'customJump',
                 'customSpawn', 'customRevive', 'customDeath', 'customAvatar',
@@ -45698,21 +45761,40 @@ function normalizeAllSkinSizes(){
     customBadge:       { sizeMul: 1.2, offsetY: 0,     anchorY: 0.5 }
   };
 
+  /* ═══ 1) طبّق محلياً ═══ */
   let count = 0;
   for(const key of keys){
     const list = Save.data.admin[key] || [];
     const def = DEFAULTS[key] || { sizeMul: 2.4, offsetY: 0, anchorY: 0.5 };
 
     for(const item of list){
-      /* ✅ احذف render القديم وأعد ضبطه للافتراضي */
       item.render = { ...def };
       count++;
     }
   }
 
   Save.save();
-  console.log(`[Normalize] ✅ Normalized ${count} items`);
-  return count;
+  console.log(`[Normalize] ✅ Normalized ${count} items locally`);
+
+  /* ═══════════════════════════════════════════════════════
+     ✅ 2) ادفع للسحابة (admin_content)
+     ═══════════════════════════════════════════════════════ */
+  try {
+    if(typeof pushAdminContent === 'function' && Cloud.user && Cloud.db){
+      const r = await pushAdminContent();
+      if(r.ok){
+        console.log('[Normalize] ✅ Synced to cloud');
+        return { count, synced: true };
+      } else {
+        console.warn('[Normalize] ⚠️ Cloud sync failed:', r.msg);
+        return { count, synced: false, error: r.msg };
+      }
+    }
+  } catch(e){
+    console.warn('[Normalize] Cloud sync error:', e);
+  }
+
+  return { count, synced: false };
 }
 
 /* ============================================================
