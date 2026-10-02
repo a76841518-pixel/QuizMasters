@@ -20960,38 +20960,82 @@ if(placements.length === 0){
       return;
     }
 
-    /* ═══ بناء العنصر ═══ */
-    const cat = currentAdminTab;
-/* ابحث عن الكائن item داخل handleAdminItemSave */
-const item = {
-  id:        'c_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
-  category:  cat,
-  name,
-  nameEn,
-  rarity,
-  color,
-  color2,
-  imagePath,
-  enabled,
-  shardsCost,
-  placements,
-
-  /* ✅ أضف هذا السطر */
-  render: getAdjustmentValues(),
-
-  createdBy: (typeof Cloud !== 'undefined' && Cloud.user) ? Cloud.user.uid : 'local',
-  createdAt: Date.now()
-};
-
     /* ═══ تحديد المفتاح ═══ */
+    const cat = currentAdminTab;
     const key = ADMIN_KEY_MAP[cat];
     if(!key){
       setStatus('✗ تصنيف غير معروف: ' + cat, 'err');
       return;
     }
 
-    if(!Save.data.admin[key]) Save.data.admin[key] = [];
-    Save.data.admin[key].push(item);
+    /* ═══════════════════════════════════════════════════════
+       ✅ التمييز بين الإضافة والتعديل
+       ═══════════════════════════════════════════════════════ */
+    const isEdit = _editingItemRef && _editingItemRef.isEdit === true;
+    const editKey = isEdit ? _editingItemRef.key : key;
+    const editIdx = isEdit ? _editingItemRef.idx : -1;
+
+    /* ═══ بناء بيانات العنصر ═══ */
+    const itemData = {
+      name,
+      nameEn,
+      rarity,
+      color,
+      color2,
+      imagePath,
+      enabled,
+      shardsCost,
+      placements,
+      render: getAdjustmentValues(),
+      updatedAt: Date.now()
+    };
+
+    /* ═══ التنفيذ ═══ */
+    let statusMsg = '';
+    let activityIcon = '';
+    let activityText = '';
+
+    if(isEdit){
+      /* ═══════════ تعديل ═══════════ */
+      if(!Save.data.admin[editKey] || !Save.data.admin[editKey][editIdx]){
+        setStatus('✗ العنصر غير موجود', 'err');
+        return;
+      }
+
+      const existing = Save.data.admin[editKey][editIdx];
+      /* احتفظ بالمعرّف وتاريخ الإنشاء */
+      Save.data.admin[editKey][editIdx] = {
+        ...existing,
+        ...itemData,
+        id: existing.id,
+        category: existing.category,
+        createdBy: existing.createdBy,
+        createdAt: existing.createdAt,
+        updatedBy: (typeof Cloud !== 'undefined' && Cloud.user) ? Cloud.user.uid : 'local'
+      };
+
+      statusMsg = 'تعديل';
+      activityIcon = '✏️';
+      activityText = `تعديل "${name}"`;
+
+    } else {
+      /* ═══════════ إضافة جديدة ═══════════ */
+      const newItem = {
+        id: 'c_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+        category: cat,
+        ...itemData,
+        createdBy: (typeof Cloud !== 'undefined' && Cloud.user) ? Cloud.user.uid : 'local',
+        createdAt: Date.now()
+      };
+
+      if(!Save.data.admin[key]) Save.data.admin[key] = [];
+      Save.data.admin[key].push(newItem);
+
+      statusMsg = 'نشر';
+      activityIcon = '🎨';
+      activityText = `إضافة "${name}"`;
+    }
+
     Save.save();
 
     /* ═══ حالة النشر ═══ */
@@ -21030,12 +21074,21 @@ if(r.ok){
       if(Admin.initialized){
         Admin.renderContentList();
         Admin.renderContentStats();
-        Admin.addActivity?.('🎨', `إضافة "${name}"`);
-        Admin.logAudit?.('content', 'created', `➕ إضافة عنصر: ${name}`);
+        if(Admin.addActivity) Admin.addActivity(activityIcon, activityText);
+        if(Admin.logAudit) Admin.logAudit('content', isEdit ? 'updated' : 'created', 
+          `${isEdit ? '✏️' : '➕'} ${isEdit ? 'تعديل' : 'إضافة'} عنصر: ${name}`);
       }
     }
     if(typeof buildAdminContentList === 'function') buildAdminContentList();
     if(typeof refreshContentEverywhere === 'function') refreshContentEverywhere();
+
+    /* ═══ تنظيف حالة التعديل ═══ */
+    _editingItemRef = null;
+
+    /* ═══ إعادة نص زر الحفظ ═══ */
+    if(saveBtn){
+      saveBtn.textContent = '💾 حفظ ونشر';
+    }
 
     /* ═══ إغلاق النموذج بعد فترة ═══ */
     setTimeout(() => closeAdminItemForm(), 1100);
@@ -23117,18 +23170,119 @@ renderContentList(){
           <div class="aci-meta">${item.rarity || 'common'}</div>
           <div class="aci-placements">${sourcesHtml}</div>
         </div>
-        <button class="aci-del" data-del="${idx}" title="حذف">🗑</button>
+        <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
+          <button class="aci-edit" data-edit="${idx}" 
+                  title="تعديل"
+                  style="width:36px;height:36px;border-radius:10px;border:none;
+                         background:linear-gradient(135deg,#E8F0FF,#D0E0FF);
+                         color:#4A88C8;font-size:15px;cursor:pointer;
+                         display:flex;align-items:center;justify-content:center;">
+            ✏️
+          </button>
+          <button class="aci-del" data-del="${idx}" 
+                  title="حذف"
+                  style="width:36px;height:36px;border-radius:10px;border:none;
+                         background:#FCE8E8;color:#C14A4A;font-size:15px;
+                         cursor:pointer;display:flex;align-items:center;
+                         justify-content:center;">
+            🗑
+          </button>
+        </div>
       `;
 
+      /* زر التعديل */
+      el.querySelector('[data-edit]').addEventListener('click', e => {
+        e.stopPropagation();
+        this.openEditForm(key, idx, item);
+      });
+
+      /* زر الحذف */
       el.querySelector('[data-del]').addEventListener('click', e => {
         e.stopPropagation();
         this.confirmDelete(key, idx, item);
+      });
+
+      /* ⭐ اضغط على البطاقة = تعديل أيضاً */
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', (e) => {
+        /* تجاهل النقر على الأزرار */
+        if(e.target.closest('button')) return;
+        this.openEditForm(key, idx, item);
       });
 
       list.appendChild(el);
     });
   });
 },
+
+  /* ═══════════════════════════════════════════════════════════
+     ═══════════ OPEN EDIT FORM — فتح نموذج التعديل ═══════════
+     ═══════════════════════════════════════════════════════════ */
+  openEditForm(key, idx, item){
+    if(!item) return;
+
+    const $ = id => document.getElementById(id);
+
+    /* ═══ احفظ مرجع العنصر الجاري تعديله ═══ */
+    _editingItemRef = { key, idx, isEdit: true };
+
+    /* ═══ املأ الحقول ═══ */
+    const setVal = (id, val) => { const el = $(id); if(el) el.value = val ?? ''; };
+
+    setVal('af-name',         item.name || '');
+    setVal('af-name-en',      item.nameEn || '');
+    setVal('af-rarity',       item.rarity || 'common');
+    setVal('af-enabled',      item.enabled === false ? 'false' : 'true');
+    setVal('af-color',        item.color || '#E07A3F');
+    setVal('af-color2',       item.color2 || '#E8B34E');
+    setVal('af-image-path',   item.imagePath || '');
+    setVal('af-shards-cost',  item.shardsCost || 0);
+
+    /* ═══ أعد بناء الأشرطة بقيم العنصر ═══ */
+    wireAdjustmentSliders();
+    setAdjustmentSliders(item);
+
+    /* ═══ تحديث التسميات ═══ */
+    const cat = item.category || this.contentTab;
+    const catLabel = $('af-cat-label');
+    if(catLabel){
+      catLabel.textContent = (CATEGORY_LABELS && CATEGORY_LABELS[cat]) || cat;
+    }
+    const pathCat = $('af-path-cat');
+    if(pathCat){
+      pathCat.textContent = (CATEGORY_FOLDERS && CATEGORY_FOLDERS[cat]) || 'misc';
+    }
+
+    /* ═══ غيّر نص العنوان ═══ */
+    const formTitle = $('afv3-title-text') || document.querySelector('.afv3-title');
+    if(formTitle){
+      formTitle.innerHTML = `تعديل — <span id="af-cat-label">${(CATEGORY_LABELS && CATEGORY_LABELS[cat]) || cat}</span>`;
+    }
+
+    /* ═══ شغّل المعاينة ═══ */
+    setTimeout(() => {
+      updateAdminImagePreview();
+      updateAdminLivePreview();
+    }, 100);
+
+    /* ═══ افتح النموذج ═══ */
+    const form = $('admin-form');
+    if(form){
+      form.classList.add('active');
+      form.style.display = '';
+      requestAnimationFrame(() => {
+        form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+
+    /* ═══ غيّر نص زر الحفظ ═══ */
+    const saveBtn = $('af-save');
+    if(saveBtn){
+      saveBtn.textContent = '💾 حفظ التعديلات';
+    }
+
+    Sfx.tap(); haptic(6);
+  },
 
   async confirmDelete(key, idx, item){
     if(!confirm(`حذف "${item.name}" نهائياً من جميع اللاعبين؟`)) return;
