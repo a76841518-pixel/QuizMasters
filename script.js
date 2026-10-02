@@ -20470,10 +20470,153 @@ function wireAdminOpenButtons($){
   });
 }
 
-/* ═══ 2) فتح نموذج إضافة عنصر ═══ */
+/* ============================================================
+   ═══════════ RESET SOURCES EDITOR ══════════════════════════
+   ═══════════════════════════════════════════════════════════
+   يعيد محرر المصادر لحالته الطبيعية (مفعّل + بدون شارات)
+   ============================================================ */
+function resetSourcesEditor(){
+  const sourcesSection = document.getElementById('sources-editor');
+  if(!sourcesSection) return;
+
+  /* ═══ أعد التفعيل ═══ */
+  sourcesSection.style.pointerEvents = '';
+  sourcesSection.style.opacity = '1';
+  sourcesSection.style.filter = '';
+
+  /* ═══ احذف شارة "للقراءة فقط" ═══ */
+  const parent = sourcesSection.closest('.afv3-section');
+  if(parent){
+    /* احذف شارات RO */
+    parent.querySelectorAll('.ro-badge').forEach(b => b.remove());
+
+    /* احذف زر "تعديل المصادر" إن وُجد */
+    parent.querySelectorAll('.edit-sources-btn').forEach(b => b.remove());
+
+    /* أعد رأس القسم لحالته الطبيعية */
+    const head = parent.querySelector('.afv3-section-head');
+    if(head){
+      head.style.background = '';
+      head.style.borderColor = '';
+    }
+  }
+
+  /* ═══ أعد تفعيل كل السطور التفاعلية ═══ */
+  sourcesSection.querySelectorAll('input, select, button').forEach(el => {
+    el.disabled = false;
+  });
+
+  console.log('[Reset] ✅ Sources editor reset to normal');
+}
+
+/* ============================================================
+   ═══════════ LOCK SOURCES EDITOR ═══════════════════════════
+   ═══════════════════════════════════════════════════════════
+   يقفل محرر المصادر — يُستخدم عند التعديل
+   ============================================================ */
+function lockSourcesEditor(){
+  const sourcesSection = document.getElementById('sources-editor');
+  if(!sourcesSection) return;
+
+  /* ═══ اجعله غير قابل للتفاعل ═══ */
+  sourcesSection.style.pointerEvents = 'none';
+  sourcesSection.style.opacity = '0.7';
+  sourcesSection.style.filter = 'grayscale(0.3)';
+
+  /* ═══ عطّل كل الحقول ═══ */
+  sourcesSection.querySelectorAll('input, select, button').forEach(el => {
+    el.disabled = true;
+  });
+
+  /* ═══ أضف شارة "للقراءة فقط" ═══ */
+  const parent = sourcesSection.closest('.afv3-section');
+  if(parent){
+    const head = parent.querySelector('.afv3-section-head');
+    if(head && !head.querySelector('.ro-badge')){
+      const badge = document.createElement('span');
+      badge.className = 'ro-badge';
+      badge.style.cssText = `
+        margin-right:auto;
+        padding:4px 12px;
+        border-radius:100px;
+        background:rgba(74,136,200,.18);
+        color:#4A88C8;
+        font-family:'Space Grotesk',sans-serif;
+        font-size:9.5px;
+        font-weight:800;
+        letter-spacing:1px;
+        display:inline-flex;
+        align-items:center;
+        gap:4px;
+      `;
+      badge.innerHTML = '🔒 للقراءة فقط';
+      head.appendChild(badge);
+    }
+
+    /* ═══ أضف زر "تعديل المصادر" الاختياري ═══ */
+    if(head && !head.querySelector('.edit-sources-btn')){
+      const btn = document.createElement('button');
+      btn.className = 'edit-sources-btn';
+      btn.style.cssText = `
+        margin-right:6px;
+        padding:5px 12px;
+        border-radius:100px;
+        border:1.5px solid #4A88C8;
+        background:#fff;
+        color:#4A88C8;
+        font-family:inherit;
+        font-size:10px;
+        font-weight:800;
+        cursor:pointer;
+        pointer-events:auto;
+      `;
+      btn.textContent = '✏️ تعديل المصادر';
+      btn.onclick = () => {
+        if(!confirm('⚠️ تعديل المصادر سيحذف المصادر الأصلية.\n\nمتأكد؟')) return;
+        
+        sourcesSection.style.pointerEvents = '';
+        sourcesSection.style.opacity = '1';
+        sourcesSection.style.filter = '';
+        
+        sourcesSection.querySelectorAll('input, select, button').forEach(el => {
+          el.disabled = false;
+        });
+        
+        const roBadge = head.querySelector('.ro-badge');
+        if(roBadge) roBadge.remove();
+        btn.remove();
+        
+        if(_editingItemRef) _editingItemRef.modifiedSources = true;
+        Toast.info('محرر المصادر مفعّل', 'اختر موسم ومصادر جديدة');
+      };
+      head.appendChild(btn);
+    }
+  }
+
+  console.log('[Lock] 🔒 Sources editor locked');
+}
+
 /* ═══ 2) فتح نموذج إضافة عنصر ═══ */
 function openAdminItemForm(){
   const $ = id => document.getElementById(id);
+
+  /* ═══════════════════════════════════════════════════════
+     ✅ 1) تصفير حالة التعديل — قبل أي شيء آخر
+     ═══════════════════════════════════════════════════════ */
+  _editingItemRef = null;
+
+  /* ═══ 2) أعد تفعيل محرر المصادر فوراً ═══ */
+  resetSourcesEditor();
+
+  /* ═══ 3) أعد نص العنوان وزر الحفظ ═══ */
+  const formTitle = document.querySelector('.afv3-title');
+  if(formTitle){
+    formTitle.innerHTML = 'عنصر جديد — <span id="af-cat-label">أزياء</span>';
+  }
+  const saveBtnTop = $('af-save');
+  if(saveBtnTop){
+    saveBtnTop.textContent = '💾 حفظ ونشر';
+  }
 
   const cat = (typeof Admin !== 'undefined' && Admin && Admin.contentTab)
     ? Admin.contentTab
@@ -20505,8 +20648,8 @@ function openAdminItemForm(){
     status.className = 'af-status';
   }
 
-    wireAdjustmentSliders();
-  setAdjustmentSliders(null);  // ← قيم افتراضية
+  wireAdjustmentSliders();
+  setAdjustmentSliders(null);
 
   /* تحديث التسميات */
   const catLabel = $('af-cat-label');
@@ -20528,23 +20671,13 @@ function openAdminItemForm(){
     }
   }
   /* ═══ بناء محرر المصادر (مفعّل للإضافة) ═══ */
-  if(typeof buildSourcesEditor === 'function') buildSourcesEditor();
-  
-  /* ✅ أعد تفعيل محرر المصادر */
-  setTimeout(() => {
-    const sourcesSection = document.getElementById('sources-editor');
-    if(sourcesSection){
-      sourcesSection.style.pointerEvents = '';
-      sourcesSection.style.opacity = '1';
-      
-      /* احذف شارة "للقراءة فقط" إن وُجدت */
-      const parent = sourcesSection.closest('.afv3-section');
-      if(parent){
-        const badge = parent.querySelector('.ro-badge');
-        if(badge) badge.remove();
-      }
-    }
-  }, 50);
+    /* ═══ بناء محرر المصادر (للقراءة فقط عند التعديل) ═══ */
+    if(typeof buildSourcesEditor === 'function') buildSourcesEditor();
+    
+    /* ═══ اجعل قسم المصادر للقراءة فقط عند التعديل ═══ */
+    setTimeout(() => {
+      lockSourcesEditor();
+    }, 50);
     
     /* ✅ اجعل قسم المصادر للقراءة فقط عند التعديل */
     setTimeout(() => {
@@ -20612,35 +20745,24 @@ function closeAdminItemForm(){
     stopAdminLivePreview();
   }
   
-  /* ═══════════════════════════════════════════════════════
-     ✅ تصفير حالة التعديل وإعادة تفعيل كل شيء
-     ═══════════════════════════════════════════════════════ */
+  /* ═══ تصفير حالة التعديل ═══ */
   _editingItemRef = null;
   
-  /* أعد تفعيل محرر المصادر */
-  const sourcesSection = document.getElementById('sources-editor');
-  if(sourcesSection){
-    sourcesSection.style.pointerEvents = '';
-    sourcesSection.style.opacity = '1';
-    
-    const parent = sourcesSection.closest('.afv3-section');
-    if(parent){
-      const badge = parent.querySelector('.ro-badge');
-      if(badge) badge.remove();
-    }
-  }
+  /* ═══ إعادة ضبط محرر المصادر ═══ */
+  resetSourcesEditor();
   
-  /* أعد نص زر الحفظ */
+  /* ═══ إعادة نصوص الواجهة ═══ */
   const saveBtn = document.getElementById('af-save');
   if(saveBtn){
     saveBtn.textContent = '💾 حفظ ونشر';
   }
   
-  /* أعد نص العنوان */
   const formTitle = document.querySelector('.afv3-title');
   if(formTitle){
     formTitle.innerHTML = 'عنصر جديد — <span id="af-cat-label">أزياء</span>';
   }
+  
+  console.log('[Close] ✅ Form reset complete');
 }
 
 /* ═══ 4) ربط حقول النموذج ═══ */
